@@ -14,9 +14,10 @@ Numbers for the demo position come from `docs/how-risk-is-computed.md` and the o
 - [6. Loss channels the model does not have](#6-loss-channels-the-model-does-not-have)
 - [7. The decision rule](#7-the-decision-rule)
 - [8. Vault depositors](#8-vault-depositors)
-- [9. What holds up](#9-what-holds-up)
-- [10. Recommended order](#10-recommended-order)
-- [11. Resources](#11-resources)
+- [9. Against the challenge brief](#9-against-the-challenge-brief)
+- [10. What holds up](#10-what-holds-up)
+- [11. Recommended order](#11-recommended-order)
+- [12. Resources](#12-resources)
 
 ## 1. Verdict
 
@@ -37,6 +38,13 @@ Its exploit priors rest entirely on a 5-year hack history. That history is biase
 
 None of these gaps means the demo verdict is wrong. Every one of them points the same way, though: **more risk than reported**.
 
+**Against the challenge brief (§9),** the tool covers the brief's own worked example: the five layers of a Pendle PT, a stay-or-exit verdict with execution cost, a demo on real data. It misses the brief's question in the form it is asked:
+- the impact **when a component is hit**, rather than a probability-weighted average (K20);
+- on a **book** of pockets, with the stay-or-exit trade-off made explicit as a breakeven probability (K21);
+- **how fast** the impact arrives (K22).
+
+Of the scope items the brief names, feed quality, vaults in external venues, TVL concentration and other chains are partial or missing (K23–K25, C5).
+
 ## 2. Summary table
 
 | Id | Gap | Direction | Evidence | Impact | Effort |
@@ -56,9 +64,16 @@ None of these gaps means the demo verdict is wrong. Every one of them points the
 | K13 | EXIT rule uses the mean only; CVaR 98 % of equity still gives REDUCE | biases to STAY | Bundi: yields cover the mean, not the tail | medium | S |
 | K14 | Point estimates without uncertainty; Poisson-style one event per layer | hides uncertainty | dispersion index 3.27; ξ unstable | medium | M |
 | K15 | Age factor and PT stress ×1.5 have no empirical basis | unknown | no study found | low | S |
+| K16 | Depositor loss under a scenario still missing for vaults (drain d\* done in the watches) | missing | Team 2; deUSD, wstUSR | high | M |
 | K17 | Exploit prior rests only on a 5-year hack history; attack mix shifts yearly | stale, noisy | top classes change every year; a 2-year window raises Morpho Blue to 8.6 % | high | S |
 | K18 | No protocol-specific signal (admin powers, audit scope, insurance price, reputation) | blind to the protocol | 67.6 % of audited incidents outside audit scope (H1 2026); Nexus prices 1.05–1.44 %/yr | medium | S–M |
-| K16 | Depositor loss under a scenario still missing for vaults (drain d\* done in the watches) | missing | Team 2; deUSD, wstUSR | high | M |
+| K19 | Discovery stops at the issuer; admin surface not in `analyze` | shallow | brief scores depth at 30 %; issuer deps typed by hand | high | M |
+| K20 | No "this component is affected now" input; impact is always probability-weighted | missing | brief's worked example marks the oracle "incident" | high | S |
+| K21 | No book (pocket weights), no breakeven p\*, no single headline number | missing | brief's 10 × 10 % book, 11 % unwind example | high | S–M |
+| K22 | No time to impact or time to exit in `analyze` | missing | brief asks "and how fast"; USR −97 % in 17 min | medium | S |
+| K23 | Feed quality (heartbeat, staleness, sources, shared feed) not measured | missing | named in the brief's scope | medium | S–M |
+| K24 | Vaults or hedges in an external venue (perp, CEX) not covered | missing | named in the brief's scope; Belem runs market-neutral | medium | M–L |
+| K25 | Concentration of TVL (protocol share of chain, position share of pool and supply) not measured | missing | named in the brief's scope | medium | S |
 
 ## 3. Probabilities
 
@@ -250,7 +265,7 @@ The oracles actually used for PT markets combine several parts:
 
 ### K8. Liquidation without any incident
 
-On 2026-08-25, one wallet spent $320k on YT-reUSD over 9 minutes. The trades pushed the PT's implied yield from about 11 % to more than 20 %. A min(TWAP, linear) oracle dropped 0.5–2.8 %, and Morpho liquidated 33 PT-reUSD positions at LLTV 91.5 %. Borrowers paid about $946k of liquidation bonus. There was no bad debt, and the price recovered within five hours. (Single detailed source plus news corroboration; see §11.)
+On 2026-08-25, one wallet spent $320k on YT-reUSD over 9 minutes. The trades pushed the PT's implied yield from about 11 % to more than 20 %. A min(TWAP, linear) oracle dropped 0.5–2.8 %, and Morpho liquidated 33 PT-reUSD positions at LLTV 91.5 %. Borrowers paid about $946k of liquidation bonus. There was no bad debt, and the price recovered within five hours. (Single detailed source plus news corroboration; see §12.)
 
 The demo sits at the same LLTV with a 5.16 % buffer. In the model, the only path to a liquidation without a real loss is the `oracle` layer (misconfiguration, mean −10 %, 2.0 %/yr). A manipulation of the pool is not in it. Its cost to the borrower is the LIF, 2.6 % of the debt repaid, plus the loss of the position.
 
@@ -349,7 +364,120 @@ Incidents add a third: the **realisation rule** depends on the vault version.
 
 A V2 vault holding V1.1 shares through `MorphoVaultV1Adapter` inherits the V1.1 behaviour (see `REPOSITORY_ADD.md`).
 
-## 9. What holds up
+## 9. Against the challenge brief
+
+The brief is `docs/hackaton_instruction/Hackathon_DeFi-Risk-Dependency-Challenge_EN_v1.pdf` (Belem Capital, EPFL Hackathon 2026). Its task is: "Automatically identify the dependencies of a position, and estimate the potential economic impact on that position when one of them is affected", then answer "stay in the position, or is the expected loss high enough to justify exiting despite execution costs?". The judging is:
+- dependency discovery 30 %;
+- impact estimation ("is the number defensible") 30 %;
+- decision usefulness 25 %;
+- a working demo on real data 15 %.
+
+### Requirement by requirement
+
+| The brief asks | What the tool does | Status | Gap |
+|---|---|---|---|
+| The worked example: a Pendle PT, 5 layers (chain, yield issuer, oracle, PT AMM, lending market) | `analyze` builds exactly these layers for a PT on Morpho Blue | met | — |
+| Discover dependencies **automatically** | Chain, Pendle market, oracle and Morpho market are found on-chain and through the APIs. The issuer's own dependencies (custodians, CEX, keys) are typed by hand for 4 issuers. The admin surface is found automatically, but only by `graph` and the watches, not by `analyze` | partial | K19 |
+| Discovery **depth** (30 %) | 5 layers for a PT. Stops at the issuer: no look-through into what backs it (USDe's hedges and custodians, sUSDS's PSM and USDC) | partial | K19, M7 |
+| Impact "when **one of them is affected**" | The report gives, per layer, the loss if it happens ("Loss if it happens", the mean over a severity draw). There is no way to say "**this** oracle is affected now, at this size" and get the impact; the input is always a probability, never an observed incident | partial | K20 |
+| "Is the number defensible" (30 %) | Every number has a basis, but K1–K18 show the exploit, depeg and rate parts are biased or missing | partial | K1–K18 |
+| Stay or exit "despite execution costs" | EL vs carry vs exit cost, a CVaR tail budget, de-lever sizing, a real Pendle quote | met, with K12 and K13 | — |
+| The **book** example: ten pockets of 10 %, one affected, unwinding costs 11 % | Works per position in USD. No book, no pocket weight, no loss as a share of the book; the 11 % example can't be entered or reproduced | missing | K21 |
+| "Makes that trade-off explicit" | One line: "a full exit would only pay if probabilities were k× the estimates". No breakeven probability, which is exactly the "expensive and certain vs cheap and uncertain" trade-off | partial | K21 |
+| "What it does to your book, **and how fast**" | Watches alert block by block; the exit queue and the drain window give time for vault depositors. `analyze` has one 30-day horizon and no time to impact or time to exit | partial | K22 |
+| "Turn ... into **one number**" | A verdict label plus several dollar amounts; no single headline number a manager reads first | partial | K21 |
+| Any ecosystem: Solana, EVM chains, Canton, Tempo | Ethereum mainnet only (C5). Belem's mandates include SOL | missing | C5 |
+| Oracle dependency and **feed-quality** analysis | Oracle mode inferred, verified on Etherscan, admins and aggregator changes watched, oracle vs DefiLlama price. Feed quality itself (heartbeat, deviation threshold, staleness, number of sources, single feed under several markets) is not measured | partial | K23, K7, R3 |
+| **Vaults that deploy into an external venue**, e.g. a perp exchange | Not covered. Morpho Vault V2 adapters other than Morpho markets are opaque (C4); no perp venue, no off-chain venue | missing | K24 |
+| **Protocols concentrating a large share of on-chain TVL** | Not measured. Lender concentration inside a market is (R4); the share of a chain's TVL that one protocol holds is not | missing | K25 |
+| Working prototype on real data (15 %) | Live and offline runs on real positions, recorded replays, tests | met | — |
+| Belem's context: capital only on protocols that clear a **pre-selection scorecard**; positions are fund deposits and market-neutral strategies | The priors use no scorecard (K18); `analyze` covers a borrower, not a depositor (K16); delta-neutral legs are not modelled (K24) | partial | K16, K18, K24 |
+
+### K19. Discovery stops at the issuer
+
+The brief scores discovery on "depth and correctness". `analyze` reaches the issuer and stops. The issuer's own dependencies are text in `registry.json`, not discovered:
+- USDe: hedges on CEXs, custodians, collateral;
+- sUSDS: the USDC peg module and the Sky core.
+
+Their failures are exactly the ones that broke issuers in 2025–2026 (K2). The admin surface (proxies, owners, feeds) **is** discovered automatically by `admin.py`, but only `graph` and the watches use it.
+
+- **Fix:**
+  - add the admin surface to `analyze`'s graph as layers with their own priors (K18);
+  - look through one level where it is on-chain: sUSDS → USDS → PSM → USDC, or the ERC-4626 vault behind an exchange-rate oracle;
+  - keep the off-chain part as typed registry nodes, drawn in the graph, so the depth is visible even where it is not computed.
+
+### K20. No "this component is affected now" mode
+
+The brief's worked example marks layer 3, the oracle, with "incident". Its question is conditional: a component **is** hit, what does it do to the position? `analyze` answers an unconditional question: what loss to expect over 30 days, given yearly probabilities. The per-layer "loss if it happens" comes close, but at a drawn severity and with no input from the user.
+
+- **Fix:** the scenario table already proposed in `comparison_team.md` §4.2. One call to `propagate.loss()` per named shock, plus a CLI input for an observed incident:
+  - `--shock oracle=-0.10`;
+  - `--shock issuer_depeg=0.08`;
+  - `--shock pool=-0.03`.
+
+  The output is the loss, whether the position is liquidated, and the verdict with that probability set to 1. The watches could call the same function when they raise a critical alert, which turns an alert into an impact number.
+
+### K21. No book, and no breakeven
+
+The brief's example is about a book: ten pockets of 10 %, one affected, an 11 % unwinding cost. Three things are missing to reproduce it:
+1. **A book.** A list of positions with their weights, so the loss and the exit cost read as a share of the book, and two pockets that share a layer are combined (M6).
+2. **The breakeven probability** p\* = exit cost ÷ L(s) (Team 2, `docs/scenarios-and-breakeven.md`). On the brief's numbers, an 11 % exit cost against a total loss of the pocket gives p\* = 11 %: exit if you believe the incident wipes out the pocket with more than 11 % probability over the horizon. That's the trade-off "made explicit", and it does not depend on a base rate.
+3. **One headline number.** For example "expected loss X % of the book; exit pays above p\* = Y %", above the verdict.
+
+### K22. "How fast" is not an output of `analyze`
+
+The brief asks what an incident does "and how fast". For a PT loop, speed decides everything:
+- USR fell 97 % in 17 minutes;
+- PT-reUSD's oracle moved in 9 minutes;
+- an exit through the Pendle pool takes one block, but only at the depth left in the pool.
+
+`analyze` has a 30-day horizon. The watches react in 12 seconds but give no impact number (K20).
+
+- **Fix:** report, per scenario, the time from the incident to liquidation (zero for a TWAP move, the timelock for a meta-oracle switch, never for a linear discount) next to the time to exit.
+
+### K23. Feed quality is not measured
+
+The brief names "oracle dependency and feed-quality analysis" in its scope. What exists:
+- oracle-mode inference;
+- Etherscan verification;
+- aggregator-change and admin events;
+- the oracle vs DefiLlama price, warned from 3 %.
+
+What a feed-quality analysis would add:
+- heartbeat and deviation threshold;
+- age of the last update compared with the heartbeat (the Morpho oracle itself does not check staleness);
+- the number of nodes or sources;
+- whether one feed carries several markets or positions (R3);
+- for a meta-oracle, which source is live and its timelock.
+
+Chainlink publishes most of these for each feed (`REPOSITORY_ADD.md`, priority 2).
+
+### K24. Vaults that deploy into an external venue
+
+The brief names "vaults routing capital into a perp venue". Belem runs market-neutral strategies, so its positions have a hedge leg on a perp exchange. The tool covers Morpho and Pendle only; any Vault V2 adapter other than a Morpho market adapter is opaque (C4).
+
+The same structure is inside USDe: delta-neutral, with hedges on CEXs. The model reduces it to one depeg prior.
+
+- **Fix:** start with a typed "external venue" node:
+  - the venue (on-chain perp such as Hyperliquid, or a CEX);
+  - custody;
+  - the withdrawal delay;
+  - funding-rate exposure.
+
+  Give it a prior with a basis, and a funding-rate scenario. A full model of a perp venue is a separate project.
+
+### K25. Concentration of TVL is not measured
+
+The brief names "protocols concentrating a large share of on-chain TVL". The tool measures lender concentration inside a market (R4), but not:
+- the share of Ethereum's lending TVL that Morpho holds;
+- the share of a collateral's supply that sits in one Pendle pool or one Morpho market (LlamaRisk measured PT supply on lending markets at 12.8× to 30× the AMM depth, K9);
+- the share of a vault in one market.
+
+DefiLlama's `/protocols` (already fetched) gives TVL by protocol and chain.
+
+- **Fix:** a concentration line per layer: protocol share of the chain's category TVL, and position or market share of the PT supply and of the pool depth. A high share means both a systemic node and a slow exit.
+
+## 10. What holds up
 
 The challenge also found choices that the evidence supports.
 
@@ -361,10 +489,11 @@ The challenge also found choices that the evidence supports.
 - **The "risk multiple to exit" line** partly answers Team 2's breakeven-probability argument.
 - **No cascade on blue-chip collateral** is consistent with 2025-10-10. It's the PT, with its thin pool, where the assumption fails (K9).
 
-## 10. Recommended order
+## 11. Recommended order
 
 | Order | Gaps | Why first | Effort |
 |---|---|---|---|
+| 0 | K20, K21 | The brief's own question: impact when a component **is** hit, on a book, with the trade-off made explicit (p\*). Reuses `propagate.loss()`; scores on impact (30 %) and decision (25 %) | S–M |
 | 1 | K10, K11, K12 | The largest effect on a PT loop; IRM rules and PT pricing are deterministic, no new data source | S each |
 | 2 | K17, K1, K3, K5 | Decayed hack window as a category base rate only; fix known biases in the existing priors; one data call (TVL history) | S |
 | 2b | K18 (admin powers, upgrades since audit, insurance price) | Protocol multiplier from what `admin.py` already reads and one keyless Nexus Mutual call; audits and reputation by hand later | S–M |
@@ -372,13 +501,16 @@ The challenge also found choices that the evidence supports.
 | 4 | K6 + named scenarios, K13 | Correlated stress and a tail-aware verdict; answers both teams | M |
 | 5 | K16 | Depositor loss under a scenario, and d\* fed into `analyze`; the track's use case | M |
 | 6 | K9, K14, K2, K4, K15 | Cascade loop, parameter uncertainty, off-chain priors, recalibration | M |
+| 7 | K19, K23, K25, K22 | The brief's scope items on discovery depth (30 %): admin surface and one look-through level in `analyze`, feed quality, TVL concentration, time to impact | S–M each |
+| 8 | K24, C5 | External venues and other chains: named in the brief, large, and closest to Belem's own book (market-neutral, SOL mandate) | M–L |
 
-## 11. Resources
+## 12. Resources
 
 ### Project files
 
 | File | Used for |
 |---|---|
+| `docs/hackaton_instruction/Hackathon_DeFi-Risk-Dependency-Challenge_EN_v1.pdf` | the challenge brief, scope and judging weights (§9) |
 | `riskdep/priors.py` | base rates, tiers, age factor, oracle prior |
 | `riskdep/propagate.py` | loss per shock, liquidation rule |
 | `riskdep/simulate.py` | Monte Carlo, horizon probability, tail metrics |
