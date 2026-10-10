@@ -69,7 +69,7 @@ python3 -m riskdep graph --example                                   # writes ou
 python3 -m riskdep graph --user <address> --vault <vault> --out out/graph.html
 ```
 
-Builds the graph of `ANALYSIS_MONITORING.md` §1 from live data: positions, pools (markets, vaults, adapters, Pendle pools), assets, oracles and the feeds they read, and vault admins. The output is an interactive HTML page (Cytoscape.js from cdnjs) plus the same data as JSON. `docs/graph-example.html` is a rendered example.
+Builds the graph of `ANALYSIS_MONITORING.md` §1 from live data. Actors are addresses, vaults, and the main lenders of the borrowed markets. Pools are Blue markets and Pendle pools. It also draws assets, oracles with the feeds they read, and vault admins. The output is an interactive HTML page (Cytoscape.js from cdnjs) plus the same data as JSON. `docs/graph-example.html` is a rendered example.
 
 ## analyze: Pendle PT on Morpho Blue
 

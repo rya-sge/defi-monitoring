@@ -18,12 +18,17 @@ A position is modelled as a graph. Nodes are the things that can fail; edges say
 
 ### Node types
 
-| Type | Morpho examples | Read from |
-|---|---|---|
-| **Pool** | Morpho Blue market, Vault V2, vault adapter, Pendle PT/SY pool | market id, vault address, `adapters(i)`, Pendle API |
-| **Asset** | loan token, collateral token, vault share, the yield source behind a PT | `MarketParams.loanToken` / `collateralToken`, Pendle `underlyingAsset` |
-| **Oracle** | the market's oracle, and the feeds or vaults it reads | `MarketParams.oracle`, then the oracle's own getters |
-| **Admin** | vault owner, curator, allocators, sentinels; Blue owner; oracle and token admins | `owner()`, `curator()`, `isAllocator`, `isSentinel`, role events |
+The types separate **who** holds capital, **where** the capital sits, **what** it is held in, **how** it is priced, and **who decides**:
+
+| Type | What it is | Morpho examples | Read from |
+|---|---|---|---|
+| **Actor** | whose capital is at stake: it supplies, borrows or deposits, and can move | an address with positions; a Vault V2 (with its adapters folded in); a Vault V1 (MetaMorpho) supplying a market | the user's positions, `parentVault()` of an adapter, `MORPHO()` and `withdrawQueueLength()` for a V1 vault |
+| **Pool** | where liquidity sits and is priced; it never moves on its own | Morpho Blue market, Pendle PT/SY pool | market id, Pendle API |
+| **Asset** | a token | loan token, collateral token, the yield source behind a PT; a vault's share token **only** when another protocol reuses it (as collateral, or in an oracle's conversion) | `MarketParams.loanToken` / `collateralToken`, Pendle `underlyingAsset`, an oracle's `BASE_VAULT()` |
+| **Oracle** | how a market prices its collateral | the market's oracle and the price feeds it reads | `MarketParams.oracle`, then the oracle's own getters |
+| **Admin** | who decides for an actor, without their own capital at stake | vault owner, curator, allocators, sentinels; Blue owner; oracle and token admins | `owner()`, `curator()`, `isAllocator`, `isSentinel`, role events |
+
+A vault is an **Actor** rather than a Pool because it behaves like a large lender: its allocators move its capital between markets without a timelock, and it can leave a market. Seen from a market's borrowers, a vault's withdrawal raises utilisation and the borrow rate, and stops other lenders from leaving. Its share token is a separate **Asset** node, and only when something else depends on it.
 
 ### Edges
 
@@ -31,13 +36,14 @@ An edge exists because an attribute of one node names another node:
 
 | Edge | Derived from |
 |---|---|
-| vault → adapter | `adapters(i)` |
-| adapter → Blue market | `marketIds(i)` on `MorphoMarketV1AdapterV2` |
-| market → loan asset, collateral asset, oracle, IRM | the five `MarketParams` of the market id |
-| oracle → feed / vault | the oracle's configuration (e.g. `BASE_FEED_1()` on a Chainlink-style adapter) |
-| PT → Pendle pool → yield source | Pendle market data |
-| admin → pool | the role getters and their change events (`SetCurator`, `SetIsAllocator`, …) |
-| position → pool | the user's `position(id, user)` or vault shares |
+| actor (vault) → market: *supplies*, with the amount and its share of the market | `marketIds(i)` on the vault's `MorphoMarketV1AdapterV2`, `position(id, adapter)` |
+| actor (lender) → market: *supplies* | the market's main suppliers (Morpho API), amounts from `position(id, supplier)`; an adapter is resolved to its vault with `parentVault()` |
+| actor (address) → market: *borrows from*, with debt, collateral and health factor | the user's `position(id, user)` |
+| actor (address) → vault: *deposits in* | vault shares, `balanceOf(user)` |
+| market → loan asset, collateral asset, oracle | the five `MarketParams` of the market id |
+| oracle → feed: *reads*; oracle → vault share: *converts through* | the oracle's configuration (`BASE_FEED_1()`, `BASE_VAULT()` on a Morpho `ChainlinkOracleV2`) |
+| collateral PT → Pendle pool → yield source | Pendle market data |
+| admin → vault: *owns*, *curates*, *allocates*, *can de-risk* | the role getters and their change events (`SetCurator`, `SetIsAllocator`, …) |
 
 ### State in this repository
 
@@ -46,16 +52,23 @@ An edge exists because an attribute of one node names another node:
 | Graph for one PT borrow, with typed nodes (chain, issuer, asset, amm, oracle, lending, stable, off-chain) and the source of each node | done | `riskdep/discover.py` |
 | Vault → adapters → markets → collateral / oracle / LLTV, read on-chain | done, as data structures rather than a graph object | `riskdep/vault.py` |
 | A user's positions: Blue borrows and Vault V2 deposits | done | `riskdep/positions.py`, `riskdep/borrower.py` |
+| Vaults and lenders as actors; the main suppliers of a borrower's markets (≥ 5 % of supply, up to 5 per market), vaults resolved through their adapter | done, in the `graph` command | `riskdep/graph.py` |
 | Admin nodes: owner and curator on-chain, allocators and sentinels from the Morpho API, each confirmed with `isAllocator` / `isSentinel` | done, in the `graph` command | `riskdep/graph.py` |
 | Oracle decomposed into feeds (Morpho `ChainlinkOracleV2` getters, feed `description()`) | done, in the `graph` command; custom oracles stay one node | `riskdep/graph.py` |
 | One graph shared by `analyze` and `watch` | missing: the `graph` command draws the graph, the rules still work on their own structures | — |
 
 ### Example
 
-`docs/graph-example.html` is an interactive rendering of a real graph, generated by `python3 -m riskdep graph --example` at block 26,162,313 (`docs/graph-example.json` holds the same data). It shows the demo borrower `0xdf81…2730` with its 6 Blue borrows, and Sentora RLUSD Main with its largest depositor, its adapter, its 10 markets and its five role holders: 85 nodes and 118 edges. Click a node to isolate its neighbours and read its details; edge width follows the amount carried.
+`docs/graph-example.html` is an interactive rendering of a real graph, generated by `python3 -m riskdep graph --example` at block 26,162,421 (`docs/graph-example.json` holds the same data). It has 100 nodes and 134 edges:
 
-Two dependencies are visible in it that no single-position view shows:
+- the demo borrower `0xdf81…2730` with its 6 Blue borrows, and the main lenders of each of those markets;
+- Sentora RLUSD Main with its largest depositor, its 10 markets and its five role holders.
 
+Click a node to isolate its neighbours and read its details; edge width follows the amount carried.
+
+Three dependencies are visible in it that no single-position view shows:
+
+- **One lender under a borrow.** The borrower's PT-sUSDE-26NOV2026/USDC market (3.41M USDC of debt) is funded entirely by one Vault V2, Pendle Ecosystem USDC, through its adapter (7.76M USDC, 100 % of the supply). PT-fxSAVE-29OCT2026/USDC is 89 % funded by one vault. If that vault's allocator moves the liquidity elsewhere, which needs no timelock, the market's utilisation and borrow rate jump.
 - **One feed under a whole vault.** The oracles of all 10 Sentora markets read the same `RLUSD / USD` feed. A fault in that feed misprices every market of the vault at once.
 - **One feed under two borrows.** The borrower's PT-reUSD/USDC (3.67M USDC) and PT-reUSD/USDT (1.20M USDT) markets both read the same Ojo PT feed, so one feed decides the liquidation of 4.9M of debt.
 
@@ -191,6 +204,7 @@ Gaps found while building and testing the tool, ranked by how much they limit th
 |---|---|---|---|
 | R1 | The `graph` command builds and draws the graph (with admins and oracle feeds), but `analyze` and `watch` do not use it: their rules work on their own structures, and exposure is computed per position. | medium | L |
 | R3 | Shared nodes are drawn but not measured: no alert says that one feed (for example `RLUSD / USD` under all 10 Sentora markets) carries several positions at once. | medium | S after R1 |
+| R4 | Lender concentration is drawn but not watched: `watch --user` does not alert when a market's dominant supplier (for example the vault funding 100 % of a borrowed market) deallocates. | high for a borrower | S |
 | R2 | No general propagation limits (exposure floor, depth, severity floor). | low until R1 exists | S after R1 |
 
 ### Data and infrastructure

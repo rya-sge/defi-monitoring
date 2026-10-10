@@ -1,13 +1,14 @@
 {
  "title": "Morpho dependency graph: 0xdf819874\u2026, 0xb03d620e\u2026, 0x6dc58a0f\u2026",
- "subtitle": "Ethereum mainnet, read at block 26,162,313 (2026-10-10 13:25 UTC). Positions found with the Morpho API; amounts, parameters, oracles and roles read on-chain.",
+ "subtitle": "Ethereum mainnet, read at block 26,162,421 (2026-10-10 13:47 UTC). Positions found with the Morpho API; amounts, parameters, oracles and roles read on-chain.",
  "nodes": [
   {
    "id": "user:0xdf81987465681d0515058fe0a47a3bd174012730",
-   "kind": "Position",
+   "kind": "Actor",
    "label": "Address 0xdf81\u20262730",
    "details": {
     "address": "0xdf81987465681d0515058fe0a47a3bd174012730",
+    "actor_type": "address with positions",
     "source": "Morpho API userByAddress (positions), Morpho Blue position() on-chain (amounts)"
    }
   },
@@ -63,6 +64,39 @@
    }
   },
   {
+   "id": "0xc207d3f66537d7f66456808379a0e560cf20da36",
+   "kind": "Actor",
+   "label": "Vault RockawayX Confidential RWA USDC",
+   "details": {
+    "address": "0xc207d3f66537d7f66456808379a0e560cf20da36",
+    "actor_type": "Vault V2 (capital provider)",
+    "adapter": "0xedee08b242d4cd94127cec8a4c334cd2d0ca3f65",
+    "source": "market's top suppliers from the Morpho API; amounts and parentVault() on-chain"
+   }
+  },
+  {
+   "id": "0x8ac91877b93330f52b2979a31a4879506021475c",
+   "kind": "Actor",
+   "label": "Vault Huma USDC Main",
+   "details": {
+    "address": "0x8ac91877b93330f52b2979a31a4879506021475c",
+    "actor_type": "Vault V2 (capital provider)",
+    "adapter": "0x30009fd0ec97cb7088812be8281795a4fd8b74e3",
+    "source": "market's top suppliers from the Morpho API; amounts and parentVault() on-chain"
+   }
+  },
+  {
+   "id": "0xd95fe7adf5075fad9d6bf853e0f9fe53369e8d96",
+   "kind": "Actor",
+   "label": "Vault Galaxy USDC Enhanced",
+   "details": {
+    "address": "0xd95fe7adf5075fad9d6bf853e0f9fe53369e8d96",
+    "actor_type": "Vault V2 (capital provider)",
+    "adapter": "0x2972f23f56c31707eac4263765998fde9f51ab43",
+    "source": "market's top suppliers from the Morpho API; amounts and parentVault() on-chain"
+   }
+  },
+  {
    "id": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
    "kind": "Pool",
    "label": "Blue PT-reUSD-10DEC2026/USDT",
@@ -99,7 +133,7 @@
    "details": {
     "address": "0x217d6ddcdb95112c51657f6270e8c079cfdb51f0",
     "shape": "Morpho ChainlinkOracleV2",
-    "price_raw": "981718892885071246000000000000000000",
+    "price_raw": "981718011054805332000000000000000000",
     "source": "price() and getters read on-chain"
    }
   },
@@ -133,6 +167,48 @@
    }
   },
   {
+   "id": "0xa0804346780b4c2e3be118ac957d1db82f9d7484",
+   "kind": "Actor",
+   "label": "Vault Smokehouse USDT",
+   "details": {
+    "address": "0xa0804346780b4c2e3be118ac957d1db82f9d7484",
+    "actor_type": "Vault V1 / MetaMorpho (capital provider)",
+    "source": "market's top suppliers from the Morpho API; amounts on-chain; MORPHO() and withdrawQueueLength() identify a Vault V1"
+   }
+  },
+  {
+   "id": "0x500ae64100d7dbdb640531085c2f5d40cdc8930d",
+   "kind": "Actor",
+   "label": "Vault Wintermute USDT Select",
+   "details": {
+    "address": "0x500ae64100d7dbdb640531085c2f5d40cdc8930d",
+    "actor_type": "Vault V2 (capital provider)",
+    "adapter": "0xbc27ac3864ebc1d469a23521c224a14182f381cb",
+    "source": "market's top suppliers from the Morpho API; amounts and parentVault() on-chain"
+   }
+  },
+  {
+   "id": "0xb48c056c5608ba2ee4cd94af2bf4b1f25295bd7e",
+   "kind": "Actor",
+   "label": "Vault Flowdesk Confidential High Yield USDT",
+   "details": {
+    "address": "0xb48c056c5608ba2ee4cd94af2bf4b1f25295bd7e",
+    "actor_type": "Vault V2 (capital provider)",
+    "adapter": "0x31313494de579734fde0b9b6ce7006a92b093c3c",
+    "source": "market's top suppliers from the Morpho API; amounts and parentVault() on-chain"
+   }
+  },
+  {
+   "id": "0xbeef0c18715acddc14a3123a608f491319f1c28c",
+   "kind": "Actor",
+   "label": "Vault Safe x Smokehouse USDT",
+   "details": {
+    "address": "0xbeef0c18715acddc14a3123a608f491319f1c28c",
+    "actor_type": "Vault V1 / MetaMorpho (capital provider)",
+    "source": "market's top suppliers from the Morpho API; amounts on-chain; MORPHO() and withdrawQueueLength() identify a Vault V1"
+   }
+  },
+  {
    "id": "0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b",
    "kind": "Pool",
    "label": "Blue sUSDS/USDT",
@@ -150,7 +226,7 @@
    "details": {
     "address": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
     "issuer": "Sky",
-    "source": "oracle getter, description() on-chain",
+    "source": "oracle getter, symbol() on-chain",
     "role_in_oracle": "BASE_VAULT"
    }
   },
@@ -161,7 +237,7 @@
    "details": {
     "address": "0x0c426d174fc88b7a25d59945ab2f7274bf7b4c79",
     "shape": "Morpho ChainlinkOracleV2",
-    "price_raw": "1113051964191829857329422",
+    "price_raw": "1113053670171759089627203",
     "source": "price() and getters read on-chain"
    }
   },
@@ -183,6 +259,38 @@
     "address": "0x3e7d1eab13ad0104d2750b8863b489d65364e32d",
     "role_in_oracle": "QUOTE_FEED_1",
     "source": "oracle getter, description() on-chain"
+   }
+  },
+  {
+   "id": "0xb0c424116172b55cbb6dd3136f5989f7959e5b91",
+   "kind": "Actor",
+   "label": "Vault Spark Blue Chip USDT Vault",
+   "details": {
+    "address": "0xb0c424116172b55cbb6dd3136f5989f7959e5b91",
+    "actor_type": "Vault V2 (capital provider)",
+    "adapter": "0xef4cb7e87f212f128f0b24cf35861e52b3c78a6a",
+    "source": "market's top suppliers from the Morpho API; amounts and parentVault() on-chain"
+   }
+  },
+  {
+   "id": "0xbeef047a543e45807105e51a8bbefcc5950fcfba",
+   "kind": "Actor",
+   "label": "Vault Steakhouse USDT",
+   "details": {
+    "address": "0xbeef047a543e45807105e51a8bbefcc5950fcfba",
+    "actor_type": "Vault V1 / MetaMorpho (capital provider)",
+    "source": "market's top suppliers from the Morpho API; amounts on-chain; MORPHO() and withdrawQueueLength() identify a Vault V1"
+   }
+  },
+  {
+   "id": "0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9",
+   "kind": "Actor",
+   "label": "Vault Steakhouse Prime USDT",
+   "details": {
+    "address": "0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9",
+    "actor_type": "Vault V2 (capital provider)",
+    "adapter": "0x1c87feac33e2ad0a81a250fa63db4b1c2687bb05",
+    "source": "market's top suppliers from the Morpho API; amounts and parentVault() on-chain"
    }
   },
   {
@@ -213,7 +321,7 @@
     "address": "0xf8b29e7e9c00ce531434775f7923cc9fbca01b08",
     "shape": "custom (no ChainlinkOracleV2 getters)",
     "implementation": "0x9b4655239e91dc9e1f7599bb88fba41b4542de5b",
-    "price_raw": "992365820015220701000000",
+    "price_raw": "992368285768645358000000",
     "source": "price() and getters read on-chain"
    }
   },
@@ -270,6 +378,17 @@
    }
   },
   {
+   "id": "0x55c1b6e461a6334b567baf0feb5d728715446f05",
+   "kind": "Actor",
+   "label": "Vault Pendle Ecosystem USDC",
+   "details": {
+    "address": "0x55c1b6e461a6334b567baf0feb5d728715446f05",
+    "actor_type": "Vault V2 (capital provider)",
+    "adapter": "0xa2f362079dbc570a6df5bd04ad91002d17c0db9a",
+    "source": "market's top suppliers from the Morpho API; amounts and parentVault() on-chain"
+   }
+  },
+  {
    "id": "0xae992849c5f544a32dfdfcc74c0695b73b8732f449727827af6ce3768e968382",
    "kind": "Pool",
    "label": "Blue PT-fxSAVE-29OCT2026/USDC",
@@ -296,7 +415,7 @@
    "details": {
     "address": "0x5911530e5f62fff0a73e91ccd797d717e6d49fa9",
     "shape": "Morpho ChainlinkOracleV2",
-    "price_raw": "992421399353120244000000",
+    "price_raw": "992427563736681888000000",
     "source": "price() and getters read on-chain"
    }
   },
@@ -330,6 +449,17 @@
    }
   },
   {
+   "id": "0x2ca22cb25558fa2018ecb1ce4ed8af92ee7ea423",
+   "kind": "Actor",
+   "label": "Vault RockawayX f(x) Protocol Ecosystem USDC",
+   "details": {
+    "address": "0x2ca22cb25558fa2018ecb1ce4ed8af92ee7ea423",
+    "actor_type": "Vault V2 (capital provider)",
+    "adapter": "0x516ecd770f9b6420e77cedd80ea7052ae65bf835",
+    "source": "market's top suppliers from the Morpho API; amounts and parentVault() on-chain"
+   }
+  },
+  {
    "id": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
    "kind": "Pool",
    "label": "Blue PT-reUSD-10DEC2026/USDC",
@@ -341,14 +471,59 @@
    }
   },
   {
+   "id": "0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757",
+   "kind": "Actor",
+   "label": "Vault Steakhouse High Yield USDC",
+   "details": {
+    "address": "0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757",
+    "actor_type": "Vault V2 (capital provider)",
+    "adapter": "0xbfe734baab130048e20a64e800c4c2ec25756284",
+    "source": "market's top suppliers from the Morpho API; amounts and parentVault() on-chain"
+   }
+  },
+  {
+   "id": "0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd",
+   "kind": "Actor",
+   "label": "Vault Wintermute USDC Select",
+   "details": {
+    "address": "0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd",
+    "actor_type": "Vault V2 (capital provider)",
+    "adapter": "0x3b9e060a2b05588126fda01b95e9485687fc91d7",
+    "source": "market's top suppliers from the Morpho API; amounts and parentVault() on-chain"
+   }
+  },
+  {
+   "id": "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
+   "kind": "Actor",
+   "label": "Vault RockawayX USDC Yield",
+   "details": {
+    "address": "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
+    "actor_type": "Vault V2 (capital provider)",
+    "adapter": "0xce0b17e6e94c9068b760557ba11a7bb1943f5674",
+    "source": "market's top suppliers from the Morpho API; amounts and parentVault() on-chain"
+   }
+  },
+  {
+   "id": "0xd33847382f821094d9079256c25ca1794ab408c6",
+   "kind": "Actor",
+   "label": "Lender 0xd338\u202608c6",
+   "details": {
+    "address": "0xd33847382f821094d9079256c25ca1794ab408c6",
+    "actor_type": "lender",
+    "source": "market's top suppliers from the Morpho API; amounts on-chain"
+   }
+  },
+  {
    "id": "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
-   "kind": "Pool",
-   "label": "Sentora RLUSD Main",
+   "kind": "Actor",
+   "label": "Vault Sentora RLUSD Main",
    "details": {
     "address": "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
-    "total_assets": "458,113,863 RLUSD",
-    "idle": "39,248,385 RLUSD",
-    "plain_withdrawal_capacity": "39,248,385 RLUSD",
+    "actor_type": "Vault V2 (capital provider)",
+    "total_assets": "458,103,119 RLUSD",
+    "idle": "39,237,010 RLUSD",
+    "plain_withdrawal_capacity": "39,237,010 RLUSD",
+    "adapters": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff (market)",
     "source": "Vault V2 getters on-chain"
    }
   },
@@ -359,16 +534,6 @@
    "details": {
     "address": "0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
     "source": "ERC-20 symbol() on-chain"
-   }
-  },
-  {
-   "id": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
-   "kind": "Pool",
-   "label": "Adapter 0x3c6e\u2026dfff",
-   "details": {
-    "address": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
-    "adapter_type": "market",
-    "source": "adapters(i) on-chain"
    }
   },
   {
@@ -532,7 +697,7 @@
    "label": "syrupUSDC",
    "details": {
     "address": "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
-    "source": "oracle getter, description() on-chain",
+    "source": "oracle getter, symbol() on-chain",
     "role_in_oracle": "BASE_VAULT"
    }
   },
@@ -543,7 +708,7 @@
    "details": {
     "address": "0xf766f4f1bcb0cbbf4eef5e26ff7c7f66a713c1b5",
     "shape": "Morpho ChainlinkOracleV2",
-    "price_raw": "1187146607353399850410127077204301505366881928597",
+    "price_raw": "1187167084371588035045585697114663477403497123063",
     "source": "price() and getters read on-chain"
    }
   },
@@ -584,7 +749,7 @@
    "details": {
     "address": "0xbcc3d9834b84b32cf540dbe948ded4b47bec5ddb",
     "shape": "Morpho ChainlinkOracleV2",
-    "price_raw": "827614881977296499477011505746873568781486807290239",
+    "price_raw": "827845797392457365937949365113967492715160266474137",
     "source": "price() and getters read on-chain"
    }
   },
@@ -625,7 +790,7 @@
    "details": {
     "address": "0xf58725eb213161e9054c97f970dc80b2d0327e8d",
     "shape": "Morpho ChainlinkOracleV2",
-    "price_raw": "826232765124394414322884896532276289921621724322064",
+    "price_raw": "826463294910811962136832989674227167002325948829125",
     "source": "price() and getters read on-chain"
    }
   },
@@ -758,7 +923,7 @@
    "details": {
     "address": "0x5ac03061500e0c97862a466a38a7e87fac4ac39d",
     "shape": "Morpho ChainlinkOracleV2",
-    "price_raw": "1403825755833371665823351886258502312949115119467",
+    "price_raw": "1402623442284269746065586557095743893634340044519",
     "source": "price() and getters read on-chain"
    }
   },
@@ -851,10 +1016,11 @@
   },
   {
    "id": "user:0xb03d620e49b6a21ea9d02142831c3f61c2fcbabc",
-   "kind": "Position",
+   "kind": "Actor",
    "label": "Address 0xb03d\u2026babc",
    "details": {
     "address": "0xb03d620e49b6a21ea9d02142831c3f61c2fcbabc",
+    "actor_type": "address with positions",
     "source": "Morpho API userByAddress (positions), Morpho Blue position() on-chain (amounts)"
    }
   }
@@ -896,12 +1062,48 @@
    "source": "user:0xdf81987465681d0515058fe0a47a3bd174012730",
    "target": "0x002278ea242ec722813b4fe3c8eeaa07dbc331c731cc0b4248a1bf0771f933ea",
    "rel": "borrows from",
-   "amount": 1100624.770625,
+   "amount": 1100673.867016,
    "unit": "USDC",
    "details": {
     "collateral": "1,230,761.81 PST",
-    "health_factor": 1.0946,
+    "health_factor": 1.0945,
     "liquidation_at": "-8.64% oracle fall"
+   }
+  },
+  {
+   "source": "0xc207d3f66537d7f66456808379a0e560cf20da36",
+   "target": "0x002278ea242ec722813b4fe3c8eeaa07dbc331c731cc0b4248a1bf0771f933ea",
+   "rel": "supplies",
+   "amount": 21847920.010051,
+   "unit": "USDC",
+   "details": {
+    "share_of_market": "57.6%",
+    "through_adapter": "0xedee08b242d4cd94127cec8a4c334cd2d0ca3f65",
+    "note": "its withdrawal raises utilisation and the borrow rate of the market"
+   }
+  },
+  {
+   "source": "0x8ac91877b93330f52b2979a31a4879506021475c",
+   "target": "0x002278ea242ec722813b4fe3c8eeaa07dbc331c731cc0b4248a1bf0771f933ea",
+   "rel": "supplies",
+   "amount": 12832792.140854,
+   "unit": "USDC",
+   "details": {
+    "share_of_market": "33.8%",
+    "through_adapter": "0x30009fd0ec97cb7088812be8281795a4fd8b74e3",
+    "note": "its withdrawal raises utilisation and the borrow rate of the market"
+   }
+  },
+  {
+   "source": "0xd95fe7adf5075fad9d6bf853e0f9fe53369e8d96",
+   "target": "0x002278ea242ec722813b4fe3c8eeaa07dbc331c731cc0b4248a1bf0771f933ea",
+   "rel": "supplies",
+   "amount": 3183841.786452,
+   "unit": "USDC",
+   "details": {
+    "share_of_market": "8.4%",
+    "through_adapter": "0x2972f23f56c31707eac4263765998fde9f51ab43",
+    "note": "its withdrawal raises utilisation and the borrow rate of the market"
    }
   },
   {
@@ -965,6 +1167,52 @@
    }
   },
   {
+   "source": "0xa0804346780b4c2e3be118ac957d1db82f9d7484",
+   "target": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
+   "rel": "supplies",
+   "amount": 4327353.813425,
+   "unit": "USDT",
+   "details": {
+    "share_of_market": "43.5%",
+    "note": "its withdrawal raises utilisation and the borrow rate of the market"
+   }
+  },
+  {
+   "source": "0x500ae64100d7dbdb640531085c2f5d40cdc8930d",
+   "target": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
+   "rel": "supplies",
+   "amount": 1905619.310453,
+   "unit": "USDT",
+   "details": {
+    "share_of_market": "19.2%",
+    "through_adapter": "0xbc27ac3864ebc1d469a23521c224a14182f381cb",
+    "note": "its withdrawal raises utilisation and the borrow rate of the market"
+   }
+  },
+  {
+   "source": "0xb48c056c5608ba2ee4cd94af2bf4b1f25295bd7e",
+   "target": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
+   "rel": "supplies",
+   "amount": 1666583.958025,
+   "unit": "USDT",
+   "details": {
+    "share_of_market": "16.8%",
+    "through_adapter": "0x31313494de579734fde0b9b6ce7006a92b093c3c",
+    "note": "its withdrawal raises utilisation and the borrow rate of the market"
+   }
+  },
+  {
+   "source": "0xbeef0c18715acddc14a3123a608f491319f1c28c",
+   "target": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
+   "rel": "supplies",
+   "amount": 1000980.168824,
+   "unit": "USDT",
+   "details": {
+    "share_of_market": "10.1%",
+    "note": "its withdrawal raises utilisation and the borrow rate of the market"
+   }
+  },
+  {
    "source": "0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b",
    "target": "0xdac17f958d2ee523a2206206994597c13d831ec7",
    "rel": "lends",
@@ -1016,12 +1264,47 @@
    "source": "user:0xdf81987465681d0515058fe0a47a3bd174012730",
    "target": "0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b",
    "rel": "borrows from",
-   "amount": 1159927.11892,
+   "amount": 1159949.341637,
    "unit": "USDT",
    "details": {
     "collateral": "1,162,712.11 sUSDS",
     "health_factor": 1.0767,
     "liquidation_at": "-7.12% oracle fall"
+   }
+  },
+  {
+   "source": "0xb0c424116172b55cbb6dd3136f5989f7959e5b91",
+   "target": "0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b",
+   "rel": "supplies",
+   "amount": 6186407.314511,
+   "unit": "USDT",
+   "details": {
+    "share_of_market": "45.5%",
+    "through_adapter": "0xef4cb7e87f212f128f0b24cf35861e52b3c78a6a",
+    "note": "its withdrawal raises utilisation and the borrow rate of the market"
+   }
+  },
+  {
+   "source": "0xbeef047a543e45807105e51a8bbefcc5950fcfba",
+   "target": "0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b",
+   "rel": "supplies",
+   "amount": 3251258.61034,
+   "unit": "USDT",
+   "details": {
+    "share_of_market": "23.9%",
+    "note": "its withdrawal raises utilisation and the borrow rate of the market"
+   }
+  },
+  {
+   "source": "0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9",
+   "target": "0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b",
+   "rel": "supplies",
+   "amount": 2974059.877077,
+   "unit": "USDT",
+   "details": {
+    "share_of_market": "21.9%",
+    "through_adapter": "0x1c87feac33e2ad0a81a250fa63db4b1c2687bb05",
+    "note": "its withdrawal raises utilisation and the borrow rate of the market"
    }
   },
   {
@@ -1109,6 +1392,18 @@
    }
   },
   {
+   "source": "0x55c1b6e461a6334b567baf0feb5d728715446f05",
+   "target": "0x5613b170ded221c588b6e9637b910f49e5508680ceede207f44aa72e5c46cb05",
+   "rel": "supplies",
+   "amount": 7757168.686648,
+   "unit": "USDC",
+   "details": {
+    "share_of_market": "100.0%",
+    "through_adapter": "0xa2f362079dbc570a6df5bd04ad91002d17c0db9a",
+    "note": "its withdrawal raises utilisation and the borrow rate of the market"
+   }
+  },
+  {
    "source": "0xae992849c5f544a32dfdfcc74c0695b73b8732f449727827af6ce3768e968382",
    "target": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
    "rel": "lends",
@@ -1165,7 +1460,19 @@
    "details": {
     "collateral": "734,250.79 PT-fxSAVE-29OCT2026",
     "health_factor": 1.1083,
-    "liquidation_at": "-9.77% oracle fall"
+    "liquidation_at": "-9.78% oracle fall"
+   }
+  },
+  {
+   "source": "0x2ca22cb25558fa2018ecb1ce4ed8af92ee7ea423",
+   "target": "0xae992849c5f544a32dfdfcc74c0695b73b8732f449727827af6ce3768e968382",
+   "rel": "supplies",
+   "amount": 1016883.513582,
+   "unit": "USDC",
+   "details": {
+    "share_of_market": "89.2%",
+    "through_adapter": "0x516ecd770f9b6420e77cedd80ea7052ae65bf835",
+    "note": "its withdrawal raises utilisation and the borrow rate of the market"
    }
   },
   {
@@ -1196,7 +1503,7 @@
    "source": "user:0xdf81987465681d0515058fe0a47a3bd174012730",
    "target": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
    "rel": "borrows from",
-   "amount": 3672095.521262,
+   "amount": 3672109.474768,
    "unit": "USDC",
    "details": {
     "collateral": "4,300,638.38 PT-reUSD-10DEC2026",
@@ -1205,19 +1512,70 @@
    }
   },
   {
+   "source": "0x55c1b6e461a6334b567baf0feb5d728715446f05",
+   "target": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+   "rel": "supplies",
+   "amount": 39491369.982083,
+   "unit": "USDC",
+   "details": {
+    "share_of_market": "33.2%",
+    "through_adapter": "0xa2f362079dbc570a6df5bd04ad91002d17c0db9a",
+    "note": "its withdrawal raises utilisation and the borrow rate of the market"
+   }
+  },
+  {
+   "source": "0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757",
+   "target": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+   "rel": "supplies",
+   "amount": 10000210.657043,
+   "unit": "USDC",
+   "details": {
+    "share_of_market": "8.4%",
+    "through_adapter": "0xbfe734baab130048e20a64e800c4c2ec25756284",
+    "note": "its withdrawal raises utilisation and the borrow rate of the market"
+   }
+  },
+  {
+   "source": "0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd",
+   "target": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+   "rel": "supplies",
+   "amount": 9325409.292841,
+   "unit": "USDC",
+   "details": {
+    "share_of_market": "7.8%",
+    "through_adapter": "0x3b9e060a2b05588126fda01b95e9485687fc91d7",
+    "note": "its withdrawal raises utilisation and the borrow rate of the market"
+   }
+  },
+  {
+   "source": "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
+   "target": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+   "rel": "supplies",
+   "amount": 9300659.036916,
+   "unit": "USDC",
+   "details": {
+    "share_of_market": "7.8%",
+    "through_adapter": "0xce0b17e6e94c9068b760557ba11a7bb1943f5674",
+    "note": "its withdrawal raises utilisation and the borrow rate of the market"
+   }
+  },
+  {
+   "source": "0xd33847382f821094d9079256c25ca1794ab408c6",
+   "target": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+   "rel": "supplies",
+   "amount": 9048879.218606,
+   "unit": "USDC",
+   "details": {
+    "share_of_market": "7.6%",
+    "note": "its withdrawal raises utilisation and the borrow rate of the market"
+   }
+  },
+  {
    "source": "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
    "target": "0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
    "rel": "denominated in",
    "amount": null,
    "unit": null,
-   "details": {}
-  },
-  {
-   "source": "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
-   "target": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
-   "rel": "allocates through",
-   "amount": 418865477.6837879,
-   "unit": "RLUSD",
    "details": {}
   },
   {
@@ -1261,13 +1619,15 @@
    "details": {}
   },
   {
-   "source": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
+   "source": "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
    "target": "0xffd010618ed3cb39bb2c5de0e3e58d3d2ec9f52187a180f29723c31756a939bc",
    "rel": "supplies",
-   "amount": 13067287.8001118,
+   "amount": 13067315.94076915,
    "unit": "RLUSD",
    "details": {
     "share_of_vault": "2.9%",
+    "share_of_market": "100.0%",
+    "through_adapter": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
     "utilization": "88.6%"
    }
   },
@@ -1320,13 +1680,15 @@
    "details": {}
   },
   {
-   "source": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
+   "source": "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
    "target": "0xea4bfb18df0ee6bffb7b3f0270899a8adb92ab6b684709634c8276128813cfd4",
    "rel": "supplies",
    "amount": 105547763.83366641,
    "unit": "RLUSD",
    "details": {
     "share_of_vault": "23.0%",
+    "share_of_market": "100.0%",
+    "through_adapter": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
     "utilization": "84.3%"
    }
   },
@@ -1379,13 +1741,15 @@
    "details": {}
   },
   {
-   "source": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
+   "source": "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
    "target": "0x88abdf8693e663144c3544b9442e9b04520016d6ebc57aa76424c00ab1683c9d",
    "rel": "supplies",
    "amount": 1383162.3185437587,
    "unit": "RLUSD",
    "details": {
     "share_of_vault": "0.3%",
+    "share_of_market": "100.0%",
+    "through_adapter": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
     "utilization": "91.5%"
    }
   },
@@ -1438,13 +1802,15 @@
    "details": {}
   },
   {
-   "source": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
+   "source": "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
    "target": "0xc0ae375fd761ff19b3f04de5534c0f1ec110f80e1c2ede27c42c1c43c3040394",
    "rel": "supplies",
    "amount": 4745216.411795818,
    "unit": "RLUSD",
    "details": {
     "share_of_vault": "1.0%",
+    "share_of_market": "100.0%",
+    "through_adapter": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
     "utilization": "88.4%"
    }
   },
@@ -1489,13 +1855,15 @@
    "details": {}
   },
   {
-   "source": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
+   "source": "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
    "target": "0x15bb2a6af0c909eed19fb1f2ceeead34ecbdcba626de752c6b09389ee14eec32",
    "rel": "supplies",
    "amount": 235131418.5598771,
    "unit": "RLUSD",
    "details": {
     "share_of_vault": "51.3%",
+    "share_of_market": "100.0%",
+    "through_adapter": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
     "utilization": "90.5%"
    }
   },
@@ -1548,13 +1916,15 @@
    "details": {}
   },
   {
-   "source": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
+   "source": "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
    "target": "0xa128dddc761075df9a9a60689f3a41a989b245aad506352c509c0c3a76a9ec6b",
    "rel": "supplies",
    "amount": 0.000409481689287843,
    "unit": "RLUSD",
    "details": {
     "share_of_vault": "0.0%",
+    "share_of_market": "0.0%",
+    "through_adapter": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
     "utilization": "72.3%"
    }
   },
@@ -1623,13 +1993,15 @@
    "details": {}
   },
   {
-   "source": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
+   "source": "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
    "target": "0x1749e02006bc6bd6a86af52d231511f6911d5e42318e028e51a28dfabc68dd47",
    "rel": "supplies",
    "amount": 1e-18,
    "unit": "RLUSD",
    "details": {
     "share_of_vault": "0.0%",
+    "share_of_market": "0.0%",
+    "through_adapter": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
     "utilization": "57.9%"
    }
   },
@@ -1674,13 +2046,15 @@
    "details": {}
   },
   {
-   "source": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
+   "source": "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
    "target": "0xc3b37a18d5b15f8e5b78bcdc014ffb3f22933bde4e5f6a36dedf36db87e68585",
    "rel": "supplies",
    "amount": 1e-18,
    "unit": "RLUSD",
    "details": {
     "share_of_vault": "0.0%",
+    "share_of_market": "0.0%",
+    "through_adapter": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
     "utilization": "80.1%"
    }
   },
@@ -1725,13 +2099,15 @@
    "details": {}
   },
   {
-   "source": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
+   "source": "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
    "target": "0x4fa31e3f8ba345227d44e1cf48559eea53a90dd5311dc006984c060f2f311d96",
    "rel": "supplies",
    "amount": 8949101.753285129,
    "unit": "RLUSD",
    "details": {
     "share_of_vault": "2.0%",
+    "share_of_market": "100.0%",
+    "through_adapter": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
     "utilization": "89.2%"
    }
   },
@@ -1776,13 +2152,15 @@
    "details": {}
   },
   {
-   "source": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
+   "source": "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
    "target": "0xd9d2fc090bdbab1804ea960dd6669b62357787e5816f575f14ca4e6d999614bf",
    "rel": "supplies",
    "amount": 50017068.06553976,
    "unit": "RLUSD",
    "details": {
     "share_of_vault": "10.9%",
+    "share_of_market": "100.0%",
+    "through_adapter": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
     "utilization": "91.4%"
    }
   },
@@ -1854,7 +2232,7 @@
    "source": "user:0xb03d620e49b6a21ea9d02142831c3f61c2fcbabc",
    "target": "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
    "rel": "deposits in",
-   "amount": 149431057.53156388,
+   "amount": 149431226.2156641,
    "unit": "RLUSD",
    "details": {}
   }

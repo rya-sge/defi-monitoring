@@ -1,8 +1,13 @@
 """Dependency graph of an address's Morpho positions and of vaults, as JSON and as an interactive HTML page.
 
-Node types follow ANALYSIS_MONITORING.md §1 (Pool, Asset, Oracle, Admin), plus Position (the roots)
-and External (off-chain dependencies of a yield source, from registry.json). Every edge comes from an
-on-chain attribute or a role getter, with the amount that flows along it where one exists.
+Node types follow ANALYSIS_MONITORING.md §1:
+  Actor     whose capital is at stake: an address with positions, or a Vault V2 (adapters folded in)
+  Pool      where liquidity sits and is priced: a Blue market, a Pendle pool
+  Asset     a token; a vault's share token only where another protocol reuses it (an oracle conversion)
+  Oracle    a market oracle and the feeds it reads
+  Admin     who decides for a vault: owner, curator, allocators, sentinels
+  External  off-chain dependencies of a yield source (registry.json)
+Every edge comes from an on-chain attribute or a role getter, with the amount it carries where one exists.
 """
 
 from __future__ import annotations
@@ -88,10 +93,15 @@ def _oracle(g: Graph, f, oracle: str, block) -> str:
                 label = decode(["string"], bytes.fromhex(desc[2:]))[0]
             except Exception:
                 pass
-        kind = "Pool" if "VAULT" in name else "Oracle"
-        fid = g.node(addr, kind, label if kind == "Oracle" else f"{_symbol(f, addr, block)} (vault)",
-                     address=addr, role_in_oracle=name, source="oracle getter, description() on-chain")
-        g.edge(oracle, fid, "reads" if kind == "Oracle" else "converts through")
+        if "VAULT" in name:
+            # a vault share whose exchange rate the oracle applies: an asset reused by the oracle, not an actor
+            fid = g.node(addr, "Asset", f"{_symbol(f, addr, block)} (vault share)", address=addr,
+                         role_in_oracle=name, source="oracle getter, symbol() on-chain")
+            g.edge(oracle, fid, "converts through")
+        else:
+            fid = g.node(addr, "Oracle", label, address=addr, role_in_oracle=name,
+                         source="oracle getter, description() on-chain")
+            g.edge(oracle, fid, "reads")
     return oracle
 
 
@@ -121,13 +131,68 @@ def _market(g: Graph, f, m: B.BorrowMarket, block, quotes_pt: bool = True) -> st
     return mid
 
 
+SUPPLIER_MIN_SHARE = 0.05     # draw suppliers holding at least 5 % of a market's supply
+SUPPLIER_MAX = 5
+
+
+def _name(f: S.Fetcher, addr: str, block) -> str | None:
+    raw = S.rpc_batch(f, [_call(addr, "name()")], block)[0]
+    try:
+        return decode(["string"], bytes.fromhex(raw[2:]))[0] if raw else None
+    except Exception:
+        return None
+
+
+def _suppliers(g: Graph, f: S.Fetcher, m: B.BorrowMarket, block) -> None:
+    """The main lenders of a market, as actors: a Vault V2 supplies through its adapter (resolved with
+    parentVault()), anything else is drawn as the address itself, named when it answers name()."""
+    try:
+        items = S.morpho(f, """query($id:String!){ marketPositions(first:%d, where:{marketUniqueKey_in:[$id], chainId_in:[1]},
+              orderBy: SupplyShares, orderDirection: Desc){ items{ user{ address } } } }""" % SUPPLIER_MAX,
+                         {"id": m.id})["marketPositions"]["items"]
+    except (S.SourceError, S.CacheMiss, KeyError, TypeError):
+        return
+    addrs = [i["user"]["address"].lower() for i in items]
+    if not addrs:
+        return
+    mid = bytes.fromhex(m.id[2:])
+    res = S.rpc_batch(f, [_call(MORPHO_BLUE, "market(bytes32)", ["bytes32"], [mid])]
+                      + [_call(MORPHO_BLUE, "position(bytes32,address)", ["bytes32", "address"], [mid, a]) for a in addrs]
+                      + [_call(a, "parentVault()") for a in addrs], block)
+    mk = decode(["uint128"] * 6, bytes.fromhex(res[0][2:]))
+    tsa, tss = mk[0], mk[1]
+    for i, a in enumerate(addrs):
+        pos, parent = res[1 + i], res[1 + len(addrs) + i]
+        shares = decode(["uint256", "uint128", "uint128"], bytes.fromhex(pos[2:]))[0] if pos else 0
+        assets = shares * (tsa + 1) // (tss + 10 ** 6)
+        share = assets / tsa if tsa else 0
+        if share < SUPPLIER_MIN_SHARE:
+            continue
+        if parent and int(parent, 16):
+            vault = ("0x" + parent[-40:]).lower()
+            aid = g.node(vault, "Actor", f"Vault {_name(f, vault, block) or _short(vault)}", address=vault,
+                         actor_type="Vault V2 (capital provider)", adapter=a,
+                         source="market's top suppliers from the Morpho API; amounts and parentVault() on-chain")
+        else:
+            nm = _name(f, a, block)
+            morpho, wq = S.rpc_batch(f, [_call(a, "MORPHO()"), _call(a, "withdrawQueueLength()")], block)
+            is_v1 = bool(morpho and ("0x" + morpho[-40:]).lower() == MORPHO_BLUE and wq)
+            aid = g.node(a, "Actor", f"Vault {nm}" if is_v1 and nm else (nm or f"Lender {_short(a)}"), address=a,
+                         actor_type="Vault V1 / MetaMorpho (capital provider)" if is_v1 else "lender",
+                         source="market's top suppliers from the Morpho API; amounts on-chain"
+                                + ("; MORPHO() and withdrawQueueLength() identify a Vault V1" if is_v1 else ""))
+        g.edge(aid, m.id, "supplies", assets / 10 ** m.loan_decimals, m.loan_symbol, share_of_market=f"{share:.1%}",
+               through_adapter=a if parent and int(parent, 16) else None,
+               note="its withdrawal raises utilisation and the borrow rate of the market")
+
+
 def build(f: S.Fetcher, block: int, user: str | None = None, vaults: list[str] | None = None) -> Graph:
     g = Graph()
     vaults = [v.lower() for v in (vaults or [])]
     if user:
         user = user.lower()
         up = discover_user(f, user)
-        pos = g.node(f"user:{user}", "Position", f"Address {_short(user)}", address=user,
+        pos = g.node(f"user:{user}", "Actor", f"Address {_short(user)}", address=user, actor_type="address with positions",
                      source="Morpho API userByAddress (positions), Morpho Blue position() on-chain (amounts)")
         if up.borrows:
             markets = B.discover_markets(f, up.borrows, block)
@@ -140,30 +205,31 @@ def build(f: S.Fetcher, block: int, user: str | None = None, vaults: list[str] |
                        collateral=f"{st.collateral / 10 ** m.collateral_decimals:,.2f} {m.collateral_symbol}",
                        health_factor=None if hf is None else round(hf, 4),
                        liquidation_at=None if hf in (None, math.inf) else f"-{1 - 1 / hf:.2%} oracle fall")
+                _suppliers(g, f, m, block)
         vaults += [v for v in up.vaults if v not in vaults]
     for va in vaults:
         view = discover_vault(f, va, block)
         st = read_state(f, view, block, user if user else None)
         unit = 10 ** view.decimals
-        vid = g.node(va, "Pool", view.name, address=va, total_assets=f"{st.total_assets / unit:,.0f} {view.asset_symbol}",
+        vid = g.node(va, "Actor", f"Vault {view.name}", address=va, actor_type="Vault V2 (capital provider)",
+                     total_assets=f"{st.total_assets / unit:,.0f} {view.asset_symbol}",
                      idle=f"{st.idle / unit:,.0f} {view.asset_symbol}",
                      plain_withdrawal_capacity=f"{st.withdrawable / unit:,.0f} {view.asset_symbol}",
+                     adapters=", ".join(f"{a.address} ({a.kind})" for a in view.adapters),
                      source="Vault V2 getters on-chain")
         g.edge(vid, _asset(g, f, view.asset, block, view.asset_symbol), "denominated in")
         if user and st.depositor_shares:
             g.edge(f"user:{user}", vid, "deposits in", st.depositor_assets / unit, view.asset_symbol)
         for a in view.adapters:
-            aid = g.node(a.address, "Pool", f"Adapter {_short(a.address)}", address=a.address, adapter_type=a.kind,
-                         source="adapters(i) on-chain")
-            g.edge(vid, aid, "allocates through", st.real_assets.get(a.address, 0) / unit, view.asset_symbol)
             for mp in a.markets.values():
                 ms = st.markets[mp.id]
                 m = B.BorrowMarket(mp.id, mp.loan_token, mp.collateral_token, mp.oracle, mp.irm, int(round(mp.lltv * 1e18)),
                                    view.asset_symbol, mp.collateral_symbol)
                 node = _market(g, f, m, block)
-                g.edge(aid, node, "supplies", ms.vault_assets / unit, view.asset_symbol,
+                g.edge(vid, node, "supplies", ms.vault_assets / unit, view.asset_symbol,
                        share_of_vault=f"{ms.vault_assets / st.total_assets:.1%}" if st.total_assets else None,
-                       utilization=f"{ms.utilization:.1%}")
+                       share_of_market=f"{ms.vault_assets / ms.total_supply_assets:.1%}" if ms.total_supply_assets else None,
+                       through_adapter=a.address, utilization=f"{ms.utilization:.1%}")
         # admins: owner and curator on-chain; allocators and sentinels listed by the API, each confirmed on-chain
         owner, curator = (("0x" + r[-40:]).lower() if r else None
                           for r in S.rpc_batch(f, [_call(va, "owner()"), _call(va, "curator()")], block))
@@ -196,7 +262,7 @@ def build(f: S.Fetcher, block: int, user: str | None = None, vaults: list[str] |
 
 CSS = """
 :root{--bg:#ffffff;--fg:#1f2328;--muted:#59636e;--panel:#f6f8fa;--line:#d1d9e0;
---Position:#0072B2;--Pool:#009E73;--Asset:#E69F00;--Oracle:#CC79A7;--Admin:#D55E00;--External:#999999;--edge:#8c959f}
+--Actor:#0072B2;--Pool:#009E73;--Asset:#E69F00;--Oracle:#CC79A7;--Admin:#D55E00;--External:#999999;--edge:#8c959f}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0d1117;--fg:#e6edf3;--muted:#9198a1;
 --panel:#151b23;--line:#3d444d;--edge:#6e7681}}
 :root[data-theme="dark"]{--bg:#0d1117;--fg:#e6edf3;--muted:#9198a1;--panel:#151b23;--line:#3d444d;--edge:#6e7681}
@@ -215,11 +281,11 @@ td:first-child{color:var(--muted);width:38%}button{padding:5px 10px;border:1px s
 @media (max-width:760px){.app{grid-template-columns:1fr;grid-template-rows:auto 70vh;height:auto}aside{border-right:0;border-bottom:1px solid var(--line)}}
 """
 
-SHAPES = {"Position": "round-rectangle", "Pool": "ellipse", "Asset": "round-tag", "Oracle": "diamond",
+SHAPES = {"Actor": "round-rectangle", "Pool": "ellipse", "Asset": "round-tag", "Oracle": "diamond",
           "Admin": "triangle", "External": "rectangle"}
-DESCR = {"Position": "the address's positions (roots)", "Pool": "Blue market, Vault V2, adapter, Pendle pool",
-         "Asset": "token: loan, collateral, yield source", "Oracle": "market oracle and the feeds it reads",
-         "Admin": "vault roles: owner, curator, allocator, sentinel", "External": "off-chain dependency (registry.json)"}
+DESCR = {"Actor": "whose capital is at stake: an address, a Vault V2", "Pool": "where liquidity sits: Blue market, Pendle pool",
+         "Asset": "token: loan, collateral, yield source, reused vault share", "Oracle": "market oracle and the feeds it reads",
+         "Admin": "decides for a vault: owner, curator, allocator, sentinel", "External": "off-chain dependency (registry.json)"}
 
 
 def to_html(g: Graph, title: str, subtitle: str) -> str:
@@ -233,7 +299,7 @@ def to_html(g: Graph, title: str, subtitle: str) -> str:
 <style>{CSS}</style></head><body><div class="app"><aside>
 <h1>{html.escape(title)}</h1><p class="muted">{html.escape(subtitle)}</p>
 <h2>Node types</h2><div class="legend">{legend}</div>
-<p class="muted">Shapes repeat the colour: rounded box Position, ellipse Pool, tag Asset, diamond Oracle, triangle Admin, square External.
+<p class="muted">Shapes repeat the colour: rounded box Actor, ellipse Pool, tag Asset, diamond Oracle, triangle Admin, square External.
 Edge width grows with the amount carried (log scale, in the token of the edge). Zoom in to read asset, oracle and off-chain labels; click a node to isolate its neighbours.</p>
 <h2>Find</h2><input type="search" id="q" placeholder="symbol, address, market id…">
 <p><button id="fit">Fit</button> <button id="lay">Re-layout</button></p>
@@ -252,14 +318,17 @@ const cy=cytoscape({{container:document.getElementById("cy"),elements:els,wheelS
  style:[{{selector:"node",style:{{"background-color":e=>css("--"+e.data("kind")),"shape":e=>SHAPES[e.data("kind")]||"ellipse",
    "label":"data(label)","font-size":10,"color":css("--fg"),"text-valign":"bottom","text-margin-y":4,"width":26,"height":26,
    "text-wrap":"wrap","text-max-width":120,"border-width":1,"border-color":css("--line")}}}},
-  {{selector:'node[kind="Position"]',style:{{"width":44,"height":30,"font-weight":"bold","font-size":12}}}},
+  {{selector:'node[kind="Actor"]',style:{{"width":44,"height":30,"font-weight":"bold","font-size":11,"text-max-width":90}}}},
   {{selector:'node[kind="Asset"],node[kind="Oracle"],node[kind="External"]',style:{{"min-zoomed-font-size":9}}}},
   {{selector:"edge",style:{{"width":"data(w)","line-color":css("--edge"),"target-arrow-color":css("--edge"),
    "target-arrow-shape":"triangle","curve-style":"bezier","opacity":0.75,"label":"data(label)","font-size":8,
    "color":css("--muted"),"text-rotation":"autorotate","text-background-color":css("--bg"),"text-background-opacity":0.8}}}},
   {{selector:".faded",style:{{"opacity":0.08}}}},{{selector:":selected",style:{{"border-width":3,"border-color":css("--fg"),"line-color":css("--fg")}}}}],
- layout:{{name:"breadthfirst",directed:true,spacingFactor:1.5,roots:cy0roots()}}}});
-function cy0roots(){{return DATA.nodes.filter(n=>n.kind==="Position"||n.kind==="Admin").map(n=>"#"+CSS.escape(n.id)).join(",")}}
+ layout:{{name:"preset"}}}});
+// roots passed as a collection: ids such as "0x6dc5…" start with a digit and make a CSS selector fail
+const roots=()=>cy.nodes().filter(n=>n.data("kind")==="Actor"||n.data("kind")==="Admin");
+const relayout=()=>cy.layout({{name:"breadthfirst",directed:true,spacingFactor:1.5,roots:roots()}}).run();
+relayout();
 function row(k,v){{if(v==null||v==="")return"";const s=String(v);const link=/^0x[0-9a-f]{{40}}$/.test(s)?
  `<a href="https://etherscan.io/address/${{s}}" target="_blank" rel="noopener">${{s}}</a>`:s.replace(/[&<>]/g,c=>({{"&":"&amp;","<":"&lt;",">":"&gt;"}}[c]));
  return `<tr><td>${{k.replace(/_/g," ")}}</td><td>${{link}}</td></tr>`}}
@@ -278,7 +347,7 @@ document.getElementById("q").addEventListener("input",e=>{{const q=e.target.valu
  const hit=cy.nodes().filter(n=>(n.data("label")+" "+n.id()+" "+JSON.stringify(n.data("details"))).toLowerCase().includes(q));
  cy.elements().addClass("faded");hit.closedNeighborhood().removeClass("faded")}});
 document.getElementById("fit").onclick=()=>cy.fit(undefined,30);
-document.getElementById("lay").onclick=()=>cy.layout({{name:"breadthfirst",directed:true,spacingFactor:1.5,roots:cy0roots()}}).run();
+document.getElementById("lay").onclick=relayout;
 </script></body></html>"""
 
 
