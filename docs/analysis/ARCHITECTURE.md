@@ -17,20 +17,21 @@
 
 ## 1. What the tool does
 
-One command, `python3 -m riskdep`, with four modes:
+One command, `python3 -m riskdep`, with five modes:
 
 | Mode | For whom | What it produces | When it runs |
 |---|---|---|---|
 | `analyze` | a risk or portfolio manager | a STAY / REDUCE / EXIT verdict for one Pendle PT position used as Morpho Blue collateral, with the reasons, an HTML report and JSON | once, on demand |
 | `watch --vault` | a Vault V2 depositor | alerts on every transaction that changes the depositor's exposure, losses, exit capacity or the vault's governance | continuously, block by block |
 | `watch --user` | an address with Morpho positions | the same for every Blue borrow and Vault V2 deposit of the address: health factor, liquidation, lenders, rate, curves | continuously, block by block |
-| `graph` | anyone reviewing a position | an interactive dependency graph (HTML) and its data (JSON) | once, on demand |
+| `graph` | anyone reviewing a position | an interactive dependency graph (HTML) and its data (JSON), with sibling markets and oracle classes | once, on demand |
+| `shock` | a vault owner or risk analyst | what each market, the vault and a depositor lose when a node fails (oracle reading low or high, frozen feed, collateral falling), with the path, or a ranking of every oracle by that loss | once, on demand |
 
-`analyze` estimates a risk; the two `watch` modes detect events; `graph` draws dependencies. All four read the same sources through the same modules.
+`analyze` estimates a risk; the two `watch` modes detect events; `graph` draws dependencies; `shock` propagates a failure through them. All five read the same sources through the same modules; `shock` adds a pure engine on top of the graph.
 
 ## 2. Components
 
-The package has 28 Python files (about 7,300 lines), in five layers. The diagram shows the main path of each mode; the table under it lists every import, taken from the code.
+The package has 30 Python files (about 8,100 lines), in five layers. The diagram shows the main path of each mode; the table under it lists every import, taken from the code.
 
 ```mermaid
 flowchart TB
@@ -40,6 +41,7 @@ flowchart TB
     watch_user["watch_user · address loop"]
     report["report · analyze output"]
     graphmod["graph · dependency graph"]
+    shockmod["shock · what-if report"]
   end
   subgraph Rules["Rules and models (pure)"]
     rules["rules · vault alerts"]
@@ -50,6 +52,7 @@ flowchart TB
     admin["admin · admin surface"]
     oracle_class["oracle_class · price-tracking or constant-price"]
     siblings["siblings · sibling markets"]
+    engine["engine · shock propagation, rules"]
     model["decide → simulate → propagate, priors"]
   end
   subgraph Readers["Readers"]
@@ -65,6 +68,9 @@ flowchart TB
   cli -->|"watch --user"| watch_user
   cli -->|"analyze"| report
   cli -->|"graph"| graphmod
+  cli -->|"shock"| shockmod
+  shockmod --> engine
+  shockmod -->|"builds or replays"| graphmod
   watch_user -->|"reuses printer, vault table"| watch
   watch -->|"events + state"| rules
   watch --> market_risk
@@ -93,13 +99,15 @@ flowchart TB
 
 | Module | Imports |
 |---|---|
-| `cli` | `clock`, `crosscheck`, `decide`, `discover`, `graph`, `priors`, `report`, `scenario`, `simulate`, `sources`, `vault_incident`, `watch`, `watch_user` |
+| `cli` | `clock`, `crosscheck`, `decide`, `discover`, `engine`, `graph`, `priors`, `report`, `scenario`, `shock`, `simulate`, `sources`, `vault_incident`, `watch`, `watch_user` |
 | `scenario` | `decide`, `discover`, `oracle_class`, `propagate`, `sources`, `vault` |
 | `vault_incident` | `discover`, `exit_queue`, `market_risk`, `oracle_class`, `scenario`, `sources`, `vault` |
 | `watch` | `admin`, `crosscheck`, `discover`, `drain`, `exit_queue`, `market_risk`, `poller`, `rules`, `sources`, `vault` |
 | `watch_user` | `abi`, `admin`, `borrower`, `borrower_rules`, `crosscheck`, `discover`, `drain`, `exit_queue`, `market_risk`, `poller`, `positions`, `rules`, `scenario`, `sources`, `vault`, `watch` |
 | `report` | `clock`, `decide`, `discover`, `priors`, `simulate` |
-| `graph` | `abi`, `borrower`, `discover`, `market_risk`, `oracle_class`, `positions`, `siblings`, `sources`, `vault` |
+| `graph` | `abi`, `borrower`, `clock`, `discover`, `market_risk`, `oracle_class`, `positions`, `siblings`, `sources`, `vault` |
+| `engine` | `discover`, `drain` (pure: reads only the graph) |
+| `shock` | `engine` |
 | `rules` | `abi`, `discover`, `vault` |
 | `borrower_rules` | `abi`, `borrower`, `discover`, `rules` |
 | `market_risk` | `abi`, `discover`, `rules`, `sources`, `vault` |
@@ -216,9 +224,25 @@ Details, with a real transaction decoded step by step: `docs/how-a-block-is-anal
 Then, by default (plan `2026-10-10-sibling-markets`):
 1. **Sibling markets.** `siblings.candidates` lists every Ethereum Blue market above the TVL floor, $1M supplied (Morpho API); `siblings.underlyings` reads each collateral's underlying (Pendle lists for PTs, `asset()` for ERC-4626 shares); the pure `siblings.match` keeps those linked to a held market by the same collateral, the same underlying, a shared base price input, or lending that collateral. Each is re-read on-chain and added like a held market, so it joins the graph through the shared asset, oracle or feed node.
 2. **Oracle classes.** `_oracle` probes each base-side input (`oracle_class.probe`: answer, description, round history, composite and structural getters) and `oracle_class.classify_oracle` labels the oracle `price-tracking`, `constant-price` or `not classified`, with its basis.
-3. **Wraps and market state.** An ERC-4626 asset gets a `wraps` edge to the token it redeems into; every Blue market, held or sibling, gets supply, borrow, the collateral of its borrowers and the liquidation curve from `market_risk`, the data the propagation engine of `docs/graph-propagation.md` needs.
+3. **Wraps, tracks and market state.**
+   - An ERC-4626 asset gets a `wraps` edge to the token it redeems into.
+   - An oracle input gets a `tracks` edge to the market it reads: a Pendle TWAP to its PT (from `market()`), a price-tracking "SYM / USD" feed to that asset.
+   - Each PT gets two Pendle quote ladders, turned into sale-impact curves with a capacity: PT → underlying, on the PT; PT → loan token, on the underlying.
+   - Every Blue market, held or sibling, gets supply, borrow, the collateral of its borrowers, its positions and the liquidation curve from `market_risk`.
 
-`--record` saves every response under `fixtures/replay/graph-<target>/` with a `meta.json` (block, targets); `--replay` rebuilds the graph offline from it.
+   That is the data the propagation engine needs.
+
+`--record` saves every response under `fixtures/replay/graph-<target>/` with a `meta.json` (block, targets, the time of the recording); `--replay` rebuilds the graph offline from it, with the recording's time as "now" (a PT's days to maturity).
+
+### `shock`
+
+`shock` builds or replays the graph (`graph.load`), which also carries every market's borrower positions, LLTV and free liquidity, and a Pendle pool's liquidity and implied yield. It parses the shocks and hands both to `engine.run`, a pure function:
+1. **Inputs.** Each shock becomes an input of its node: a misreport, a freeze or a price factor.
+2. **Node models.** A node's model recomputes its effects from its inputs. A Blue market evaluates every borrower (liquidations, Blue's write-off, insolvent debt, the drain), net of its state before the shock. An asset applies the impact of the collateral sold into its pool, down to a PT's floor.
+3. **Edge rules.** For each changed effect, the first matching edge rule of `registry.json` (`engine`), or of a `--rules` file, picks the transmission that carries it to the next node.
+4. **Fixed point.** The run repeats until no input moves (ε) or the evaluation budget is spent.
+
+`shock.report` prints each market's outcome, each vault's and depositor's loss and the path (`engine.path`). `shock.trace` writes the same run as data for a front end (D119): the graph with edge ids, every step with its edge and wave, each node's final state (`docs/shock-trace.md`). `--sweep` runs one shock per oracle (or asset) and ranks them. Details and the rule format: `docs/shock-engine.md`.
 
 ## 5. State and files
 
@@ -233,7 +257,7 @@ Then, by default (plan `2026-10-10-sibling-markets`):
 | Alerts | `out/watch-*.jsonl` | the watch loops | one JSON object per alert |
 | Reports and graphs | `out/report.html/.json`, `out/graph.html/.json` | `report`, `graph` | `out/` is git-ignored |
 
-The `Fetcher` has four modes: `offline` (cache only; a miss is an error), `live` (cache first, network on a miss), `refresh` (network always, cache rewritten) and `direct` (network always, nothing cached; used by the live watches).
+The `Fetcher` has four modes: `offline` (cache only; a miss is an error), `live` (cache first, network on a miss), `refresh` (network always, cache rewritten; a request repeated in the same run gets its first answer, so a recording replays what it computed from) and `direct` (network always, nothing cached; used by the live watches).
 
 ## 6. Design principles
 
@@ -247,13 +271,14 @@ The `Fetcher` has four modes: `offline` (cache only; a miss is an error), `live`
 
 ## 7. Testing
 
-`uv run pytest -q tests` runs 161 tests, all offline:
+`uv run pytest -q tests` runs 221 tests, all offline:
 
 | Kind | Files | What it covers |
 |---|---|---|
 | Rule tests on synthetic events and states | `test_watch_rules.py`, `test_borrower.py`, `test_market_risk.py`, `test_exit_queue.py`, `test_drain.py`, `test_admin.py` | every alert fires at its threshold and stays silent below it |
 | Classifier and matcher tests | `test_oracle_class.py`, `test_siblings.py` | every oracle-class rule (D83) and every sibling relation, floor and cap (D77, D79) |
-| Model tests | `test_propagate.py`, `test_decide.py` | loss propagation and the verdict |
+| Engine tests | `test_engine.py` | every transmission and node model on a hand-worked graph, every rule criterion, a rules file overriding the defaults, the squeeze down to the PT floor, and three scenarios on the recorded RockawayX graph |
+| Model tests | `test_propagate.py`, `test_decide.py`, `test_scenario.py`, `test_vault_incident.py` | loss propagation, the verdict, and incident mode for a position and for a vault depositor |
 | End to end on recorded real data | `test_demo_snapshot.py`, `test_watch_replay.py`, `test_watch_user_replay.py`, `test_graph.py` | the `analyze` demo, three recorded watch ranges (a vault, a borrower with 6 borrows, a depositor) and the recorded RockawayX USDC Yield graph (10 siblings, 6 oracle classes) |
 | Fixes and tools | `test_fixes.py`, `test_graph.py`, `test_light_reads.py` | the snapshot clock, oracle ambiguity, cross-checks, the graph output, light reads on quiet batches (D61), RPC routing and retries, throttled batches (a 429, or rate-limit errors inside a reply) resent and never recorded |
 
@@ -261,7 +286,7 @@ The `Fetcher` has four modes: `offline` (cache only; a miss is an error), `live`
 
 ## 8. Decisions
 
-The design decisions are numbered across nine plans, in the order the increments were built:
+The design decisions are numbered across twelve plans, in the order the increments were built:
 
 | Plan | Increment | Decisions |
 |---|---|---|
@@ -273,9 +298,10 @@ The design decisions are numbered across nine plans, in the order the increments
 | `plan/2026-10-10-admin-surface.plan.md` | admins of oracles, Morpho Blue and collateral issuers; oracle divergence | D52–D60 |
 | `plan/2026-10-10-exit-queue.plan.md` | a depositor's place in a run on a vault | D62–D67 |
 | `plan/2026-10-10-drain-threshold.plan.md` | when a depeg empties a market: d\*, the Public Allocator, `DrainWindow` | D69–D74 |
-| `plan/2026-10-10-sibling-markets.plan.md` | sibling markets and oracle classes in the dependency graph | D75–D85 |
-| `plan/2026-10-10-incident-mode.plan.md` | incident mode: a known incident's impact, time to impact and verdict; alert impacts in `watch --user` | D89–D95 |
+| `plan/2026-10-10-sibling-markets.plan.md` | sibling markets and oracle classes in the dependency graph; eRPC; the TVL floor | D75–D88 |
+| `plan/2026-10-10-incident-mode.plan.md` | incident mode: a known incident's impact, time to impact and verdict; alert impacts in `watch --user` | D89–D97 |
 | `plan/2026-10-11-vault-incident.plan.md` | incident mode for a vault depositor; curve widened to −30 and −50 % | D98–D103 |
+| `plan/2026-10-10-propagation-engine.plan.md` | the shock engine: a deterministic failure through the graph, driven by rules; calibrated on Pendle quotes | D104–D118 |
 
 A change that departs from a decision is recorded in that plan's table.
 

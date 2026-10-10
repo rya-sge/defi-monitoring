@@ -99,7 +99,7 @@ Status: **done** for the watched markets (`riskdep/market_risk.py`): every borro
 
 The cost of leaving, for the user or for liquidators, depends on how much collateral the market can absorb.
 
-Status: **partial**. Real Pendle quotes for PT collateral, including a re-quote for a partial de-lever. Other collateral is not quoted, and the liquidators' side (selling the seized collateral) is not modelled at all.
+Status: **partial**. Real Pendle quotes for PT collateral, including a re-quote for a partial de-lever. The shock engine models the liquidators' side for PTs: two quote ladders per PT (into its pool, then the underlying for dollars), with the capacity beyond which liquidations cannot complete. Collateral that is not a PT, or the underlying of one, has no quote, so its sales move no price.
 
 ### Limiting the propagation
 
@@ -208,10 +208,10 @@ Gaps found while building and testing the tool, ranked by how much they limit th
 
 | # | Gap | Impact | Effort |
 |---|---|---|---|
-| R1 | The `graph` command builds and draws the graph (with admins and oracle feeds), but `analyze` and `watch` do not use it: their rules work on their own structures, and exposure is computed per position. | medium | L |
+| R1 | The `graph` command builds and draws the graph (with admins and oracle feeds), but `analyze` and `watch` do not use it: their rules work on their own structures, and exposure is computed per position. *Partial:* `riskdep shock` propagates a failure through the graph with a rule-driven engine (plan `2026-10-10-propagation-engine`); the watches and `analyze` still do not use it. | medium | L |
 | R3 | Shared nodes are drawn but not measured: no alert says that one feed (for example `RLUSD / USD` under all 10 Sentora markets) carries several positions at once. | medium | S after R1 |
 | R4 | ~~Lender concentration is not watched.~~ Done (plan `2026-10-10-lenders-and-timelocks`): `watch --user` lists each borrowed market's main lenders, warns when one funds ≥ 50 %, and when a main lender withdraws ≥ 5 % of the supply. | — | done |
-| R2 | No general propagation limits (exposure floor, depth, severity floor). | low until R1 exists | S after R1 |
+| R2 | No general propagation limits (exposure floor, depth, severity floor). *Partial:* the shock engine stops when no input moves by more than ε or its evaluation budget is spent, and a rule can stop an effect on any criterion; there is no exposure floor by default. | low | S |
 | R5 | Sibling markets are found on Morpho Blue only: the same collateral borrowed on Euler, Aave, Silo or Fluid, or sold through another pool, is not in the graph. | medium | M per venue |
 | R6 | Sibling markets are drawn, not watched: `watch` does not follow their liquidations, oracle moves or bad debt, and the curves in the graph are read once. | medium | M |
 | R7 | Oracle classes are binary and per input: a meta-oracle that switches source after a deviation (`MetaOracleDeviationTimelock`) and an input known only by name without the Etherscan key stay `not classified`. | low | S per oracle type |

@@ -71,6 +71,7 @@ class Fetcher:
         self.dir = Path(snapshot_dir)
         self.dir.mkdir(parents=True, exist_ok=True)
         self.network_calls = 0
+        self._recorded: set[Path] = set()  # refresh mode: requests already answered in this run
 
     def _key(self, method: str, url: str, body) -> Path:
         raw = json.dumps([method, url, body], sort_keys=True).encode()
@@ -82,7 +83,10 @@ class Fetcher:
     def _request(self, method: str, url: str, body=None, transform=None, secret: dict | None = None):
         """`secret` (an API key) is added to the request only: never to the cache key, the stored URL or an error."""
         path = self._key(method, url, body)
-        if self.mode not in ("refresh", "direct") and path.exists():
+        if (self.mode not in ("refresh", "direct") or path in self._recorded) and path.exists():
+            # a recording keeps the first answer to a request: a second fetch in the same run (the Pendle market list,
+            # read for a PT and again for the sibling search) would overwrite it with a later one, and the replay
+            # would then disagree with what the recorded run computed from the first
             return json.loads(path.read_text())["response"]
         if self.mode == "offline":
             raise CacheMiss(
@@ -155,6 +159,7 @@ class Fetcher:
                 }
             )
         )
+        self._recorded.add(path)
         return data
 
     def get_json(self, url: str, transform=None, secret: dict | None = None):
