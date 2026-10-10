@@ -48,6 +48,7 @@ Steps of the two earlier versions that are now done, with their plans:
 | Wrapped collateral in vault incidents (A1) | a token reaches the markets whose collateral wraps it; hidden shortfall when the oracle does not follow | `2026-10-11-wrapped-collateral` |
 | Pharos, keyless (part of B5, C1, K19) | grades on hit collateral and graph assets; a token shock follows Pharos's off-chain backing; common-mode groups as notes and graph nodes (`docs/risk-assessment/outside-providers.md`) | `2026-10-11-pharos` |
 | Borrower concentration and default; no-liquidator branch (part of B6, K27; `ROCK-VAULT-DEP.md` §11 item 3) | top-1 and top-3 shares, `BorrowerConcentration`; `--shock borrower=<target>:<recovery>[:<n>]` on any vault or book; `exit_liquidity` per token in the registry and the loss if nobody liquidates | `2026-10-11-borrower-concentration` |
+| Shock engine (part of K6, K9; `graph-propagation.md` §7) | `shock`: a failure applied to a graph node, propagated to every market, vault and depositor by rules in `registry.json`; sale impact from real Pendle quotes; a trace for a front end (`docs/shock-engine.md`, `docs/shock-trace.md`) | `2026-10-10-propagation-engine` |
 | CI (part of v1 step 10) | lint and tests on every push | — |
 
 **No longer relevant:** v1 step 2 as written ("`analyze` for any collateral") is replaced, for vaults, by the vault incident mode, which takes any collateral; for a borrower it continues as part of A2 below. The v1 → v2 carry-over table and the "phase A first" ordering are superseded by this file.
@@ -76,6 +77,7 @@ Steps of the two earlier versions that are now done, with their plans:
 | B6 | Liquidation cascade with slippage; liquidity returned by liquidations (the no-liquidator branch is done) | K9, K27 | M | curves of held and sibling markets, `exit_liquidity` |
 | B7 | Tail-aware verdict, sampling error shown | K13, K14 | S–M | `simulate.py`, `decide.py` |
 | B8 | Market-price revaluation of loans; the drain as a loss channel | K16 | S–M | `market_risk.py`, `drain.py` |
+| B9 | Backtest the shock engine on the 2026-08-25 PT-reUSD liquidations | K8, K9 | M | `shock`, an archive RPC |
 | C1 | Discovery depth in `analyze`; watch the siblings; other venues | K19, R5, R6 | M | `admin.py`, `siblings.py` |
 | C2 | Feed quality | K23, R3 | S–M | `oracle_class.py` |
 | C3 | TVL concentration | K25 | S | `graph` market nodes |
@@ -202,6 +204,28 @@ The demo's CVaR 99 % is 98 % of equity, and its carry sits inside the expected l
 ### B8. Loans at the market price; the drain as a loss channel (K16, rest)
 
 **How:** in `market_risk.value`, a second valuation at the market price (DefiLlama) for markets whose oracle does not follow the market: the hidden bad debt; a scenario past d\* adds the drainable amount as bad debt and removes it from the exit capacity; Vault V1.1's realisation rule once C5 reads V1. **Size:** S–M.
+
+### B9. Backtest the shock engine (K8, K9)
+
+**Goal.** Test `riskdep shock` against a real episode before trusting its magnitudes. Its accounting follows Morpho Blue's code and its sale impact comes from real Pendle quotes, but no full episode has been replayed (`docs/shock-engine.md`, "Validation").
+
+**The episode.** On 2026-08-25, according to the source cited in `GAP.md` K8:
+- trading in YT-reUSD pushed PT-reUSD's implied yield from about 11 % to over 20 % in nine minutes;
+- a min(TWAP, linear) oracle fell 0.5 to 2.8 %;
+- Morpho liquidated 33 PT-reUSD positions, for about $946k of liquidation bonus, with no bad debt.
+
+**Delivers.**
+1. The graph rebuilt at the block before the event: positions, oracle and pool states.
+2. The oracle's measured fall applied as a shock.
+3. The predicted positions liquidated, debt repaid and bonus, against the `Liquidate` events of the following blocks.
+4. A report of the gap, and the rule or parameter changes it calls for (pool curve, timing, partial liquidations).
+
+**Size.** M.
+
+**Needs.**
+- **An archive RPC**, its URL in `keys.ini [rpc]` (empty today): the free node serves state only about 100 blocks back.
+- **The pool's curve at that time,** rebuilt from its reserves at that block: Pendle's quote API answers only for now.
+- **The event's block range and transactions,** to confirm the cited figures.
 
 ## 7. Phase C: discovery depth and the brief's scope items
 

@@ -424,3 +424,64 @@ def partial_exit_quote(f: S.Fetcher, pos: Position, fraction: float) -> dict:
     part = copy.copy(pos)
     part.collateral_units = pos.collateral_units * fraction
     return exit_quote(f, part)
+
+
+# --- sale-size ladders for the shock engine's squeeze (plan 2026-10-10-propagation-engine, D112, D113)
+
+
+def quote_ladder(
+    f: S.Fetcher,
+    market: str,
+    token_in: str,
+    token_out: str,
+    decimals_in: int,
+    usd_per_unit: float,
+    aggregator: bool,
+    sizes_usd: list[float],
+) -> tuple[list[tuple[float, int]], bool]:
+    """Real Pendle swap quotes for selling token_in at growing sizes: ([(USD sold at today's price, amount out raw)],
+    refused). Stops at the first size Pendle cannot route ("MarketProportionTooHigh. Market liquidity is likely
+    insufficient", no route): `refused` then says the market's capacity lies below that size."""
+    out: list[tuple[float, int]] = []
+    if usd_per_unit <= 0:
+        return out, False
+    for usd in sizes_usd:
+        amount = int(usd / usd_per_unit * 10**decimals_in)
+        url = (
+            f"{S.PENDLE}/v2/sdk/1/markets/{market}/swap?receiver=0x1111111111111111111111111111111111111111"
+            f"&slippage=0.01&enableAggregator={'true' if aggregator else 'false'}&tokenIn={token_in}"
+            f"&tokenOut={token_out}&amountIn={amount}"
+        )
+        try:
+            d = f.get_json(url, transform=lambda r: {"data": r.get("data")})["data"]
+            out.append((float(usd), int(d["amountOut"])))
+        except (S.SourceError, KeyError, TypeError, ValueError):
+            return out, True  # a missing cached answer (CacheMiss) is not a refusal: it fails the replay instead
+    return out, False
+
+
+def ladder_sizes(liquidity_usd: float | None) -> list[float]:
+    """Sale sizes for a pool: multiples of its liquidity (`engine.quote_sizes_x_liquidity`), at most
+    `engine.quote_max_usd` (Pendle refuses quotes above 100M USD)."""
+    e = REGISTRY["engine"]
+    if not liquidity_usd:
+        return []
+    return sorted({min(e["quote_max_usd"], round(x * liquidity_usd, -3)) for x in e["quote_sizes_x_liquidity"]})
+
+
+def marginal_curve(ladder: list[tuple[float, float]], min_ratio: float) -> tuple[list[list[float]], float | None]:
+    """Pure. From [(sold, received)] in any units, the marginal price after each step relative to the first step's
+    average (the spot): [[sold up to, factor]], and the capacity, where the marginal price falls under `min_ratio` of
+    spot or the amount received stops growing (None when the ladder never reaches it)."""
+    pts = sorted((s, r) for s, r in ladder if s > 0 and r > 0)
+    if len(pts) < 2:
+        return [], None
+    spot = pts[0][1] / pts[0][0]
+    curve, capacity = [[pts[0][0], 1.0]], None
+    for (s0, r0), (s1, r1) in zip(pts, pts[1:]):
+        factor = max(0.0, (r1 - r0) / (s1 - s0) / spot)
+        if factor < min_ratio:
+            capacity = s0
+            break
+        curve.append([s1, min(1.0, factor)])
+    return curve, capacity

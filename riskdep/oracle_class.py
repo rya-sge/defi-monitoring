@@ -45,6 +45,13 @@ class Probe:
     getters: dict[str, int] = field(default_factory=dict)  # structural getter of `oracle_getters` → its answer
     children: list[Probe] = field(default_factory=list)  # composite or wrapper inputs (`oracle_children_getters`)
     name: str | None = None  # verified contract name (Etherscan), the implementation's for a proxy
+    market: str | None = None  # `market()` of a Pendle TWAP input: the pool whose PT price it reads (engine D115)
+
+    def pendle_market(self) -> str | None:
+        """The Pendle pool this input, or one of its parts, reads with a TWAP (once `read_pendle_markets` ran)."""
+        if self.market:
+            return self.market
+        return next((m for c in self.children if (m := c.pendle_market())), None)
 
     @property
     def label(self) -> str:
@@ -162,6 +169,18 @@ def probe(f: S.Fetcher, address: str, block, vault: bool = False, depth: int = 0
     if classify_input(p)[0] == NOT_CLASSIFIED:  # the name is the last resort: it needs the optional Etherscan key
         p.name = _contract_name(f, p.address)
     return p
+
+
+def read_pendle_markets(f: S.Fetcher, p: Probe, block) -> None:
+    """Fill `market` on every Pendle TWAP input (one with a `twapDuration`) of a probe tree, one call each, so that the
+    graph can tie the input to its pool (engine D115). Kept out of `probe`'s batch, which the other modes share: the
+    batch's cache key stays the one their recordings hold."""
+    if p.getters.get("twapDuration()"):
+        raw = S.rpc_batch(f, [_call(p.address, "market()")], block)[0]
+        if raw and _word(raw):
+            p.market = ("0x" + raw[26:66]).lower()
+    for c in p.children:
+        read_pendle_markets(f, c, block)
 
 
 def _history(f: S.Fetcher, address: str, latest: tuple, block) -> list[int]:

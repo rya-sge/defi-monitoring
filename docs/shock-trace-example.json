@@ -1,0 +1,4664 @@
+{
+ "format": "riskdep.shock-trace/1",
+ "block": 26164907,
+ "as_of": "2026-10-10T22:07:04Z",
+ "note": "Waves are rounds of a fixed-point iteration, not time: a value can overshoot in an early wave and settle lower. Only the final state (`nodes`) is the answer; `evaluations_log` shows how the loop got there.",
+ "shocks": [
+  {
+   "node": "0x77ee147391eac11c92817e771860ff4aad265d89",
+   "mode": "reads-low",
+   "size": 0.1,
+   "label": "Ojo PT Feed Pendle Chainlink-compatible Oracle reads-low 10%"
+  }
+ ],
+ "converged": true,
+ "evaluations": 31,
+ "graph": {
+  "nodes": [
+   {
+    "id": "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
+    "kind": "Actor",
+    "label": "Vault RockawayX USDC Yield",
+    "details": {
+     "address": "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
+     "actor_type": "Vault V2 (capital provider)",
+     "total_assets": "18,444,970 USDC",
+     "total_assets_value": 18444970.466433,
+     "idle": "0 USDC",
+     "plain_withdrawal_capacity": "244,951 USDC",
+     "adapters": "0xce0b17e6e94c9068b760557ba11a7bb1943f5674 (market)",
+     "source": "Vault V2 getters on-chain"
+    }
+   },
+   {
+    "id": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "kind": "Asset",
+    "label": "USDC",
+    "details": {
+     "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+     "issuer": "Circle",
+     "source": "ERC-20 symbol() on-chain, issuer from registry.json"
+    }
+   },
+   {
+    "id": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+    "kind": "Pool",
+    "label": "Blue PT-reUSD-10DEC2026/USDC",
+    "details": {
+     "market_id": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+     "lltv": "91.5%",
+     "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
+     "source": "Morpho Blue idToMarketParams on-chain",
+     "oracle_class": "price-tracking",
+     "oracle_tracks_bound": true,
+     "total_supply": 120712272.163516,
+     "total_borrow": 106885175.648222,
+     "loan_unit": "USDC",
+     "utilization": "88.5%",
+     "borrowers": 231,
+     "collateral_of_borrowers": 135306607.113726,
+     "collateral_unit": "PT-reUSD-10DEC2026",
+     "unrealised_bad_debt": 0.0,
+     "lltv_value": 0.915,
+     "free_liquidity": 13827096.515294,
+     "loan_usd": 1.0,
+     "liquidation_curve": [
+      {
+       "oracle_fall": 0.02,
+       "liquidatable_debt": 3174681.291373,
+       "positions": 5,
+       "bad_debt": 0.0,
+       "collateral_liquidatable": 3599552.537724
+      },
+      {
+       "oracle_fall": 0.05,
+       "liquidatable_debt": 48564582.881708,
+       "positions": 58,
+       "bad_debt": 0.0,
+       "collateral_liquidatable": 56095331.655116
+      },
+      {
+       "oracle_fall": 0.1,
+       "liquidatable_debt": 71045902.07471,
+       "positions": 126,
+       "bad_debt": 352144.792821,
+       "collateral_liquidatable": 82768147.212611
+      },
+      {
+       "oracle_fall": 0.2,
+       "liquidatable_debt": 102333889.290419,
+       "positions": 178,
+       "bad_debt": 8163485.734616,
+       "collateral_liquidatable": 123449162.089264
+      },
+      {
+       "oracle_fall": 0.3,
+       "liquidatable_debt": 105538332.17434,
+       "positions": 198,
+       "bad_debt": 19662791.844329,
+       "collateral_liquidatable": 128389975.911278
+      },
+      {
+       "oracle_fall": 0.5,
+       "liquidatable_debt": 105658053.886744,
+       "positions": 210,
+       "bad_debt": 44135842.266611,
+       "collateral_liquidatable": 128608240.815591
+      }
+     ],
+     "state_source": "Morpho Blue market() and every borrower's position() on-chain, borrowers from the Morpho API"
+    }
+   },
+   {
+    "id": "0xecfafdc7741323a945a163ed068b5a3c43483957",
+    "kind": "Asset",
+    "label": "PT-reUSD-10DEC2026",
+    "details": {
+     "address": "0xecfafdc7741323a945a163ed068b5a3c43483957",
+     "source": "ERC-20 symbol() on-chain",
+     "impact_curve": [
+      [
+       620000.0,
+       1.0
+      ],
+      [
+       1861000.0,
+       0.999676630247077
+      ],
+      [
+       3723000.0,
+       0.9985429731135499
+      ],
+      [
+       6205000.0,
+       0.9956996899353299
+      ],
+      [
+       9307000.0,
+       0.9941939830981277
+      ],
+      [
+       12410000.0,
+       0.9941737535524509
+      ],
+      [
+       18615000.0,
+       0.994172244221381
+      ],
+      [
+       31024000.0,
+       0.9931952511976212
+      ],
+      [
+       62049000.0,
+       0.991503955709322
+      ]
+     ],
+     "impact_source": "Pendle swap quotes: the PT sold into its pool for the underlying, no aggregator"
+    }
+   },
+   {
+    "id": "0x217d6ddcdb95112c51657f6270e8c079cfdb51f0",
+    "kind": "Oracle",
+    "label": "Oracle 0x217d\u202651f0",
+    "details": {
+     "address": "0x217d6ddcdb95112c51657f6270e8c079cfdb51f0",
+     "shape": "Morpho ChainlinkOracleV2",
+     "price_raw": "981797360838506558000000000000000000",
+     "oracle_class": "price-tracking",
+     "class_basis": "base side: Ojo PT Feed Pendle Chainlink-compatible Oracle combines 2 input(s): Pendle Chainlink-compatible Oracle: twapDuration() = 900, Pendle PendleChainlinkOracle: a TWAP of the Pendle AMM (900 s on PT-reUSD), so a pool move reaches the price",
+     "source": "price() and getters read on-chain; class from the base-side inputs (D82\u2013D84)",
+     "tracks_bound": true
+    }
+   },
+   {
+    "id": "0x77ee147391eac11c92817e771860ff4aad265d89",
+    "kind": "Oracle",
+    "label": "Ojo PT Feed Pendle Chainlink-compatible Oracle",
+    "details": {
+     "address": "0x77ee147391eac11c92817e771860ff4aad265d89",
+     "role_in_oracle": "BASE_FEED_1",
+     "oracle_class": "price-tracking",
+     "class_basis": "Ojo PT Feed Pendle Chainlink-compatible Oracle combines 2 input(s): Pendle Chainlink-compatible Oracle: twapDuration() = 900, Pendle PendleChainlinkOracle: a TWAP of the Pendle AMM (900 s on PT-reUSD), so a pool move reaches the price",
+     "tracks_market": "0x13285bcbc27f92b47b4edb99d744c07b48c977c0",
+     "source": "oracle getter, description() on-chain"
+    }
+   },
+   {
+    "id": "pendle:0xecfafdc7741323a945a163ed068b5a3c43483957",
+    "kind": "Pool",
+    "label": "Pendle reUSD pool",
+    "details": {
+     "address": "0x13285bcbc27f92b47b4edb99d744c07b48c977c0",
+     "expiry": "2026-12-10",
+     "liquidity_usd": 12409793.247930603,
+     "implied_apy": 0.11807037814558363,
+     "days_to_maturity": 60.08,
+     "source": "Pendle API markets"
+    }
+   },
+   {
+    "id": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+    "kind": "Asset",
+    "label": "reUSD",
+    "details": {
+     "address": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+     "source": "ERC-20 symbol() on-chain",
+     "impact_curve": [
+      [
+       619622.766101,
+       1.0
+      ],
+      [
+       1859466.6321666674,
+       0.9997845049566481
+      ],
+      [
+       3717622.3802163843,
+       0.9994359823917791
+      ],
+      [
+       6187445.352280236,
+       0.9989665438921241
+      ],
+      [
+       9269558.659669295,
+       0.9983314428811784
+      ],
+      [
+       12352602.822045349,
+       0.9605804763813728
+      ]
+     ],
+     "capacity_usd": 12352602.822045349,
+     "impact_source": "Pendle swap quotes: the underlying sold for USDC through the aggregator"
+    }
+   },
+   {
+    "id": "0xf062a110320da27e0e7e7d9e1bdf458dd51e2d2089e55f63ff9fd54f415ce35d",
+    "kind": "Pool",
+    "label": "Blue PT-strUSD-26NOV2026/USDC",
+    "details": {
+     "market_id": "0xf062a110320da27e0e7e7d9e1bdf458dd51e2d2089e55f63ff9fd54f415ce35d",
+     "lltv": "86.0%",
+     "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
+     "source": "Morpho Blue idToMarketParams on-chain",
+     "oracle_class": "constant-price",
+     "oracle_tracks_bound": false,
+     "total_supply": 770524.370082,
+     "total_borrow": 671065.850048,
+     "loan_unit": "USDC",
+     "utilization": "87.1%",
+     "borrowers": 39,
+     "collateral_of_borrowers": 927455.5923265001,
+     "collateral_unit": "PT-strUSD-26NOV2026",
+     "unrealised_bad_debt": 0.0,
+     "lltv_value": 0.86,
+     "free_liquidity": 99458.520034,
+     "loan_usd": 1.0,
+     "liquidation_curve": [
+      {
+       "oracle_fall": 0.02,
+       "liquidatable_debt": 0.0,
+       "positions": 0,
+       "bad_debt": 0.0,
+       "collateral_liquidatable": 0.0
+      },
+      {
+       "oracle_fall": 0.05,
+       "liquidatable_debt": 198137.053021,
+       "positions": 2,
+       "bad_debt": 0.0,
+       "collateral_liquidatable": 248541.3472782829
+      },
+      {
+       "oracle_fall": 0.1,
+       "liquidatable_debt": 324128.529243,
+       "positions": 11,
+       "bad_debt": 0.0,
+       "collateral_liquidatable": 414341.93562104105
+      },
+      {
+       "oracle_fall": 0.2,
+       "liquidatable_debt": 608468.28743,
+       "positions": 31,
+       "bad_debt": 15963.162335,
+       "collateral_liquidatable": 811563.3855648399
+      },
+      {
+       "oracle_fall": 0.3,
+       "liquidatable_debt": 620260.134939,
+       "positions": 35,
+       "bad_debt": 80345.913213,
+       "collateral_liquidatable": 829879.78128839
+      },
+      {
+       "oracle_fall": 0.5,
+       "liquidatable_debt": 669053.692258,
+       "positions": 38,
+       "bad_debt": 242292.751286,
+       "collateral_liquidatable": 918072.2515813172
+      }
+     ],
+     "state_source": "Morpho Blue market() and every borrower's position() on-chain, borrowers from the Morpho API"
+    }
+   },
+   {
+    "id": "0x74299580811e1c3c1a2831db079ba0a8f513998f",
+    "kind": "Asset",
+    "label": "PT-strUSD-26NOV2026",
+    "details": {
+     "address": "0x74299580811e1c3c1a2831db079ba0a8f513998f",
+     "source": "ERC-20 symbol() on-chain",
+     "impact_curve": [
+      [
+       229000.0,
+       1.0
+      ],
+      [
+       688000.0,
+       0.9983761769268542
+      ],
+      [
+       1377000.0,
+       0.9919582766019502
+      ],
+      [
+       2295000.0,
+       0.9830574340353663
+      ],
+      [
+       3442000.0,
+       0.9591719544000142
+      ]
+     ],
+     "capacity_usd": 3442000.0,
+     "impact_source": "Pendle swap quotes: the PT sold into its pool for the underlying, no aggregator"
+    }
+   },
+   {
+    "id": "0xdb6e2e77ac10f05b9a52efe02d4c61c2770a776d",
+    "kind": "Oracle",
+    "label": "Oracle 0xdb6e\u2026776d",
+    "details": {
+     "address": "0xdb6e2e77ac10f05b9a52efe02d4c61c2770a776d",
+     "shape": "Morpho ChainlinkOracleV2",
+     "price_raw": "970448044997537987715671",
+     "oracle_class": "constant-price",
+     "class_basis": "base side, none follows a market: 0xcb8c\u2026640b: baseDiscountPerYear() = 235000000000000000, Pendle linear-discount oracle: a deterministic discount to maturity, no market input; RedStone Price Feed for trUSD_FUNDAMENTAL: answers exactly 1.0 with no round history, a pegged or hardcoded value",
+     "source": "price() and getters read on-chain; class from the base-side inputs (D82\u2013D84)",
+     "tracks_bound": false
+    }
+   },
+   {
+    "id": "0xcb8c6585bd593a4b7d91bfcc85ff1dcfa04a640b",
+    "kind": "Oracle",
+    "label": "BASE_FEED_1",
+    "details": {
+     "address": "0xcb8c6585bd593a4b7d91bfcc85ff1dcfa04a640b",
+     "role_in_oracle": "BASE_FEED_1",
+     "oracle_class": "constant-price",
+     "class_basis": "0xcb8c\u2026640b: baseDiscountPerYear() = 235000000000000000, Pendle linear-discount oracle: a deterministic discount to maturity, no market input",
+     "source": "oracle getter, description() on-chain"
+    }
+   },
+   {
+    "id": "0x33c6f75916db4267e52209a8e6b270b22d983b53",
+    "kind": "Oracle",
+    "label": "RedStone Price Feed for trUSD_FUNDAMENTAL",
+    "details": {
+     "address": "0x33c6f75916db4267e52209a8e6b270b22d983b53",
+     "role_in_oracle": "BASE_FEED_2",
+     "oracle_class": "constant-price",
+     "class_basis": "RedStone Price Feed for trUSD_FUNDAMENTAL: answers exactly 1.0 with no round history, a pegged or hardcoded value",
+     "source": "oracle getter, description() on-chain"
+    }
+   },
+   {
+    "id": "0x8fffffd4afb6115b954bd326cbe7b4ba576818f6",
+    "kind": "Oracle",
+    "label": "USDC / USD",
+    "details": {
+     "address": "0x8fffffd4afb6115b954bd326cbe7b4ba576818f6",
+     "role_in_oracle": "QUOTE_FEED_1",
+     "source": "oracle getter, description() on-chain"
+    }
+   },
+   {
+    "id": "pendle:0x74299580811e1c3c1a2831db079ba0a8f513998f",
+    "kind": "Pool",
+    "label": "Pendle strUSD pool",
+    "details": {
+     "address": "0xac028348c46d3455899a2b9b50077c11960eaddb",
+     "expiry": "2026-11-26",
+     "liquidity_usd": 4589900.380700583,
+     "implied_apy": 0.11420331546800666,
+     "days_to_maturity": 46.08,
+     "source": "Pendle API markets"
+    }
+   },
+   {
+    "id": "0x280839980a7ed0d7717f64125fe241012e5f5815",
+    "kind": "Asset",
+    "label": "strUSD",
+    "details": {
+     "address": "0x280839980a7ed0d7717f64125fe241012e5f5815",
+     "source": "ERC-20 symbol() on-chain",
+     "impact_curve": [
+      [
+       231929.97237199996,
+       1.0
+      ],
+      [
+       696047.8406748921,
+       0.9953170173476844
+      ],
+      [
+       1388251.7077839565,
+       0.8791947521092236
+      ]
+     ],
+     "capacity_usd": 1388251.7077839565,
+     "impact_source": "Pendle swap quotes: the underlying sold for USDC through the aggregator"
+    }
+   },
+   {
+    "id": "0x975c6e8b71073a82216ae464bc44f67d71988450d2542d635d88bc78fca344b1",
+    "kind": "Pool",
+    "label": "Blue strUSD/USDC",
+    "details": {
+     "market_id": "0x975c6e8b71073a82216ae464bc44f67d71988450d2542d635d88bc78fca344b1",
+     "lltv": "86.0%",
+     "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
+     "source": "Morpho Blue idToMarketParams on-chain",
+     "oracle_class": "constant-price",
+     "oracle_tracks_bound": false,
+     "total_supply": 14449981.832827,
+     "total_borrow": 12552712.227629,
+     "loan_unit": "USDC",
+     "utilization": "86.9%",
+     "borrowers": 59,
+     "collateral_of_borrowers": 16426603.99237087,
+     "collateral_unit": "strUSD",
+     "unrealised_bad_debt": 0.0,
+     "lltv_value": 0.86,
+     "free_liquidity": 1897269.605198,
+     "loan_usd": 1.0,
+     "liquidation_curve": [
+      {
+       "oracle_fall": 0.02,
+       "liquidatable_debt": 1446512.177231,
+       "positions": 7,
+       "bad_debt": 0.0,
+       "collateral_liquidatable": 1646648.8155391384
+      },
+      {
+       "oracle_fall": 0.05,
+       "liquidatable_debt": 4117334.803323,
+       "positions": 19,
+       "bad_debt": 0.0,
+       "collateral_liquidatable": 4802827.511465153
+      },
+      {
+       "oracle_fall": 0.1,
+       "liquidatable_debt": 5961510.887857,
+       "positions": 32,
+       "bad_debt": 0.0,
+       "collateral_liquidatable": 7013775.1663617855
+      },
+      {
+       "oracle_fall": 0.2,
+       "liquidatable_debt": 10361853.308993,
+       "positions": 41,
+       "bad_debt": 425079.182206,
+       "collateral_liquidatable": 12694640.523969475
+      },
+      {
+       "oracle_fall": 0.3,
+       "liquidatable_debt": 11463063.331249,
+       "positions": 44,
+       "bad_debt": 1617080.164572,
+       "collateral_liquidatable": 14255187.441388933
+      },
+      {
+       "oracle_fall": 0.5,
+       "liquidatable_debt": 12070355.045166,
+       "positions": 54,
+       "bad_debt": 4505125.530311,
+       "collateral_liquidatable": 15334666.23069295
+      }
+     ],
+     "state_source": "Morpho Blue market() and every borrower's position() on-chain, borrowers from the Morpho API"
+    }
+   },
+   {
+    "id": "0x1506c98ce61ac63c8438b710c054a51c5dd9a6a4",
+    "kind": "Oracle",
+    "label": "Oracle 0x1506\u2026a6a4",
+    "details": {
+     "address": "0x1506c98ce61ac63c8438b710c054a51c5dd9a6a4",
+     "shape": "Morpho ChainlinkOracleV2",
+     "price_raw": "1029965341757300250098894",
+     "oracle_class": "constant-price",
+     "class_basis": "base side, none follows a market: RedStone Price Feed for strUSD_FUNDAMENTAL: matches 'FUNDAMENTAL', RedStone fundamental feed: the issuer's redemption value, not a market price",
+     "source": "price() and getters read on-chain; class from the base-side inputs (D82\u2013D84)",
+     "tracks_bound": false
+    }
+   },
+   {
+    "id": "0x7fda577c085330e69df3179a2a5867751a9d0caa",
+    "kind": "Oracle",
+    "label": "RedStone Price Feed for strUSD_FUNDAMENTAL",
+    "details": {
+     "address": "0x7fda577c085330e69df3179a2a5867751a9d0caa",
+     "role_in_oracle": "BASE_FEED_1",
+     "oracle_class": "constant-price",
+     "class_basis": "RedStone Price Feed for strUSD_FUNDAMENTAL: matches 'FUNDAMENTAL', RedStone fundamental feed: the issuer's redemption value, not a market price",
+     "source": "oracle getter, description() on-chain"
+    }
+   },
+   {
+    "id": "0xff836cc9796e2889ebf73b26c2de2de74b35f985bb83e9d79380deb4229e365b",
+    "kind": "Pool",
+    "label": "Blue etrUSD/USDC",
+    "details": {
+     "market_id": "0xff836cc9796e2889ebf73b26c2de2de74b35f985bb83e9d79380deb4229e365b",
+     "lltv": "86.0%",
+     "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
+     "source": "Morpho Blue idToMarketParams on-chain",
+     "oracle_class": "constant-price",
+     "oracle_tracks_bound": false,
+     "total_supply": 1868971.143519,
+     "total_borrow": 1682785.510325,
+     "loan_unit": "USDC",
+     "utilization": "90.0%",
+     "borrowers": 12,
+     "collateral_of_borrowers": 4093526.4434072548,
+     "collateral_unit": "etrUSD",
+     "unrealised_bad_debt": 0.0,
+     "lltv_value": 0.86,
+     "free_liquidity": 186185.633194,
+     "loan_usd": 1.0,
+     "liquidation_curve": [
+      {
+       "oracle_fall": 0.02,
+       "liquidatable_debt": 0.0,
+       "positions": 0,
+       "bad_debt": 0.0,
+       "collateral_liquidatable": 0.0
+      },
+      {
+       "oracle_fall": 0.05,
+       "liquidatable_debt": 294054.288382,
+       "positions": 3,
+       "bad_debt": 0.0,
+       "collateral_liquidatable": 353395.8466904206
+      },
+      {
+       "oracle_fall": 0.1,
+       "liquidatable_debt": 1285203.066068,
+       "positions": 7,
+       "bad_debt": 0.0,
+       "collateral_liquidatable": 1550432.9058035756
+      },
+      {
+       "oracle_fall": 0.2,
+       "liquidatable_debt": 1662800.075327,
+       "positions": 10,
+       "bad_debt": 79477.690884,
+       "collateral_liquidatable": 2067778.9103190321
+      },
+      {
+       "oracle_fall": 0.3,
+       "liquidatable_debt": 1681766.696271,
+       "positions": 11,
+       "bad_debt": 255841.668739,
+       "collateral_liquidatable": 2095526.777631076
+      },
+      {
+       "oracle_fall": 0.5,
+       "liquidatable_debt": 1681766.696271,
+       "positions": 11,
+       "bad_debt": 663248.819466,
+       "collateral_liquidatable": 2095526.777631076
+      }
+     ],
+     "state_source": "Morpho Blue market() and every borrower's position() on-chain, borrowers from the Morpho API"
+    }
+   },
+   {
+    "id": "0x6f20ae2c98c2d34e6a57f3411f2c5af92e32592d",
+    "kind": "Asset",
+    "label": "etrUSD",
+    "details": {
+     "address": "0x6f20ae2c98c2d34e6a57f3411f2c5af92e32592d",
+     "source": "ERC-20 symbol() on-chain"
+    }
+   },
+   {
+    "id": "0xf73166adf598f4c03776d058564f6543f8184dcf",
+    "kind": "Oracle",
+    "label": "Oracle 0xf731\u20264dcf",
+    "details": {
+     "address": "0xf73166adf598f4c03776d058564f6543f8184dcf",
+     "shape": "Morpho ChainlinkOracleV2",
+     "price_raw": "1014705297724236978045985",
+     "oracle_class": "constant-price",
+     "class_basis": "base side, none follows a market: RedStone Price Feed for etrUSD_FUNDAMENTAL/USD: matches 'FUNDAMENTAL', RedStone fundamental feed: the issuer's redemption value, not a market price",
+     "source": "price() and getters read on-chain; class from the base-side inputs (D82\u2013D84)",
+     "tracks_bound": false
+    }
+   },
+   {
+    "id": "0x835cfff06a60a16fd1880c3b0befac9968abd659",
+    "kind": "Oracle",
+    "label": "RedStone Price Feed for etrUSD_FUNDAMENTAL/USD",
+    "details": {
+     "address": "0x835cfff06a60a16fd1880c3b0befac9968abd659",
+     "role_in_oracle": "BASE_FEED_1",
+     "oracle_class": "constant-price",
+     "class_basis": "RedStone Price Feed for etrUSD_FUNDAMENTAL/USD: matches 'FUNDAMENTAL', RedStone fundamental feed: the issuer's redemption value, not a market price",
+     "source": "oracle getter, description() on-chain"
+    }
+   },
+   {
+    "id": "0xbbf7ce1b40d32d3e3048f5cf27eeaa6de8cb27b80194690aab191a63381d8c99",
+    "kind": "Pool",
+    "label": "Blue siUSD/USDC",
+    "details": {
+     "market_id": "0xbbf7ce1b40d32d3e3048f5cf27eeaa6de8cb27b80194690aab191a63381d8c99",
+     "lltv": "91.5%",
+     "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
+     "source": "Morpho Blue idToMarketParams on-chain",
+     "oracle_class": "constant-price",
+     "oracle_tracks_bound": false,
+     "total_supply": 8000064.389547,
+     "total_borrow": 7194691.940642,
+     "loan_unit": "USDC",
+     "utilization": "89.9%",
+     "borrowers": 12,
+     "collateral_of_borrowers": 9006746.187202554,
+     "collateral_unit": "siUSD",
+     "unrealised_bad_debt": 0.0,
+     "lltv_value": 0.915,
+     "free_liquidity": 805372.448905,
+     "loan_usd": 1.0,
+     "liquidation_curve": [
+      {
+       "oracle_fall": 0.02,
+       "liquidatable_debt": 165.492666,
+       "positions": 1,
+       "bad_debt": 0.0,
+       "collateral_liquidatable": 165.76633547112735
+      },
+      {
+       "oracle_fall": 0.05,
+       "liquidatable_debt": 353308.519326,
+       "positions": 3,
+       "bad_debt": 0.0,
+       "collateral_liquidatable": 367606.7787071555
+      },
+      {
+       "oracle_fall": 0.1,
+       "liquidatable_debt": 7194688.705917,
+       "positions": 6,
+       "bad_debt": 645.594149,
+       "collateral_liquidatable": 7833829.556118395
+      },
+      {
+       "oracle_fall": 0.2,
+       "liquidatable_debt": 7194688.705917,
+       "positions": 6,
+       "bad_debt": 514358.728985,
+       "collateral_liquidatable": 7833829.556118395
+      },
+      {
+       "oracle_fall": 0.3,
+       "liquidatable_debt": 7194688.705917,
+       "positions": 6,
+       "bad_debt": 1349399.9761,
+       "collateral_liquidatable": 7833829.556118395
+      },
+      {
+       "oracle_fall": 0.5,
+       "liquidatable_debt": 7194689.784981,
+       "positions": 7,
+       "bad_debt": 3019482.483457,
+       "collateral_liquidatable": 7833831.556118395
+      }
+     ],
+     "state_source": "Morpho Blue market() and every borrower's position() on-chain, borrowers from the Morpho API"
+    }
+   },
+   {
+    "id": "0xdbdc1ef57537e34680b898e1febd3d68c7389bcb",
+    "kind": "Asset",
+    "label": "siUSD",
+    "details": {
+     "address": "0xdbdc1ef57537e34680b898e1febd3d68c7389bcb",
+     "source": "oracle getter, symbol() on-chain",
+     "role_in_oracle": "BASE_VAULT"
+    }
+   },
+   {
+    "id": "0xd2cc46b9b2d761502ef933320ecf0268ec0dfa6d",
+    "kind": "Oracle",
+    "label": "Oracle 0xd2cc\u2026fa6d",
+    "details": {
+     "address": "0xd2cc46b9b2d761502ef933320ecf0268ec0dfa6d",
+     "shape": "Morpho ChainlinkOracleV2",
+     "price_raw": "1093835380000000000000000",
+     "oracle_class": "constant-price",
+     "class_basis": "base side, none follows a market: 0xdbdc\u20269bcb: an ERC-4626 exchange rate, which follows the vault's accounting, not a market; Chainlink-formatted InfiniFi RT Oracle: answers exactly 1.0 with no round history, a pegged or hardcoded value",
+     "source": "price() and getters read on-chain; class from the base-side inputs (D82\u2013D84)",
+     "tracks_bound": false
+    }
+   },
+   {
+    "id": "0xf81aa28a4f68124683afada81e8ebbf6e2867067",
+    "kind": "Oracle",
+    "label": "Chainlink-formatted InfiniFi RT Oracle",
+    "details": {
+     "address": "0xf81aa28a4f68124683afada81e8ebbf6e2867067",
+     "role_in_oracle": "BASE_FEED_1",
+     "oracle_class": "constant-price",
+     "class_basis": "Chainlink-formatted InfiniFi RT Oracle: answers exactly 1.0 with no round history, a pegged or hardcoded value",
+     "source": "oracle getter, description() on-chain"
+    }
+   },
+   {
+    "id": "0xc3866d726c204c0836e0677a31973c649888973d",
+    "kind": "Oracle",
+    "label": "Dummy feed with 12 decimals",
+    "details": {
+     "address": "0xc3866d726c204c0836e0677a31973c649888973d",
+     "role_in_oracle": "QUOTE_FEED_1",
+     "source": "oracle getter, description() on-chain"
+    }
+   },
+   {
+    "id": "0x755f954513d31d5f24aaf3d0cdc5e913a28383f8ea8ff85be9ffffa7371fb64d",
+    "kind": "Pool",
+    "label": "Blue PRIME/USDC",
+    "details": {
+     "market_id": "0x755f954513d31d5f24aaf3d0cdc5e913a28383f8ea8ff85be9ffffa7371fb64d",
+     "lltv": "86.0%",
+     "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
+     "source": "Morpho Blue idToMarketParams on-chain",
+     "oracle_class": "constant-price",
+     "oracle_tracks_bound": false,
+     "total_supply": 1703617.778151,
+     "total_borrow": 1458666.774015,
+     "loan_unit": "USDC",
+     "utilization": "85.6%",
+     "borrowers": 9,
+     "collateral_of_borrowers": 1865079.626358,
+     "collateral_unit": "PRIME",
+     "unrealised_bad_debt": 0.0,
+     "lltv_value": 0.86,
+     "free_liquidity": 244951.004136,
+     "loan_usd": 1.0,
+     "liquidation_curve": [
+      {
+       "oracle_fall": 0.02,
+       "liquidatable_debt": 0.0,
+       "positions": 0,
+       "bad_debt": 0.0,
+       "collateral_liquidatable": 0.0
+      },
+      {
+       "oracle_fall": 0.05,
+       "liquidatable_debt": 0.0,
+       "positions": 0,
+       "bad_debt": 0.0,
+       "collateral_liquidatable": 0.0
+      },
+      {
+       "oracle_fall": 0.1,
+       "liquidatable_debt": 17.850901,
+       "positions": 2,
+       "bad_debt": 0.0,
+       "collateral_liquidatable": 20.673848
+      },
+      {
+       "oracle_fall": 0.2,
+       "liquidatable_debt": 1403545.46536,
+       "positions": 5,
+       "bad_debt": 0.994326,
+       "collateral_liquidatable": 1759346.023992
+      },
+      {
+       "oracle_fall": 0.3,
+       "liquidatable_debt": 1403555.589275,
+       "positions": 6,
+       "bad_debt": 148357.707956,
+       "collateral_liquidatable": 1759360.327799
+      },
+      {
+       "oracle_fall": 0.5,
+       "liquidatable_debt": 1458666.774011,
+       "positions": 8,
+       "bad_debt": 508222.249391,
+       "collateral_liquidatable": 1865079.626356
+      }
+     ],
+     "state_source": "Morpho Blue market() and every borrower's position() on-chain, borrowers from the Morpho API"
+    }
+   },
+   {
+    "id": "0x19ebb35279a16207ec4ba82799cc64715065f7f6",
+    "kind": "Asset",
+    "label": "PRIME",
+    "details": {
+     "address": "0x19ebb35279a16207ec4ba82799cc64715065f7f6",
+     "source": "ERC-20 symbol() on-chain"
+    }
+   },
+   {
+    "id": "0x999eff9ca63d23a60a0cd19b9f65a0918674119a",
+    "kind": "Oracle",
+    "label": "Oracle 0x999e\u2026119a",
+    "details": {
+     "address": "0x999eff9ca63d23a60a0cd19b9f65a0918674119a",
+     "shape": "Morpho ChainlinkOracleV2",
+     "price_raw": "1063883030482435231483219189189683842",
+     "oracle_class": "constant-price",
+     "class_basis": "base side, none follows a market: PRIME / WYLDS Exchange Rate: fell 0 times in 24 changes over 24 rounds, an accrual rate",
+     "source": "price() and getters read on-chain; class from the base-side inputs (D82\u2013D84)",
+     "tracks_bound": false
+    }
+   },
+   {
+    "id": "0xf17c0edcaa28371e9c8012d7699bf40ecf0f58d1",
+    "kind": "Oracle",
+    "label": "PRIME / WYLDS Exchange Rate",
+    "details": {
+     "address": "0xf17c0edcaa28371e9c8012d7699bf40ecf0f58d1",
+     "role_in_oracle": "BASE_FEED_1",
+     "oracle_class": "constant-price",
+     "class_basis": "PRIME / WYLDS Exchange Rate: fell 0 times in 24 changes over 24 rounds, an accrual rate",
+     "source": "oracle getter, description() on-chain"
+    }
+   },
+   {
+    "id": "admin:0xbbacdcfb9691dfa1066ab29edfcc4a73f6def918",
+    "kind": "Admin",
+    "label": "owner + curator 0xbbac\u2026f918",
+    "details": {
+     "address": "0xbbacdcfb9691dfa1066ab29edfcc4a73f6def918",
+     "source": "owner()/curator() on-chain; allocators and sentinels from the Morpho API, confirmed with isAllocator()/isSentinel()"
+    }
+   },
+   {
+    "id": "admin:0x1cda83fe97a2e0a8f94a9cf32da947c23b72ba02",
+    "kind": "Admin",
+    "label": "allocator 0x1cda\u2026ba02",
+    "details": {
+     "address": "0x1cda83fe97a2e0a8f94a9cf32da947c23b72ba02",
+     "source": "owner()/curator() on-chain; allocators and sentinels from the Morpho API, confirmed with isAllocator()/isSentinel()"
+    }
+   },
+   {
+    "id": "admin:0xbda66c6704d1170ce3479a9a53465faa2482f9e5",
+    "kind": "Admin",
+    "label": "allocator 0xbda6\u2026f9e5",
+    "details": {
+     "address": "0xbda66c6704d1170ce3479a9a53465faa2482f9e5",
+     "source": "owner()/curator() on-chain; allocators and sentinels from the Morpho API, confirmed with isAllocator()/isSentinel()"
+    }
+   },
+   {
+    "id": "admin:0xdf758f044e3761ad52e1b96e1a468f03f565334b",
+    "kind": "Admin",
+    "label": "allocator 0xdf75\u2026334b",
+    "details": {
+     "address": "0xdf758f044e3761ad52e1b96e1a468f03f565334b",
+     "source": "owner()/curator() on-chain; allocators and sentinels from the Morpho API, confirmed with isAllocator()/isSentinel()"
+    }
+   },
+   {
+    "id": "admin:0xac851fcda514c09e36323124ec5dd8181f923a49",
+    "kind": "Admin",
+    "label": "allocator 0xac85\u20263a49",
+    "details": {
+     "address": "0xac851fcda514c09e36323124ec5dd8181f923a49",
+     "source": "owner()/curator() on-chain; allocators and sentinels from the Morpho API, confirmed with isAllocator()/isSentinel()"
+    }
+   },
+   {
+    "id": "admin:0x040eaacb689d4635a2b2c2e2383a059ff4733a47",
+    "kind": "Admin",
+    "label": "sentinel 0x040e\u20263a47",
+    "details": {
+     "address": "0x040eaacb689d4635a2b2c2e2383a059ff4733a47",
+     "source": "owner()/curator() on-chain; allocators and sentinels from the Morpho API, confirmed with isAllocator()/isSentinel()"
+    }
+   },
+   {
+    "id": "0x41c41d0c9aadbf4751f5ee215ed5a16954a4b34e1b70fca5393d4b08858fa3fa",
+    "kind": "Pool",
+    "label": "Blue PRIME/PYUSD",
+    "details": {
+     "market_id": "0x41c41d0c9aadbf4751f5ee215ed5a16954a4b34e1b70fca5393d4b08858fa3fa",
+     "lltv": "86.0%",
+     "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
+     "source": "sibling found with the Morpho API markets query; parameters and oracle read on-chain",
+     "oracle_class": "constant-price",
+     "sibling": true,
+     "linked_by": "same collateral with PRIME/USDC (LLTV 86.0%); shared price input with PRIME/USDC (LLTV 86.0%)",
+     "oracle_tracks_bound": false,
+     "total_supply": 209677558.421838,
+     "total_borrow": 189079321.968465,
+     "loan_unit": "PYUSD",
+     "utilization": "90.2%",
+     "borrowers": 76,
+     "collateral_of_borrowers": 246203520.494647,
+     "collateral_unit": "PRIME",
+     "unrealised_bad_debt": 0.0,
+     "lltv_value": 0.86,
+     "free_liquidity": 20598236.453373,
+     "liquidation_curve": [
+      {
+       "oracle_fall": 0.02,
+       "liquidatable_debt": 4678143.64804,
+       "positions": 6,
+       "bad_debt": 0.0,
+       "collateral_liquidatable": 5181017.596919
+      },
+      {
+       "oracle_fall": 0.05,
+       "liquidatable_debt": 45758778.030208,
+       "positions": 16,
+       "bad_debt": 0.0,
+       "collateral_liquidatable": 51867308.547655
+      },
+      {
+       "oracle_fall": 0.1,
+       "liquidatable_debt": 119214278.099608,
+       "positions": 52,
+       "bad_debt": 0.0,
+       "collateral_liquidatable": 138778693.251112
+      },
+      {
+       "oracle_fall": 0.2,
+       "liquidatable_debt": 150590920.930244,
+       "positions": 61,
+       "bad_debt": 6073559.544083,
+       "collateral_liquidatable": 178947530.776209
+      },
+      {
+       "oracle_fall": 0.3,
+       "liquidatable_debt": 150664244.78366,
+       "positions": 66,
+       "bad_debt": 22939277.055454,
+       "collateral_liquidatable": 179049488.926741
+      },
+      {
+       "oracle_fall": 0.5,
+       "liquidatable_debt": 189077284.076618,
+       "positions": 70,
+       "bad_debt": 66282795.905187,
+       "collateral_liquidatable": 240992050.55564
+      }
+     ],
+     "state_source": "Morpho Blue market() and every borrower's position() on-chain, borrowers from the Morpho API"
+    }
+   },
+   {
+    "id": "0x6c3ea9036406852006290770bedfcaba0e23a0e8",
+    "kind": "Asset",
+    "label": "PYUSD",
+    "details": {
+     "address": "0x6c3ea9036406852006290770bedfcaba0e23a0e8",
+     "source": "ERC-20 symbol() on-chain"
+    }
+   },
+   {
+    "id": "0x335e5718bc20028d5e357473a3736c187ca6b07e",
+    "kind": "Oracle",
+    "label": "Oracle 0x335e\u2026b07e",
+    "details": {
+     "address": "0x335e5718bc20028d5e357473a3736c187ca6b07e",
+     "shape": "Morpho ChainlinkOracleV2",
+     "price_raw": "1063752620098310366153383232181141847",
+     "oracle_class": "constant-price",
+     "class_basis": "base side, none follows a market: PRIME / WYLDS Exchange Rate: fell 0 times in 24 changes over 24 rounds, an accrual rate",
+     "source": "price() and getters read on-chain; class from the base-side inputs (D82\u2013D84)",
+     "tracks_bound": false
+    }
+   },
+   {
+    "id": "0x8f1df6d7f2db73eece86a18b4381f4707b918fb1",
+    "kind": "Oracle",
+    "label": "PYUSD / USD",
+    "details": {
+     "address": "0x8f1df6d7f2db73eece86a18b4381f4707b918fb1",
+     "role_in_oracle": "QUOTE_FEED_1",
+     "source": "oracle getter, description() on-chain"
+    }
+   },
+   {
+    "id": "0x4565ac05d38b19374ccbb04c17cca60ca9353cd41824f0803d0fc7704f60eaed",
+    "kind": "Pool",
+    "label": "Blue reUSD/USDC",
+    "details": {
+     "market_id": "0x4565ac05d38b19374ccbb04c17cca60ca9353cd41824f0803d0fc7704f60eaed",
+     "lltv": "91.5%",
+     "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
+     "source": "sibling found with the Morpho API markets query; parameters and oracle read on-chain",
+     "oracle_class": "constant-price",
+     "sibling": true,
+     "linked_by": "same underlying with PT-reUSD-10DEC2026/USDC (LLTV 91.5%)",
+     "oracle_tracks_bound": false,
+     "total_supply": 10208727.142211,
+     "total_borrow": 9187854.510284,
+     "loan_unit": "USDC",
+     "utilization": "90.0%",
+     "borrowers": 26,
+     "collateral_of_borrowers": 9257614.910804354,
+     "collateral_unit": "reUSD",
+     "unrealised_bad_debt": 0.0,
+     "lltv_value": 0.915,
+     "free_liquidity": 1020872.631927,
+     "loan_usd": 1.0,
+     "liquidation_curve": [
+      {
+       "oracle_fall": 0.02,
+       "liquidatable_debt": 7150432.346567,
+       "positions": 9,
+       "bad_debt": 0.0,
+       "collateral_liquidatable": 7133913.1469764905
+      },
+      {
+       "oracle_fall": 0.05,
+       "liquidatable_debt": 7539799.097737,
+       "positions": 12,
+       "bad_debt": 0.0,
+       "collateral_liquidatable": 7534802.980860947
+      },
+      {
+       "oracle_fall": 0.1,
+       "liquidatable_debt": 9175347.945064,
+       "positions": 20,
+       "bad_debt": 230711.926422,
+       "collateral_liquidatable": 9242916.934404507
+      },
+      {
+       "oracle_fall": 0.2,
+       "liquidatable_debt": 9186802.73858,
+       "positions": 22,
+       "bad_debt": 1204852.983249,
+       "collateral_liquidatable": 9256064.890984775
+      },
+      {
+       "oracle_fall": 0.3,
+       "liquidatable_debt": 9186802.73858,
+       "positions": 22,
+       "bad_debt": 2202539.47384,
+       "collateral_liquidatable": 9256064.890984775
+      },
+      {
+       "oracle_fall": 0.5,
+       "liquidatable_debt": 9187854.51025,
+       "positions": 25,
+       "bad_debt": 4198259.989579,
+       "collateral_liquidatable": 9257614.221782649
+      }
+     ],
+     "state_source": "Morpho Blue market() and every borrower's position() on-chain, borrowers from the Morpho API"
+    }
+   },
+   {
+    "id": "0xa66a4f03fd8031973f8c7718904ce32385f54e70",
+    "kind": "Oracle",
+    "label": "Oracle 0xa66a\u20264e70",
+    "details": {
+     "address": "0xa66a4f03fd8031973f8c7718904ce32385f54e70",
+     "shape": "Morpho ChainlinkOracleV2",
+     "price_raw": "1106150773063658800000000",
+     "oracle_class": "constant-price",
+     "class_basis": "base side, none follows a market: reUSD/USD exchange rate: matches 'exchange rate', an exchange rate between a token and its underlying, not a market price",
+     "source": "price() and getters read on-chain; class from the base-side inputs (D82\u2013D84)",
+     "tracks_bound": false
+    }
+   },
+   {
+    "id": "0x72b5760cfbe437dd01409f44055fdfb8f8121b46",
+    "kind": "Oracle",
+    "label": "reUSD/USD exchange rate",
+    "details": {
+     "address": "0x72b5760cfbe437dd01409f44055fdfb8f8121b46",
+     "role_in_oracle": "BASE_FEED_1",
+     "oracle_class": "constant-price",
+     "class_basis": "reUSD/USD exchange rate: matches 'exchange rate', an exchange rate between a token and its underlying, not a market price",
+     "source": "oracle getter, description() on-chain"
+    }
+   },
+   {
+    "id": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
+    "kind": "Pool",
+    "label": "Blue PT-reUSD-10DEC2026/USDT",
+    "details": {
+     "market_id": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
+     "lltv": "91.5%",
+     "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
+     "source": "sibling found with the Morpho API markets query; parameters and oracle read on-chain",
+     "oracle_class": "price-tracking",
+     "sibling": true,
+     "linked_by": "same collateral with PT-reUSD-10DEC2026/USDC (LLTV 91.5%); shared price input with PT-reUSD-10DEC2026/USDC (LLTV 91.5%)",
+     "oracle_tracks_bound": true,
+     "total_supply": 11343758.917801,
+     "total_borrow": 8456346.220581,
+     "loan_unit": "USDT",
+     "utilization": "74.5%",
+     "borrowers": 76,
+     "collateral_of_borrowers": 10185220.225683,
+     "collateral_unit": "PT-reUSD-10DEC2026",
+     "unrealised_bad_debt": 0.0,
+     "lltv_value": 0.915,
+     "free_liquidity": 2887412.69722,
+     "loan_usd": 1.0,
+     "liquidation_curve": [
+      {
+       "oracle_fall": 0.02,
+       "liquidatable_debt": 0.0,
+       "positions": 0,
+       "bad_debt": 0.0,
+       "collateral_liquidatable": 0.0
+      },
+      {
+       "oracle_fall": 0.05,
+       "liquidatable_debt": 2150558.063229,
+       "positions": 12,
+       "bad_debt": 0.0,
+       "collateral_liquidatable": 2484514.215497
+      },
+      {
+       "oracle_fall": 0.1,
+       "liquidatable_debt": 7189925.377443,
+       "positions": 47,
+       "bad_debt": 11551.172135,
+       "collateral_liquidatable": 8459137.434493
+      },
+      {
+       "oracle_fall": 0.2,
+       "liquidatable_debt": 7975671.250993,
+       "positions": 63,
+       "bad_debt": 726135.744404,
+       "collateral_liquidatable": 9485032.476706
+      },
+      {
+       "oracle_fall": 0.3,
+       "liquidatable_debt": 8440943.260422,
+       "positions": 70,
+       "bad_debt": 1639723.816215,
+       "collateral_liquidatable": 10155969.346091
+      },
+      {
+       "oracle_fall": 0.5,
+       "liquidatable_debt": 8456345.231241,
+       "positions": 74,
+       "bad_debt": 3583933.877318,
+       "collateral_liquidatable": 10185215.878119
+      }
+     ],
+     "state_source": "Morpho Blue market() and every borrower's position() on-chain, borrowers from the Morpho API"
+    }
+   },
+   {
+    "id": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    "kind": "Asset",
+    "label": "USDT",
+    "details": {
+     "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+     "issuer": "Tether",
+     "source": "ERC-20 symbol() on-chain, issuer from registry.json"
+    }
+   },
+   {
+    "id": "0x5131d0b823d726a4080951ee49f0cbd57d0fd53776c7d8aeceb76dd9a22a1695",
+    "kind": "Pool",
+    "label": "Blue PRIME/AUSD",
+    "details": {
+     "market_id": "0x5131d0b823d726a4080951ee49f0cbd57d0fd53776c7d8aeceb76dd9a22a1695",
+     "lltv": "86.0%",
+     "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
+     "source": "sibling found with the Morpho API markets query; parameters and oracle read on-chain",
+     "oracle_class": "constant-price",
+     "sibling": true,
+     "linked_by": "same collateral with PRIME/USDC (LLTV 86.0%); shared price input with PRIME/USDC (LLTV 86.0%)",
+     "oracle_tracks_bound": false,
+     "total_supply": 5625674.404017,
+     "total_borrow": 5084256.690349,
+     "loan_unit": "AUSD",
+     "utilization": "90.4%",
+     "borrowers": 5,
+     "collateral_of_borrowers": 5947613.851329,
+     "collateral_unit": "PRIME",
+     "unrealised_bad_debt": 0.0,
+     "lltv_value": 0.86,
+     "free_liquidity": 541417.713668,
+     "liquidation_curve": [
+      {
+       "oracle_fall": 0.02,
+       "liquidatable_debt": 0.0,
+       "positions": 0,
+       "bad_debt": 0.0,
+       "collateral_liquidatable": 0.0
+      },
+      {
+       "oracle_fall": 0.05,
+       "liquidatable_debt": 2852.293115,
+       "positions": 1,
+       "bad_debt": 0.0,
+       "collateral_liquidatable": 3192.249392
+      },
+      {
+       "oracle_fall": 0.1,
+       "liquidatable_debt": 5084256.690346,
+       "positions": 5,
+       "bad_debt": 0.0,
+       "collateral_liquidatable": 5947613.851329
+      },
+      {
+       "oracle_fall": 0.2,
+       "liquidatable_debt": 5084256.690346,
+       "positions": 5,
+       "bad_debt": 235390.18508,
+       "collateral_liquidatable": 5947613.851329
+      },
+      {
+       "oracle_fall": 0.3,
+       "liquidatable_debt": 5084256.690346,
+       "positions": 5,
+       "bad_debt": 841498.498238,
+       "collateral_liquidatable": 5947613.851329
+      },
+      {
+       "oracle_fall": 0.5,
+       "liquidatable_debt": 5084256.690346,
+       "positions": 5,
+       "bad_debt": 2053715.124555,
+       "collateral_liquidatable": 5947613.851329
+      }
+     ],
+     "state_source": "Morpho Blue market() and every borrower's position() on-chain, borrowers from the Morpho API"
+    }
+   },
+   {
+    "id": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+    "kind": "Asset",
+    "label": "AUSD",
+    "details": {
+     "address": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+     "source": "ERC-20 symbol() on-chain"
+    }
+   },
+   {
+    "id": "0xb79429cf3ae7bfb1bee0fd5b2f338d8ea49d7d11",
+    "kind": "Oracle",
+    "label": "Oracle 0xb794\u20267d11",
+    "details": {
+     "address": "0xb79429cf3ae7bfb1bee0fd5b2f338d8ea49d7d11",
+     "shape": "Morpho ChainlinkOracleV2",
+     "price_raw": "1063755864543801666000000000000000000",
+     "oracle_class": "constant-price",
+     "class_basis": "base side, none follows a market: PRIME / WYLDS Exchange Rate: fell 0 times in 24 changes over 24 rounds, an accrual rate",
+     "source": "price() and getters read on-chain; class from the base-side inputs (D82\u2013D84)",
+     "tracks_bound": false
+    }
+   },
+   {
+    "id": "0xd21bbc238918855461d943753ac4c90d103888e5661fd78f3378294c45f7d8df",
+    "kind": "Pool",
+    "label": "Blue PT-trUSD-26NOV2026/USDC",
+    "details": {
+     "market_id": "0xd21bbc238918855461d943753ac4c90d103888e5661fd78f3378294c45f7d8df",
+     "lltv": "94.5%",
+     "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
+     "source": "sibling found with the Morpho API markets query; parameters and oracle read on-chain",
+     "oracle_class": "constant-price",
+     "sibling": true,
+     "linked_by": "shared price input with PT-strUSD-26NOV2026/USDC (LLTV 86.0%); same underlying with strUSD/USDC (LLTV 86.0%)",
+     "oracle_tracks_bound": false,
+     "total_supply": 2012146.822354,
+     "total_borrow": 1820798.716987,
+     "loan_unit": "USDC",
+     "utilization": "90.5%",
+     "borrowers": 38,
+     "collateral_of_borrowers": 2188066.370834029,
+     "collateral_unit": "PT-trUSD-26NOV2026",
+     "unrealised_bad_debt": 0.0,
+     "lltv_value": 0.945,
+     "free_liquidity": 191348.105367,
+     "loan_usd": 1.0,
+     "liquidation_curve": [
+      {
+       "oracle_fall": 0.02,
+       "liquidatable_debt": 902488.91618,
+       "positions": 1,
+       "bad_debt": 0.0,
+       "collateral_liquidatable": 1000359.6578310337
+      },
+      {
+       "oracle_fall": 0.05,
+       "liquidatable_debt": 973275.411432,
+       "positions": 3,
+       "bad_debt": 0.0,
+       "collateral_liquidatable": 1081058.8117895236
+      },
+      {
+       "oracle_fall": 0.1,
+       "liquidatable_debt": 1276308.5571,
+       "positions": 17,
+       "bad_debt": 43923.696218,
+       "collateral_liquidatable": 1436776.356641032
+      },
+      {
+       "oracle_fall": 0.2,
+       "liquidatable_debt": 1726992.054375,
+       "positions": 26,
+       "bad_debt": 197778.87673,
+       "collateral_liquidatable": 2000169.094663667
+      },
+      {
+       "oracle_fall": 0.3,
+       "liquidatable_debt": 1731458.273283,
+       "positions": 31,
+       "bad_debt": 389039.707457,
+       "collateral_liquidatable": 2006786.1860090133
+      },
+      {
+       "oracle_fall": 0.5,
+       "liquidatable_debt": 1820797.857383,
+       "positions": 34,
+       "bad_debt": 787763.520973,
+       "collateral_liquidatable": 2161889.1426159665
+      }
+     ],
+     "state_source": "Morpho Blue market() and every borrower's position() on-chain, borrowers from the Morpho API"
+    }
+   },
+   {
+    "id": "0x7191878f1fe834b28f4d0cead0e4375b814c4abb",
+    "kind": "Asset",
+    "label": "PT-trUSD-26NOV2026",
+    "details": {
+     "address": "0x7191878f1fe834b28f4d0cead0e4375b814c4abb",
+     "source": "ERC-20 symbol() on-chain",
+     "impact_curve": [
+      [
+       57000.0,
+       1.0
+      ],
+      [
+       170000.0,
+       0.9997808705588779
+      ],
+      [
+       339000.0,
+       0.9967261957520676
+      ],
+      [
+       565000.0,
+       0.9885464032556005
+      ],
+      [
+       848000.0,
+       0.9737281647254267
+      ]
+     ],
+     "capacity_usd": 848000.0,
+     "impact_source": "Pendle swap quotes: the PT sold into its pool for the underlying, no aggregator"
+    }
+   },
+   {
+    "id": "0x345866dcd877994afb36277d1ad287eb94a1e7af",
+    "kind": "Oracle",
+    "label": "Oracle 0x3458\u2026e7af",
+    "details": {
+     "address": "0x345866dcd877994afb36277d1ad287eb94a1e7af",
+     "shape": "Morpho ChainlinkOracleV2",
+     "price_raw": "971710661988669515667207",
+     "oracle_class": "constant-price",
+     "class_basis": "base side, none follows a market: 0x7180\u20264d19: baseDiscountPerYear() = 225000000000000000, Pendle linear-discount oracle: a deterministic discount to maturity, no market input; RedStone Price Feed for trUSD_FUNDAMENTAL: answers exactly 1.0 with no round history, a pegged or hardcoded value",
+     "source": "price() and getters read on-chain; class from the base-side inputs (D82\u2013D84)",
+     "tracks_bound": false
+    }
+   },
+   {
+    "id": "0x7180e88ac8883aac79934ad27cfab41d5aa74d19",
+    "kind": "Oracle",
+    "label": "BASE_FEED_1",
+    "details": {
+     "address": "0x7180e88ac8883aac79934ad27cfab41d5aa74d19",
+     "role_in_oracle": "BASE_FEED_1",
+     "oracle_class": "constant-price",
+     "class_basis": "0x7180\u20264d19: baseDiscountPerYear() = 225000000000000000, Pendle linear-discount oracle: a deterministic discount to maturity, no market input",
+     "source": "oracle getter, description() on-chain"
+    }
+   },
+   {
+    "id": "pendle:0x7191878f1fe834b28f4d0cead0e4375b814c4abb",
+    "kind": "Pool",
+    "label": "Pendle trUSD pool",
+    "details": {
+     "address": "0xfcf009cb3135da12a6eb1f73f3ee05392a7bc947",
+     "expiry": "2026-11-26",
+     "liquidity_usd": 1130081.747878388,
+     "implied_apy": 0.10383807499271391,
+     "days_to_maturity": 46.08,
+     "source": "Pendle API markets"
+    }
+   },
+   {
+    "id": "0xd0580192e98ea6ceb9c7b6191ed2e27560911697",
+    "kind": "Asset",
+    "label": "trUSD",
+    "details": {
+     "address": "0xd0580192e98ea6ceb9c7b6191ed2e27560911697",
+     "source": "ERC-20 symbol() on-chain",
+     "impact_curve": [
+      [
+       57825.181731,
+       1.0
+      ],
+      [
+       172435.9482227654,
+       0.9999024705173207
+      ],
+      [
+       343321.2570914419,
+       0.9997528831942544
+      ],
+      [
+       569967.0438356282,
+       0.9995294160737843
+      ],
+      [
+       849521.4348384523,
+       0.9983169777475637
+      ]
+     ],
+     "capacity_usd": 849521.4348384523,
+     "impact_source": "Pendle swap quotes: the underlying sold for USDC through the aggregator"
+    }
+   },
+   {
+    "id": "0x64d2f82e674b764d618b630297813cd34bdc42a0fa66f92efa2ac8b1efe4bbd5",
+    "kind": "Pool",
+    "label": "Blue siUSD/msUSD",
+    "details": {
+     "market_id": "0x64d2f82e674b764d618b630297813cd34bdc42a0fa66f92efa2ac8b1efe4bbd5",
+     "lltv": "91.5%",
+     "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
+     "source": "sibling found with the Morpho API markets query; parameters and oracle read on-chain",
+     "oracle_class": "constant-price",
+     "sibling": true,
+     "linked_by": "same collateral with siUSD/USDC (LLTV 91.5%); shared price input with siUSD/USDC (LLTV 91.5%)",
+     "oracle_tracks_bound": false,
+     "total_supply": 2075012.510092762,
+     "total_borrow": 1867511.284762028,
+     "loan_unit": "msUSD",
+     "utilization": "90.0%",
+     "borrowers": 59,
+     "collateral_of_borrowers": 1914994.0458368568,
+     "collateral_unit": "siUSD",
+     "unrealised_bad_debt": 0.0,
+     "lltv_value": 0.915,
+     "free_liquidity": 207501.22533073416,
+     "liquidation_curve": [
+      {
+       "oracle_fall": 0.02,
+       "liquidatable_debt": 1063465.9154017128,
+       "positions": 17,
+       "bad_debt": 0.0,
+       "collateral_liquidatable": 1076416.784598777
+      },
+      {
+       "oracle_fall": 0.05,
+       "liquidatable_debt": 1824693.6587942147,
+       "positions": 23,
+       "bad_debt": 0.0,
+       "collateral_liquidatable": 1859183.1332029265
+      },
+      {
+       "oracle_fall": 0.1,
+       "liquidatable_debt": 1825546.8750315353,
+       "positions": 34,
+       "bad_debt": 41089.44332973496,
+       "collateral_liquidatable": 1860095.653195094
+      },
+      {
+       "oracle_fall": 0.2,
+       "liquidatable_debt": 1835127.1873411827,
+       "positions": 46,
+       "bad_debt": 239670.11862355424,
+       "collateral_liquidatable": 1870947.0754305527
+      },
+      {
+       "oracle_fall": 0.3,
+       "liquidatable_debt": 1867507.3049795064,
+       "positions": 51,
+       "bad_debt": 439362.6440541199,
+       "collateral_liquidatable": 1914984.501528214
+      },
+      {
+       "oracle_fall": 0.5,
+       "liquidatable_debt": 1867509.4784033431,
+       "positions": 53,
+       "bad_debt": 846875.8283426765,
+       "collateral_liquidatable": 1914988.051528214
+      }
+     ],
+     "state_source": "Morpho Blue market() and every borrower's position() on-chain, borrowers from the Morpho API"
+    }
+   },
+   {
+    "id": "0xab5eb14c09d416f0ac63661e57edb7aecdb9befa",
+    "kind": "Asset",
+    "label": "msUSD",
+    "details": {
+     "address": "0xab5eb14c09d416f0ac63661e57edb7aecdb9befa",
+     "source": "ERC-20 symbol() on-chain"
+    }
+   },
+   {
+    "id": "0xc7bb5f34d645f3849a3091ce4b6724631ee811af",
+    "kind": "Oracle",
+    "label": "Oracle 0xc7bb\u202611af",
+    "details": {
+     "address": "0xc7bb5f34d645f3849a3091ce4b6724631ee811af",
+     "shape": "Morpho ChainlinkOracleV2",
+     "price_raw": "1093835380000000000000000000000000000",
+     "oracle_class": "constant-price",
+     "class_basis": "base side, none follows a market: 0xdbdc\u20269bcb: an ERC-4626 exchange rate, which follows the vault's accounting, not a market; Chainlink-formatted InfiniFi RT Oracle: answers exactly 1.0 with no round history, a pegged or hardcoded value",
+     "source": "price() and getters read on-chain; class from the base-side inputs (D82\u2013D84)",
+     "tracks_bound": false
+    }
+   },
+   {
+    "id": "0x9e553e8a22eb2b2040042965d0dc424f7c5e64744b093d2df9162dce1833eeda",
+    "kind": "Pool",
+    "label": "Blue nvPRIME/USDC",
+    "details": {
+     "market_id": "0x9e553e8a22eb2b2040042965d0dc424f7c5e64744b093d2df9162dce1833eeda",
+     "lltv": "86.0%",
+     "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
+     "source": "sibling found with the Morpho API markets query; parameters and oracle read on-chain",
+     "oracle_class": "constant-price",
+     "sibling": true,
+     "linked_by": "same underlying with PRIME/USDC (LLTV 86.0%); shared price input with PRIME/USDC (LLTV 86.0%)",
+     "oracle_tracks_bound": false,
+     "total_supply": 1294970.867077,
+     "total_borrow": 1166319.809031,
+     "loan_unit": "USDC",
+     "utilization": "90.1%",
+     "borrowers": 6,
+     "collateral_of_borrowers": 1590070.1619678705,
+     "collateral_unit": "nvPRIME",
+     "unrealised_bad_debt": 0.0,
+     "lltv_value": 0.86,
+     "free_liquidity": 128651.058046,
+     "loan_usd": 1.0,
+     "liquidation_curve": [
+      {
+       "oracle_fall": 0.02,
+       "liquidatable_debt": 0.0,
+       "positions": 0,
+       "bad_debt": 0.0,
+       "collateral_liquidatable": 0.0
+      },
+      {
+       "oracle_fall": 0.05,
+       "liquidatable_debt": 0.0,
+       "positions": 0,
+       "bad_debt": 0.0,
+       "collateral_liquidatable": 0.0
+      },
+      {
+       "oracle_fall": 0.1,
+       "liquidatable_debt": 1145.716311,
+       "positions": 1,
+       "bad_debt": 0.0,
+       "collateral_liquidatable": 1318.4559049772308
+      },
+      {
+       "oracle_fall": 0.2,
+       "liquidatable_debt": 1166230.940575,
+       "positions": 3,
+       "bad_debt": 70.700165,
+       "collateral_liquidatable": 1589942.05444435
+      },
+      {
+       "oracle_fall": 0.3,
+       "liquidatable_debt": 1166301.763264,
+       "positions": 5,
+       "bad_debt": 31903.852459,
+       "collateral_liquidatable": 1590039.770726949
+      },
+      {
+       "oracle_fall": 0.5,
+       "liquidatable_debt": 1166319.809028,
+       "positions": 6,
+       "bad_debt": 356020.09965,
+       "collateral_liquidatable": 1590070.1619678705
+      }
+     ],
+     "state_source": "Morpho Blue market() and every borrower's position() on-chain, borrowers from the Morpho API"
+    }
+   },
+   {
+    "id": "0xc360e625f19a7ea47e47810b13e386221d5187d1",
+    "kind": "Asset",
+    "label": "nvPRIME",
+    "details": {
+     "address": "0xc360e625f19a7ea47e47810b13e386221d5187d1",
+     "source": "oracle getter, symbol() on-chain",
+     "role_in_oracle": "BASE_VAULT"
+    }
+   },
+   {
+    "id": "0x9cc1a40a90760c7cc238ce06abdef4adc972e28d",
+    "kind": "Oracle",
+    "label": "Oracle 0x9cc1\u2026e28d",
+    "details": {
+     "address": "0x9cc1a40a90760c7cc238ce06abdef4adc972e28d",
+     "shape": "Morpho ChainlinkOracleV2",
+     "price_raw": "1063883030482435231483219",
+     "oracle_class": "constant-price",
+     "class_basis": "base side, none follows a market: 0xc360\u202687d1: an ERC-4626 exchange rate, which follows the vault's accounting, not a market; PRIME / WYLDS Exchange Rate: fell 0 times in 24 changes over 24 rounds, an accrual rate",
+     "source": "price() and getters read on-chain; class from the base-side inputs (D82\u2013D84)",
+     "tracks_bound": false
+    }
+   },
+   {
+    "id": "0x9105a5447f3eecdf768f04da12d580a878106e2e6b234312db2ee0f304539e35",
+    "kind": "Pool",
+    "label": "Blue reUSD/USDT",
+    "details": {
+     "market_id": "0x9105a5447f3eecdf768f04da12d580a878106e2e6b234312db2ee0f304539e35",
+     "lltv": "91.5%",
+     "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
+     "source": "sibling found with the Morpho API markets query; parameters and oracle read on-chain",
+     "oracle_class": "constant-price",
+     "sibling": true,
+     "linked_by": "same underlying with PT-reUSD-10DEC2026/USDC (LLTV 91.5%)",
+     "oracle_tracks_bound": false,
+     "total_supply": 1297980.964934,
+     "total_borrow": 915090.510684,
+     "loan_unit": "USDT",
+     "utilization": "70.5%",
+     "borrowers": 10,
+     "collateral_of_borrowers": 924218.4936958277,
+     "collateral_unit": "reUSD",
+     "unrealised_bad_debt": 0.0,
+     "lltv_value": 0.915,
+     "free_liquidity": 382890.45425,
+     "loan_usd": 1.0,
+     "liquidation_curve": [
+      {
+       "oracle_fall": 0.02,
+       "liquidatable_debt": 782501.931898,
+       "positions": 3,
+       "bad_debt": 0.0,
+       "collateral_liquidatable": 786744.838061027
+      },
+      {
+       "oracle_fall": 0.05,
+       "liquidatable_debt": 825787.252004,
+       "positions": 5,
+       "bad_debt": 0.0,
+       "collateral_liquidatable": 831058.5436982443
+      },
+      {
+       "oracle_fall": 0.1,
+       "liquidatable_debt": 915076.602537,
+       "positions": 8,
+       "bad_debt": 19554.943503,
+       "collateral_liquidatable": 924199.6487298842
+      },
+      {
+       "oracle_fall": 0.2,
+       "liquidatable_debt": 915089.57558,
+       "positions": 9,
+       "bad_debt": 118088.282597,
+       "collateral_liquidatable": 924214.7553780708
+      },
+      {
+       "oracle_fall": 0.3,
+       "liquidatable_debt": 915089.57558,
+       "positions": 9,
+       "bad_debt": 217713.396751,
+       "collateral_liquidatable": 924214.7553780708
+      },
+      {
+       "oracle_fall": 0.5,
+       "liquidatable_debt": 915089.57558,
+       "positions": 9,
+       "bad_debt": 416963.733561,
+       "collateral_liquidatable": 924214.7553780708
+      }
+     ],
+     "state_source": "Morpho Blue market() and every borrower's position() on-chain, borrowers from the Morpho API"
+    }
+   },
+   {
+    "id": "0x48f9e38f3070ad8945dfeae3fa70987722e3d89c",
+    "kind": "Asset",
+    "label": "iUSD",
+    "details": {
+     "address": "0x48f9e38f3070ad8945dfeae3fa70987722e3d89c",
+     "source": "ERC-20 symbol() on-chain"
+    }
+   },
+   {
+    "id": "0x6ad038ca6c04e885630851278ca0a856ad9a66cc",
+    "kind": "Asset",
+    "label": "wYLDS",
+    "details": {
+     "address": "0x6ad038ca6c04e885630851278ca0a856ad9a66cc",
+     "source": "ERC-20 symbol() on-chain"
+    }
+   }
+  ],
+  "edges": [
+   {
+    "id": "e0",
+    "source": "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
+    "target": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "rel": "denominated in",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e1",
+    "source": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+    "target": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "rel": "lends",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e2",
+    "source": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+    "target": "0xecfafdc7741323a945a163ed068b5a3c43483957",
+    "rel": "takes as collateral",
+    "amount": 135306607.113726,
+    "unit": "PT-reUSD-10DEC2026",
+    "details": {
+     "note": "collateral of the market's borrowers; liquidations sell it (curve on the market)"
+    }
+   },
+   {
+    "id": "e3",
+    "source": "0x217d6ddcdb95112c51657f6270e8c079cfdb51f0",
+    "target": "0x77ee147391eac11c92817e771860ff4aad265d89",
+    "rel": "reads",
+    "amount": null,
+    "unit": null,
+    "details": {
+     "role": "BASE_FEED_1"
+    }
+   },
+   {
+    "id": "e4",
+    "source": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+    "target": "0x217d6ddcdb95112c51657f6270e8c079cfdb51f0",
+    "rel": "priced by",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e5",
+    "source": "0xecfafdc7741323a945a163ed068b5a3c43483957",
+    "target": "pendle:0xecfafdc7741323a945a163ed068b5a3c43483957",
+    "rel": "trades in / redeems through",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e6",
+    "source": "pendle:0xecfafdc7741323a945a163ed068b5a3c43483957",
+    "target": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+    "rel": "yield source",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e7",
+    "source": "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
+    "target": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+    "rel": "supplies",
+    "amount": 9301278.065165,
+    "unit": "USDC",
+    "details": {
+     "share_of_vault": "50.4%",
+     "share_of_market": "7.7%",
+     "through_adapter": "0xce0b17e6e94c9068b760557ba11a7bb1943f5674",
+     "utilization": "88.5%"
+    }
+   },
+   {
+    "id": "e8",
+    "source": "0xf062a110320da27e0e7e7d9e1bdf458dd51e2d2089e55f63ff9fd54f415ce35d",
+    "target": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "rel": "lends",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e9",
+    "source": "0xf062a110320da27e0e7e7d9e1bdf458dd51e2d2089e55f63ff9fd54f415ce35d",
+    "target": "0x74299580811e1c3c1a2831db079ba0a8f513998f",
+    "rel": "takes as collateral",
+    "amount": 927455.5923265001,
+    "unit": "PT-strUSD-26NOV2026",
+    "details": {
+     "note": "collateral of the market's borrowers; liquidations sell it (curve on the market)"
+    }
+   },
+   {
+    "id": "e10",
+    "source": "0xdb6e2e77ac10f05b9a52efe02d4c61c2770a776d",
+    "target": "0xcb8c6585bd593a4b7d91bfcc85ff1dcfa04a640b",
+    "rel": "reads",
+    "amount": null,
+    "unit": null,
+    "details": {
+     "role": "BASE_FEED_1"
+    }
+   },
+   {
+    "id": "e11",
+    "source": "0xdb6e2e77ac10f05b9a52efe02d4c61c2770a776d",
+    "target": "0x33c6f75916db4267e52209a8e6b270b22d983b53",
+    "rel": "reads",
+    "amount": null,
+    "unit": null,
+    "details": {
+     "role": "BASE_FEED_2"
+    }
+   },
+   {
+    "id": "e12",
+    "source": "0xdb6e2e77ac10f05b9a52efe02d4c61c2770a776d",
+    "target": "0x8fffffd4afb6115b954bd326cbe7b4ba576818f6",
+    "rel": "reads",
+    "amount": null,
+    "unit": null,
+    "details": {
+     "role": "QUOTE_FEED_1"
+    }
+   },
+   {
+    "id": "e13",
+    "source": "0xf062a110320da27e0e7e7d9e1bdf458dd51e2d2089e55f63ff9fd54f415ce35d",
+    "target": "0xdb6e2e77ac10f05b9a52efe02d4c61c2770a776d",
+    "rel": "priced by",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e14",
+    "source": "0x74299580811e1c3c1a2831db079ba0a8f513998f",
+    "target": "pendle:0x74299580811e1c3c1a2831db079ba0a8f513998f",
+    "rel": "trades in / redeems through",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e15",
+    "source": "pendle:0x74299580811e1c3c1a2831db079ba0a8f513998f",
+    "target": "0x280839980a7ed0d7717f64125fe241012e5f5815",
+    "rel": "yield source",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e16",
+    "source": "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
+    "target": "0xf062a110320da27e0e7e7d9e1bdf458dd51e2d2089e55f63ff9fd54f415ce35d",
+    "rel": "supplies",
+    "amount": 256983.501387,
+    "unit": "USDC",
+    "details": {
+     "share_of_vault": "1.4%",
+     "share_of_market": "33.4%",
+     "through_adapter": "0xce0b17e6e94c9068b760557ba11a7bb1943f5674",
+     "utilization": "87.1%"
+    }
+   },
+   {
+    "id": "e17",
+    "source": "0x975c6e8b71073a82216ae464bc44f67d71988450d2542d635d88bc78fca344b1",
+    "target": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "rel": "lends",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e18",
+    "source": "0x975c6e8b71073a82216ae464bc44f67d71988450d2542d635d88bc78fca344b1",
+    "target": "0x280839980a7ed0d7717f64125fe241012e5f5815",
+    "rel": "takes as collateral",
+    "amount": 16426603.99237087,
+    "unit": "strUSD",
+    "details": {
+     "note": "collateral of the market's borrowers; liquidations sell it (curve on the market)"
+    }
+   },
+   {
+    "id": "e19",
+    "source": "0x1506c98ce61ac63c8438b710c054a51c5dd9a6a4",
+    "target": "0x7fda577c085330e69df3179a2a5867751a9d0caa",
+    "rel": "reads",
+    "amount": null,
+    "unit": null,
+    "details": {
+     "role": "BASE_FEED_1"
+    }
+   },
+   {
+    "id": "e20",
+    "source": "0x1506c98ce61ac63c8438b710c054a51c5dd9a6a4",
+    "target": "0x8fffffd4afb6115b954bd326cbe7b4ba576818f6",
+    "rel": "reads",
+    "amount": null,
+    "unit": null,
+    "details": {
+     "role": "QUOTE_FEED_1"
+    }
+   },
+   {
+    "id": "e21",
+    "source": "0x975c6e8b71073a82216ae464bc44f67d71988450d2542d635d88bc78fca344b1",
+    "target": "0x1506c98ce61ac63c8438b710c054a51c5dd9a6a4",
+    "rel": "priced by",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e22",
+    "source": "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
+    "target": "0x975c6e8b71073a82216ae464bc44f67d71988450d2542d635d88bc78fca344b1",
+    "rel": "supplies",
+    "amount": 4909137.203629,
+    "unit": "USDC",
+    "details": {
+     "share_of_vault": "26.6%",
+     "share_of_market": "34.0%",
+     "through_adapter": "0xce0b17e6e94c9068b760557ba11a7bb1943f5674",
+     "utilization": "86.9%"
+    }
+   },
+   {
+    "id": "e23",
+    "source": "0xff836cc9796e2889ebf73b26c2de2de74b35f985bb83e9d79380deb4229e365b",
+    "target": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "rel": "lends",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e24",
+    "source": "0xff836cc9796e2889ebf73b26c2de2de74b35f985bb83e9d79380deb4229e365b",
+    "target": "0x6f20ae2c98c2d34e6a57f3411f2c5af92e32592d",
+    "rel": "takes as collateral",
+    "amount": 4093526.4434072548,
+    "unit": "etrUSD",
+    "details": {
+     "note": "collateral of the market's borrowers; liquidations sell it (curve on the market)"
+    }
+   },
+   {
+    "id": "e25",
+    "source": "0xf73166adf598f4c03776d058564f6543f8184dcf",
+    "target": "0x835cfff06a60a16fd1880c3b0befac9968abd659",
+    "rel": "reads",
+    "amount": null,
+    "unit": null,
+    "details": {
+     "role": "BASE_FEED_1"
+    }
+   },
+   {
+    "id": "e26",
+    "source": "0xf73166adf598f4c03776d058564f6543f8184dcf",
+    "target": "0x8fffffd4afb6115b954bd326cbe7b4ba576818f6",
+    "rel": "reads",
+    "amount": null,
+    "unit": null,
+    "details": {
+     "role": "QUOTE_FEED_1"
+    }
+   },
+   {
+    "id": "e27",
+    "source": "0xff836cc9796e2889ebf73b26c2de2de74b35f985bb83e9d79380deb4229e365b",
+    "target": "0xf73166adf598f4c03776d058564f6543f8184dcf",
+    "rel": "priced by",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e28",
+    "source": "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
+    "target": "0xff836cc9796e2889ebf73b26c2de2de74b35f985bb83e9d79380deb4229e365b",
+    "rel": "supplies",
+    "amount": 113293.260329,
+    "unit": "USDC",
+    "details": {
+     "share_of_vault": "0.6%",
+     "share_of_market": "6.1%",
+     "through_adapter": "0xce0b17e6e94c9068b760557ba11a7bb1943f5674",
+     "utilization": "90.0%"
+    }
+   },
+   {
+    "id": "e29",
+    "source": "0xbbf7ce1b40d32d3e3048f5cf27eeaa6de8cb27b80194690aab191a63381d8c99",
+    "target": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "rel": "lends",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e30",
+    "source": "0xbbf7ce1b40d32d3e3048f5cf27eeaa6de8cb27b80194690aab191a63381d8c99",
+    "target": "0xdbdc1ef57537e34680b898e1febd3d68c7389bcb",
+    "rel": "takes as collateral",
+    "amount": 9006746.187202554,
+    "unit": "siUSD",
+    "details": {
+     "note": "collateral of the market's borrowers; liquidations sell it (curve on the market)"
+    }
+   },
+   {
+    "id": "e31",
+    "source": "0xd2cc46b9b2d761502ef933320ecf0268ec0dfa6d",
+    "target": "0xdbdc1ef57537e34680b898e1febd3d68c7389bcb",
+    "rel": "converts through",
+    "amount": null,
+    "unit": null,
+    "details": {
+     "role": "BASE_VAULT"
+    }
+   },
+   {
+    "id": "e32",
+    "source": "0xd2cc46b9b2d761502ef933320ecf0268ec0dfa6d",
+    "target": "0xf81aa28a4f68124683afada81e8ebbf6e2867067",
+    "rel": "reads",
+    "amount": null,
+    "unit": null,
+    "details": {
+     "role": "BASE_FEED_1"
+    }
+   },
+   {
+    "id": "e33",
+    "source": "0xd2cc46b9b2d761502ef933320ecf0268ec0dfa6d",
+    "target": "0xc3866d726c204c0836e0677a31973c649888973d",
+    "rel": "reads",
+    "amount": null,
+    "unit": null,
+    "details": {
+     "role": "QUOTE_FEED_1"
+    }
+   },
+   {
+    "id": "e34",
+    "source": "0xbbf7ce1b40d32d3e3048f5cf27eeaa6de8cb27b80194690aab191a63381d8c99",
+    "target": "0xd2cc46b9b2d761502ef933320ecf0268ec0dfa6d",
+    "rel": "priced by",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e35",
+    "source": "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
+    "target": "0xbbf7ce1b40d32d3e3048f5cf27eeaa6de8cb27b80194690aab191a63381d8c99",
+    "rel": "supplies",
+    "amount": 2357448.886457,
+    "unit": "USDC",
+    "details": {
+     "share_of_vault": "12.8%",
+     "share_of_market": "29.5%",
+     "through_adapter": "0xce0b17e6e94c9068b760557ba11a7bb1943f5674",
+     "utilization": "89.9%"
+    }
+   },
+   {
+    "id": "e36",
+    "source": "0x755f954513d31d5f24aaf3d0cdc5e913a28383f8ea8ff85be9ffffa7371fb64d",
+    "target": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "rel": "lends",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e37",
+    "source": "0x755f954513d31d5f24aaf3d0cdc5e913a28383f8ea8ff85be9ffffa7371fb64d",
+    "target": "0x19ebb35279a16207ec4ba82799cc64715065f7f6",
+    "rel": "takes as collateral",
+    "amount": 1865079.626358,
+    "unit": "PRIME",
+    "details": {
+     "note": "collateral of the market's borrowers; liquidations sell it (curve on the market)"
+    }
+   },
+   {
+    "id": "e38",
+    "source": "0x999eff9ca63d23a60a0cd19b9f65a0918674119a",
+    "target": "0xf17c0edcaa28371e9c8012d7699bf40ecf0f58d1",
+    "rel": "reads",
+    "amount": null,
+    "unit": null,
+    "details": {
+     "role": "BASE_FEED_1"
+    }
+   },
+   {
+    "id": "e39",
+    "source": "0x999eff9ca63d23a60a0cd19b9f65a0918674119a",
+    "target": "0x8fffffd4afb6115b954bd326cbe7b4ba576818f6",
+    "rel": "reads",
+    "amount": null,
+    "unit": null,
+    "details": {
+     "role": "QUOTE_FEED_1"
+    }
+   },
+   {
+    "id": "e40",
+    "source": "0x755f954513d31d5f24aaf3d0cdc5e913a28383f8ea8ff85be9ffffa7371fb64d",
+    "target": "0x999eff9ca63d23a60a0cd19b9f65a0918674119a",
+    "rel": "priced by",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e41",
+    "source": "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
+    "target": "0x755f954513d31d5f24aaf3d0cdc5e913a28383f8ea8ff85be9ffffa7371fb64d",
+    "rel": "supplies",
+    "amount": 1506156.908777,
+    "unit": "USDC",
+    "details": {
+     "share_of_vault": "8.2%",
+     "share_of_market": "88.4%",
+     "through_adapter": "0xce0b17e6e94c9068b760557ba11a7bb1943f5674",
+     "utilization": "85.6%"
+    }
+   },
+   {
+    "id": "e42",
+    "source": "admin:0xbbacdcfb9691dfa1066ab29edfcc4a73f6def918",
+    "target": "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
+    "rel": "owns (sets curator, sentinels)",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e43",
+    "source": "admin:0xbbacdcfb9691dfa1066ab29edfcc4a73f6def918",
+    "target": "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
+    "rel": "curates (timelocked changes)",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e44",
+    "source": "admin:0x1cda83fe97a2e0a8f94a9cf32da947c23b72ba02",
+    "target": "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
+    "rel": "allocates (immediate, within caps)",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e45",
+    "source": "admin:0xbda66c6704d1170ce3479a9a53465faa2482f9e5",
+    "target": "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
+    "rel": "allocates (immediate, within caps)",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e46",
+    "source": "admin:0xdf758f044e3761ad52e1b96e1a468f03f565334b",
+    "target": "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
+    "rel": "allocates (immediate, within caps)",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e47",
+    "source": "admin:0xac851fcda514c09e36323124ec5dd8181f923a49",
+    "target": "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
+    "rel": "allocates (immediate, within caps)",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e48",
+    "source": "admin:0x040eaacb689d4635a2b2c2e2383a059ff4733a47",
+    "target": "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
+    "rel": "can de-risk (lower caps, revoke)",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e49",
+    "source": "0x41c41d0c9aadbf4751f5ee215ed5a16954a4b34e1b70fca5393d4b08858fa3fa",
+    "target": "0x6c3ea9036406852006290770bedfcaba0e23a0e8",
+    "rel": "lends",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e50",
+    "source": "0x41c41d0c9aadbf4751f5ee215ed5a16954a4b34e1b70fca5393d4b08858fa3fa",
+    "target": "0x19ebb35279a16207ec4ba82799cc64715065f7f6",
+    "rel": "takes as collateral",
+    "amount": 246203520.494647,
+    "unit": "PRIME",
+    "details": {
+     "note": "collateral of the market's borrowers; liquidations sell it (curve on the market)"
+    }
+   },
+   {
+    "id": "e51",
+    "source": "0x335e5718bc20028d5e357473a3736c187ca6b07e",
+    "target": "0xf17c0edcaa28371e9c8012d7699bf40ecf0f58d1",
+    "rel": "reads",
+    "amount": null,
+    "unit": null,
+    "details": {
+     "role": "BASE_FEED_1"
+    }
+   },
+   {
+    "id": "e52",
+    "source": "0x335e5718bc20028d5e357473a3736c187ca6b07e",
+    "target": "0x8f1df6d7f2db73eece86a18b4381f4707b918fb1",
+    "rel": "reads",
+    "amount": null,
+    "unit": null,
+    "details": {
+     "role": "QUOTE_FEED_1"
+    }
+   },
+   {
+    "id": "e53",
+    "source": "0x41c41d0c9aadbf4751f5ee215ed5a16954a4b34e1b70fca5393d4b08858fa3fa",
+    "target": "0x335e5718bc20028d5e357473a3736c187ca6b07e",
+    "rel": "priced by",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e54",
+    "source": "0x4565ac05d38b19374ccbb04c17cca60ca9353cd41824f0803d0fc7704f60eaed",
+    "target": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "rel": "lends",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e55",
+    "source": "0x4565ac05d38b19374ccbb04c17cca60ca9353cd41824f0803d0fc7704f60eaed",
+    "target": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+    "rel": "takes as collateral",
+    "amount": 9257614.910804354,
+    "unit": "reUSD",
+    "details": {
+     "note": "collateral of the market's borrowers; liquidations sell it (curve on the market)"
+    }
+   },
+   {
+    "id": "e56",
+    "source": "0xa66a4f03fd8031973f8c7718904ce32385f54e70",
+    "target": "0x72b5760cfbe437dd01409f44055fdfb8f8121b46",
+    "rel": "reads",
+    "amount": null,
+    "unit": null,
+    "details": {
+     "role": "BASE_FEED_1"
+    }
+   },
+   {
+    "id": "e57",
+    "source": "0x4565ac05d38b19374ccbb04c17cca60ca9353cd41824f0803d0fc7704f60eaed",
+    "target": "0xa66a4f03fd8031973f8c7718904ce32385f54e70",
+    "rel": "priced by",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e58",
+    "source": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
+    "target": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    "rel": "lends",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e59",
+    "source": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
+    "target": "0xecfafdc7741323a945a163ed068b5a3c43483957",
+    "rel": "takes as collateral",
+    "amount": 10185220.225683,
+    "unit": "PT-reUSD-10DEC2026",
+    "details": {
+     "note": "collateral of the market's borrowers; liquidations sell it (curve on the market)"
+    }
+   },
+   {
+    "id": "e60",
+    "source": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
+    "target": "0x217d6ddcdb95112c51657f6270e8c079cfdb51f0",
+    "rel": "priced by",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e61",
+    "source": "0x5131d0b823d726a4080951ee49f0cbd57d0fd53776c7d8aeceb76dd9a22a1695",
+    "target": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+    "rel": "lends",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e62",
+    "source": "0x5131d0b823d726a4080951ee49f0cbd57d0fd53776c7d8aeceb76dd9a22a1695",
+    "target": "0x19ebb35279a16207ec4ba82799cc64715065f7f6",
+    "rel": "takes as collateral",
+    "amount": 5947613.851329,
+    "unit": "PRIME",
+    "details": {
+     "note": "collateral of the market's borrowers; liquidations sell it (curve on the market)"
+    }
+   },
+   {
+    "id": "e63",
+    "source": "0xb79429cf3ae7bfb1bee0fd5b2f338d8ea49d7d11",
+    "target": "0xf17c0edcaa28371e9c8012d7699bf40ecf0f58d1",
+    "rel": "reads",
+    "amount": null,
+    "unit": null,
+    "details": {
+     "role": "BASE_FEED_1"
+    }
+   },
+   {
+    "id": "e64",
+    "source": "0x5131d0b823d726a4080951ee49f0cbd57d0fd53776c7d8aeceb76dd9a22a1695",
+    "target": "0xb79429cf3ae7bfb1bee0fd5b2f338d8ea49d7d11",
+    "rel": "priced by",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e65",
+    "source": "0xd21bbc238918855461d943753ac4c90d103888e5661fd78f3378294c45f7d8df",
+    "target": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "rel": "lends",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e66",
+    "source": "0xd21bbc238918855461d943753ac4c90d103888e5661fd78f3378294c45f7d8df",
+    "target": "0x7191878f1fe834b28f4d0cead0e4375b814c4abb",
+    "rel": "takes as collateral",
+    "amount": 2188066.370834029,
+    "unit": "PT-trUSD-26NOV2026",
+    "details": {
+     "note": "collateral of the market's borrowers; liquidations sell it (curve on the market)"
+    }
+   },
+   {
+    "id": "e67",
+    "source": "0x345866dcd877994afb36277d1ad287eb94a1e7af",
+    "target": "0x7180e88ac8883aac79934ad27cfab41d5aa74d19",
+    "rel": "reads",
+    "amount": null,
+    "unit": null,
+    "details": {
+     "role": "BASE_FEED_1"
+    }
+   },
+   {
+    "id": "e68",
+    "source": "0x345866dcd877994afb36277d1ad287eb94a1e7af",
+    "target": "0x33c6f75916db4267e52209a8e6b270b22d983b53",
+    "rel": "reads",
+    "amount": null,
+    "unit": null,
+    "details": {
+     "role": "BASE_FEED_2"
+    }
+   },
+   {
+    "id": "e69",
+    "source": "0x345866dcd877994afb36277d1ad287eb94a1e7af",
+    "target": "0x8fffffd4afb6115b954bd326cbe7b4ba576818f6",
+    "rel": "reads",
+    "amount": null,
+    "unit": null,
+    "details": {
+     "role": "QUOTE_FEED_1"
+    }
+   },
+   {
+    "id": "e70",
+    "source": "0xd21bbc238918855461d943753ac4c90d103888e5661fd78f3378294c45f7d8df",
+    "target": "0x345866dcd877994afb36277d1ad287eb94a1e7af",
+    "rel": "priced by",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e71",
+    "source": "0x7191878f1fe834b28f4d0cead0e4375b814c4abb",
+    "target": "pendle:0x7191878f1fe834b28f4d0cead0e4375b814c4abb",
+    "rel": "trades in / redeems through",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e72",
+    "source": "pendle:0x7191878f1fe834b28f4d0cead0e4375b814c4abb",
+    "target": "0xd0580192e98ea6ceb9c7b6191ed2e27560911697",
+    "rel": "yield source",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e73",
+    "source": "0x64d2f82e674b764d618b630297813cd34bdc42a0fa66f92efa2ac8b1efe4bbd5",
+    "target": "0xab5eb14c09d416f0ac63661e57edb7aecdb9befa",
+    "rel": "lends",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e74",
+    "source": "0x64d2f82e674b764d618b630297813cd34bdc42a0fa66f92efa2ac8b1efe4bbd5",
+    "target": "0xdbdc1ef57537e34680b898e1febd3d68c7389bcb",
+    "rel": "takes as collateral",
+    "amount": 1914994.0458368568,
+    "unit": "siUSD",
+    "details": {
+     "note": "collateral of the market's borrowers; liquidations sell it (curve on the market)"
+    }
+   },
+   {
+    "id": "e75",
+    "source": "0xc7bb5f34d645f3849a3091ce4b6724631ee811af",
+    "target": "0xdbdc1ef57537e34680b898e1febd3d68c7389bcb",
+    "rel": "converts through",
+    "amount": null,
+    "unit": null,
+    "details": {
+     "role": "BASE_VAULT"
+    }
+   },
+   {
+    "id": "e76",
+    "source": "0xc7bb5f34d645f3849a3091ce4b6724631ee811af",
+    "target": "0xf81aa28a4f68124683afada81e8ebbf6e2867067",
+    "rel": "reads",
+    "amount": null,
+    "unit": null,
+    "details": {
+     "role": "BASE_FEED_1"
+    }
+   },
+   {
+    "id": "e77",
+    "source": "0xc7bb5f34d645f3849a3091ce4b6724631ee811af",
+    "target": "0xc3866d726c204c0836e0677a31973c649888973d",
+    "rel": "reads",
+    "amount": null,
+    "unit": null,
+    "details": {
+     "role": "QUOTE_FEED_1"
+    }
+   },
+   {
+    "id": "e78",
+    "source": "0x64d2f82e674b764d618b630297813cd34bdc42a0fa66f92efa2ac8b1efe4bbd5",
+    "target": "0xc7bb5f34d645f3849a3091ce4b6724631ee811af",
+    "rel": "priced by",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e79",
+    "source": "0x9e553e8a22eb2b2040042965d0dc424f7c5e64744b093d2df9162dce1833eeda",
+    "target": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "rel": "lends",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e80",
+    "source": "0x9e553e8a22eb2b2040042965d0dc424f7c5e64744b093d2df9162dce1833eeda",
+    "target": "0xc360e625f19a7ea47e47810b13e386221d5187d1",
+    "rel": "takes as collateral",
+    "amount": 1590070.1619678705,
+    "unit": "nvPRIME",
+    "details": {
+     "note": "collateral of the market's borrowers; liquidations sell it (curve on the market)"
+    }
+   },
+   {
+    "id": "e81",
+    "source": "0x9cc1a40a90760c7cc238ce06abdef4adc972e28d",
+    "target": "0xc360e625f19a7ea47e47810b13e386221d5187d1",
+    "rel": "converts through",
+    "amount": null,
+    "unit": null,
+    "details": {
+     "role": "BASE_VAULT"
+    }
+   },
+   {
+    "id": "e82",
+    "source": "0x9cc1a40a90760c7cc238ce06abdef4adc972e28d",
+    "target": "0xf17c0edcaa28371e9c8012d7699bf40ecf0f58d1",
+    "rel": "reads",
+    "amount": null,
+    "unit": null,
+    "details": {
+     "role": "BASE_FEED_1"
+    }
+   },
+   {
+    "id": "e83",
+    "source": "0x9cc1a40a90760c7cc238ce06abdef4adc972e28d",
+    "target": "0x8fffffd4afb6115b954bd326cbe7b4ba576818f6",
+    "rel": "reads",
+    "amount": null,
+    "unit": null,
+    "details": {
+     "role": "QUOTE_FEED_1"
+    }
+   },
+   {
+    "id": "e84",
+    "source": "0x9e553e8a22eb2b2040042965d0dc424f7c5e64744b093d2df9162dce1833eeda",
+    "target": "0x9cc1a40a90760c7cc238ce06abdef4adc972e28d",
+    "rel": "priced by",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e85",
+    "source": "0x9105a5447f3eecdf768f04da12d580a878106e2e6b234312db2ee0f304539e35",
+    "target": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    "rel": "lends",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e86",
+    "source": "0x9105a5447f3eecdf768f04da12d580a878106e2e6b234312db2ee0f304539e35",
+    "target": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+    "rel": "takes as collateral",
+    "amount": 924218.4936958277,
+    "unit": "reUSD",
+    "details": {
+     "note": "collateral of the market's borrowers; liquidations sell it (curve on the market)"
+    }
+   },
+   {
+    "id": "e87",
+    "source": "0x9105a5447f3eecdf768f04da12d580a878106e2e6b234312db2ee0f304539e35",
+    "target": "0xa66a4f03fd8031973f8c7718904ce32385f54e70",
+    "rel": "priced by",
+    "amount": null,
+    "unit": null,
+    "details": {}
+   },
+   {
+    "id": "e88",
+    "source": "0x280839980a7ed0d7717f64125fe241012e5f5815",
+    "target": "0xd0580192e98ea6ceb9c7b6191ed2e27560911697",
+    "rel": "wraps",
+    "amount": null,
+    "unit": null,
+    "details": {
+     "note": "an ERC-4626 share: redeems into this asset at the vault's exchange rate"
+    }
+   },
+   {
+    "id": "e89",
+    "source": "0xdbdc1ef57537e34680b898e1febd3d68c7389bcb",
+    "target": "0x48f9e38f3070ad8945dfeae3fa70987722e3d89c",
+    "rel": "wraps",
+    "amount": null,
+    "unit": null,
+    "details": {
+     "note": "an ERC-4626 share: redeems into this asset at the vault's exchange rate"
+    }
+   },
+   {
+    "id": "e90",
+    "source": "0x19ebb35279a16207ec4ba82799cc64715065f7f6",
+    "target": "0x6ad038ca6c04e885630851278ca0a856ad9a66cc",
+    "rel": "wraps",
+    "amount": null,
+    "unit": null,
+    "details": {
+     "note": "an ERC-4626 share: redeems into this asset at the vault's exchange rate"
+    }
+   },
+   {
+    "id": "e91",
+    "source": "0xc360e625f19a7ea47e47810b13e386221d5187d1",
+    "target": "0x19ebb35279a16207ec4ba82799cc64715065f7f6",
+    "rel": "wraps",
+    "amount": null,
+    "unit": null,
+    "details": {
+     "note": "an ERC-4626 share: redeems into this asset at the vault's exchange rate"
+    }
+   },
+   {
+    "id": "e92",
+    "source": "0x77ee147391eac11c92817e771860ff4aad265d89",
+    "target": "0xecfafdc7741323a945a163ed068b5a3c43483957",
+    "rel": "tracks",
+    "amount": null,
+    "unit": null,
+    "details": {
+     "note": "a Pendle TWAP of this PT's pool (PT against its underlying)"
+    }
+   }
+  ]
+ },
+ "rules": {
+  "tracks": {
+   "apply": "pass",
+   "effect": "price",
+   "rel": "tracks",
+   "basis": "D115: a feed reads the market it tracks (a Pendle TWAP its PT's pool, a 'SYM / USD' feed that pair): a move of that market moves the reading"
+  },
+  "base-feed": {
+   "apply": "pass",
+   "effect": "misreport",
+   "rel": "reads",
+   "basis": "Morpho ChainlinkOracleV2: price = base vault x base feeds / (quote vault x quote feeds); a base feed reading m x moves the price by m"
+  },
+  "base-feed-reading": {
+   "apply": "pass",
+   "effect": "reading",
+   "rel": "reads",
+   "basis": "a base feed following its market moves the oracle with it"
+  },
+  "oracle-misreport": {
+   "apply": "pass",
+   "effect": "misreport",
+   "rel": "priced by",
+   "basis": "a market liquidates on its oracle's reading"
+  },
+  "oracle-reading": {
+   "apply": "pass",
+   "effect": "reading",
+   "rel": "priced by",
+   "basis": "a market liquidates on its oracle's reading"
+  },
+  "collateral-tracked-by-feed": {
+   "apply": "collateral_price",
+   "effect": "price",
+   "rel": "takes as collateral",
+   "basis": "D115: the oracle reads its collateral's market through a tracked feed (rule tracks), not here; the collateral's worth still moves"
+  },
+  "collateral-constant": {
+   "apply": "collateral_price",
+   "effect": "price",
+   "rel": "takes as collateral",
+   "basis": "a constant-price oracle ignores the market: a fall liquidates nobody and leaves insolvent debt"
+  },
+  "collateral-value": {
+   "apply": "collateral_price",
+   "effect": "value",
+   "rel": "takes as collateral",
+   "basis": "D115: a move inherited from an underlying changes the collateral's worth; no oracle reading its own market or its accounting rate sees it"
+  },
+  "collateral-exit": {
+   "apply": "pass",
+   "effect": "exit",
+   "rel": "takes as collateral",
+   "basis": "D113: liquidations can sell only what the collateral's market absorbs"
+  },
+  "pendle-underlying": {
+   "apply": "pass",
+   "effect": "price",
+   "rel": "yield source",
+   "basis": "D115: a PT is worth its underlying at maturity, so a move of the underlying's market changes the PT's worth; the pool prices PT against the underlying (PT_TO_ASSET / PT_TO_SY), so the pool price, which a Pendle oracle reads, does not move"
+  },
+  "pendle-underlying-exit": {
+   "apply": "pass",
+   "effect": "exit",
+   "rel": "yield source",
+   "basis": "PT liquidators sell the underlying they receive: if its market cannot absorb it, the PT's liquidations cannot complete"
+  },
+  "pendle-pt-value": {
+   "apply": "pass",
+   "effect": "value",
+   "rel": "trades in / redeems through",
+   "basis": "a move inherited through the pool passes on to the PT"
+  },
+  "pendle-pt-exit": {
+   "apply": "pass",
+   "effect": "exit",
+   "rel": "trades in / redeems through",
+   "basis": "the underlying's exit limit passes on to the PT"
+  },
+  "liquidation-sale": {
+   "apply": "liquidation_sale",
+   "effect": "sale",
+   "rel": "takes as collateral",
+   "basis": "liquidators offer the seized collateral for sale into its market"
+  },
+  "pt-onward": {
+   "apply": "pass",
+   "effect": "onward",
+   "rel": "trades in / redeems through",
+   "basis": "a PT sold into its pool comes out as underlying"
+  },
+  "pool-onward": {
+   "apply": "pass",
+   "effect": "onward",
+   "rel": "yield source",
+   "basis": "liquidators sell that underlying for dollars"
+  },
+  "supplier": {
+   "apply": "supplier_loss",
+   "effect": "loss",
+   "rel": "supplies",
+   "basis": "a market's loss is shared by its suppliers pro rata to their supply"
+  }
+ },
+ "steps": [
+  {
+   "seq": 1,
+   "wave": 0,
+   "edge": "e3",
+   "source": "0x77ee147391eac11c92817e771860ff4aad265d89",
+   "target": "0x217d6ddcdb95112c51657f6270e8c079cfdb51f0",
+   "direction": "dependents",
+   "effect": "misreport",
+   "value": 0.9,
+   "change": -0.09999999999999998,
+   "unit": "factor",
+   "display": "misreport \u00d70.9000 (-10.00%)",
+   "rule": "base-feed",
+   "replaces": null
+  },
+  {
+   "seq": 2,
+   "wave": 1,
+   "edge": "e4",
+   "source": "0x217d6ddcdb95112c51657f6270e8c079cfdb51f0",
+   "target": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+   "direction": "dependents",
+   "effect": "misreport",
+   "value": 0.9,
+   "change": -0.09999999999999998,
+   "unit": "factor",
+   "display": "misreport \u00d70.9000 (-10.00%)",
+   "rule": "oracle-misreport",
+   "replaces": null
+  },
+  {
+   "seq": 3,
+   "wave": 1,
+   "edge": "e60",
+   "source": "0x217d6ddcdb95112c51657f6270e8c079cfdb51f0",
+   "target": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
+   "direction": "dependents",
+   "effect": "misreport",
+   "value": 0.9,
+   "change": -0.09999999999999998,
+   "unit": "factor",
+   "display": "misreport \u00d70.9000 (-10.00%)",
+   "rule": "oracle-misreport",
+   "replaces": null
+  },
+  {
+   "seq": 4,
+   "wave": 2,
+   "edge": "e7",
+   "source": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+   "target": "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
+   "direction": "dependents",
+   "effect": "loss",
+   "value": 27133.915867387263,
+   "change": 27133.915867387263,
+   "unit": "USDC",
+   "display": "loss 27.1k USDC",
+   "rule": "supplier",
+   "replaces": null
+  },
+  {
+   "seq": 5,
+   "wave": 2,
+   "edge": "e2",
+   "source": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+   "target": "0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "direction": "dependencies",
+   "effect": "sale",
+   "value": 80604021.75692214,
+   "change": 80604021.75692214,
+   "unit": "USD",
+   "display": "80.60M USD offered for sale",
+   "rule": "liquidation-sale",
+   "replaces": null
+  },
+  {
+   "seq": 6,
+   "wave": 2,
+   "edge": "e59",
+   "source": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
+   "target": "0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "direction": "dependencies",
+   "effect": "sale",
+   "value": 8184680.6970066335,
+   "change": 8184680.6970066335,
+   "unit": "USD",
+   "display": "8.18M USD offered for sale",
+   "rule": "liquidation-sale",
+   "replaces": null
+  },
+  {
+   "seq": 7,
+   "wave": 3,
+   "edge": "e2",
+   "source": "0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "target": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+   "direction": "dependents",
+   "effect": "collateral",
+   "value": {
+    "factor": 0.991503955709322,
+    "follows": false,
+    "kind": "price"
+   },
+   "change": -0.008496044290677962,
+   "unit": null,
+   "display": "collateral price \u00d70.9915 (-0.85%)",
+   "rule": "collateral-tracked-by-feed",
+   "replaces": null
+  },
+  {
+   "seq": 8,
+   "wave": 3,
+   "edge": "e59",
+   "source": "0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "target": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
+   "direction": "dependents",
+   "effect": "collateral",
+   "value": {
+    "factor": 0.991503955709322,
+    "follows": false,
+    "kind": "price"
+   },
+   "change": -0.008496044290677962,
+   "unit": null,
+   "display": "collateral price \u00d70.9915 (-0.85%)",
+   "rule": "collateral-tracked-by-feed",
+   "replaces": null
+  },
+  {
+   "seq": 9,
+   "wave": 3,
+   "edge": "e92",
+   "source": "0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "target": "0x77ee147391eac11c92817e771860ff4aad265d89",
+   "direction": "dependents",
+   "effect": "reading",
+   "value": 0.991503955709322,
+   "change": -0.008496044290677962,
+   "unit": "factor",
+   "display": "reading \u00d70.9915 (-0.85%)",
+   "rule": "tracks",
+   "replaces": null
+  },
+  {
+   "seq": 10,
+   "wave": 3,
+   "edge": "e5",
+   "source": "0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "target": "pendle:0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "direction": "dependencies",
+   "effect": "onward",
+   "value": 88788702.45392877,
+   "change": 88788702.45392877,
+   "unit": "USD",
+   "display": "88.79M USD of underlying sold on",
+   "rule": "pt-onward",
+   "replaces": null
+  },
+  {
+   "seq": 11,
+   "wave": 4,
+   "edge": "e3",
+   "source": "0x77ee147391eac11c92817e771860ff4aad265d89",
+   "target": "0x217d6ddcdb95112c51657f6270e8c079cfdb51f0",
+   "direction": "dependents",
+   "effect": "reading",
+   "value": 0.991503955709322,
+   "change": -0.008496044290677962,
+   "unit": "factor",
+   "display": "reading \u00d70.9915 (-0.85%)",
+   "rule": "base-feed-reading",
+   "replaces": null
+  },
+  {
+   "seq": 12,
+   "wave": 4,
+   "edge": "e6",
+   "source": "pendle:0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "target": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+   "direction": "dependencies",
+   "effect": "sale",
+   "value": 88788702.45392877,
+   "change": 88788702.45392877,
+   "unit": "USD",
+   "display": "88.79M USD offered for sale",
+   "rule": "pool-onward",
+   "replaces": null
+  },
+  {
+   "seq": 13,
+   "wave": 5,
+   "edge": "e4",
+   "source": "0x217d6ddcdb95112c51657f6270e8c079cfdb51f0",
+   "target": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+   "direction": "dependents",
+   "effect": "reading",
+   "value": 0.991503955709322,
+   "change": -0.008496044290677962,
+   "unit": "factor",
+   "display": "reading \u00d70.9915 (-0.85%)",
+   "rule": "oracle-reading",
+   "replaces": null
+  },
+  {
+   "seq": 14,
+   "wave": 5,
+   "edge": "e60",
+   "source": "0x217d6ddcdb95112c51657f6270e8c079cfdb51f0",
+   "target": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
+   "direction": "dependents",
+   "effect": "reading",
+   "value": 0.991503955709322,
+   "change": -0.008496044290677962,
+   "unit": "factor",
+   "display": "reading \u00d70.9915 (-0.85%)",
+   "rule": "oracle-reading",
+   "replaces": null
+  },
+  {
+   "seq": 15,
+   "wave": 5,
+   "edge": "e6",
+   "source": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+   "target": "pendle:0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "direction": "dependents",
+   "effect": "value",
+   "value": 0.9605804763813728,
+   "change": -0.03941952361862722,
+   "unit": "factor",
+   "display": "value \u00d70.9606 (-3.94%)",
+   "rule": "pendle-underlying",
+   "replaces": null
+  },
+  {
+   "seq": 16,
+   "wave": 5,
+   "edge": "e55",
+   "source": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+   "target": "0x4565ac05d38b19374ccbb04c17cca60ca9353cd41824f0803d0fc7704f60eaed",
+   "direction": "dependents",
+   "effect": "collateral",
+   "value": {
+    "factor": 0.9605804763813728,
+    "follows": false,
+    "kind": "price"
+   },
+   "change": -0.03941952361862722,
+   "unit": null,
+   "display": "collateral price \u00d70.9606 (-3.94%)",
+   "rule": "collateral-constant",
+   "replaces": null
+  },
+  {
+   "seq": 17,
+   "wave": 5,
+   "edge": "e86",
+   "source": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+   "target": "0x9105a5447f3eecdf768f04da12d580a878106e2e6b234312db2ee0f304539e35",
+   "direction": "dependents",
+   "effect": "collateral",
+   "value": {
+    "factor": 0.9605804763813728,
+    "follows": false,
+    "kind": "price"
+   },
+   "change": -0.03941952361862722,
+   "unit": null,
+   "display": "collateral price \u00d70.9606 (-3.94%)",
+   "rule": "collateral-constant",
+   "replaces": null
+  },
+  {
+   "seq": 18,
+   "wave": 5,
+   "edge": "e6",
+   "source": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+   "target": "pendle:0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "direction": "dependents",
+   "effect": "exit",
+   "value": 0.13912358758091936,
+   "change": -0.8608764124190806,
+   "unit": "share",
+   "display": "14% of the offer absorbed",
+   "rule": "pendle-underlying-exit",
+   "replaces": null
+  },
+  {
+   "seq": 19,
+   "wave": 5,
+   "edge": "e55",
+   "source": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+   "target": "0x4565ac05d38b19374ccbb04c17cca60ca9353cd41824f0803d0fc7704f60eaed",
+   "direction": "dependents",
+   "effect": "exit",
+   "value": 0.13912358758091936,
+   "change": -0.8608764124190806,
+   "unit": "share",
+   "display": "14% of the offer absorbed",
+   "rule": "collateral-exit",
+   "replaces": null
+  },
+  {
+   "seq": 20,
+   "wave": 5,
+   "edge": "e86",
+   "source": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+   "target": "0x9105a5447f3eecdf768f04da12d580a878106e2e6b234312db2ee0f304539e35",
+   "direction": "dependents",
+   "effect": "exit",
+   "value": 0.13912358758091936,
+   "change": -0.8608764124190806,
+   "unit": "share",
+   "display": "14% of the offer absorbed",
+   "rule": "collateral-exit",
+   "replaces": null
+  },
+  {
+   "seq": 21,
+   "wave": 6,
+   "edge": "e7",
+   "source": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+   "target": "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
+   "direction": "dependents",
+   "effect": "loss",
+   "value": 51787.3134514336,
+   "change": 51787.3134514336,
+   "unit": "USDC",
+   "display": "loss 51.8k USDC",
+   "rule": "supplier",
+   "replaces": 4
+  },
+  {
+   "seq": 22,
+   "wave": 6,
+   "edge": "e2",
+   "source": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+   "target": "0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "direction": "dependencies",
+   "effect": "sale",
+   "value": 85084910.4132518,
+   "change": 85084910.4132518,
+   "unit": "USD",
+   "display": "85.08M USD offered for sale",
+   "rule": "liquidation-sale",
+   "replaces": 5
+  },
+  {
+   "seq": 23,
+   "wave": 6,
+   "edge": "e59",
+   "source": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
+   "target": "0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "direction": "dependencies",
+   "effect": "sale",
+   "value": 8289258.61817019,
+   "change": 8289258.61817019,
+   "unit": "USD",
+   "display": "8.29M USD offered for sale",
+   "rule": "liquidation-sale",
+   "replaces": 6
+  },
+  {
+   "seq": 24,
+   "wave": 6,
+   "edge": "e5",
+   "source": "pendle:0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "target": "0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "direction": "dependents",
+   "effect": "value",
+   "value": 0.9605804763813728,
+   "change": -0.03941952361862722,
+   "unit": "factor",
+   "display": "value \u00d70.9606 (-3.94%)",
+   "rule": "pendle-pt-value",
+   "replaces": null
+  },
+  {
+   "seq": 25,
+   "wave": 6,
+   "edge": "e5",
+   "source": "pendle:0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "target": "0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "direction": "dependents",
+   "effect": "exit",
+   "value": 0.13912358758091936,
+   "change": -0.8608764124190806,
+   "unit": "share",
+   "display": "14% of the offer absorbed",
+   "rule": "pendle-pt-exit",
+   "replaces": null
+  },
+  {
+   "seq": 26,
+   "wave": 7,
+   "edge": "e2",
+   "source": "0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "target": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+   "direction": "dependents",
+   "effect": "collateral",
+   "value": {
+    "factor": 0.9605804763813728,
+    "follows": false,
+    "kind": "value"
+   },
+   "change": -0.03941952361862722,
+   "unit": null,
+   "display": "collateral value \u00d70.9606 (-3.94%)",
+   "rule": "collateral-value",
+   "replaces": null
+  },
+  {
+   "seq": 27,
+   "wave": 7,
+   "edge": "e59",
+   "source": "0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "target": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
+   "direction": "dependents",
+   "effect": "collateral",
+   "value": {
+    "factor": 0.9605804763813728,
+    "follows": false,
+    "kind": "value"
+   },
+   "change": -0.03941952361862722,
+   "unit": null,
+   "display": "collateral value \u00d70.9606 (-3.94%)",
+   "rule": "collateral-value",
+   "replaces": null
+  },
+  {
+   "seq": 28,
+   "wave": 7,
+   "edge": "e2",
+   "source": "0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "target": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+   "direction": "dependents",
+   "effect": "exit",
+   "value": 0.13912358758091936,
+   "change": -0.8608764124190806,
+   "unit": "share",
+   "display": "14% of the offer absorbed",
+   "rule": "collateral-exit",
+   "replaces": null
+  },
+  {
+   "seq": 29,
+   "wave": 7,
+   "edge": "e59",
+   "source": "0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "target": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
+   "direction": "dependents",
+   "effect": "exit",
+   "value": 0.13912358758091936,
+   "change": -0.8608764124190806,
+   "unit": "share",
+   "display": "14% of the offer absorbed",
+   "rule": "collateral-exit",
+   "replaces": null
+  },
+  {
+   "seq": 30,
+   "wave": 7,
+   "edge": "e5",
+   "source": "0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "target": "pendle:0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "direction": "dependencies",
+   "effect": "onward",
+   "value": 93374169.03142199,
+   "change": 93374169.03142199,
+   "unit": "USD",
+   "display": "93.37M USD of underlying sold on",
+   "rule": "pt-onward",
+   "replaces": 10
+  },
+  {
+   "seq": 31,
+   "wave": 8,
+   "edge": "e7",
+   "source": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+   "target": "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
+   "direction": "dependents",
+   "effect": "loss",
+   "value": 7204.836838541045,
+   "change": 7204.836838541045,
+   "unit": "USDC",
+   "display": "loss 7.2k USDC",
+   "rule": "supplier",
+   "replaces": 21
+  },
+  {
+   "seq": 32,
+   "wave": 8,
+   "edge": "e6",
+   "source": "pendle:0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "target": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+   "direction": "dependencies",
+   "effect": "sale",
+   "value": 93374169.03142199,
+   "change": 93374169.03142199,
+   "unit": "USD",
+   "display": "93.37M USD offered for sale",
+   "rule": "pool-onward",
+   "replaces": 12
+  },
+  {
+   "seq": 33,
+   "wave": 9,
+   "edge": "e6",
+   "source": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+   "target": "pendle:0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "direction": "dependents",
+   "effect": "exit",
+   "value": 0.1322914350958078,
+   "change": -0.8677085649041922,
+   "unit": "share",
+   "display": "13% of the offer absorbed",
+   "rule": "pendle-underlying-exit",
+   "replaces": 18
+  },
+  {
+   "seq": 34,
+   "wave": 9,
+   "edge": "e55",
+   "source": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+   "target": "0x4565ac05d38b19374ccbb04c17cca60ca9353cd41824f0803d0fc7704f60eaed",
+   "direction": "dependents",
+   "effect": "exit",
+   "value": 0.1322914350958078,
+   "change": -0.8677085649041922,
+   "unit": "share",
+   "display": "13% of the offer absorbed",
+   "rule": "collateral-exit",
+   "replaces": 19
+  },
+  {
+   "seq": 35,
+   "wave": 9,
+   "edge": "e86",
+   "source": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+   "target": "0x9105a5447f3eecdf768f04da12d580a878106e2e6b234312db2ee0f304539e35",
+   "direction": "dependents",
+   "effect": "exit",
+   "value": 0.1322914350958078,
+   "change": -0.8677085649041922,
+   "unit": "share",
+   "display": "13% of the offer absorbed",
+   "rule": "collateral-exit",
+   "replaces": 20
+  },
+  {
+   "seq": 36,
+   "wave": 10,
+   "edge": "e5",
+   "source": "pendle:0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "target": "0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "direction": "dependents",
+   "effect": "exit",
+   "value": 0.1322914350958078,
+   "change": -0.8677085649041922,
+   "unit": "share",
+   "display": "13% of the offer absorbed",
+   "rule": "pendle-pt-exit",
+   "replaces": 25
+  },
+  {
+   "seq": 37,
+   "wave": 11,
+   "edge": "e2",
+   "source": "0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "target": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+   "direction": "dependents",
+   "effect": "exit",
+   "value": 0.1322914350958078,
+   "change": -0.8677085649041922,
+   "unit": "share",
+   "display": "13% of the offer absorbed",
+   "rule": "collateral-exit",
+   "replaces": 28
+  },
+  {
+   "seq": 38,
+   "wave": 11,
+   "edge": "e59",
+   "source": "0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "target": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
+   "direction": "dependents",
+   "effect": "exit",
+   "value": 0.1322914350958078,
+   "change": -0.8677085649041922,
+   "unit": "share",
+   "display": "13% of the offer absorbed",
+   "rule": "collateral-exit",
+   "replaces": 29
+  },
+  {
+   "seq": 39,
+   "wave": 12,
+   "edge": "e7",
+   "source": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+   "target": "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
+   "direction": "dependents",
+   "effect": "loss",
+   "value": 6851.01801624658,
+   "change": 6851.01801624658,
+   "unit": "USDC",
+   "display": "loss 6.9k USDC",
+   "rule": "supplier",
+   "replaces": 31
+  }
+ ],
+ "evaluations_log": [
+  {
+   "seq": 1,
+   "wave": 0,
+   "node": "0x77ee147391eac11c92817e771860ff4aad265d89",
+   "model": "oracle_input",
+   "status": "shocked",
+   "headline": "reads-low 10%",
+   "effects": {
+    "misreport": 0.9
+   },
+   "detail": {}
+  },
+  {
+   "seq": 2,
+   "wave": 1,
+   "node": "0x217d6ddcdb95112c51657f6270e8c079cfdb51f0",
+   "model": "oracle_input",
+   "status": "moved",
+   "headline": "misreport \u00d70.9000 (-10.00%)",
+   "effects": {
+    "misreport": 0.9
+   },
+   "detail": {}
+  },
+  {
+   "seq": 3,
+   "wave": 2,
+   "node": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+   "model": "blue_market",
+   "status": "loss",
+   "headline": "126 positions liquidatable: 70.69M USDC repaid, lenders lose 352.1k USDC",
+   "effects": {
+    "loss": 352144.79280142806,
+    "sale": 80604021.75692214
+   },
+   "detail": {
+    "oracle_factor": 0.9,
+    "market_factor": 1.0,
+    "oracle_misreport": 0.9,
+    "oracle_reading": 1.0,
+    "collateral_price": 1.0,
+    "collateral_value": 1.0,
+    "executed": 1.0,
+    "oracle_frozen": false,
+    "oracle_follows": false,
+    "liquidated_debt": 70693757.28190856,
+    "positions_liquidated": 126,
+    "bad_debt": 352144.79280142806,
+    "insolvent": 0.0,
+    "discount": -0.11111111111111116,
+    "drain_threshold": 0.08955223880596996,
+    "drained": 0.0,
+    "drain_loss": 0.0,
+    "lender_loss": 352144.79280142806,
+    "collateral_sold_usd": 80604021.75692214,
+    "collateral_sold": 80604021.75692214,
+    "loan_unit": "USDC"
+   }
+  },
+  {
+   "seq": 4,
+   "wave": 2,
+   "node": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
+   "model": "blue_market",
+   "status": "loss",
+   "headline": "47 positions liquidatable: 7.18M USDT repaid, lenders lose 11.6k USDT",
+   "effects": {
+    "loss": 11551.172133332162,
+    "sale": 8184680.6970066335
+   },
+   "detail": {
+    "oracle_factor": 0.9,
+    "market_factor": 1.0,
+    "oracle_misreport": 0.9,
+    "oracle_reading": 1.0,
+    "collateral_price": 1.0,
+    "collateral_value": 1.0,
+    "executed": 1.0,
+    "oracle_frozen": false,
+    "oracle_follows": false,
+    "liquidated_debt": 7178374.205309667,
+    "positions_liquidated": 47,
+    "bad_debt": 11551.172133332162,
+    "insolvent": 0.0,
+    "discount": -0.11111111111111116,
+    "drain_threshold": 0.08955223880596996,
+    "drained": 0.0,
+    "drain_loss": 0.0,
+    "lender_loss": 11551.172133332162,
+    "collateral_sold_usd": 8184680.6970066335,
+    "collateral_sold": 8184680.6970066335,
+    "loan_unit": "USDT"
+   }
+  },
+  {
+   "seq": 5,
+   "wave": 3,
+   "node": "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
+   "model": "combine",
+   "status": "loss",
+   "headline": "loses 27.1k USDC (0.147% of its 18.44M)",
+   "effects": {
+    "loss": 27133.915867387263
+   },
+   "detail": {}
+  },
+  {
+   "seq": 6,
+   "wave": 3,
+   "node": "0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "model": "asset_price",
+   "status": "moved",
+   "headline": "88.79M USD offered, 100% absorbed; price \u00d70.9915 (-0.85%)",
+   "effects": {
+    "price": 0.991503955709322,
+    "onward": 88788702.45392877
+   },
+   "detail": {
+    "sold_usd": 88788702.45392877,
+    "absorbed_usd": 88788702.45392877,
+    "impact": 0.991503955709322,
+    "floor": 0.9527809161597737,
+    "model": "quotes"
+   }
+  },
+  {
+   "seq": 7,
+   "wave": 4,
+   "node": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+   "model": "blue_market",
+   "status": "loss",
+   "headline": "126 positions liquidatable: 70.69M USDC repaid, lenders lose 352.1k USDC",
+   "effects": {
+    "loss": 352144.79280142806,
+    "sale": 80604021.75692214
+   },
+   "detail": {
+    "oracle_factor": 0.9,
+    "market_factor": 0.991503955709322,
+    "oracle_misreport": 0.9,
+    "oracle_reading": 1.0,
+    "collateral_price": 0.991503955709322,
+    "collateral_value": 1.0,
+    "executed": 1.0,
+    "oracle_frozen": false,
+    "oracle_follows": false,
+    "liquidated_debt": 70693757.28190856,
+    "positions_liquidated": 126,
+    "bad_debt": 352144.79280142806,
+    "insolvent": 0.0,
+    "discount": -0.10167106189924668,
+    "drain_threshold": 0.08955223880596996,
+    "drained": 0.0,
+    "drain_loss": 0.0,
+    "lender_loss": 352144.79280142806,
+    "collateral_sold_usd": 80604021.75692214,
+    "collateral_sold": 80604021.75692214,
+    "loan_unit": "USDC"
+   }
+  },
+  {
+   "seq": 8,
+   "wave": 4,
+   "node": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
+   "model": "blue_market",
+   "status": "loss",
+   "headline": "47 positions liquidatable: 7.18M USDT repaid, lenders lose 11.6k USDT",
+   "effects": {
+    "loss": 11551.172133332162,
+    "sale": 8184680.6970066335
+   },
+   "detail": {
+    "oracle_factor": 0.9,
+    "market_factor": 0.991503955709322,
+    "oracle_misreport": 0.9,
+    "oracle_reading": 1.0,
+    "collateral_price": 0.991503955709322,
+    "collateral_value": 1.0,
+    "executed": 1.0,
+    "oracle_frozen": false,
+    "oracle_follows": false,
+    "liquidated_debt": 7178374.205309667,
+    "positions_liquidated": 47,
+    "bad_debt": 11551.172133332162,
+    "insolvent": 0.0,
+    "discount": -0.10167106189924668,
+    "drain_threshold": 0.08955223880596996,
+    "drained": 0.0,
+    "drain_loss": 0.0,
+    "lender_loss": 11551.172133332162,
+    "collateral_sold_usd": 8184680.6970066335,
+    "collateral_sold": 8184680.6970066335,
+    "loan_unit": "USDT"
+   }
+  },
+  {
+   "seq": 9,
+   "wave": 4,
+   "node": "0x77ee147391eac11c92817e771860ff4aad265d89",
+   "model": "oracle_input",
+   "status": "shocked",
+   "headline": "reads-low 10%; reading \u00d70.9915 (-0.85%)",
+   "effects": {
+    "misreport": 0.9,
+    "reading": 0.991503955709322
+   },
+   "detail": {}
+  },
+  {
+   "seq": 10,
+   "wave": 4,
+   "node": "pendle:0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "model": "combine",
+   "status": "moved",
+   "headline": "reached, nothing moves",
+   "effects": {
+    "onward": 88788702.45392877
+   },
+   "detail": {}
+  },
+  {
+   "seq": 11,
+   "wave": 5,
+   "node": "0x217d6ddcdb95112c51657f6270e8c079cfdb51f0",
+   "model": "oracle_input",
+   "status": "moved",
+   "headline": "misreport \u00d70.9000 (-10.00%); reading \u00d70.9915 (-0.85%)",
+   "effects": {
+    "misreport": 0.9,
+    "reading": 0.991503955709322
+   },
+   "detail": {}
+  },
+  {
+   "seq": 12,
+   "wave": 5,
+   "node": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+   "model": "asset_price",
+   "status": "moved",
+   "headline": "88.79M USD offered, 14% absorbed; price \u00d70.9606 (-3.94%)",
+   "effects": {
+    "price": 0.9605804763813728,
+    "exit": 0.13912358758091936
+   },
+   "detail": {
+    "sold_usd": 88788702.45392877,
+    "absorbed_usd": 12352602.822045349,
+    "impact": 0.9605804763813728,
+    "floor": 0.0,
+    "model": "quotes"
+   }
+  },
+  {
+   "seq": 13,
+   "wave": 6,
+   "node": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+   "model": "blue_market",
+   "status": "loss",
+   "headline": "133 positions liquidatable: 73.99M USDC repaid, lenders lose 672.1k USDC",
+   "effects": {
+    "loss": 672097.3432005304,
+    "sale": 85084910.4132518
+   },
+   "detail": {
+    "oracle_factor": 0.8923535601383898,
+    "market_factor": 0.991503955709322,
+    "oracle_misreport": 0.9,
+    "oracle_reading": 0.991503955709322,
+    "collateral_price": 0.991503955709322,
+    "collateral_value": 1.0,
+    "executed": 1.0,
+    "oracle_frozen": false,
+    "oracle_follows": false,
+    "liquidated_debt": 73989714.24192747,
+    "positions_liquidated": 133,
+    "bad_debt": 672097.3432005304,
+    "insolvent": 0.0,
+    "discount": -0.11111111111111116,
+    "drain_threshold": 0.08955223880596996,
+    "drained": 0.0,
+    "drain_loss": 0.0,
+    "lender_loss": 672097.3432005304,
+    "collateral_sold_usd": 85084910.4132518,
+    "collateral_sold": 85084910.4132518,
+    "loan_unit": "USDC"
+   }
+  },
+  {
+   "seq": 14,
+   "wave": 6,
+   "node": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
+   "model": "blue_market",
+   "status": "loss",
+   "headline": "49 positions liquidatable: 7.21M USDT repaid, lenders lose 29.4k USDT",
+   "effects": {
+    "loss": 29355.465000216936,
+    "sale": 8289258.61817019
+   },
+   "detail": {
+    "oracle_factor": 0.8923535601383898,
+    "market_factor": 0.991503955709322,
+    "oracle_misreport": 0.9,
+    "oracle_reading": 0.991503955709322,
+    "collateral_price": 0.991503955709322,
+    "collateral_value": 1.0,
+    "executed": 1.0,
+    "oracle_frozen": false,
+    "oracle_follows": false,
+    "liquidated_debt": 7208327.228141783,
+    "positions_liquidated": 49,
+    "bad_debt": 29355.465000216936,
+    "insolvent": 0.0,
+    "discount": -0.11111111111111116,
+    "drain_threshold": 0.08955223880596996,
+    "drained": 0.0,
+    "drain_loss": 0.0,
+    "lender_loss": 29355.465000216936,
+    "collateral_sold_usd": 8289258.61817019,
+    "collateral_sold": 8289258.61817019,
+    "loan_unit": "USDT"
+   }
+  },
+  {
+   "seq": 15,
+   "wave": 6,
+   "node": "pendle:0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "model": "combine",
+   "status": "moved",
+   "headline": "value \u00d70.9606 (-3.94%)",
+   "effects": {
+    "onward": 88788702.45392877,
+    "value": 0.9605804763813728,
+    "exit": 0.13912358758091936
+   },
+   "detail": {}
+  },
+  {
+   "seq": 16,
+   "wave": 6,
+   "node": "0x4565ac05d38b19374ccbb04c17cca60ca9353cd41824f0803d0fc7704f60eaed",
+   "model": "blue_market",
+   "status": "moved",
+   "headline": "oracle \u00d71.0000, market \u00d70.9606, no liquidation",
+   "effects": {},
+   "detail": {
+    "oracle_factor": 1.0,
+    "market_factor": 0.9605804763813728,
+    "oracle_misreport": 1.0,
+    "oracle_reading": 1.0,
+    "collateral_price": 0.9605804763813728,
+    "collateral_value": 1.0,
+    "executed": 0.13912358758091936,
+    "oracle_frozen": false,
+    "oracle_follows": false,
+    "liquidated_debt": 0.0,
+    "positions_liquidated": 0,
+    "bad_debt": 0.0,
+    "insolvent": 0.0,
+    "discount": 0.03941952361862722,
+    "drain_threshold": 0.08955223880596996,
+    "drained": 0.0,
+    "drain_loss": 0.0,
+    "lender_loss": 0.0,
+    "collateral_sold_usd": 0.0,
+    "collateral_sold": 0.0,
+    "loan_unit": "USDC"
+   }
+  },
+  {
+   "seq": 17,
+   "wave": 6,
+   "node": "0x9105a5447f3eecdf768f04da12d580a878106e2e6b234312db2ee0f304539e35",
+   "model": "blue_market",
+   "status": "moved",
+   "headline": "oracle \u00d71.0000, market \u00d70.9606, no liquidation",
+   "effects": {},
+   "detail": {
+    "oracle_factor": 1.0,
+    "market_factor": 0.9605804763813728,
+    "oracle_misreport": 1.0,
+    "oracle_reading": 1.0,
+    "collateral_price": 0.9605804763813728,
+    "collateral_value": 1.0,
+    "executed": 0.13912358758091936,
+    "oracle_frozen": false,
+    "oracle_follows": false,
+    "liquidated_debt": 0.0,
+    "positions_liquidated": 0,
+    "bad_debt": 0.0,
+    "insolvent": 0.0,
+    "discount": 0.03941952361862722,
+    "drain_threshold": 0.08955223880596996,
+    "drained": 0.0,
+    "drain_loss": 0.0,
+    "lender_loss": 0.0,
+    "collateral_sold_usd": 0.0,
+    "collateral_sold": 0.0,
+    "loan_unit": "USDT"
+   }
+  },
+  {
+   "seq": 18,
+   "wave": 7,
+   "node": "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
+   "model": "combine",
+   "status": "loss",
+   "headline": "loses 51.8k USDC (0.281% of its 18.44M)",
+   "effects": {
+    "loss": 51787.3134514336
+   },
+   "detail": {}
+  },
+  {
+   "seq": 19,
+   "wave": 7,
+   "node": "0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "model": "asset_price",
+   "status": "moved",
+   "headline": "93.37M USD offered, 100% absorbed; price \u00d70.9915 (-0.85%); value \u00d70.9606 (-3.94%)",
+   "effects": {
+    "value": 0.9605804763813728,
+    "exit": 0.13912358758091936,
+    "price": 0.991503955709322,
+    "onward": 93374169.03142199
+   },
+   "detail": {
+    "sold_usd": 93374169.03142199,
+    "absorbed_usd": 93374169.03142199,
+    "impact": 0.991503955709322,
+    "floor": 0.9527809161597737,
+    "model": "quotes"
+   }
+  },
+  {
+   "seq": 20,
+   "wave": 8,
+   "node": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+   "model": "blue_market",
+   "status": "loss",
+   "headline": "133 positions liquidatable, only 14% of their collateral sells: 10.29M USDC repaid, lenders lose 93.5k USDC",
+   "effects": {
+    "loss": 93504.5935896622,
+    "sale": 85084910.4132518
+   },
+   "detail": {
+    "oracle_factor": 0.8923535601383898,
+    "market_factor": 0.9524193421092761,
+    "oracle_misreport": 0.9,
+    "oracle_reading": 0.991503955709322,
+    "collateral_price": 0.991503955709322,
+    "collateral_value": 0.9605804763813728,
+    "executed": 0.13912358758091936,
+    "oracle_frozen": false,
+    "oracle_follows": false,
+    "liquidated_debt": 10293714.489423994,
+    "positions_liquidated": 133,
+    "bad_debt": 93504.5935896622,
+    "insolvent": 0.0,
+    "discount": -0.06731164042374749,
+    "drain_threshold": 0.08955223880596996,
+    "drained": 0.0,
+    "drain_loss": 0.0,
+    "lender_loss": 93504.5935896622,
+    "collateral_sold_usd": 85084910.4132518,
+    "collateral_sold": 85084910.4132518,
+    "loan_unit": "USDC"
+   }
+  },
+  {
+   "seq": 21,
+   "wave": 8,
+   "node": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
+   "model": "blue_market",
+   "status": "loss",
+   "headline": "49 positions liquidatable, only 14% of their collateral sells: 1.00M USDT repaid, lenders lose 4.1k USDT",
+   "effects": {
+    "loss": 4084.0376059362934,
+    "sale": 8289258.61817019
+   },
+   "detail": {
+    "oracle_factor": 0.8923535601383898,
+    "market_factor": 0.9524193421092761,
+    "oracle_misreport": 0.9,
+    "oracle_reading": 0.991503955709322,
+    "collateral_price": 0.991503955709322,
+    "collateral_value": 0.9605804763813728,
+    "executed": 0.13912358758091936,
+    "oracle_frozen": false,
+    "oracle_follows": false,
+    "liquidated_debt": 1002848.3444363093,
+    "positions_liquidated": 49,
+    "bad_debt": 4084.0376059362934,
+    "insolvent": 0.0,
+    "discount": -0.06731164042374749,
+    "drain_threshold": 0.08955223880596996,
+    "drained": 0.0,
+    "drain_loss": 0.0,
+    "lender_loss": 4084.0376059362934,
+    "collateral_sold_usd": 8289258.61817019,
+    "collateral_sold": 8289258.61817019,
+    "loan_unit": "USDT"
+   }
+  },
+  {
+   "seq": 22,
+   "wave": 8,
+   "node": "pendle:0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "model": "combine",
+   "status": "moved",
+   "headline": "value \u00d70.9606 (-3.94%)",
+   "effects": {
+    "onward": 93374169.03142199,
+    "value": 0.9605804763813728,
+    "exit": 0.13912358758091936
+   },
+   "detail": {}
+  },
+  {
+   "seq": 23,
+   "wave": 9,
+   "node": "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
+   "model": "combine",
+   "status": "loss",
+   "headline": "loses 7.2k USDC (0.039% of its 18.44M)",
+   "effects": {
+    "loss": 7204.836838541045
+   },
+   "detail": {}
+  },
+  {
+   "seq": 24,
+   "wave": 9,
+   "node": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+   "model": "asset_price",
+   "status": "moved",
+   "headline": "93.37M USD offered, 13% absorbed; price \u00d70.9606 (-3.94%)",
+   "effects": {
+    "price": 0.9605804763813728,
+    "exit": 0.1322914350958078
+   },
+   "detail": {
+    "sold_usd": 93374169.03142199,
+    "absorbed_usd": 12352602.822045349,
+    "impact": 0.9605804763813728,
+    "floor": 0.0,
+    "model": "quotes"
+   }
+  },
+  {
+   "seq": 25,
+   "wave": 10,
+   "node": "pendle:0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "model": "combine",
+   "status": "moved",
+   "headline": "value \u00d70.9606 (-3.94%)",
+   "effects": {
+    "onward": 93374169.03142199,
+    "value": 0.9605804763813728,
+    "exit": 0.1322914350958078
+   },
+   "detail": {}
+  },
+  {
+   "seq": 26,
+   "wave": 10,
+   "node": "0x4565ac05d38b19374ccbb04c17cca60ca9353cd41824f0803d0fc7704f60eaed",
+   "model": "blue_market",
+   "status": "moved",
+   "headline": "oracle \u00d71.0000, market \u00d70.9606, no liquidation",
+   "effects": {},
+   "detail": {
+    "oracle_factor": 1.0,
+    "market_factor": 0.9605804763813728,
+    "oracle_misreport": 1.0,
+    "oracle_reading": 1.0,
+    "collateral_price": 0.9605804763813728,
+    "collateral_value": 1.0,
+    "executed": 0.1322914350958078,
+    "oracle_frozen": false,
+    "oracle_follows": false,
+    "liquidated_debt": 0.0,
+    "positions_liquidated": 0,
+    "bad_debt": 0.0,
+    "insolvent": 0.0,
+    "discount": 0.03941952361862722,
+    "drain_threshold": 0.08955223880596996,
+    "drained": 0.0,
+    "drain_loss": 0.0,
+    "lender_loss": 0.0,
+    "collateral_sold_usd": 0.0,
+    "collateral_sold": 0.0,
+    "loan_unit": "USDC"
+   }
+  },
+  {
+   "seq": 27,
+   "wave": 10,
+   "node": "0x9105a5447f3eecdf768f04da12d580a878106e2e6b234312db2ee0f304539e35",
+   "model": "blue_market",
+   "status": "moved",
+   "headline": "oracle \u00d71.0000, market \u00d70.9606, no liquidation",
+   "effects": {},
+   "detail": {
+    "oracle_factor": 1.0,
+    "market_factor": 0.9605804763813728,
+    "oracle_misreport": 1.0,
+    "oracle_reading": 1.0,
+    "collateral_price": 0.9605804763813728,
+    "collateral_value": 1.0,
+    "executed": 0.1322914350958078,
+    "oracle_frozen": false,
+    "oracle_follows": false,
+    "liquidated_debt": 0.0,
+    "positions_liquidated": 0,
+    "bad_debt": 0.0,
+    "insolvent": 0.0,
+    "discount": 0.03941952361862722,
+    "drain_threshold": 0.08955223880596996,
+    "drained": 0.0,
+    "drain_loss": 0.0,
+    "lender_loss": 0.0,
+    "collateral_sold_usd": 0.0,
+    "collateral_sold": 0.0,
+    "loan_unit": "USDT"
+   }
+  },
+  {
+   "seq": 28,
+   "wave": 11,
+   "node": "0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "model": "asset_price",
+   "status": "moved",
+   "headline": "93.37M USD offered, 100% absorbed; price \u00d70.9915 (-0.85%); value \u00d70.9606 (-3.94%)",
+   "effects": {
+    "value": 0.9605804763813728,
+    "exit": 0.1322914350958078,
+    "price": 0.991503955709322,
+    "onward": 93374169.03142199
+   },
+   "detail": {
+    "sold_usd": 93374169.03142199,
+    "absorbed_usd": 93374169.03142199,
+    "impact": 0.991503955709322,
+    "floor": 0.9527809161597737,
+    "model": "quotes"
+   }
+  },
+  {
+   "seq": 29,
+   "wave": 12,
+   "node": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+   "model": "blue_market",
+   "status": "loss",
+   "headline": "133 positions liquidatable, only 13% of their collateral sells: 9.79M USDC repaid, lenders lose 88.9k USDC",
+   "effects": {
+    "loss": 88912.7220560778,
+    "sale": 85084910.4132518
+   },
+   "detail": {
+    "oracle_factor": 0.8923535601383898,
+    "market_factor": 0.9524193421092761,
+    "oracle_misreport": 0.9,
+    "oracle_reading": 0.991503955709322,
+    "collateral_price": 0.991503955709322,
+    "collateral_value": 0.9605804763813728,
+    "executed": 0.1322914350958078,
+    "oracle_frozen": false,
+    "oracle_follows": false,
+    "liquidated_debt": 9788205.479393318,
+    "positions_liquidated": 133,
+    "bad_debt": 88912.7220560778,
+    "insolvent": 0.0,
+    "discount": -0.06731164042374749,
+    "drain_threshold": 0.08955223880596996,
+    "drained": 0.0,
+    "drain_loss": 0.0,
+    "lender_loss": 88912.7220560778,
+    "collateral_sold_usd": 85084910.4132518,
+    "collateral_sold": 85084910.4132518,
+    "loan_unit": "USDC"
+   }
+  },
+  {
+   "seq": 30,
+   "wave": 12,
+   "node": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
+   "model": "blue_market",
+   "status": "loss",
+   "headline": "49 positions liquidatable, only 13% of their collateral sells: 953.6k USDT repaid, lenders lose 3.9k USDT",
+   "effects": {
+    "loss": 3883.4765927834565,
+    "sale": 8289258.61817019
+   },
+   "detail": {
+    "oracle_factor": 0.8923535601383898,
+    "market_factor": 0.9524193421092761,
+    "oracle_misreport": 0.9,
+    "oracle_reading": 0.991503955709322,
+    "collateral_price": 0.991503955709322,
+    "collateral_value": 0.9605804763813728,
+    "executed": 0.1322914350958078,
+    "oracle_frozen": false,
+    "oracle_follows": false,
+    "liquidated_debt": 953599.9536510629,
+    "positions_liquidated": 49,
+    "bad_debt": 3883.4765927834565,
+    "insolvent": 0.0,
+    "discount": -0.06731164042374749,
+    "drain_threshold": 0.08955223880596996,
+    "drained": 0.0,
+    "drain_loss": 0.0,
+    "lender_loss": 3883.4765927834565,
+    "collateral_sold_usd": 8289258.61817019,
+    "collateral_sold": 8289258.61817019,
+    "loan_unit": "USDT"
+   }
+  },
+  {
+   "seq": 31,
+   "wave": 13,
+   "node": "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
+   "model": "combine",
+   "status": "loss",
+   "headline": "loses 6.9k USDC (0.037% of its 18.44M)",
+   "effects": {
+    "loss": 6851.01801624658
+   },
+   "detail": {}
+  }
+ ],
+ "waves": [
+  {
+   "wave": 0,
+   "evaluated": [
+    "0x77ee147391eac11c92817e771860ff4aad265d89"
+   ],
+   "steps": [
+    1
+   ]
+  },
+  {
+   "wave": 1,
+   "evaluated": [
+    "0x217d6ddcdb95112c51657f6270e8c079cfdb51f0"
+   ],
+   "steps": [
+    2,
+    3
+   ]
+  },
+  {
+   "wave": 2,
+   "evaluated": [
+    "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+    "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca"
+   ],
+   "steps": [
+    4,
+    5,
+    6
+   ]
+  },
+  {
+   "wave": 3,
+   "evaluated": [
+    "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
+    "0xecfafdc7741323a945a163ed068b5a3c43483957"
+   ],
+   "steps": [
+    7,
+    8,
+    9,
+    10
+   ]
+  },
+  {
+   "wave": 4,
+   "evaluated": [
+    "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+    "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
+    "0x77ee147391eac11c92817e771860ff4aad265d89",
+    "pendle:0xecfafdc7741323a945a163ed068b5a3c43483957"
+   ],
+   "steps": [
+    11,
+    12
+   ]
+  },
+  {
+   "wave": 5,
+   "evaluated": [
+    "0x217d6ddcdb95112c51657f6270e8c079cfdb51f0",
+    "0x5086bf358635b81d8c47c66d1c8b9e567db70c72"
+   ],
+   "steps": [
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20
+   ]
+  },
+  {
+   "wave": 6,
+   "evaluated": [
+    "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+    "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
+    "pendle:0xecfafdc7741323a945a163ed068b5a3c43483957",
+    "0x4565ac05d38b19374ccbb04c17cca60ca9353cd41824f0803d0fc7704f60eaed",
+    "0x9105a5447f3eecdf768f04da12d580a878106e2e6b234312db2ee0f304539e35"
+   ],
+   "steps": [
+    21,
+    22,
+    23,
+    24,
+    25
+   ]
+  },
+  {
+   "wave": 7,
+   "evaluated": [
+    "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
+    "0xecfafdc7741323a945a163ed068b5a3c43483957"
+   ],
+   "steps": [
+    26,
+    27,
+    28,
+    29,
+    30
+   ]
+  },
+  {
+   "wave": 8,
+   "evaluated": [
+    "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+    "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
+    "pendle:0xecfafdc7741323a945a163ed068b5a3c43483957"
+   ],
+   "steps": [
+    31,
+    32
+   ]
+  },
+  {
+   "wave": 9,
+   "evaluated": [
+    "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
+    "0x5086bf358635b81d8c47c66d1c8b9e567db70c72"
+   ],
+   "steps": [
+    33,
+    34,
+    35
+   ]
+  },
+  {
+   "wave": 10,
+   "evaluated": [
+    "pendle:0xecfafdc7741323a945a163ed068b5a3c43483957",
+    "0x4565ac05d38b19374ccbb04c17cca60ca9353cd41824f0803d0fc7704f60eaed",
+    "0x9105a5447f3eecdf768f04da12d580a878106e2e6b234312db2ee0f304539e35"
+   ],
+   "steps": [
+    36
+   ]
+  },
+  {
+   "wave": 11,
+   "evaluated": [
+    "0xecfafdc7741323a945a163ed068b5a3c43483957"
+   ],
+   "steps": [
+    37,
+    38
+   ]
+  },
+  {
+   "wave": 12,
+   "evaluated": [
+    "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+    "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca"
+   ],
+   "steps": [
+    39
+   ]
+  },
+  {
+   "wave": 13,
+   "evaluated": [
+    "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965"
+   ],
+   "steps": []
+  }
+ ],
+ "nodes": {
+  "0x77ee147391eac11c92817e771860ff4aad265d89": {
+   "status": "shocked",
+   "headline": "reads-low 10%; reading \u00d70.9915 (-0.85%)",
+   "model": "oracle_input",
+   "effects": {
+    "misreport": 0.9,
+    "reading": 0.991503955709322
+   },
+   "loss_unit": null,
+   "detail": {},
+   "inputs": [
+    9
+   ],
+   "first_wave": 0
+  },
+  "0x217d6ddcdb95112c51657f6270e8c079cfdb51f0": {
+   "status": "moved",
+   "headline": "misreport \u00d70.9000 (-10.00%); reading \u00d70.9915 (-0.85%)",
+   "model": "oracle_input",
+   "effects": {
+    "misreport": 0.9,
+    "reading": 0.991503955709322
+   },
+   "loss_unit": null,
+   "detail": {},
+   "inputs": [
+    1,
+    11
+   ],
+   "first_wave": 1
+  },
+  "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64": {
+   "status": "loss",
+   "headline": "133 positions liquidatable, only 13% of their collateral sells: 9.79M USDC repaid, lenders lose 88.9k USDC",
+   "model": "blue_market",
+   "effects": {
+    "loss": 88912.7220560778,
+    "sale": 85084910.4132518
+   },
+   "loss_unit": "USDC",
+   "detail": {
+    "oracle_factor": 0.8923535601383898,
+    "market_factor": 0.9524193421092761,
+    "oracle_misreport": 0.9,
+    "oracle_reading": 0.991503955709322,
+    "collateral_price": 0.991503955709322,
+    "collateral_value": 0.9605804763813728,
+    "executed": 0.1322914350958078,
+    "oracle_frozen": false,
+    "oracle_follows": false,
+    "liquidated_debt": 9788205.479393318,
+    "positions_liquidated": 133,
+    "bad_debt": 88912.7220560778,
+    "insolvent": 0.0,
+    "discount": -0.06731164042374749,
+    "drain_threshold": 0.08955223880596996,
+    "drained": 0.0,
+    "drain_loss": 0.0,
+    "lender_loss": 88912.7220560778,
+    "collateral_sold_usd": 85084910.4132518,
+    "collateral_sold": 85084910.4132518,
+    "loan_unit": "USDC",
+    "before": {
+     "liquidated_debt": 0.0,
+     "positions_liquidated": 0,
+     "bad_debt": 0.0,
+     "insolvent": 0.0,
+     "sold": 0.0
+    }
+   },
+   "inputs": [
+    2,
+    7,
+    13,
+    26,
+    37
+   ],
+   "first_wave": 2
+  },
+  "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca": {
+   "status": "loss",
+   "headline": "49 positions liquidatable, only 13% of their collateral sells: 953.6k USDT repaid, lenders lose 3.9k USDT",
+   "model": "blue_market",
+   "effects": {
+    "loss": 3883.4765927834565,
+    "sale": 8289258.61817019
+   },
+   "loss_unit": "USDT",
+   "detail": {
+    "oracle_factor": 0.8923535601383898,
+    "market_factor": 0.9524193421092761,
+    "oracle_misreport": 0.9,
+    "oracle_reading": 0.991503955709322,
+    "collateral_price": 0.991503955709322,
+    "collateral_value": 0.9605804763813728,
+    "executed": 0.1322914350958078,
+    "oracle_frozen": false,
+    "oracle_follows": false,
+    "liquidated_debt": 953599.9536510629,
+    "positions_liquidated": 49,
+    "bad_debt": 3883.4765927834565,
+    "insolvent": 0.0,
+    "discount": -0.06731164042374749,
+    "drain_threshold": 0.08955223880596996,
+    "drained": 0.0,
+    "drain_loss": 0.0,
+    "lender_loss": 3883.4765927834565,
+    "collateral_sold_usd": 8289258.61817019,
+    "collateral_sold": 8289258.61817019,
+    "loan_unit": "USDT",
+    "before": {
+     "liquidated_debt": 0.0,
+     "positions_liquidated": 0,
+     "bad_debt": 0.0,
+     "insolvent": 0.0,
+     "sold": 0.0
+    }
+   },
+   "inputs": [
+    3,
+    8,
+    14,
+    27,
+    38
+   ],
+   "first_wave": 2
+  },
+  "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965": {
+   "status": "loss",
+   "headline": "loses 6.9k USDC (0.037% of its 18.44M)",
+   "model": "combine",
+   "effects": {
+    "loss": 6851.01801624658
+   },
+   "loss_unit": "USDC",
+   "detail": {},
+   "inputs": [
+    39
+   ],
+   "first_wave": 3
+  },
+  "0xecfafdc7741323a945a163ed068b5a3c43483957": {
+   "status": "moved",
+   "headline": "93.37M USD offered, 100% absorbed; price \u00d70.9915 (-0.85%); value \u00d70.9606 (-3.94%)",
+   "model": "asset_price",
+   "effects": {
+    "value": 0.9605804763813728,
+    "exit": 0.1322914350958078,
+    "price": 0.991503955709322,
+    "onward": 93374169.03142199
+   },
+   "loss_unit": null,
+   "detail": {
+    "sold_usd": 93374169.03142199,
+    "absorbed_usd": 93374169.03142199,
+    "impact": 0.991503955709322,
+    "floor": 0.9527809161597737,
+    "model": "quotes"
+   },
+   "inputs": [
+    22,
+    23,
+    24,
+    36
+   ],
+   "first_wave": 3
+  },
+  "pendle:0xecfafdc7741323a945a163ed068b5a3c43483957": {
+   "status": "moved",
+   "headline": "value \u00d70.9606 (-3.94%)",
+   "model": "combine",
+   "effects": {
+    "onward": 93374169.03142199,
+    "value": 0.9605804763813728,
+    "exit": 0.1322914350958078
+   },
+   "loss_unit": null,
+   "detail": {},
+   "inputs": [
+    15,
+    30,
+    33
+   ],
+   "first_wave": 4
+  },
+  "0x5086bf358635b81d8c47c66d1c8b9e567db70c72": {
+   "status": "moved",
+   "headline": "93.37M USD offered, 13% absorbed; price \u00d70.9606 (-3.94%)",
+   "model": "asset_price",
+   "effects": {
+    "price": 0.9605804763813728,
+    "exit": 0.1322914350958078
+   },
+   "loss_unit": null,
+   "detail": {
+    "sold_usd": 93374169.03142199,
+    "absorbed_usd": 12352602.822045349,
+    "impact": 0.9605804763813728,
+    "floor": 0.0,
+    "model": "quotes"
+   },
+   "inputs": [
+    32
+   ],
+   "first_wave": 5
+  },
+  "0x4565ac05d38b19374ccbb04c17cca60ca9353cd41824f0803d0fc7704f60eaed": {
+   "status": "moved",
+   "headline": "oracle \u00d71.0000, market \u00d70.9606, no liquidation",
+   "model": "blue_market",
+   "effects": {},
+   "loss_unit": "USDC",
+   "detail": {
+    "oracle_factor": 1.0,
+    "market_factor": 0.9605804763813728,
+    "oracle_misreport": 1.0,
+    "oracle_reading": 1.0,
+    "collateral_price": 0.9605804763813728,
+    "collateral_value": 1.0,
+    "executed": 0.1322914350958078,
+    "oracle_frozen": false,
+    "oracle_follows": false,
+    "liquidated_debt": 0.0,
+    "positions_liquidated": 0,
+    "bad_debt": 0.0,
+    "insolvent": 0.0,
+    "discount": 0.03941952361862722,
+    "drain_threshold": 0.08955223880596996,
+    "drained": 0.0,
+    "drain_loss": 0.0,
+    "lender_loss": 0.0,
+    "collateral_sold_usd": 0.0,
+    "collateral_sold": 0.0,
+    "loan_unit": "USDC",
+    "before": {
+     "liquidated_debt": 0.0,
+     "positions_liquidated": 0,
+     "bad_debt": 0.0,
+     "insolvent": 0.0,
+     "sold": 0.0
+    }
+   },
+   "inputs": [
+    16,
+    34
+   ],
+   "first_wave": 6
+  },
+  "0x9105a5447f3eecdf768f04da12d580a878106e2e6b234312db2ee0f304539e35": {
+   "status": "moved",
+   "headline": "oracle \u00d71.0000, market \u00d70.9606, no liquidation",
+   "model": "blue_market",
+   "effects": {},
+   "loss_unit": "USDT",
+   "detail": {
+    "oracle_factor": 1.0,
+    "market_factor": 0.9605804763813728,
+    "oracle_misreport": 1.0,
+    "oracle_reading": 1.0,
+    "collateral_price": 0.9605804763813728,
+    "collateral_value": 1.0,
+    "executed": 0.1322914350958078,
+    "oracle_frozen": false,
+    "oracle_follows": false,
+    "liquidated_debt": 0.0,
+    "positions_liquidated": 0,
+    "bad_debt": 0.0,
+    "insolvent": 0.0,
+    "discount": 0.03941952361862722,
+    "drain_threshold": 0.08955223880596996,
+    "drained": 0.0,
+    "drain_loss": 0.0,
+    "lender_loss": 0.0,
+    "collateral_sold_usd": 0.0,
+    "collateral_sold": 0.0,
+    "loan_unit": "USDT",
+    "before": {
+     "liquidated_debt": 0.0,
+     "positions_liquidated": 0,
+     "bad_debt": 0.0,
+     "insolvent": 0.0,
+     "sold": 0.0
+    }
+   },
+   "inputs": [
+    17,
+    35
+   ],
+   "first_wave": 6
+  }
+ },
+ "paths": {
+  "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64": [
+   1,
+   2,
+   3,
+   7,
+   8,
+   9,
+   11,
+   13,
+   14,
+   15,
+   22,
+   23,
+   24,
+   26,
+   27,
+   30,
+   32,
+   33,
+   36,
+   37,
+   38
+  ],
+  "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca": [
+   1,
+   2,
+   3,
+   7,
+   8,
+   9,
+   11,
+   13,
+   14,
+   15,
+   22,
+   23,
+   24,
+   26,
+   27,
+   30,
+   32,
+   33,
+   36,
+   37,
+   38
+  ],
+  "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965": [
+   1,
+   2,
+   3,
+   7,
+   8,
+   9,
+   11,
+   13,
+   14,
+   15,
+   22,
+   23,
+   24,
+   26,
+   27,
+   30,
+   32,
+   33,
+   36,
+   37,
+   38,
+   39
+  ]
+ }
+}

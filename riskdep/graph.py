@@ -20,13 +20,14 @@ from __future__ import annotations
 import html
 import json
 import math
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
 from eth_abi import decode
 
 from . import borrower as B
-from . import discover
+from . import clock, discover
 from . import market_risk as MR
 from . import oracle_class as OC
 from . import siblings as SB
@@ -103,6 +104,8 @@ def _oracle(g: Graph, f, oracle: str, block) -> str:
     code = S.rpc(f, "eth_getCode", [oracle, hex(block)]) or ""
     impl = "0x" + code[22:62] if code.startswith("0x363d3d373d3d3d363d73") else None
     cls, basis, base, feeds, standard = OC.classify_market_oracle(f, oracle, block)
+    for p in base:
+        OC.read_pendle_markets(f, p, block)
     shape = "Morpho ChainlinkOracleV2" if standard else "custom (no ChainlinkOracleV2 getters)"
     price = _uint(S.rpc_batch(f, [_call(oracle, "price()")], block)[0])
     g.node(
@@ -115,6 +118,7 @@ def _oracle(g: Graph, f, oracle: str, block) -> str:
         price_raw=str(price) if price is not None else "reverts",
         oracle_class=cls,
         class_basis=basis,
+        tracks_market=base[0].pendle_market() if not standard and base else None,
         source="price() and getters read on-chain; class from the base-side inputs (D82–D84)",
     )
     probes = {p.address: p for p in base if not p.vault}
@@ -147,6 +151,7 @@ def _oracle(g: Graph, f, oracle: str, block) -> str:
                 role_in_oracle=name,
                 oracle_class=fcls[0],
                 class_basis=fcls[1],
+                tracks_market=probes[addr].pendle_market() if addr in probes else None,
                 source="oracle getter, description() on-chain",
             )
             g.edge(oracle, fid, "reads", role=name)
@@ -181,12 +186,18 @@ def _market(g: Graph, f, m: B.BorrowMarket, block, quotes_pt: bool = True) -> st
             f"Pendle {pm['name']} pool",
             address=pm["address"],
             expiry=pm["expiry"][:10],
+            liquidity_usd=(pm.get("details") or {}).get("liquidity"),
+            implied_apy=(pm.get("details") or {}).get("impliedApy"),
+            days_to_maturity=round(
+                (datetime.fromisoformat(pm["expiry"].replace("Z", "+00:00")).timestamp() - clock.now()) / 86400, 2
+            ),
             source="Pendle API markets",
         )
         g.edge(coll, pool, "trades in / redeems through")
         und = pm["underlyingAsset"].split("-", 1)[-1].lower()
         uid = _asset(g, f, und, block)
         g.edge(pool, uid, "yield source")
+        _ladders(g, f, m, pm, und, orc)
         reg = REGISTRY["issuers"].get(und)
         for i, dep in enumerate((reg or {}).get("dependencies", [])):
             ext = g.node(f"ext:{und}:{i}", "External", dep, source="registry.json")
@@ -273,6 +284,94 @@ def _wraps(g: Graph, f: S.Fetcher, und: dict[str, tuple[str, str]], block) -> No
             )
 
 
+def _ladders(g: Graph, f: S.Fetcher, m: B.BorrowMarket, pm: dict, und: str, orc: str) -> None:
+    """Real Pendle quotes for selling the PT at growing sizes (engine D112, D113), turned into marginal-price curves:
+    on the PT, its pool against the underlying with no aggregator (the price a Pendle TWAP oracle reads); on the
+    underlying, the underlying received then sold for the loan token through the aggregator (the dollars a liquidator
+    gets). Sizes in USD at today's oracle price, the loan token counted at $1."""
+    try:
+        price = int(g.nodes[orc]["details"].get("price_raw"))
+    except (TypeError, ValueError):
+        return
+    usd_per_pt = price * 10**m.collateral_decimals / 10**36 / 10**m.loan_decimals
+    ratio = REGISTRY["engine"]["capacity_min_ratio"]
+    sizes = discover.ladder_sizes((pm.get("details") or {}).get("liquidity"))
+    pt = m.collateral_token
+    internal, refused = discover.quote_ladder(
+        f, pm["address"], pt, und, m.collateral_decimals, usd_per_pt, False, sizes
+    )
+    curve, cap = discover.marginal_curve(internal, ratio)
+    if refused and cap is None:
+        cap = internal[-1][0] if internal else 0.0  # Pendle could not route the next size: the pool is full there
+    if curve or cap is not None:
+        g.node(
+            pt,
+            "Asset",
+            "",
+            impact_curve=curve,
+            capacity_usd=cap,
+            impact_source="Pendle swap quotes: the PT sold into its pool for the underlying, no aggregator",
+        )
+    exits, refused2 = discover.quote_ladder(
+        f, pm["address"], pt, m.loan_token, m.collateral_decimals, usd_per_pt, True, sizes
+    )
+    got = dict(internal)
+    pts = [(got[usd], out) for usd, out in exits if usd in got]  # (underlying received, loan token received)
+    if pts and pts[0][0] and "impact_curve" not in g.nodes[und]["details"]:
+        usd_per_und = pts[0][1] / pts[0][0] / 10**m.loan_decimals
+        curve2, cap2 = discover.marginal_curve([(u * usd_per_und, out) for u, out in pts], ratio)
+        if refused2 and cap2 is None:
+            cap2 = pts[-1][0] * usd_per_und
+        if curve2 or cap2 is not None:
+            g.node(
+                und,
+                "Asset",
+                "",
+                impact_curve=curve2,
+                capacity_usd=cap2,
+                impact_source=f"Pendle swap quotes: the underlying sold for {m.loan_symbol} through the aggregator",
+            )
+
+
+PAIR = re.compile(r"^\s*([A-Za-z0-9.\-]+)\s*/\s*USD\s*$")
+
+
+def _tracks(g: Graph) -> None:
+    """Ties each oracle input to the market it reads (engine D115): a Pendle TWAP input → the PT of its pool; a
+    price-tracking 'SYM / USD' feed → the one asset of the graph with that symbol. An oracle whose base side reads a
+    tracked input is marked `tracks_bound`, and so are the markets it prices."""
+    pools = {n["details"].get("address", "").lower(): nid for nid, n in g.nodes.items() if nid.startswith("pendle:")}
+    pt_of_pool = {e["target"]: e["source"] for e in g.edges if e["rel"] == "trades in / redeems through"}
+    symbols: dict[str, list[str]] = {}
+    for nid, n in g.nodes.items():
+        if n["kind"] == "Asset":
+            symbols.setdefault(n["label"], []).append(nid)
+    for nid, n in list(g.nodes.items()):
+        if n["kind"] != "Oracle":
+            continue
+        d = n["details"]
+        pool = pools.get(d.get("tracks_market") or "")
+        pair = PAIR.match(n["label"]) if d.get("oracle_class") == "price-tracking" else None
+        if pool and pool in pt_of_pool:
+            g.edge(nid, pt_of_pool[pool], "tracks", note="a Pendle TWAP of this PT's pool (PT against its underlying)")
+        elif pair and len(symbols.get(pair.group(1), [])) == 1:
+            g.edge(nid, symbols[pair.group(1)][0], "tracks", note=f"the {pair.group(1)} / USD market")
+    tracked = {e["source"] for e in g.edges if e["rel"] == "tracks"}
+    for nid, n in g.nodes.items():
+        if n["kind"] == "Oracle" and n["details"].get("shape"):
+            bound = nid in tracked or any(
+                e["source"] == nid
+                and e["rel"] == "reads"
+                and str(e["details"].get("role", "")).startswith("BASE")
+                and e["target"] in tracked
+                for e in g.edges
+            )
+            g.node(nid, "Oracle", "", tracks_bound=bound)
+    for e in g.edges:
+        if e["rel"] == "priced by":
+            g.node(e["source"], "Pool", "", oracle_tracks_bound=g.nodes[e["target"]]["details"].get("tracks_bound"))
+
+
 def _market_state(g: Graph, f: S.Fetcher, markets: dict[str, B.BorrowMarket], block) -> None:
     """Supply, borrow, the collateral of the borrowers and the liquidation curve of every Blue market (D81), from all
     its borrowers (market_risk, D45)."""
@@ -296,6 +395,13 @@ def _market_state(g: Graph, f: S.Fetcher, markets: dict[str, B.BorrowMarket], bl
         ld, cd = 10**m.loan_decimals, 10**m.collateral_decimals
         supply, borrow = (decode(["uint128"] * 6, bytes.fromhex(raw[2:]))[0], r.total_borrow) if raw else (0, 0)
         coll = sum(c for c, _ in tracker.positions.get(mid, {}).values())
+        tba, tbs = tracker.totals.get(mid, (0, 0))
+        price = prices.get(mid)
+        positions = [
+            [c * price // 10**36 / ld, b * (tba + 1) // (tbs + 10**6) / ld]
+            for c, b in tracker.positions.get(mid, {}).values()
+            if b and price is not None
+        ]  # collateral value at today's oracle price and debt, in loan units: the engine's input (D111)
         g.node(
             mid,
             "Pool",
@@ -308,6 +414,10 @@ def _market_state(g: Graph, f: S.Fetcher, markets: dict[str, B.BorrowMarket], bl
             collateral_of_borrowers=coll / cd,
             collateral_unit=m.collateral_symbol,
             unrealised_bad_debt=r.unrealised_bad_debt / ld,
+            lltv_value=m.lltv,
+            free_liquidity=max(0, supply - borrow) / ld,
+            loan_usd=1.0 if m.loan_token in REGISTRY["stables"] else None,
+            _positions=positions,
             liquidation_curve=[
                 {
                     "oracle_fall": p.drop,
@@ -378,6 +488,7 @@ def build(
             address=va,
             actor_type="Vault V2 (capital provider)",
             total_assets=f"{st.total_assets / unit:,.0f} {view.asset_symbol}",
+            total_assets_value=st.total_assets / unit,
             idle=f"{st.idle / unit:,.0f} {view.asset_symbol}",
             plain_withdrawal_capacity=f"{st.withdrawable / unit:,.0f} {view.asset_symbol}",
             adapters=", ".join(f"{a.address} ({a.kind})" for a in view.adapters),
@@ -467,6 +578,7 @@ def build(
                 g.edge(nid, vid, verb[r])
     found, und = _siblings(g, f, held, block) if siblings and held else ({}, {})
     _wraps(g, f, und, block)
+    _tracks(g)
     _market_state(g, f, {**held, **found}, block)
     return g
 
@@ -484,6 +596,33 @@ def build_all(f: S.Fetcher, block: int, users: list[str], vaults: list[str], sib
         for e in part.edges:
             g.edge(e["source"], e["target"], e["rel"], e["amount"], e["unit"], **e["details"])
     return g
+
+
+def load(
+    users: list[str], vaults: list[str], siblings: bool, mode: str, replay_dir: Path
+) -> tuple[Graph, int, list[str], list[str], bool]:
+    """Build a graph live (`direct`), live while saving every response (`record`), or from a recording (`replay`,
+    whose meta.json fixes the targets, the block and siblings). Returns (graph, block, users, vaults, siblings)."""
+    meta = replay_dir / "meta.json"
+    if mode == "replay":
+        if not meta.exists():
+            raise FileNotFoundError(f"no recorded graph in {replay_dir}")
+        m = json.loads(meta.read_text())
+        users, vaults, block, siblings = m["users"], m["vaults"], m["block"], m["siblings"]
+        clock.set_as_of(m.get("as_of"))  # days to a PT's maturity count from the recording, not from today
+        f = S.Fetcher("offline", replay_dir)
+    else:
+        # a direct run gets no directory: the Fetcher would create an empty one under fixtures/
+        f = S.Fetcher("refresh", replay_dir) if mode == "record" else S.Fetcher("direct")
+        block = int(S.rpc(f, "eth_blockNumber", []), 16) - 2
+    g = build_all(f, block, users, vaults, siblings)
+    if mode == "record":
+        meta.write_text(
+            json.dumps(
+                {"users": users, "vaults": vaults, "block": block, "siblings": siblings, "as_of": clock.now()}, indent=1
+            )
+        )
+    return g, block, users, vaults, siblings
 
 
 def annotate_pharos(g: Graph, snap) -> int:
@@ -617,7 +756,7 @@ function row(k,v){{if(v==null||v==="")return"";const s=val(v);const link=/^0x[0-
  `<a href="https://etherscan.io/address/${{s}}" target="_blank" rel="noopener">${{s}}</a>`:s.replace(/[&<>]/g,c=>({{"&":"&amp;","<":"&lt;",">":"&gt;"}}[c]));
  return `<tr><td>${{k.replace(/_/g," ")}}</td><td>${{link}}</td></tr>`}}
 cy.on("tap","node",ev=>{{const d=ev.target.data();const nb=ev.target.closedNeighborhood();cy.elements().addClass("faded");nb.removeClass("faded");
- let h=`<b>${{d.label}}</b> <span class="muted">${{d.kind}}</span><table>`+Object.entries(d.details).map(([k,v])=>row(k,v)).join("");
+ let h=`<b>${{d.label}}</b> <span class="muted">${{d.kind}}</span><table>`+Object.entries(d.details).filter(([k])=>!k.startsWith("_")).map(([k,v])=>row(k,v)).join("");
  const out=ev.target.outgoers("edge").map(e=>row("→ "+e.data("rel"),cy.getElementById(e.data("target")).data("label")+(e.data("amount")?" · "+fmt(e.data("amount"))+" "+(e.data("unit")||""):""))).join("");
  const inc=ev.target.incomers("edge").map(e=>row("← "+e.data("rel"),cy.getElementById(e.data("source")).data("label")+(e.data("amount")?" · "+fmt(e.data("amount"))+" "+(e.data("unit")||""):""))).join("");
  document.getElementById("info").innerHTML=h+out+inc+"</table>"}});
