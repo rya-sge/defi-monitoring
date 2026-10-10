@@ -31,17 +31,25 @@ def _slot(label: str, minus_one: bool = True) -> str:
 
 
 SLOTS = {
-    "impl": _slot("eip1967.proxy.implementation"),          # EIP-1967
+    "impl": _slot("eip1967.proxy.implementation"),  # EIP-1967
     "admin": _slot("eip1967.proxy.admin"),
     "beacon": _slot("eip1967.proxy.beacon"),
-    "zos_impl": _slot("org.zeppelinos.proxy.implementation", False),   # ZeppelinOS (USDC's proxy)
+    "zos_impl": _slot("org.zeppelinos.proxy.implementation", False),  # ZeppelinOS (USDC's proxy)
     "zos_admin": _slot("org.zeppelinos.proxy.admin", False),
 }
 ORACLE_GETTERS = ["BASE_FEED_1()", "BASE_FEED_2()", "QUOTE_FEED_1()", "QUOTE_FEED_2()", "BASE_VAULT()", "QUOTE_VAULT()"]
-ADMIN_EVENTS = ["Upgraded(address)", "AdminChanged(address,address)", "BeaconUpgraded(address)",
-                "OwnershipTransferred(address,address)", "AggregatorProposed(address,address)",
-                "AggregatorConfirmed(address,address)", "Paused(address)", "Unpaused(address)",
-                "RoleGranted(bytes32,address,address)", "RoleRevoked(bytes32,address,address)"]
+ADMIN_EVENTS = [
+    "Upgraded(address)",
+    "AdminChanged(address,address)",
+    "BeaconUpgraded(address)",
+    "OwnershipTransferred(address,address)",
+    "AggregatorProposed(address,address)",
+    "AggregatorConfirmed(address,address)",
+    "Paused(address)",
+    "Unpaused(address)",
+    "RoleGranted(bytes32,address,address)",
+    "RoleRevoked(bytes32,address,address)",
+]
 BLUE_OWNER = ["SetOwner(address)", "EnableIrm(address)", "EnableLltv(uint256)", "SetFeeRecipient(address)"]
 TRANSFER = topic("Transfer(address,address,uint256)")
 DEFAULT_ADMIN_ROLE = "0x" + "00" * 32
@@ -50,8 +58,8 @@ DEFAULT_ADMIN_ROLE = "0x" + "00" * 32
 @dataclass
 class Contract:
     address: str
-    roles: list[str] = field(default_factory=list)       # "collateral X/Y", "oracle of …", "feed ETH / USD", …
-    mint_watch: bool = False                             # collateral and yield tokens (D55)
+    roles: list[str] = field(default_factory=list)  # "collateral X/Y", "oracle of …", "feed ETH / USD", …
+    mint_watch: bool = False  # collateral and yield tokens (D55)
     is_collateral: bool = False
     symbol: str = ""
     # state, read at start and every refresh
@@ -133,15 +141,21 @@ class AdminWatch:
     def read_state(self, f: S.Fetcher, block: int) -> None:
         addrs = sorted(self.contracts)
         tag = hex(block)
-        raw = S.rpc_batch_methods(f, [("eth_getStorageAt", [a, slot, tag]) for a in addrs for slot in SLOTS.values()]
-                                  + [("eth_getCode", [a, tag]) for a in addrs])
+        raw = S.rpc_batch_methods(
+            f,
+            [("eth_getStorageAt", [a, slot, tag]) for a in addrs for slot in SLOTS.values()]
+            + [("eth_getCode", [a, tag]) for a in addrs],
+        )
         n = len(SLOTS)
-        calls = [_call(a, "owner()") for a in addrs] + [_call(a, "aggregator()") for a in addrs] \
+        calls = (
+            [_call(a, "owner()") for a in addrs]
+            + [_call(a, "aggregator()") for a in addrs]
             + [_call(a, "totalSupply()") for a in addrs]
+        )
         res = S.rpc_batch(f, calls, block)
         for i, a in enumerate(addrs):
             c = self.contracts[a]
-            words = dict(zip(SLOTS, raw[i * n:(i + 1) * n]))
+            words = dict(zip(SLOTS, raw[i * n : (i + 1) * n]))
             c.impl = _addr(words["impl"]) or _addr(words["zos_impl"])
             c.admin = _addr(words["admin"]) or _addr(words["zos_admin"])
             c.beacon = _addr(words["beacon"])
@@ -181,7 +195,9 @@ class AdminWatch:
     def filters(self) -> list[dict]:
         out = []
         if self.contracts:
-            out.append({"address": sorted(self.contracts), "topics": [[topic(e) for e in ADMIN_EVENTS]], "_optional": True})
+            out.append(
+                {"address": sorted(self.contracts), "topics": [[topic(e) for e in ADMIN_EVENTS]], "_optional": True}
+            )
         mint = sorted(a for a, c in self.contracts.items() if c.mint_watch)
         if mint:
             out.append({"address": mint, "topics": [TRANSFER, "0x" + "0" * 64], "_optional": True})
@@ -205,11 +221,23 @@ class AdminWatch:
         up = [c for c in self.contracts.values() if c.upgradeable]
         out = []
         if up:
-            out.append(Alert("info", block, None, "AdminSurface",
-                             f"{len(up)} of {len(self.contracts)} contracts your markets depend on are upgradeable",
-                             "; ".join(f"{c.label}: " + (f"admin {c.admin}" if c.admin else "upgrade right in the implementation (UUPS)")
-                                       for c in up[:8])
-                             + ("…" if len(up) > 8 else ""), None, {"upgradeable": [c.address for c in up]}))
+            out.append(
+                Alert(
+                    "info",
+                    block,
+                    None,
+                    "AdminSurface",
+                    f"{len(up)} of {len(self.contracts)} contracts your markets depend on are upgradeable",
+                    "; ".join(
+                        f"{c.label}: "
+                        + (f"admin {c.admin}" if c.admin else "upgrade right in the implementation (UUPS)")
+                        for c in up[:8]
+                    )
+                    + ("…" if len(up) > 8 else ""),
+                    None,
+                    {"upgradeable": [c.address for c in up]},
+                )
+            )
         out += assess_divergence({}, self.divergence, self.markets, block)
         return out
 
@@ -221,15 +249,21 @@ class AdminWatch:
             who = c.admin or c.owner or ("UUPS: right in the code" if c.upgradeable else "")
             if c.aggregator:
                 who = (who + " · feed " + c.aggregator[:10] + "…").strip(" ·")
-            line(f"    {(c.symbol or '')[:20] + ' ' + c.address[:10] + '…':<34} {up:<12} {who[:44]:<44} {c.roles[0]}"
-                 + (f" (+{len(c.roles) - 1})" if len(c.roles) > 1 else ""))
-        div = [f"{self.markets[m].collateral_symbol}/{self.markets[m].loan_symbol} {d:+.2%}"
-               for m, d in self.divergence.items() if d is not None]
+            line(
+                f"    {(c.symbol or '')[:20] + ' ' + c.address[:10] + '…':<34} {up:<12} {who[:44]:<44} {c.roles[0]}"
+                + (f" (+{len(c.roles) - 1})" if len(c.roles) > 1 else "")
+            )
+        div = [
+            f"{self.markets[m].collateral_symbol}/{self.markets[m].loan_symbol} {d:+.2%}"
+            for m, d in self.divergence.items()
+            if d is not None
+        ]
         if div:
             line("  oracle vs DefiLlama: " + ", ".join(div))
 
 
 # --- rules (pure)
+
 
 def apply_events(events: list[Event], contracts: dict[str, Contract]) -> None:
     """Keep the snapshot current, so a change already alerted by its event is not alerted again at refresh."""
@@ -258,57 +292,139 @@ def assess_events(events: list[Event], contracts: dict[str, Contract], block: in
         a = e.args
         if e.contract == "blue" and e.name in ("SetOwner", "EnableIrm", "EnableLltv", "SetFeeRecipient"):
             lvl = "warn" if e.name == "SetOwner" else "info"
-            out.append(Alert(lvl, e.block, e.tx, f"Blue.{e.name}", f"Morpho Blue owner action: {e.name}",
-                             ", ".join(f"{k}={v}" for k, v in a.items())
-                             + ". Blue is immutable; this does not change existing markets", None, {}))
+            out.append(
+                Alert(
+                    lvl,
+                    e.block,
+                    e.tx,
+                    f"Blue.{e.name}",
+                    f"Morpho Blue owner action: {e.name}",
+                    ", ".join(f"{k}={v}" for k, v in a.items())
+                    + ". Blue is immutable; this does not change existing markets",
+                    None,
+                    {},
+                )
+            )
             continue
         c = contracts.get(e.address)
         if c is None or e.contract != "admin":
             continue
         name, label = e.name, c.label
         if name in ("Upgraded", "BeaconUpgraded"):
-            out.append(Alert("critical", e.block, e.tx, f"Admin.{name}", f"{label} was upgraded",
-                             f"new {'implementation' if name == 'Upgraded' else 'beacon'} "
-                             f"{a.get('implementation') or a.get('beacon')}: its code, and so its behaviour, changed",
-                             None, {"contract": c.address}))
+            out.append(
+                Alert(
+                    "critical",
+                    e.block,
+                    e.tx,
+                    f"Admin.{name}",
+                    f"{label} was upgraded",
+                    f"new {'implementation' if name == 'Upgraded' else 'beacon'} "
+                    f"{a.get('implementation') or a.get('beacon')}: its code, and so its behaviour, changed",
+                    None,
+                    {"contract": c.address},
+                )
+            )
         elif name == "AdminChanged":
-            out.append(Alert("warn", e.block, e.tx, "Admin.AdminChanged", f"Proxy admin of {label} changed",
-                             f"{a['previousAdmin']} → {a['newAdmin']}: the new admin can upgrade it", None, {"contract": c.address}))
+            out.append(
+                Alert(
+                    "warn",
+                    e.block,
+                    e.tx,
+                    "Admin.AdminChanged",
+                    f"Proxy admin of {label} changed",
+                    f"{a['previousAdmin']} → {a['newAdmin']}: the new admin can upgrade it",
+                    None,
+                    {"contract": c.address},
+                )
+            )
         elif name == "OwnershipTransferred":
-            out.append(Alert("warn", e.block, e.tx, "Admin.OwnershipTransferred", f"Owner of {label} changed",
-                             f"{a['previousOwner']} → {a['newOwner']}", None, {"contract": c.address}))
+            out.append(
+                Alert(
+                    "warn",
+                    e.block,
+                    e.tx,
+                    "Admin.OwnershipTransferred",
+                    f"Owner of {label} changed",
+                    f"{a['previousOwner']} → {a['newOwner']}",
+                    None,
+                    {"contract": c.address},
+                )
+            )
         elif name in ("AggregatorProposed", "AggregatorConfirmed"):
-            out.append(Alert("warn", e.block, e.tx, f"Admin.{name}",
-                             f"Price feed {'change proposed' if name == 'AggregatorProposed' else 'changed'}: {label}",
-                             f"{a.get('current') or a.get('previous')} → {a.get('proposed') or a.get('latest')}; "
-                             "the oracle's price now comes from a different aggregator" if name == "AggregatorConfirmed"
-                             else f"{a['current']} → {a['proposed']}, not yet confirmed", None, {"contract": c.address}))
+            out.append(
+                Alert(
+                    "warn",
+                    e.block,
+                    e.tx,
+                    f"Admin.{name}",
+                    f"Price feed {'change proposed' if name == 'AggregatorProposed' else 'changed'}: {label}",
+                    f"{a.get('current') or a.get('previous')} → {a.get('proposed') or a.get('latest')}; "
+                    "the oracle's price now comes from a different aggregator"
+                    if name == "AggregatorConfirmed"
+                    else f"{a['current']} → {a['proposed']}, not yet confirmed",
+                    None,
+                    {"contract": c.address},
+                )
+            )
         elif name == "Paused":
             lvl = "critical" if c.is_collateral else "warn"
-            out.append(Alert(lvl, e.block, e.tx, "Admin.Paused", f"{label} was paused",
-                             "a paused collateral token cannot be transferred: liquidations can fail and leave bad debt"
-                             if c.is_collateral else "transfers or operations of this contract are suspended",
-                             None, {"contract": c.address}))
+            out.append(
+                Alert(
+                    lvl,
+                    e.block,
+                    e.tx,
+                    "Admin.Paused",
+                    f"{label} was paused",
+                    "a paused collateral token cannot be transferred: liquidations can fail and leave bad debt"
+                    if c.is_collateral
+                    else "transfers or operations of this contract are suspended",
+                    None,
+                    {"contract": c.address},
+                )
+            )
         elif name == "Unpaused":
-            out.append(Alert("info", e.block, e.tx, "Admin.Unpaused", f"{label} was unpaused", "", None, {"contract": c.address}))
+            out.append(
+                Alert(
+                    "info", e.block, e.tx, "Admin.Unpaused", f"{label} was unpaused", "", None, {"contract": c.address}
+                )
+            )
         elif name in ("RoleGranted", "RoleRevoked"):
             admin_role = a["role"] == DEFAULT_ADMIN_ROLE
             lvl = "warn" if (name == "RoleGranted" and admin_role) else "info"
-            out.append(Alert(lvl, e.block, e.tx, f"Admin.{name}",
-                             f"{'Admin role' if admin_role else 'Role'} {'granted' if name == 'RoleGranted' else 'revoked'} on {label}",
-                             f"role {a['role'][:10]}… account {a['account']}", None, {"contract": c.address}))
+            out.append(
+                Alert(
+                    lvl,
+                    e.block,
+                    e.tx,
+                    f"Admin.{name}",
+                    f"{'Admin role' if admin_role else 'Role'} {'granted' if name == 'RoleGranted' else 'revoked'} on {label}",
+                    f"role {a['role'][:10]}… account {a['account']}",
+                    None,
+                    {"contract": c.address},
+                )
+            )
         elif name == "Transfer" and a.get("from") == ZERO and c.mint_watch and c.total_supply:
             share = a["value"] / c.total_supply
             if share >= W["mint_share_critical"]:
-                out.append(Alert("critical", e.block, e.tx, "Admin.Mint", f"Large mint of {label}",
-                                 f"{share:.1%} of the supply minted in one transaction to {a['to']}. Unbacked minting "
-                                 "is how Resolv's USR depegged in March 2026 and left bad debt in Morpho markets",
-                                 None, {"contract": c.address, "share": share}))
+                out.append(
+                    Alert(
+                        "critical",
+                        e.block,
+                        e.tx,
+                        "Admin.Mint",
+                        f"Large mint of {label}",
+                        f"{share:.1%} of the supply minted in one transaction to {a['to']}. Unbacked minting "
+                        "is how Resolv's USR depegged in March 2026 and left bad debt in Morpho markets",
+                        None,
+                        {"contract": c.address, "share": share},
+                    )
+                )
     return out
 
 
-def assess_changes(before: dict[str, tuple], after: dict[str, tuple], contracts: dict[str, Contract],
-                   block: int) -> list[Alert]:
+def assess_changes(
+    before: dict[str, tuple], after: dict[str, tuple], contracts: dict[str, Contract], block: int
+) -> list[Alert]:
     """D56: slot changes seen at a refresh that no event explained."""
     out = []
     fields = ("implementation", "proxy admin", "beacon", "owner", "price feed")
@@ -319,14 +435,24 @@ def assess_changes(before: dict[str, tuple], after: dict[str, tuple], contracts:
             continue
         for name, old, new in zip(fields, was, now):
             if old != new:
-                out.append(Alert(level.get(name, "warn"), block, None, "AdminState",
-                                 f"{name.capitalize()} of {contracts[a].label} changed",
-                                 f"{old} → {new}, seen at a state refresh (no standard event was emitted)",
-                                 None, {"contract": a, "field": name}))
+                out.append(
+                    Alert(
+                        level.get(name, "warn"),
+                        block,
+                        None,
+                        "AdminState",
+                        f"{name.capitalize()} of {contracts[a].label} changed",
+                        f"{old} → {new}, seen at a state refresh (no standard event was emitted)",
+                        None,
+                        {"contract": a, "field": name},
+                    )
+                )
     return out
 
 
-def assess_divergence(before: dict[str, float | None], after: dict[str, float | None], markets: dict, block: int) -> list[Alert]:
+def assess_divergence(
+    before: dict[str, float | None], after: dict[str, float | None], markets: dict, block: int
+) -> list[Alert]:
     """D58: oracle vs independent price, warn on crossing the threshold."""
     out, th = [], W["oracle_divergence_warn"]
     for mid, d in after.items():
@@ -336,9 +462,18 @@ def assess_divergence(before: dict[str, float | None], after: dict[str, float | 
         if d0 is not None and abs(d0) >= th:
             continue
         m = markets[mid]
-        out.append(Alert("warn", block, None, "OracleDivergence",
-                         f"Oracle of {m.label} is {d:+.1%} from the market price",
-                         "oracle price vs DefiLlama's collateral ÷ loan price. A fixed-rate or linear PT oracle differs by "
-                         "design; otherwise the oracle is lagging, misconfigured, or the market is dislocated, and "
-                         "liquidations follow the oracle", None, {"market": mid, "gap": d}))
+        out.append(
+            Alert(
+                "warn",
+                block,
+                None,
+                "OracleDivergence",
+                f"Oracle of {m.label} is {d:+.1%} from the market price",
+                "oracle price vs DefiLlama's collateral ÷ loan price. A fixed-rate or linear PT oracle differs by "
+                "design; otherwise the oracle is lagging, misconfigured, or the market is dislocated, and "
+                "liquidations follow the oracle",
+                None,
+                {"market": mid, "gap": d},
+            )
+        )
     return out

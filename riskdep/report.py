@@ -38,8 +38,8 @@ def mermaid(pos: Position, sim: SimResult) -> str:
     g = pos.graph
     ids = {n: f"n{i}" for i, n in enumerate(g.nodes)}
     contrib = {}
-    for l in sim.layers:
-        contrib[l.node] = contrib.get(l.node, 0) + l.contribution_usd
+    for ly in sim.layers:
+        contrib[ly.node] = contrib.get(ly.node, 0) + ly.contribution_usd
     lines = ["flowchart TB"]
     for n, a in g.nodes(data=True):
         label = a["label"].replace('"', "'")
@@ -69,15 +69,19 @@ def histogram_svg(losses: np.ndarray, equity: float, w: int = 640, h: int = 180)
     for i, c in enumerate(counts):
         bh = (h - 30) * c / cmax
         x = 30 + i * bw
-        bars.append(f'<rect x="{x:.1f}" y="{h - 20 - bh:.1f}" width="{bw - 2:.1f}" height="{bh:.1f}" class="bar">'
-                    f'<title>{_usd(edges[i])}–{_usd(edges[i + 1])}: {c} paths</title></rect>')
+        bars.append(
+            f'<rect x="{x:.1f}" y="{h - 20 - bh:.1f}" width="{bw - 2:.1f}" height="{bh:.1f}" class="bar">'
+            f"<title>{_usd(edges[i])}–{_usd(edges[i + 1])}: {c} paths</title></rect>"
+        )
     ex = 30 + (w - 40) * min(1.0, equity / top)
-    return (f'<svg viewBox="0 0 {w} {h}" role="img" aria-label="Loss distribution of the paths that lost money">'
-            + "".join(bars)
-            + f'<line x1="{ex:.1f}" x2="{ex:.1f}" y1="5" y2="{h - 20}" class="eq"/>'
-            + f'<text x="{ex - 4:.1f}" y="14" text-anchor="end" class="lbl">equity {_usd(equity)}</text>'
-            + f'<text x="30" y="{h - 4}" class="lbl">$0</text>'
-            + f'<text x="{w - 10}" y="{h - 4}" text-anchor="end" class="lbl">{_usd(top)}</text></svg>')
+    return (
+        f'<svg viewBox="0 0 {w} {h}" role="img" aria-label="Loss distribution of the paths that lost money">'
+        + "".join(bars)
+        + f'<line x1="{ex:.1f}" x2="{ex:.1f}" y1="5" y2="{h - 20}" class="eq"/>'
+        + f'<text x="{ex - 4:.1f}" y="14" text-anchor="end" class="lbl">equity {_usd(equity)}</text>'
+        + f'<text x="30" y="{h - 4}" class="lbl">$0</text>'
+        + f'<text x="{w - 10}" y="{h - 4}" text-anchor="end" class="lbl">{_usd(top)}</text></svg>'
+    )
 
 
 CSS = """
@@ -104,8 +108,16 @@ details{margin:6px 0}summary{cursor:pointer}code{font-size:.85em}
 """
 
 
-def write(pos: Position, priors: list[Prior], sim: SimResult, dec: Decision, quote: dict,
-          out_dir: Path, mode: str, oracle_alt: dict | None = None) -> tuple[Path, Path]:
+def write(
+    pos: Position,
+    priors: list[Prior],
+    sim: SimResult,
+    dec: Decision,
+    quote: dict,
+    out_dir: Path,
+    mode: str,
+    oracle_alt: dict | None = None,
+) -> tuple[Path, Path]:
     out_dir.mkdir(parents=True, exist_ok=True)
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     data_as_of = clock.now_dt().strftime("%Y-%m-%d %H:%M UTC")
@@ -113,51 +125,67 @@ def write(pos: Position, priors: list[Prior], sim: SimResult, dec: Decision, quo
     e = html.escape
 
     kpis = [
-        ("Collateral", f"{_usd(pos.collateral_usd)}"), ("Debt", _usd(pos.debt_usd)),
+        ("Collateral", f"{_usd(pos.collateral_usd)}"),
+        ("Debt", _usd(pos.debt_usd)),
         ("Equity", _usd(pos.equity_usd)),
         ("Health factor", f"{pos.health_factor:.3f}" if pos.health_factor else "n/a"),
         ("Liquidates at oracle drop", f"−{pos.liquidation_drop:.2%}" if pos.liquidation_drop is not None else "n/a"),
         (f"Expected loss ({sim.horizon_days:.0f}d)", _usd(sim.expected_loss_usd)),
         (f"Carry ({sim.horizon_days:.0f}d)", _usd(dec.carry_usd)),
         ("Exit cost (quoted)", _usd(dec.exit_cost_usd)),
-        ("P(any loss)", f"{sim.p_any_loss:.2%}"), ("P(liquidation)", f"{sim.p_liquidation:.2%}"),
-        ("CVaR 99%", _usd(sim.cvar99_usd)), ("Exit pays if risk ×", f"{dec.risk_multiple_to_exit:.1f}"),
+        ("P(any loss)", f"{sim.p_any_loss:.2%}"),
+        ("P(liquidation)", f"{sim.p_liquidation:.2%}"),
+        ("CVaR 99%", _usd(sim.cvar99_usd)),
+        ("Exit pays if risk ×", f"{dec.risk_multiple_to_exit:.1f}"),
     ]
     kpi_html = "".join(f'<div class="card kpi"><div class="k">{k}</div><div class="v">{v}</div></div>' for k, v in kpis)
 
     rows = []
-    for l in sim.layers:
-        rows.append(f"<tr><td>{e(l.layer)}</td><td class='n'>{l.p_horizon:.2%}</td><td class='n'>{l.mean_severity:.1%}</td>"
-                    f"<td class='n'>{_usd(l.standalone_loss_usd)}</td><td class='n'>{l.liquidation_rate:.0%}</td>"
-                    f"<td class='n'><b>{_usd(l.contribution_usd)}</b></td><td>{e(' → '.join(l.example_path))}</td></tr>")
-    rows.append(f"<tr><td colspan='5' class='muted'>Interaction of simultaneous incidents</td>"
-                f"<td class='n'>{_usd(sim.interaction_usd)}</td><td></td></tr>")
-    rows.append(f"<tr><td colspan='5'><b>Total expected loss</b></td><td class='n'><b>{_usd(sim.expected_loss_usd)}</b></td><td></td></tr>")
+    for ly in sim.layers:
+        rows.append(
+            f"<tr><td>{e(ly.layer)}</td><td class='n'>{ly.p_horizon:.2%}</td><td class='n'>{ly.mean_severity:.1%}</td>"
+            f"<td class='n'>{_usd(ly.standalone_loss_usd)}</td><td class='n'>{ly.liquidation_rate:.0%}</td>"
+            f"<td class='n'><b>{_usd(ly.contribution_usd)}</b></td><td>{e(' → '.join(ly.example_path))}</td></tr>"
+        )
+    rows.append(
+        f"<tr><td colspan='5' class='muted'>Interaction of simultaneous incidents</td>"
+        f"<td class='n'>{_usd(sim.interaction_usd)}</td><td></td></tr>"
+    )
+    rows.append(
+        f"<tr><td colspan='5'><b>Total expected loss</b></td><td class='n'><b>{_usd(sim.expected_loss_usd)}</b></td><td></td></tr>"
+    )
 
-    nodes = "".join(f"<tr><td>{e(a['kind'])}</td><td>{e(a['label'])}</td><td>{e(a['evidence'])}</td><td class='muted'>{e(a['source'])}</td></tr>"
-                    for n, a in pos.graph.nodes(data=True))
-    basis = "".join(f"<details><summary><b>{e(p.layer)}</b>: {p.p_year:.2%}/yr, severity Beta({p.a}, {p.b}) "
-                    f"mean {p.mean_severity:.1%}</summary><p class='muted'>{e(p.basis)}</p></details>" for p in priors)
+    nodes = "".join(
+        f"<tr><td>{e(a['kind'])}</td><td>{e(a['label'])}</td><td>{e(a['evidence'])}</td><td class='muted'>{e(a['source'])}</td></tr>"
+        for n, a in pos.graph.nodes(data=True)
+    )
+    basis = "".join(
+        f"<details><summary><b>{e(p.layer)}</b>: {p.p_year:.2%}/yr, severity Beta({p.a}, {p.b}) "
+        f"mean {p.mean_severity:.1%}</summary><p class='muted'>{e(p.basis)}</p></details>"
+        for p in priors
+    )
     red = ""
     if dec.reduction:
         r = dec.reduction
-        red = (f"<h2>De-lever option</h2><div class='card'><p>Sell <b>{_usd(r.sell_usd)}</b> of PT and repay debt "
-               f"(quote: {e(r.source)}).</p><div class='grid'>"
-               f"<div class='kpi'><div class='k'>Health factor</div><div class='v'>{pos.health_factor:.3f} → {r.new_health_factor:.3f}</div></div>"
-               f"<div class='kpi'><div class='k'>Liquidates at</div><div class='v'>−{pos.liquidation_drop:.1%} → −{r.new_liquidation_drop:.1%}</div></div>"
-               f"<div class='kpi'><div class='k'>Expected loss</div><div class='v'>{_usd(dec.expected_loss_usd)} → {_usd(r.expected_loss_usd)}</div></div>"
-               f"<div class='kpi'><div class='k'>CVaR 99%</div><div class='v'>{_usd(sim.cvar99_usd)} → {_usd(r.cvar99_usd)}</div></div>"
-               f"<div class='kpi'><div class='k'>Carry</div><div class='v'>{_usd(dec.carry_usd)} → {_usd(r.carry_usd)}</div></div>"
-               f"<div class='kpi'><div class='k'>One-off cost</div><div class='v'>{_usd(r.cost_usd)}</div></div></div></div>")
+        red = (
+            f"<h2>De-lever option</h2><div class='card'><p>Sell <b>{_usd(r.sell_usd)}</b> of PT and repay debt "
+            f"(quote: {e(r.source)}).</p><div class='grid'>"
+            f"<div class='kpi'><div class='k'>Health factor</div><div class='v'>{pos.health_factor:.3f} → {r.new_health_factor:.3f}</div></div>"
+            f"<div class='kpi'><div class='k'>Liquidates at</div><div class='v'>−{pos.liquidation_drop:.1%} → −{r.new_liquidation_drop:.1%}</div></div>"
+            f"<div class='kpi'><div class='k'>Expected loss</div><div class='v'>{_usd(dec.expected_loss_usd)} → {_usd(r.expected_loss_usd)}</div></div>"
+            f"<div class='kpi'><div class='k'>CVaR 99%</div><div class='v'>{_usd(sim.cvar99_usd)} → {_usd(r.cvar99_usd)}</div></div>"
+            f"<div class='kpi'><div class='k'>Carry</div><div class='v'>{_usd(dec.carry_usd)} → {_usd(r.carry_usd)}</div></div>"
+            f"<div class='kpi'><div class='k'>One-off cost</div><div class='v'>{_usd(r.cost_usd)}</div></div></div></div>"
+        )
     notes = "".join(f"<li>{e(n)}</li>" for n in pos.notes)
 
     doc = f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>Position Risk Report</title>
 <style>{CSS}</style></head><body><main>
 <h1>{e(pos.label)}</h1>
-<p class="muted">Generated {now} · data as of <b>{data_as_of}</b> ({e(mode)}) · horizon {sim.horizon_days:.0f} days (maturity {e((pos.maturity or '')[:10])}) · {sim.n:,} Monte Carlo paths</p>
-<div class="card verdict" style="--c:{color}"><div class="tag">{dec.verdict}</div><p>{e(dec.headline.split(': ', 1)[-1])}</p>
-<ul>{''.join(f'<li>{e(r)}</li>' for r in dec.reasons)}</ul></div>
+<p class="muted">Generated {now} · data as of <b>{data_as_of}</b> ({e(mode)}) · horizon {sim.horizon_days:.0f} days (maturity {e((pos.maturity or "")[:10])}) · {sim.n:,} Monte Carlo paths</p>
+<div class="card verdict" style="--c:{color}"><div class="tag">{dec.verdict}</div><p>{e(dec.headline.split(": ", 1)[-1])}</p>
+<ul>{"".join(f"<li>{e(r)}</li>" for r in dec.reasons)}</ul></div>
 <div class="grid">{kpi_html}</div>
 {red}
 <h2>Dependency stack</h2>
@@ -165,15 +193,15 @@ def write(pos: Position, priors: list[Prior], sim: SimResult, dec: Decision, quo
 <pre class="mermaid">{e(mermaid(pos, sim))}</pre>
 <h2>How each failure reaches the position</h2>
 <div class="scroll"><table><thead><tr><th>Layer / event</th><th>P(horizon)</th><th>Mean severity</th><th>Loss if it happens</th><th>Liquidates</th><th>Expected loss</th><th>Typical propagation</th></tr></thead>
-<tbody>{''.join(rows)}</tbody></table></div>
+<tbody>{"".join(rows)}</tbody></table></div>
 <h2>Loss distribution</h2>
 <p class="muted">Paths that lost money ({sim.p_any_loss:.2%} of {sim.n:,}). VaR95 {_usd(sim.var95_usd)}, CVaR95 {_usd(sim.cvar95_usd)}, VaR99 {_usd(sim.var99_usd)}, CVaR99 {_usd(sim.cvar99_usd)}.</p>
 <div class="card">{histogram_svg(sim.loss_samples, pos.equity_usd)}</div>
 <h2>Evidence per layer</h2>
 <div class="scroll"><table><thead><tr><th>Kind</th><th>Layer</th><th>What was read</th><th>Source</th></tr></thead><tbody>{nodes}</tbody></table></div>
 <h2>Assumptions and their basis</h2>{basis}
-<p class="muted">Exit quote: {e(quote['source'])}, price impact {quote['price_impact']:.3%}, fee {_usd(quote['fee_usd'])}. Oracle mode: <b>{e(pos.oracle_mode)}</b>{' (ambiguous, see notes)' if pos.oracle_ambiguous else ''}.</p>
-{f'<h2>Notes</h2><ul>{notes}</ul>' if notes else ''}
+<p class="muted">Exit quote: {e(quote["source"])}, price impact {quote["price_impact"]:.3%}, fee {_usd(quote["fee_usd"])}. Oracle mode: <b>{e(pos.oracle_mode)}</b>{" (ambiguous, see notes)" if pos.oracle_ambiguous else ""}.</p>
+{f"<h2>Notes</h2><ul>{notes}</ul>" if notes else ""}
 <h2>Limits</h2><ul>
 <li>Incidents are independent across layers, except an issuer exploit, which always comes with a depeg.</li>
 <li>Exploit frequencies are base rates from the DefiLlama hack record by TVL tier and category, not protocol-specific audits.</li>
@@ -199,11 +227,21 @@ theme:(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'default')}});}
     pos_d = {k: v for k, v in pos.__dict__.items() if k != "graph"}
     pos_d.update(collateral_usd=pos.collateral_usd, equity_usd=pos.equity_usd, liquidation_drop=pos.liquidation_drop)
     sim_d = {k: v for k, v in asdict(sim).items() if k != "loss_samples"}
-    payload = {"generated": now, "data_as_of": data_as_of, "mode": mode, "position": pos_d,
-               "graph": {"nodes": [{"id": n, **a} for n, a in pos.graph.nodes(data=True)],
-                         "edges": [{"from": u, "to": v, **a} for u, v, a in pos.graph.edges(data=True)]},
-               "priors": [asdict(p) for p in priors], "simulation": sim_d, "decision": asdict(dec), "exit_quote": quote,
-               "oracle_sensitivity": oracle_alt}
+    payload = {
+        "generated": now,
+        "data_as_of": data_as_of,
+        "mode": mode,
+        "position": pos_d,
+        "graph": {
+            "nodes": [{"id": n, **a} for n, a in pos.graph.nodes(data=True)],
+            "edges": [{"from": u, "to": v, **a} for u, v, a in pos.graph.edges(data=True)],
+        },
+        "priors": [asdict(p) for p in priors],
+        "simulation": sim_d,
+        "decision": asdict(dec),
+        "exit_quote": quote,
+        "oracle_sensitivity": oracle_alt,
+    }
     jp = out_dir / "report.json"
     jp.write_text(json.dumps(clean(payload), indent=2, default=str))
     return hp, jp

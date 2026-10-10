@@ -57,7 +57,9 @@ class Fetcher:
         if self.mode not in ("refresh", "direct") and path.exists():
             return json.loads(path.read_text())["response"]
         if self.mode == "offline":
-            raise CacheMiss(f"no cached response for {method} {url} {json.dumps(body)[:120] if body else ''}; rerun with --live")
+            raise CacheMiss(
+                f"no cached response for {method} {url} {json.dumps(body)[:120] if body else ''}; rerun with --live"
+            )
         last = None
         for attempt in range(3):
             try:
@@ -87,9 +89,17 @@ class Fetcher:
             data = transform(data)
         if self.mode == "direct":
             return data
-        path.write_text(json.dumps({"method": method, "url": url, "body": body,
-                                    "fetched": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                                    "response": data}))
+        path.write_text(
+            json.dumps(
+                {
+                    "method": method,
+                    "url": url,
+                    "body": body,
+                    "fetched": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                    "response": data,
+                }
+            )
+        )
         return data
 
     def get_json(self, url: str, transform=None):
@@ -101,6 +111,7 @@ class Fetcher:
 
 # --- thin clients -----------------------------------------------------------
 
+
 def morpho(f: Fetcher, query: str, variables: dict | None = None) -> dict:
     data = f.post_json(MORPHO, {"query": query, "variables": variables or {}})
     if data.get("errors"):
@@ -111,9 +122,11 @@ def morpho(f: Fetcher, query: str, variables: dict | None = None) -> dict:
 def rpc_call(f: Fetcher, to: str, signature: str, args_hex: str = "") -> str | None:
     """eth_call at 'latest'; returns the hex result or None on revert."""
     from eth_utils import keccak
+
     data = "0x" + keccak(text=signature)[:4].hex() + args_hex
-    resp = f.post_json(RPC, {"jsonrpc": "2.0", "id": 1, "method": "eth_call",
-                             "params": [{"to": to, "data": data}, "latest"]})
+    resp = f.post_json(
+        RPC, {"jsonrpc": "2.0", "id": 1, "method": "eth_call", "params": [{"to": to, "data": data}, "latest"]}
+    )
     return resp.get("result") if isinstance(resp, dict) else None
 
 
@@ -122,8 +135,10 @@ def rpc_batch(f: Fetcher, calls: list[tuple[str, str]], block: int | str = "late
     if not calls:
         return []
     tag = hex(block) if isinstance(block, int) else block
-    body = [{"jsonrpc": "2.0", "id": i, "method": "eth_call", "params": [{"to": to, "data": data}, tag]}
-            for i, (to, data) in enumerate(calls)]
+    body = [
+        {"jsonrpc": "2.0", "id": i, "method": "eth_call", "params": [{"to": to, "data": data}, tag]}
+        for i, (to, data) in enumerate(calls)
+    ]
     resp = f.post_json(RPC, body)
     if not isinstance(resp, list):
         raise SourceError(f"RPC batch refused: {str(resp)[:200]}")
@@ -142,7 +157,7 @@ def rpc_batch_methods(f: Fetcher, calls: list[tuple[str, list]], chunk: int = 20
     """Any JSON-RPC methods in batches, e.g. [("eth_getStorageAt", [addr, slot, tag])]; None on error."""
     out = []
     for i in range(0, len(calls), chunk):
-        part = calls[i:i + chunk]
+        part = calls[i : i + chunk]
         body = [{"jsonrpc": "2.0", "id": j, "method": m, "params": p} for j, (m, p) in enumerate(part)]
         resp = f.post_json(RPC, body)
         if not isinstance(resp, list):
@@ -180,9 +195,19 @@ def coin_drawdown(f: Fetcher, address: str, days: int = 365) -> dict:
 
 
 def _slim_protocols(data):
-    return [{"id": p.get("id"), "name": p.get("name"), "slug": p.get("slug"), "category": p.get("category"),
-             "tvl": p.get("tvl"), "listedAt": p.get("listedAt"), "audits": p.get("audits"),
-             "chains": p.get("chains")} for p in data]
+    return [
+        {
+            "id": p.get("id"),
+            "name": p.get("name"),
+            "slug": p.get("slug"),
+            "category": p.get("category"),
+            "tvl": p.get("tvl"),
+            "listedAt": p.get("listedAt"),
+            "audits": p.get("audits"),
+            "chains": p.get("chains"),
+        }
+        for p in data
+    ]
 
 
 def llama_protocols(f: Fetcher) -> list[dict]:

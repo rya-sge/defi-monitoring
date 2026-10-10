@@ -10,10 +10,10 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from . import admin as AD
 from . import borrower as B
 from . import borrower_rules as BR
 from . import crosscheck, discover
-from . import admin as AD
 from . import market_risk as MR
 from . import sources as S
 from .abi import MORPHO_BLUE, topic
@@ -34,7 +34,7 @@ class UserOptions:
     user: str
     out_dir: Path
     levels: tuple[float, ...] = DEFAULT_LEVELS
-    markets: list[str] = field(default_factory=list)     # --market: borrows given by hand, no API
+    markets: list[str] = field(default_factory=list)  # --market: borrows given by hand, no API
     mode: str = "direct"
     replay_dir: Path | None = None
     blocks: int | None = None
@@ -48,7 +48,7 @@ class UserOptions:
 class VaultTarget:
     view: object
     state: object
-    risk: object = None          # market_risk.VaultRisk: unrealised bad debt and curves of the vault's markets
+    risk: object = None  # market_risk.VaultRisk: unrealised bad debt and curves of the vault's markets
 
     @property
     def addresses(self) -> set[str]:
@@ -63,10 +63,16 @@ def _pt_quote(f: S.Fetcher, m: B.BorrowMarket, st: B.BorrowState) -> str:
         pm = discover.find_pendle_market(f, m.collateral_token)
     except (S.SourceError, S.CacheMiss):
         return "not quoted (no Pendle market)"
-    pos = discover.Position(label="", collateral_units=st.collateral / 10 ** m.collateral_decimals,
-                            collateral_symbol=m.collateral_symbol, collateral_address=m.collateral_token,
-                            pt_price_usd=0.0, collateral_decimals=m.collateral_decimals,
-                            loan_address=m.loan_token, pendle_market=pm["address"])
+    pos = discover.Position(
+        label="",
+        collateral_units=st.collateral / 10**m.collateral_decimals,
+        collateral_symbol=m.collateral_symbol,
+        collateral_address=m.collateral_token,
+        pt_price_usd=0.0,
+        collateral_decimals=m.collateral_decimals,
+        loan_address=m.loan_token,
+        pendle_market=pm["address"],
+    )
     q = discover.exit_quote(f, pos)
     if q.get("estimated"):
         return "not quoted (Pendle quote failed)"
@@ -76,19 +82,23 @@ def _pt_quote(f: S.Fetcher, m: B.BorrowMarket, st: B.BorrowState) -> str:
 def borrow_table(p: Printer, f: S.Fetcher, markets: dict, states: dict, levels, block: int, quotes: dict) -> None:
     p.line(f"  borrows at block {block} (alert levels HF {' / '.join(f'{x:.2f}' for x in levels)}):")
     p.line(f"    {'market':<42} {'debt':>16} {'HF':>8} {'liq. at':>8} {'APY':>7} {'util':>6}  exit")
-    for mid in sorted(markets, key=lambda i: (states[i].hf(markets[i].lltv) or 0)):
+    for mid in sorted(markets, key=lambda i: states[i].hf(markets[i].lltv) or 0):
         m, st = markets[mid], states[mid]
         hf, drop = st.hf(m.lltv), st.liquidation_drop(m.lltv)
-        p.line(f"    {m.label:<42} {st.debt / 10 ** m.loan_decimals:>12,.0f} {m.loan_symbol:<4}"
-               f"{BR._hf_text(hf):>8} {('−' + format(drop, '.1%')) if drop is not None and not math.isinf(drop) else 'n/a':>8}"
-               f" {(format(st.apy, '.2%') if st.apy is not None else 'n/a'):>7} {st.utilization:>6.1%}  {quotes.get(mid, '')}")
+        p.line(
+            f"    {m.label:<42} {st.debt / 10**m.loan_decimals:>12,.0f} {m.loan_symbol:<4}"
+            f"{BR._hf_text(hf):>8} {('−' + format(drop, '.1%')) if drop is not None and not math.isinf(drop) else 'n/a':>8}"
+            f" {(format(st.apy, '.2%') if st.apy is not None else 'n/a'):>7} {st.utilization:>6.1%}  {quotes.get(mid, '')}"
+        )
 
 
 def lender_table(p: Printer, markets: dict, lenders: dict) -> None:
     p.line("  main lenders of each borrowed market (≥ 5 % of supply):")
     for mid, sps in lenders.items():
         m = markets[mid]
-        names = ", ".join(f"{sp.label} {sp.share:.0%}" for sp in sorted(sps, key=lambda x: -x.share)) or "none above 5 %"
+        names = (
+            ", ".join(f"{sp.label} {sp.share:.0%}" for sp in sorted(sps, key=lambda x: -x.share)) or "none above 5 %"
+        )
         p.line(f"    {m.label:<42} {names}")
 
 
@@ -125,8 +135,14 @@ def run_user(opts: UserOptions) -> int:
     else:
         up = discover_user(f, user)
         borrow_ids, vault_addrs, api_state = up.borrows, up.vaults, up.api_state
-        p.line(f"  found {len(borrow_ids)} borrow(s) and {len(vault_addrs)} Vault V2 deposit(s)"
-               + (f"; {up.collateral_only} market(s) with collateral and no debt are not watched" if up.collateral_only else ""))
+        p.line(
+            f"  found {len(borrow_ids)} borrow(s) and {len(vault_addrs)} Vault V2 deposit(s)"
+            + (
+                f"; {up.collateral_only} market(s) with collateral and no debt are not watched"
+                if up.collateral_only
+                else ""
+            )
+        )
     if not borrow_ids and not vault_addrs:
         p.line("  nothing to watch: no borrow and no Vault V2 deposit")
         return 0
@@ -154,21 +170,40 @@ def run_user(opts: UserOptions) -> int:
         lender_table(p, markets, lenders)
         MR.curve_table(p.line, brisk, binfo)
         p.line("    (other borrowers only: your own position is excluded)")
-        for al in BR.startup(before_b, markets, opts.levels, state0) + BR.lenders_startup(lenders, markets, state0) \
-                + MR.assess_curves({}, brisk, binfo, state0):
+        for al in (
+            BR.startup(before_b, markets, opts.levels, state0)
+            + BR.lenders_startup(lenders, markets, state0)
+            + MR.assess_curves({}, brisk, binfo, state0)
+        ):
             p.alert(al)
         for mid in markets:
             if mid in api_state:
-                c = crosscheck.morpho_position(f, mid, user, markets[mid].collateral_decimals, markets[mid].loan_decimals,
-                                               api_state[mid]["collateral"] / 10 ** markets[mid].collateral_decimals,
-                                               api_state[mid]["borrowAssets"])
+                c = crosscheck.morpho_position(
+                    f,
+                    mid,
+                    user,
+                    markets[mid].collateral_decimals,
+                    markets[mid].loan_decimals,
+                    api_state[mid]["collateral"] / 10 ** markets[mid].collateral_decimals,
+                    api_state[mid]["borrowAssets"],
+                )
                 if c.ok is False:
-                    p.alert(Alert("warn", state0, None, "CrossCheck", f"Data sources disagree on {markets[mid].label}", c.detail))
+                    p.alert(
+                        Alert(
+                            "warn",
+                            state0,
+                            None,
+                            "CrossCheck",
+                            f"Data sources disagree on {markets[mid].label}",
+                            c.detail,
+                        )
+                    )
     for vt in vaults:
         exposure_table(vt.view, vt.state, p)
         MR.curve_table(p.line, vt.risk.risks, vt.risk.markets)
         for al in startup_findings(vt.view, vt.state) + vt.risk.startup(vt.state, state0):
             p.alert(al)
+
     def admin_markets():
         return sorted(set(markets) | {mid for vt in vaults for mid in vt.risk.markets})
 
@@ -194,10 +229,15 @@ def run_user(opts: UserOptions) -> int:
         return kinds, sorted(ids)
 
     user_topic = "0x" + user[2:].rjust(64, "0")
-    cursor_path = (state_dir / "replay.cursor") if opts.mode in ("record", "replay") else opts.out_dir / f"watch-user-{user}.cursor"
+    cursor_path = (
+        (state_dir / "replay.cursor")
+        if opts.mode in ("record", "replay")
+        else opts.out_dir / f"watch-user-{user}.cursor"
+    )
     if opts.mode in ("record", "replay") or opts.blocks:
         cursor_path.unlink(missing_ok=True)
     kinds, ids = kinds_and_ids()
+
     def extra_filters():
         return [{"address": MORPHO_BLUE, "topics": [SET_AUTH, None, user_topic]}] + aw.filters()
 
@@ -234,14 +274,28 @@ def run_user(opts: UserOptions) -> int:
         for w_ in poller.warnings:
             p.line(f"WARN     {w_}")
         if batch.gap:
-            p.alert(Alert("warn", batch.from_block, None, "Gap", f"Blocks {batch.gap[0]}–{batch.gap[1]} could not be read",
-                          "too old for the free RPC; events in them were not checked"))
+            p.alert(
+                Alert(
+                    "warn",
+                    batch.from_block,
+                    None,
+                    "Gap",
+                    f"Blocks {batch.gap[0]}–{batch.gap[1]} could not be read",
+                    "too old for the free RPC; events in them were not checked",
+                )
+            )
         safe = batch.head - W["confirmations"]
         state_block = max(batch.to_block, safe - W["state_window_blocks"])
 
         # a borrow opened in a market not yet watched: add it
-        new = {e.args["id"] for e in batch.events if e.contract == "blue" and e.name == "Borrow"
-               and e.args.get("onBehalf") == user and e.args.get("id") not in markets}
+        new = {
+            e.args["id"]
+            for e in batch.events
+            if e.contract == "blue"
+            and e.name == "Borrow"
+            and e.args.get("onBehalf") == user
+            and e.args.get("id") not in markets
+        }
         if new:
             markets.update(B.discover_markets(f, sorted(new), state_block))
             for mid in new:
@@ -266,7 +320,9 @@ def run_user(opts: UserOptions) -> int:
             brisk = brisk_after
         for vt in vaults:
             own = vt.addresses
-            evs = [e for e in batch.events if e.address in own or (e.contract == "blue" and e.name != "SetAuthorization")]
+            evs = [
+                e for e in batch.events if e.address in own or (e.contract == "blue" and e.name != "SetAuthorization")
+            ]
             after_v = read_state(f, vt.view, state_block, user)
             alerts += assess_batch(evs, Ctx(vt.view, vt.state, after_v), user, batch.to_block)
             alerts += vt.risk.step(f, batch.events, after_v, state_block, batch.to_block, refresh)
@@ -277,17 +333,21 @@ def run_user(opts: UserOptions) -> int:
         poller.save(batch.to_block)
         hfs = [st.hf(markets[mid].lltv) for mid, st in after_b.items() if st.debt]
         lowest = min((h for h in hfs if h is not None), default=None)
-        p.line(f"·        #{batch.from_block}–{batch.to_block}: {len(batch.events)} events"
-               + (f", {batch.unknown} undecoded" if batch.unknown else "")
-               + (f" · lowest HF {lowest:.4f}" if lowest is not None else "")
-               + (f" · {len(vaults)} vault(s)" if vaults else ""))
+        p.line(
+            f"·        #{batch.from_block}–{batch.to_block}: {len(batch.events)} events"
+            + (f", {batch.unknown} undecoded" if batch.unknown else "")
+            + (f" · lowest HF {lowest:.4f}" if lowest is not None else "")
+            + (f" · {len(vaults)} vault(s)" if vaults else "")
+        )
         before_b = after_b
 
         if batch.to_block - last_check >= W["crosscheck_every_blocks"]:
             last_check = batch.to_block
             c = crosscheck.second_rpc(f, batch.to_block)
             if c.ok is False:
-                p.alert(Alert("critical", batch.to_block, None, "CrossCheck", "Data sources disagree: second RPC", c.detail))
+                p.alert(
+                    Alert("critical", batch.to_block, None, "CrossCheck", "Data sources disagree: second RPC", c.detail)
+                )
             quotes = {mid: _pt_quote(f, markets[mid], after_b[mid]) for mid in markets}
             lenders = {mid: B.top_suppliers(f, markets[mid], batch.to_block) for mid in markets}
             if not opts.markets and opts.mode == "direct":
@@ -296,7 +356,9 @@ def run_user(opts: UserOptions) -> int:
                     missing = [i for i in up.borrows if i not in markets]
                     if missing:
                         markets.update(B.discover_markets(f, missing, state_block))
-                        p.line(f"new borrow market(s) found: {', '.join(markets[i].label for i in missing if i in markets)}")
+                        p.line(
+                            f"new borrow market(s) found: {', '.join(markets[i].label for i in missing if i in markets)}"
+                        )
                     for va in up.vaults:
                         if va not in {vt.view.address for vt in vaults}:
                             view = discover_vault(f, va, state_block)
@@ -305,7 +367,9 @@ def run_user(opts: UserOptions) -> int:
                             vaults.append(vt_new)
                             p.line(f"new Vault V2 deposit found: {view.name}")
                 except (S.SourceError, S.CacheMiss) as e:
-                    p.line(f"WARN     position rediscovery failed ({str(e)[:80]}); watching the positions already found")
+                    p.line(
+                        f"WARN     position rediscovery failed ({str(e)[:80]}); watching the positions already found"
+                    )
             if set(admin_markets()) != set(aw.markets):
                 aw = AD.AdminWatch(f, admin_markets(), state_block)
             poller.kinds, poller.market_ids = kinds_and_ids()

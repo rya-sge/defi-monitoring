@@ -12,7 +12,7 @@ from eth_abi import decode, encode
 from . import sources as S
 from .abi import MORPHO_BLUE, OTHER_VAULT_TIMELOCKED, RISK_INCREASING_ADAPTER, RISK_INCREASING_VAULT, selector
 
-WAD = 10 ** 18
+WAD = 10**18
 
 
 def _call(to: str, sig: str, types: list[str] | None = None, values: list | None = None) -> tuple[str, str]:
@@ -42,7 +42,7 @@ class MarketParams:
 @dataclass
 class AdapterView:
     address: str
-    kind: str                         # market | vault_v1 | unknown
+    kind: str  # market | vault_v1 | unknown
     markets: dict[str, MarketParams] = field(default_factory=dict)
     v1_vault: str | None = None
 
@@ -56,7 +56,7 @@ class VaultView:
     name: str
     adapters: list[AdapterView]
     liquidity_adapter: str | None
-    liquidity_market: str | None = None   # the market a plain withdrawal can draw on (liquidityData)
+    liquidity_market: str | None = None  # the market a plain withdrawal can draw on (liquidityData)
     # (contract, function signature) -> (timelock in seconds, abdicated), read at discovery (D44)
     timelocks: dict[tuple[str, str], tuple[int, bool]] = field(default_factory=dict)
 
@@ -88,11 +88,11 @@ class VaultView:
 @dataclass
 class MarketState:
     id: str
-    supply_shares: int                # held by the adapter
+    supply_shares: int  # held by the adapter
     total_supply_assets: int
     total_supply_shares: int
     total_borrow_assets: int
-    vault_assets: int                 # the adapter's supply, in assets
+    vault_assets: int  # the adapter's supply, in assets
     oracle_price: int | None
 
     @property
@@ -113,18 +113,18 @@ class VaultState:
     block: int
     total_assets: int
     total_supply: int
-    idle: int                         # vault's own balance of the asset
-    real_assets: dict[str, int]       # adapter -> realAssets
+    idle: int  # vault's own balance of the asset
+    real_assets: dict[str, int]  # adapter -> realAssets
     markets: dict[str, MarketState]
-    caps: dict[str, tuple[int, int, int]]   # id -> (allocation, absoluteCap, relativeCap)
+    caps: dict[str, tuple[int, int, int]]  # id -> (allocation, absoluteCap, relativeCap)
     performance_fee: int
     management_fee: int
     depositor: str | None = None
     depositor_shares: int = 0
-    stored_total_assets: int | None = None      # `_totalAssets`, updated only by accrueInterest
+    stored_total_assets: int | None = None  # `_totalAssets`, updated only by accrueInterest
     liquidity_market: str | None = None
-    penalties: dict[str, int] = field(default_factory=dict)   # adapter -> forceDeallocatePenalty (WAD)
-    can_send_shares: bool | None = None         # gates, for the depositor
+    penalties: dict[str, int] = field(default_factory=dict)  # adapter -> forceDeallocatePenalty (WAD)
+    can_send_shares: bool | None = None  # gates, for the depositor
     can_receive_assets: bool | None = None
 
     @property
@@ -160,12 +160,18 @@ class VaultState:
 def _cap_ids(adapter: str, mp: MarketParams) -> dict[str, str]:
     """The 3 ids a MorphoMarketV1AdapterV2 registers for a market (docs: `ids`)."""
     from eth_utils import keccak
+
     params = (mp.loan_token, mp.collateral_token, mp.oracle, mp.irm, int(round(mp.lltv * WAD)))
     return {
         "adapter": "0x" + keccak(encode(["string", "address"], ["this", adapter])).hex(),
         "collateral": "0x" + keccak(encode(["string", "address"], ["collateralToken", mp.collateral_token])).hex(),
-        "market": "0x" + keccak(encode(["string", "address", "(address,address,address,address,uint256)"],
-                                       ["this/marketParams", adapter, params])).hex(),
+        "market": "0x"
+        + keccak(
+            encode(
+                ["string", "address", "(address,address,address,address,uint256)"],
+                ["this/marketParams", adapter, params],
+            )
+        ).hex(),
     }
 
 
@@ -182,22 +188,31 @@ def _symbol(f: S.Fetcher, token: str, block) -> str:
 
 def discover_vault(f: S.Fetcher, address: str, block: int | str = "latest") -> VaultView:
     v = address.lower()
-    asset, n, liq, name_raw = S.rpc_batch(f, [_call(v, "asset()"), _call(v, "adaptersLength()"),
-                                                _call(v, "liquidityAdapter()"), _call(v, "name()")], block)
+    asset, n, liq, name_raw = S.rpc_batch(
+        f,
+        [_call(v, "asset()"), _call(v, "adaptersLength()"), _call(v, "liquidityAdapter()"), _call(v, "name()")],
+        block,
+    )
     if asset is None or n is None:
         raise S.SourceError(f"{address} does not answer asset()/adaptersLength(): not a Morpho Vault V2")
     asset = _addr(asset)
     dec = _uint(S.rpc_batch(f, [_call(asset, "decimals()")], block)[0]) or 18
     name = decode(["string"], bytes.fromhex(name_raw[2:]))[0] if name_raw else v
-    adapters = [_addr(r) for r in S.rpc_batch(f, [_call(v, "adapters(uint256)", ["uint256"], [i]) for i in range(_uint(n))], block)]
+    adapters = [
+        _addr(r)
+        for r in S.rpc_batch(f, [_call(v, "adapters(uint256)", ["uint256"], [i]) for i in range(_uint(n))], block)
+    ]
 
     views = []
     for a in adapters:
         n_m, v1 = S.rpc_batch(f, [_call(a, "marketIdsLength()"), _call(a, "morphoVaultV1()")], block)
         if n_m is not None:
             ids = S.rpc_batch(f, [_call(a, "marketIds(uint256)", ["uint256"], [i]) for i in range(_uint(n_m))], block)
-            params = S.rpc_batch(f, [_call(MORPHO_BLUE, "idToMarketParams(bytes32)", ["bytes32"], [bytes.fromhex(i[2:])])
-                                     for i in ids], block)
+            params = S.rpc_batch(
+                f,
+                [_call(MORPHO_BLUE, "idToMarketParams(bytes32)", ["bytes32"], [bytes.fromhex(i[2:])]) for i in ids],
+                block,
+            )
             av = AdapterView(a, "market")
             for mid, raw in zip(ids, params):
                 loan, coll, orc, irm, lltv = decode(["address"] * 4 + ["uint256"], bytes.fromhex(raw[2:]))
@@ -217,7 +232,8 @@ def discover_vault(f: S.Fetcher, address: str, block: int | str = "latest") -> V
             data = decode(["bytes"], bytes.fromhex(raw[2:]))[0] if raw else b""
             if data:
                 from eth_utils import keccak
-                liq_market = "0x" + keccak(data).hex()   # Blue's market id = keccak256(abi.encode(marketParams))
+
+                liq_market = "0x" + keccak(data).hex()  # Blue's market id = keccak256(abi.encode(marketParams))
         except Exception:
             liq_market = None
     view = VaultView(v, asset, _symbol(f, asset, block), dec, name, views, liq_adapter, liq_market)
@@ -225,7 +241,7 @@ def discover_vault(f: S.Fetcher, address: str, block: int | str = "latest") -> V
     return view
 
 
-def read_timelocks(f: S.Fetcher, view: "VaultView", block) -> dict:
+def read_timelocks(f: S.Fetcher, view: VaultView, block) -> dict:
     targets = [(view.address, sig) for sig in RISK_INCREASING_VAULT + OTHER_VAULT_TIMELOCKED]
     targets += [(a.address, sig) for a in view.adapters if a.kind == "market" for sig in RISK_INCREASING_ADAPTER]
     calls = []
@@ -243,21 +259,33 @@ def read_timelocks(f: S.Fetcher, view: "VaultView", block) -> dict:
 
 def read_state(f: S.Fetcher, view: VaultView, block: int, depositor: str | None = None) -> VaultState:
     v = view.address
-    calls = [_call(v, "totalAssets()"), _call(v, "totalSupply()"), _call(view.asset, "balanceOf(address)", ["address"], [v]),
-             _call(v, "performanceFee()"), _call(v, "managementFee()")]
+    calls = [
+        _call(v, "totalAssets()"),
+        _call(v, "totalSupply()"),
+        _call(view.asset, "balanceOf(address)", ["address"], [v]),
+        _call(v, "performanceFee()"),
+        _call(v, "managementFee()"),
+    ]
     if depositor:
-        calls += [_call(v, "balanceOf(address)", ["address"], [depositor]),
-                  _call(v, "canSendShares(address)", ["address"], [depositor]),
-                  _call(v, "canReceiveAssets(address)", ["address"], [depositor])]
+        calls += [
+            _call(v, "balanceOf(address)", ["address"], [depositor]),
+            _call(v, "canSendShares(address)", ["address"], [depositor]),
+            _call(v, "canReceiveAssets(address)", ["address"], [depositor]),
+        ]
     calls.append(_call(v, "_totalAssets()"))
     for a in view.adapters:
-        calls += [_call(a.address, "realAssets()"), _call(v, "forceDeallocatePenalty(address)", ["address"], [a.address])]
+        calls += [
+            _call(a.address, "realAssets()"),
+            _call(v, "forceDeallocatePenalty(address)", ["address"], [a.address]),
+        ]
     mlist = [(a, m) for a in view.adapters for m in a.markets.values()]
     for a, m in mlist:
         mid = bytes.fromhex(m.id[2:])
-        calls += [_call(a.address, "supplyShares(bytes32)", ["bytes32"], [mid]),
-                  _call(MORPHO_BLUE, "market(bytes32)", ["bytes32"], [mid]),
-                  _call(m.oracle, "price()")]
+        calls += [
+            _call(a.address, "supplyShares(bytes32)", ["bytes32"], [mid]),
+            _call(MORPHO_BLUE, "market(bytes32)", ["bytes32"], [mid]),
+            _call(m.oracle, "price()"),
+        ]
     cap_keys = []
     for a, m in mlist:
         for kind, cid in _cap_ids(a.address, m).items():
@@ -265,8 +293,11 @@ def read_state(f: S.Fetcher, view: VaultView, block: int, depositor: str | None 
                 continue
             cap_keys.append(cid)
             b = bytes.fromhex(cid[2:])
-            calls += [_call(v, "allocation(bytes32)", ["bytes32"], [b]), _call(v, "absoluteCap(bytes32)", ["bytes32"], [b]),
-                      _call(v, "relativeCap(bytes32)", ["bytes32"], [b])]
+            calls += [
+                _call(v, "allocation(bytes32)", ["bytes32"], [b]),
+                _call(v, "absoluteCap(bytes32)", ["bytes32"], [b]),
+                _call(v, "relativeCap(bytes32)", ["bytes32"], [b]),
+            ]
     res = S.rpc_batch(f, calls, block)
     it = iter(res)
     ta, ts, idle, pf, mf = (_uint(next(it)) or 0 for _ in range(5))
@@ -286,19 +317,39 @@ def read_state(f: S.Fetcher, view: VaultView, block: int, depositor: str | None 
         ss = _uint(next(it)) or 0
         mk = next(it)
         price = _uint(next(it))
-        tsa, tss, tba = (int(mk[2 + 64 * i: 2 + 64 * (i + 1)], 16) for i in range(3)) if mk else (0, 0, 0)
-        assets = ss * (tsa + 1) // (tss + 10 ** 6) if ss else 0     # Blue's virtual shares / assets
+        tsa, tss, tba = (int(mk[2 + 64 * i : 2 + 64 * (i + 1)], 16) for i in range(3)) if mk else (0, 0, 0)
+        assets = ss * (tsa + 1) // (tss + 10**6) if ss else 0  # Blue's virtual shares / assets
         markets[m.id] = MarketState(m.id, ss, tsa, tss, tba, assets, price)
     caps = {cid: tuple(_uint(next(it)) or 0 for _ in range(3)) for cid in cap_keys}
-    return VaultState(block, ta, ts, idle, real, markets, caps, pf, mf, depositor, dshares,
-                      stored, view.liquidity_market, penalties, can_send, can_recv)
+    return VaultState(
+        block,
+        ta,
+        ts,
+        idle,
+        real,
+        markets,
+        caps,
+        pf,
+        mf,
+        depositor,
+        dshares,
+        stored,
+        view.liquidity_market,
+        penalties,
+        can_send,
+        can_recv,
+    )
 
 
 def largest_depositor(f: S.Fetcher, vault: str) -> str | None:
     """Default depositor via the Morpho API (D24): the largest share holder."""
     try:
-        d = S.morpho(f, """query($a:String!){ vaultV2ByAddress(address:$a, chainId:1){
-              positions(first:100){ items{ user{ address } shares } } } }""", {"a": vault})
+        d = S.morpho(
+            f,
+            """query($a:String!){ vaultV2ByAddress(address:$a, chainId:1){
+              positions(first:100){ items{ user{ address } shares } } } }""",
+            {"a": vault},
+        )
         items = d["vaultV2ByAddress"]["positions"]["items"]
         top = max(items, key=lambda i: int(i["shares"] or 0), default=None)
         return top["user"]["address"].lower() if top else None

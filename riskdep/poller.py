@@ -13,11 +13,12 @@ from pathlib import Path
 from . import sources as S
 from .abi import EVENTS, MORPHO_BLUE, Event, decode_log
 
-MAX_ADDRESSES = 9            # per eth_getLogs filter on the free RPC
+MAX_ADDRESSES = 9  # per eth_getLogs filter on the free RPC
 BLUE_OWNER_EVENTS = ("SetOwner", "EnableIrm", "EnableLltv", "SetFeeRecipient")
 # Blue events about a market: topic1 is the market id
-BLUE_TOPICS = sorted({e.topic0 for e in EVENTS if e.contract == "blue"
-                      and e.name not in ("SetAuthorization",) + BLUE_OWNER_EVENTS})
+BLUE_TOPICS = sorted(
+    {e.topic0 for e in EVENTS if e.contract == "blue" and e.name not in ("SetAuthorization",) + BLUE_OWNER_EVENTS}
+)
 
 
 @dataclass
@@ -26,7 +27,7 @@ class Batch:
     to_block: int
     head: int
     events: list[Event]
-    unknown: int = 0                   # logs on our filters that no spec decodes
+    unknown: int = 0  # logs on our filters that no spec decodes
     gap: tuple[int, int] | None = None  # blocks that could not be read
 
     @property
@@ -40,13 +41,13 @@ class Batch:
 @dataclass
 class Poller:
     f: S.Fetcher
-    kinds: dict[str, str]              # address -> blue | vault | adapter
+    kinds: dict[str, str]  # address -> blue | vault | adapter
     market_ids: list[str]
     cursor_path: Path
     confirmations: int = 2
     max_range: int = 500
-    start_back: int = 50               # first run: start this many blocks behind the safe head
-    extra_filters: list[dict] = field(default_factory=list)   # more eth_getLogs filters (address, topics)
+    start_back: int = 50  # first run: start this many blocks behind the safe head
+    extra_filters: list[dict] = field(default_factory=list)  # more eth_getLogs filters (address, topics)
     cursor: int | None = field(default=None, init=False)
     warnings: list[str] = field(default_factory=list, init=False)
 
@@ -69,8 +70,14 @@ class Poller:
         watched = [x for x, k in self.kinds.items() if k in ("vault", "adapter")]
         flt = [{"address": watched, "fromBlock": hex(a), "toBlock": hex(b)}] if watched else []
         if self.market_ids:
-            flt.append({"address": MORPHO_BLUE, "fromBlock": hex(a), "toBlock": hex(b),
-                        "topics": [BLUE_TOPICS, self.market_ids]})
+            flt.append(
+                {
+                    "address": MORPHO_BLUE,
+                    "fromBlock": hex(a),
+                    "toBlock": hex(b),
+                    "topics": [BLUE_TOPICS, self.market_ids],
+                }
+            )
         flt += [{**x, "fromBlock": hex(a), "toBlock": hex(b)} for x in self.extra_filters]
         self.warnings = []
         # the free RPC answers "Request blocked" above 9 addresses in one filter (measured 2026-10-10):
@@ -79,7 +86,7 @@ class Poller:
         for q in flt:
             addrs = q.get("address")
             if isinstance(addrs, list) and len(addrs) > MAX_ADDRESSES:
-                split += [{**q, "address": addrs[i:i + MAX_ADDRESSES]} for i in range(0, len(addrs), MAX_ADDRESSES)]
+                split += [{**q, "address": addrs[i : i + MAX_ADDRESSES]} for i in range(0, len(addrs), MAX_ADDRESSES)]
             else:
                 split.append(q)
         out = []
@@ -131,7 +138,7 @@ class Poller:
                 if b == a:
                     raise
                 b = a + (b - a) // 2
-        raw.sort(key=lambda l: (int(l["blockNumber"], 16), int(l["logIndex"], 16)))
+        raw.sort(key=lambda r: (int(r["blockNumber"], 16), int(r["logIndex"], 16)))
         events, unknown = [], 0
         for log in raw:
             ev = decode_log(log, self.kinds)

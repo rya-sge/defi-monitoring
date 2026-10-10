@@ -4,3 +4,6 @@ __pycache__/
 out/
 *.cursor
 *.tmp
+.venv
+data
+.ruff_cache/

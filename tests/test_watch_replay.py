@@ -3,7 +3,8 @@
 import json
 from pathlib import Path
 
-from riskdep import sources as S, vault as V
+from riskdep import sources as S
+from riskdep import vault as V
 from riskdep.abi import TIMELOCKED, selector
 from riskdep.cli import DEMO_VAULT, REPLAY_DIR, main
 from riskdep.poller import Poller
@@ -26,7 +27,7 @@ def test_discovery_matches_real_assets():
     a = view.adapters[0]
     for mp in a.markets.values():
         alloc = st.caps[V.cap_ids(a.address, mp)["market"]][0]
-        assert abs(alloc - st.markets[mp.id].vault_assets) <= max(10 ** 15, 0.001 * alloc)
+        assert abs(alloc - st.markets[mp.id].vault_assets) <= max(10**15, 0.001 * alloc)
 
 
 def test_poller_decodes_every_log_and_resumes(tmp_path):
@@ -39,7 +40,7 @@ def test_poller_decodes_every_log_and_resumes(tmp_path):
     b1 = p.next_batch()
     assert b1.unknown == 0 and b1.events
     p.save(b1.to_block)
-    p2 = Poller(f, view.kinds, view.market_ids, cur, 2, 500)       # a restart
+    p2 = Poller(f, view.kinds, view.market_ids, cur, 2, 500)  # a restart
     p2.head = lambda: META["head"]
     assert p2.cursor == b1.to_block
     b2 = p2.next_batch()
@@ -58,6 +59,7 @@ def test_replay_runs_offline(tmp_path, capsys):
 
 def test_selectors_match_the_morpho_docs():
     import re
+
     if not DOCS.exists():
         return
     docs = {}
