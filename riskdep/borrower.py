@@ -1,0 +1,130 @@
+"""A borrower's Morpho Blue positions, read on-chain the way Blue computes them (D37).
+
+debt  = borrowShares × (totalBorrowAssets + 1) / (totalBorrowShares + 10^6)
+HF    = collateral × oracle price / 10^36 × LLTV / debt
+drop  = 1 − 1 / HF, the oracle fall that brings HF to 1
+APY   = e^(rate per second × seconds per year) − 1, rate from the market's IRM borrowRateView
+"""
+
+from __future__ import annotations
+
+import math
+from dataclasses import dataclass
+
+from eth_abi import decode
+
+from . import sources as S
+from .abi import MORPHO_BLUE
+from .vault import _call, _symbol, _uint
+
+WAD = 10 ** 18
+YEAR = 365 * 86400
+PARAMS_T = "(address,address,address,address,uint256)"
+MARKET_T = "(uint128,uint128,uint128,uint128,uint128,uint128)"
+
+
+@dataclass
+class BorrowMarket:
+    id: str
+    loan_token: str
+    collateral_token: str
+    oracle: str
+    irm: str
+    lltv_raw: int
+    loan_symbol: str = "?"
+    collateral_symbol: str = "?"
+    loan_decimals: int = 18
+    collateral_decimals: int = 18
+
+    @property
+    def lltv(self) -> float:
+        return self.lltv_raw / WAD
+
+    @property
+    def label(self) -> str:
+        return f"{self.collateral_symbol}/{self.loan_symbol} (LLTV {self.lltv:.1%})"
+
+    @property
+    def params(self) -> tuple:
+        return (self.loan_token, self.collateral_token, self.oracle, self.irm, self.lltv_raw)
+
+
+@dataclass
+class BorrowState:
+    id: str
+    collateral: int                    # collateral token units (raw)
+    borrow_shares: int
+    debt: int                          # loan token units (raw)
+    price: int | None                  # oracle price, scaled 10^36 × loan / collateral decimals
+    total_supply_assets: int
+    total_borrow_assets: int
+    rate_per_second: int | None        # WAD
+
+    @property
+    def collateral_value(self) -> int | None:
+        """Collateral valued by the oracle, in loan-token units (raw)."""
+        return self.collateral * self.price // 10 ** 36 if self.price is not None else None
+
+    def hf(self, lltv: float) -> float | None:
+        if self.debt == 0:
+            return math.inf
+        if self.price is None:
+            return None
+        return self.collateral_value * lltv / self.debt
+
+    def liquidation_drop(self, lltv: float) -> float | None:
+        h = self.hf(lltv)
+        if h is None or math.isinf(h):
+            return h
+        return max(0.0, 1 - 1 / h)
+
+    @property
+    def utilization(self) -> float:
+        return self.total_borrow_assets / self.total_supply_assets if self.total_supply_assets else 0.0
+
+    @property
+    def apy(self) -> float | None:
+        return math.expm1(self.rate_per_second * YEAR / WAD) if self.rate_per_second is not None else None
+
+
+def _decimals(f: S.Fetcher, token: str, block) -> int:
+    return _uint(S.rpc_batch(f, [_call(token, "decimals()")], block)[0]) or 18
+
+
+def discover_markets(f: S.Fetcher, ids: list[str], block) -> dict[str, BorrowMarket]:
+    raws = S.rpc_batch(f, [_call(MORPHO_BLUE, "idToMarketParams(bytes32)", ["bytes32"], [bytes.fromhex(i[2:])]) for i in ids], block)
+    out = {}
+    for mid, raw in zip(ids, raws):
+        if not raw:
+            continue
+        loan, coll, orc, irm, lltv = decode(["address"] * 4 + ["uint256"], bytes.fromhex(raw[2:]))
+        m = BorrowMarket(mid, loan.lower(), coll.lower(), orc.lower(), irm.lower(), lltv)
+        m.loan_symbol, m.collateral_symbol = _symbol(f, m.loan_token, block), _symbol(f, m.collateral_token, block)
+        m.loan_decimals, m.collateral_decimals = _decimals(f, m.loan_token, block), _decimals(f, m.collateral_token, block)
+        out[mid] = m
+    return out
+
+
+def read_borrows(f: S.Fetcher, markets: dict[str, BorrowMarket], user: str, block) -> dict[str, BorrowState]:
+    ids = list(markets)
+    calls = []
+    for mid in ids:
+        b = bytes.fromhex(mid[2:])
+        calls += [_call(MORPHO_BLUE, "position(bytes32,address)", ["bytes32", "address"], [b, user]),
+                  _call(MORPHO_BLUE, "market(bytes32)", ["bytes32"], [b]),
+                  _call(markets[mid].oracle, "price()")]
+    res = S.rpc_batch(f, calls, block)
+    raw_markets, out = {}, {}
+    for i, mid in enumerate(ids):
+        pos, mk, price = res[3 * i: 3 * i + 3]
+        _, bshares, coll = decode(["uint256", "uint128", "uint128"], bytes.fromhex(pos[2:])) if pos else (0, 0, 0)
+        mw = decode(["uint128"] * 6, bytes.fromhex(mk[2:])) if mk else (0,) * 6
+        raw_markets[mid] = mw
+        debt = bshares * (mw[2] + 1) // (mw[3] + 10 ** 6) if bshares else 0
+        out[mid] = BorrowState(mid, coll, bshares, debt, _uint(price), mw[0], mw[2], None)
+    rates = S.rpc_batch(f, [_call(markets[mid].irm,
+                                  f"borrowRateView({PARAMS_T},{MARKET_T})", [PARAMS_T, MARKET_T],
+                                  [markets[mid].params, raw_markets[mid]]) for mid in ids], block)
+    for mid, r in zip(ids, rates):
+        out[mid].rate_per_second = _uint(r)
+    return out

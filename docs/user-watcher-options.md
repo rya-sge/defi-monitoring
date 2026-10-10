@@ -2,7 +2,7 @@
 
 The plan `plan/2026-10-10-morpho-user-watcher.plan.md` adds `watch --user <address>`, which finds a Morpho user's positions and follows them block by block. Writing it required four choices, asked as questions Q8 to Q11 of its interview. This document sets out, for each one, the options, what each costs and buys, and when another answer would be the better one. Your answers are recorded, and each can be revisited: they are decisions D31 to D35 of the plan.
 
-The figures below come from the probes made on 2026-10-10 on the demo borrower `0xdf81…2730`. That address holds 12 Blue positions, 6 of them with debt, plus one Vault V2 deposit.
+The figures below come from the probes made on 2026-10-10 on the demo borrower `0xdf81…2730`. That address holds 12 Blue positions, 6 of them with debt; the Vault V2 position the API lists for it is empty (0 shares).
 
 ## Contents
 

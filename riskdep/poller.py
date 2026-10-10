@@ -13,7 +13,7 @@ from pathlib import Path
 from . import sources as S
 from .abi import EVENTS, MORPHO_BLUE, Event, decode_log
 
-BLUE_TOPICS = sorted({e.topic0 for e in EVENTS if e.contract == "blue"})
+BLUE_TOPICS = sorted({e.topic0 for e in EVENTS if e.contract == "blue" and e.name != "SetAuthorization"})
 
 
 @dataclass
@@ -42,6 +42,7 @@ class Poller:
     confirmations: int = 2
     max_range: int = 500
     start_back: int = 50               # first run: start this many blocks behind the safe head
+    extra_filters: list[dict] = field(default_factory=list)   # more eth_getLogs filters (address, topics)
     cursor: int | None = field(default=None, init=False)
 
     def __post_init__(self):
@@ -60,10 +61,11 @@ class Poller:
 
     def _logs(self, a: int, b: int) -> list[dict]:
         watched = [x for x, k in self.kinds.items() if k != "blue"]
-        flt = [{"address": watched, "fromBlock": hex(a), "toBlock": hex(b)}]
+        flt = [{"address": watched, "fromBlock": hex(a), "toBlock": hex(b)}] if watched else []
         if self.market_ids:
             flt.append({"address": MORPHO_BLUE, "fromBlock": hex(a), "toBlock": hex(b),
                         "topics": [BLUE_TOPICS, self.market_ids]})
+        flt += [{**x, "fromBlock": hex(a), "toBlock": hex(b)} for x in self.extra_filters]
         out = []
         for q in flt:
             r = self.f.post_json(S.RPC, {"jsonrpc": "2.0", "id": 1, "method": "eth_getLogs", "params": [q]})

@@ -16,6 +16,7 @@ from . import sources as S
 DEMO_MARKET = "0x5613b170ded221c588b6e9637b910f49e5508680ceede207f44aa72e5c46cb05"
 DEMO_USER = "0xdf81987465681D0515058fe0A47A3bD174012730"
 DEMO_VAULT = "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf"   # Sentora RLUSD Main, largest Vault V2 on 2026-10-10
+DEMO_BORROWER = "0xdf81987465681d0515058fe0a47a3bd174012730"  # 6 Blue borrows on 2026-10-10
 REPLAY_DIR = Path(__file__).resolve().parent.parent / "data" / "replay"
 
 
@@ -35,8 +36,13 @@ def main(argv: list[str] | None = None) -> int:
     a.add_argument("--out", default=str(Path(__file__).resolve().parent.parent / "out"))
 
     w = sub.add_parser("watch", help="follow a Morpho Vault V2 block by block and alert on what affects a depositor")
-    w.add_argument("--vault", default=DEMO_VAULT, help="Vault V2 address (default: Sentora RLUSD Main)")
-    w.add_argument("--user", help="depositor address; default: the vault's largest holder (Morpho API)")
+    w.add_argument("--vault", help="Vault V2 address; with --user, the depositor to follow in it "
+                                     "(default with neither: Sentora RLUSD Main and its largest holder)")
+    w.add_argument("--user", help="alone: watch every Blue borrow and Vault V2 deposit of this address; "
+                                  "with --vault: the depositor in that vault")
+    w.add_argument("--hf", default="1.10,1.05,1.02", help="health-factor alert levels (info,warn,critical) for --user")
+    w.add_argument("--market", action="append", default=[],
+                   help="with --user: a Blue market id to watch as a borrow, skipping the Morpho API lookup (repeatable)")
     w.add_argument("--blocks", type=int, help="check the last N blocks, then stop")
     w.add_argument("--record", action="store_true", help="with --blocks: save every response under data/replay/<vault>")
     w.add_argument("--replay", action="store_true", help="re-run a recorded range offline")
@@ -45,8 +51,36 @@ def main(argv: list[str] | None = None) -> int:
     w.add_argument("--out", default=str(Path(__file__).resolve().parent.parent / "out"))
     args = ap.parse_args(argv)
 
+    if args.cmd == "watch" and args.user and not args.vault:
+        from .watch_user import UserOptions, run_user
+        try:
+            levels = tuple(sorted((float(x) for x in args.hf.split(",")), reverse=True))
+        except ValueError:
+            ap.error("--hf takes comma-separated numbers, e.g. 1.10,1.05,1.02")
+        if not levels or len(levels) > 3 or min(levels) <= 1:
+            ap.error("--hf takes one to three levels, all above 1")
+        if args.record and not args.blocks:
+            ap.error("--record needs --blocks")
+        rdir = REPLAY_DIR / f"user-{args.user.lower()}"
+        uopts = UserOptions(args.user.lower(), Path(args.out), levels, args.market,
+                            mode="replay" if args.replay else "record" if args.record else "direct",
+                            replay_dir=rdir if (args.replay or args.record) else None,
+                            blocks=args.blocks, min_level=args.level, max_polls=args.max_polls)
+        try:
+            return run_user(uopts)
+        except S.CacheMiss as e:
+            print(f"replay data incomplete: {e}", file=sys.stderr)
+            return 2
+        except S.SourceError as e:
+            print(f"data source error: {e}", file=sys.stderr)
+            return 3
+        except KeyboardInterrupt:
+            print("stopped; the cursor points at the last fully processed block", file=sys.stderr)
+            return 0
+
     if args.cmd == "watch":
         from .watch import Options, run
+        args.vault = args.vault or DEMO_VAULT
         rdir = REPLAY_DIR / args.vault.lower()
         if args.record and not args.blocks:
             ap.error("--record needs --blocks")

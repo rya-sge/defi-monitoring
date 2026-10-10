@@ -58,10 +58,18 @@ EVENTS: list[EventSpec] = [
         "uint256 repaidShares", "uint256 seizedAssets", "uint256 badDebtAssets", "uint256 badDebtShares"),
     _ev("blue", "AccrueInterest", "bytes32 indexed id", "uint256 prevBorrowRate", "uint256 interest", "uint256 feeShares"),
     _ev("blue", "SetFee", "bytes32 indexed id", "uint256 newFee"),
+    # not about a market: topic1 is the caller, so the poller fetches it with its own filter
+    _ev("blue", "SetAuthorization", "address indexed caller", "address indexed authorizer", "address indexed authorized",
+        "bool newIsAuthorized"),
     # Vault V2
     _ev("vault", "Deposit", "address indexed sender", "address indexed onBehalf", "uint256 assets", "uint256 shares"),
     _ev("vault", "Withdraw", "address indexed sender", "address indexed receiver", "address indexed onBehalf", "uint256 assets", "uint256 shares"),
     _ev("vault", "Transfer", "address indexed from", "address indexed to", "uint256 shares"),
+    _ev("vault", "Approval", "address indexed owner", "address indexed spender", "uint256 shares"),
+    _ev("vault", "AllowanceUpdatedByTransferFrom", "address indexed owner", "address indexed spender", "uint256 shares"),
+    _ev("vault", "Permit", "address indexed owner", "address indexed spender", "uint256 shares", "uint256 nonce",
+        "uint256 deadline"),
+    _ev("vault", "Constructor", "address indexed owner", "address indexed asset"),
     _ev("vault", "Allocate", "address indexed sender", "address indexed adapter", "uint256 assets", "bytes32[] ids", "int256 change"),
     _ev("vault", "Deallocate", "address indexed sender", "address indexed adapter", "uint256 assets", "bytes32[] ids", "int256 change"),
     _ev("vault", "ForceDeallocate", "address indexed sender", "address adapter", "uint256 assets", "address indexed onBehalf",

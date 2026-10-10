@@ -1,7 +1,7 @@
 # Watch an address: Morpho borrows and Vault V2 deposits, plan
 
-> **Status**: draft, waiting for the person's approval
-> **Delivers**: `python -m riskdep watch --user <address> [--hf 1.10,1.05,1.02]` finds every Morpho Blue borrow and every Vault V2 deposit of the address, then follows them block by block. For each borrow it alerts on the health factor crossing the chosen levels, a liquidation of the address, actions taken on its behalf, new authorisations, borrow-rate jumps and oracle moves; each V2 deposit is watched with the existing vault rules. Proof: on the demo borrower `0xdf81…2730` (6 borrows, 1 V2 deposit), the startup table shows each borrow's on-chain HF within 0.1 % of the Morpho API's, every rule fires on a synthetic event, and a recorded range replays offline.
+> **Status**: approved: the person, 2026-10-10, "Implement. Then provide me after a one line git commit msg that I can use"
+> **Delivers**: `python -m riskdep watch --user <address> [--hf 1.10,1.05,1.02]` finds every Morpho Blue borrow and every Vault V2 deposit of the address, then follows them block by block. For each borrow it alerts on the health factor crossing the chosen levels, a liquidation of the address, actions taken on its behalf, new authorisations, borrow-rate jumps and oracle moves; each V2 deposit is watched with the existing vault rules. Proof: on the demo borrower `0xdf81…2730` (6 borrows) and Sentora's largest depositor `0xb03d…babc` (1 V2 deposit), the startup table shows each borrow's on-chain HF within 0.1 % of the Morpho API's, every rule fires on a synthetic event, and a recorded range replays offline.
 > **Hard rule**: `watch --vault` and `analyze` behave as before; the agent never commits.
 > **Read against**: `defi-monitoring` working tree (no commit yet), Morpho docs `charrette/lib/docs.morpho.org-developers-docs` (borrow/concepts/liquidation, contracts/irm), morpho-blue `8e26ca6a` and vault-v2 `d992cb84`; probes of 2026-10-10.
 > **Libraries read from source**: none new.
@@ -14,23 +14,23 @@ Phasing diagram: the slices in order, and what each has to show before the next 
 ```mermaid
 flowchart TB
   %% tracker
-  ST["📍 state · 2026-10-10<br/>repo: defi-monitoring, not committed<br/>deployed: nothing<br/>next: S1.1<br/>blocked: the person's approval<br/>parked: nothing"]
+  ST["📍 state · 2026-10-10<br/>repo: defi-monitoring, not committed<br/>deployed: nothing, local CLI<br/>next: S4.1<br/>blocked: nothing<br/>parked: nothing"]
 
   subgraph SL1["Slice 1 · US7 · the address's positions"]
-    S1.1["▶ S1.1 borrows and deposits listed,<br/>each borrow's HF and rate read on-chain<br/>done when: demo HF within 0.1% of API"]
+    S1.1["✅ S1.1 borrows and deposits listed,<br/>each borrow's HF and rate read on-chain<br/>went on: 6 borrows, HF within 0.02% of API"]
   end
 
   subgraph SL2["Slice 2 · US8, US9 · one watch, many targets"]
-    S2.1["⬜ S2.1 borrows and vaults followed together<br/>done when: a live run alerts on<br/>the demo address's positions"]
+    S2.1["✅ S2.1 borrows and vaults followed together<br/>went on: live run on both demo addresses<br/>run: 3 vault events added to the table (D40)"]
   end
 
   subgraph SL3["Slice 3 · US7–US9 · tests"]
-    S3.1["⬜ S3.1 rules, discovery, offline replay<br/>done when: pytest exits 0"]
+    S3.1["✅ S3.1 rules, discovery, offline replay<br/>went on: pytest 70 passed"]
   end
 
   subgraph SL4["Slice 4 · US8 · the live run · 👤"]
     G4{"the person: does it watch<br/>what a borrower needs?"}
-    S4.1["⬜ S4.1 live run read by the person<br/>done when: their word, quoted"]
+    S4.1["▶ S4.1 live run read by the person<br/>done when: their word, quoted"]
   end
 
   ST ~~~ S1.1
@@ -42,8 +42,8 @@ flowchart TB
   classDef next stroke:#d08b28,stroke-width:2px,fill:#7f7f7f1a
   classDef todo stroke-dasharray:4 3
   classDef state stroke:#8a8a8a,stroke-width:1px,fill:#7f7f7f12
-  class S1.1 next
-  class S2.1,S3.1,S4.1 todo
+  class S1.1,S2.1,S3.1 done
+  class S4.1 next
   class ST state
 ```
 
@@ -67,7 +67,7 @@ A borrower on Morpho Blue loses money in ways a vault depositor does not: liquid
 - Acting on the position (repaying, adding collateral). The tool only alerts.
 
 **Stories**
-- **US7**, borrower: give my address and see every borrow (market, collateral, debt, HF, the oracle drop that liquidates me, borrow APY, utilisation) and every Vault V2 deposit, without looking up a market id. *Acceptance*: on `0xdf81…2730`, the startup table lists the 6 borrows and the Sentora vault deposit, and each HF matches the API within 0.1 %.
+- **US7**, borrower: give my address and see every borrow (market, collateral, debt, HF, the oracle drop that liquidates me, borrow APY, utilisation) and every Vault V2 deposit, without looking up a market id. *Acceptance*: on `0xdf81…2730`, the startup table lists the 6 borrows, each HF within 0.1 % of the API's; on `0xb03d…babc`, the Sentora RLUSD Main deposit is listed and watched.
 - **US8**, borrower: be told when my HF crosses 1.10, 1.05 and 1.02 (or my own levels), when I am liquidated, and when the rate jumps. *Acceptance*: each rule has a test that makes it fire, and a recovery above a level is reported once.
 - **US9**, borrower: be told when someone else acts on my position or when I authorise a new address. *Acceptance*: a `Borrow`, `Repay`, `SupplyCollateral` or `WithdrawCollateral` with `onBehalf` = me and `caller` ≠ me raises a warn; a `SetAuthorization` with me as authorizer raises a warn.
 
@@ -172,13 +172,15 @@ sequenceDiagram
 | D35 | contract | Rate rules: the IRM's `borrowRateView` is read every batch; warn when the borrow APY is 50 % above its value at the start of the run, or when utilisation reaches 99 % (the AdaptiveCurveIRM rate reaches 4 × its target at 100 %, per the docs) | agreed | the person, Q10; docs contracts/irm | S2 |
 | D36 | contract | Events on the position: `Liquidate` with `borrower` = the address → critical, with repaid and seized amounts and any bad debt; `Borrow`, `Repay`, `SupplyCollateral`, `WithdrawCollateral` with `onBehalf` = the address and `caller` ≠ it → warn; `SetAuthorization` with `authorizer` = the address → warn (a third `eth_getLogs` filter on `topics[2]`) | agreed, agent's default | morpho-blue `EventsLib.sol` at `8e26ca6a` | S2 |
 | D37 | module | The HF is computed on-chain from `position`, `market`, the oracle `price()` (scale 10³⁶) and the LLTV, the way Blue does; probed on the demo borrower: 1.0535 on-chain vs 1.0533 API, borrow APY 3.7447 % vs 3.7446 % | agreed, verified 2026-10-10 | probe | S1 |
+| D39 | clarification | Correction to the probe: the `0xdf81…2730` Vault V2 position (Wintermute USDT Select) has 0 shares, an emptied position, and is rightly skipped. The vault path of `--user` is proved on `0xb03d…babc` instead | agreed, found in S1 | API probe | S1 |
+| D40 | contract | `Approval`, `AllowanceUpdatedByTransferFrom`, `Permit` and `Constructor` added to the vault event table: two logs of a real range (`Approval`, `Permit`) were undecoded | agreed, found in S2 | vault-v2 `EventsLib.sol` | S2 |
 | D38 | clarification | Mode classic, as the two earlier plans | agreed, carried over from Q4 | — | — |
 
 # Execution
 
 ## 9. The slices
 
-**S1, the address's positions** · US7 · blocked by approval · check: on `0xdf81…2730`, 6 borrows and 1 V2 vault listed, each HF within 0.1 % of the API's.
+**S1, the address's positions** · US7 · blocked by approval · check: on `0xdf81…2730`, 6 borrows listed, each HF within 0.1 % of the API's; on `0xb03d…babc`, 1 V2 deposit.
 **S2, one watch, many targets** · US8, US9 · blocked by S1 · check: a live run on the demo address prints the startup table and polls; each borrower rule fires on a synthetic event.
 **S3, tests** · US7–US9 · blocked by S2 · check: `pytest` exits 0, including an offline replay of a recorded range for the demo address.
 **S4, the live run** · 👤 · US8 · done when the person has read a live run on their address.
@@ -203,4 +205,4 @@ verify: off
 
 **Q11. Exit cost for collateral that is not a Pendle PT?** Options: PT only, others not quoted (recommended) · keyless aggregator quote. **Answer**: "PT only, others not quoted (Recommended)".
 
-Probes, 2026-10-10: Morpho API `userByAddress` exposes `marketPositions`, `vaultPositions` and `vaultV2Positions`; `0xdf81…2730` has 12 market positions, 6 with debt (PST, PT-reUSD ×2, sUSDS, PT-sUSDE, PT-fxSAVE collateral), and 1 V2 position; `0xb03d…babc` has only the Sentora RLUSD Main deposit. On-chain HF of `0xdf81…2730` on the PT-sUSDE-26NOV2026/USDC market: 1.0535 (API 1.0533); `borrowRateView` on the AdaptiveCurveIRM `0x870a…00bc`: 3.7447 % APY (API 3.7446 %). Morpho liquidation guide: liquidation at HF ≤ 1, suggested alert below 1.1. IRM doc: target utilisation 90 %, rate 4 × target at 100 %.
+Probes, 2026-10-10: Morpho API `userByAddress` exposes `marketPositions`, `vaultPositions` and `vaultV2Positions`; `0xdf81…2730` has 12 market positions, 6 with debt (PST, PT-reUSD ×2, sUSDS, PT-sUSDE, PT-fxSAVE collateral), and 1 V2 position with 0 shares (see D39); `0xb03d…babc` has only the Sentora RLUSD Main deposit. On-chain HF of `0xdf81…2730` on the PT-sUSDE-26NOV2026/USDC market: 1.0535 (API 1.0533); `borrowRateView` on the AdaptiveCurveIRM `0x870a…00bc`: 3.7447 % APY (API 3.7446 %). Morpho liquidation guide: liquidation at HF ≤ 1, suggested alert below 1.1. IRM doc: target utilisation 90 %, rate 4 × target at 100 %.

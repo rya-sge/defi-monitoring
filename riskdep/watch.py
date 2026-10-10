@@ -35,9 +35,9 @@ class Options:
 
 
 class Printer:
-    def __init__(self, opts: Options, view: VaultView):
+    def __init__(self, opts, name: str):
         self.opts = opts
-        self.path = opts.out_dir / f"watch-{view.address}.jsonl"
+        self.path = opts.out_dir / f"watch-{name}.jsonl"
         opts.out_dir.mkdir(parents=True, exist_ok=True)
         self.count = {"info": 0, "warn": 0, "critical": 0}
 
@@ -124,7 +124,7 @@ def run(opts: Options) -> int:
     view = discover_vault(f, opts.vault, state0)
     before = read_state(f, view, state0, dep)
 
-    p = Printer(opts, view)
+    p = Printer(opts, view.address)
     exposure_table(view, before, p)
     if state0 != first_block:
         p.line(f"  note: events are checked from block {first_block + 1}; state older than block {state0} "
