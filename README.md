@@ -125,7 +125,24 @@ python3 -m riskdep analyze --vault 0xd6d4b804014ef27836dbe9f8f6bf6c71251548ec --
 python3 -m riskdep analyze --live --vault <vault> --shock token=<collateral address or symbol>:<fall> [--user <depositor>]
 ```
 
-The incident is a fall of a collateral's oracle price, such as an issuer marking its NAV down. For each market of the vault holding that collateral, the tool values every borrower at the shocked price: the debt liquidatable and the bad debt. It then gives the vault's loss, the depositor's loss if it stays and if it leaves first (with what can leave now), how fast the incident lands (at once on publication for an issuer NAV oracle), and a verdict. Offline it reads the vault's watch recording; the Belem RWA EURCV vault is recorded. Output: the terminal and `out/vault-incident-<vault>.json`. Plan: `plan/2026-10-11-vault-incident.plan.md`.
+The incident is a fall of a collateral's oracle price, such as an issuer marking its NAV down. For each market of the vault holding that collateral, the tool values every borrower at the shocked price, then reports:
+
+- the debt liquidatable and the bad debt, per market;
+- the vault's loss, and the depositor's loss if it stays and if it leaves first, with what can leave now;
+- how fast the incident lands: at once on publication for an issuer NAV oracle;
+- a verdict.
+
+Offline it reads the vault's recording; the RockawayX vaults, Belem RWA EURCV among them, are recorded. Output: the terminal and `out/vault-incident-<vault>.json`. Plan: `plan/2026-10-11-vault-incident.plan.md`.
+
+**A book of vaults** (`--book`, or several `--vault`): the same incident in every vault of a book you define, added up in USD.
+
+```bash
+python3 -m riskdep analyze --book examples/rockawayx-ethereum.json --shock token=PST:0.30
+python3 -m riskdep analyze --vault <A> --vault <B> --user <depositor> --shock token=<collateral>:0.30   # ad hoc book
+python3 -m riskdep analyze --book my-book.json --record --shock token=<collateral>:0.30                # record new vaults
+```
+
+A book file lists vault addresses, each with an optional `label` and `depositor`, and a `weighting`: `vault` (each vault at its total assets, a curator's view) or `depositor` (each vault at the depositor's position). `examples/rockawayx-ethereum.json` is the template. `--record` reads each vault live and saves it under `fixtures/replay/incident-<vault>/`, with all its oracles, so any later incident runs offline. Output: the headline, one line per vault, and `out/book-incident.json`. Plan: `plan/2026-10-11-vault-book.plan.md`.
 
 - **Data date.** An offline run uses the snapshot's date, `fixtures/snapshot/as_of.json`, as "now", so the demo gives the same result on any later day. `--refresh` refetches everything and rewrites that date; `--live` fetches only what is missing and uses today's date.
 - **Oracle.** Whether the lending market's oracle follows the PT market is read from the oracle's structure when it decides (its inputs' class; a meta-oracle through its live source and its switch within the horizon, D96). Otherwise it is inferred by comparing prices; when the PT trades within 1 % of par (near maturity), that test can't tell, so the report says *ambiguous*. The report always shows the verdict under the other oracle behaviour too.

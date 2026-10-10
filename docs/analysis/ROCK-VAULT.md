@@ -192,6 +192,29 @@ Both commands were run, and the recordings are in `fixtures/replay/graph-0xd6d4�
 
 The incident lands at once when Midas publishes the new NAV: the oracle is the issuer's own figure, so no market move announces it. For the largest depositor, leaving first changes almost nothing, because it is 99.46 % of the vault and the loss falls on it either way; withdrawing the 1.03M that can leave only reduces its exposure to a further cut. A small depositor in the same vault would be told to EXIT: the first 1.03M out leaves the loss to those who stay.
 
+### 5.2 The RockawayX book under one issuer incident (2026-10-11)
+
+The seven Ethereum vaults are in `examples/rockawayx-ethereum.json` and recorded under `fixtures/replay/incident-<vault>/` (`analyze --book … --record`, plan `2026-10-11-vault-book`). The book is 99.1M USD, each vault at its total assets. Each issuer token cut by 30 %, one at a time:
+
+| Token cut by 30 % | Vaults holding it | In those markets | Book loss | Vaults where leaving first lowers the loss |
+|---|---|---|---|---|
+| PST (Huma) | Confidential RWA USDC, Huma USDC Main | 34.70M | **5.19M (5.24 %)** | Huma USDC Main |
+| fxSAVE (f(x)) | f(x) Protocol Ecosystem USDC | 19.89M | 1.88M (1.90 %) | f(x) Protocol Ecosystem USDC |
+| strUSD (Tori) | USDC Yield, Tori Ecosystem | 14.30M | 1.60M (1.61 %) | both |
+| siUSD (infiniFi) | USDC Yield | 2.36M | 0.40M (0.40 %) | USDC Yield |
+| mGLOeuro (Midas) | Belem RWA EURCV | 4.52M | 0.28M (0.28 %) | none |
+| etrUSD (Tori) | USDC Yield, Tori Ecosystem | 1.86M | 0.26M (0.26 %) | Tori Ecosystem |
+| PRIME (Hastra) | USDC Yield | 1.51M | 0.13M (0.13 %) | USDC Yield |
+| nvPRIME (Nuva) | NUVA Ecosystem | 1.29M | 0.03M (0.03 %) | NUVA Ecosystem |
+| AUTO (Hastra) | Confidential RWA USDC | 0.60M | 0.02M (0.02 %) | none |
+
+**What it says:**
+- **Huma is the book's largest single issuer risk.** A 30 % PST cut costs 5.2M, more than every other issuer's cut combined, because PST backs most of the Confidential RWA vault and all of Huma USDC Main.
+- **Tori reaches two vaults through two tokens** (strUSD and etrUSD); together a 30 % cut on both would cost about 1.9M.
+- **Leaving first lowers the loss in most hit vaults**, because they have many depositors; Belem is the exception, with one depositor at 99.46 %.
+
+**Limit (D108):** a token is matched as the markets' direct collateral. trUSD and wYLDS match nothing, although PT-trUSD, etrUSD and wYLDS-based markets depend on them; a look-through of wrapped collateral is the next step.
+
 ## 6. Registry additions this needs
 
 Each entry needs its basis, as `registry.json` requires: issuer category, TVL, age, audits, the Pharos or Nexus estimate where one exists (`EXTERNAL_SOURCE.md` §7), and the redemption route. In order of exposure:

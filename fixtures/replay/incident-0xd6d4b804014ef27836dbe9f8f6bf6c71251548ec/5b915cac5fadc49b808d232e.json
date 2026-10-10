@@ -1,0 +1,1 @@
+{"method": "GET", "url": "https://api.etherscan.io/v2/api?chainid=1&module=contract&action=getsourcecode&address=0xbfd25a5d18b2e49eb4d486a99d9373440909795a", "body": null, "fetched": "2026-10-10T22:23:52Z", "response": {"verified": true, "name": "MGloEuroCustomAggregatorFeed", "proxy": false, "implementation": null}}

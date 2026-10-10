@@ -78,6 +78,7 @@ riskdep/
   drain.py            drain threshold of each vault market: d*, the drainable amount, the Public Allocator
   scenario.py         incident mode: a known incident's impact, time to impact and verdict; alert impacts
   vault_incident.py   incident mode for a vault depositor: a collateral's oracle price falls (NAV markdown)
+  vault_book.py       a book of vaults (file or --vault flags) under one incident, added up in USD
   exit_queue.py       a depositor's place in a run on a vault: recovery and loss by queue position
   admin.py            admin surface of the watched markets: upgrades, owners, feeds, pauses, mints, oracle divergence
   # graph
@@ -93,7 +94,7 @@ riskdep/
   report.py           HTML + JSON report
 tests/                pytest, all offline (snapshot + recorded replays)
   test_watch_rules.py, test_watch_replay.py, test_borrower.py, test_watch_user_replay.py,
-  test_graph.py, test_siblings.py, test_oracle_class.py, test_market_risk.py, test_exit_queue.py, test_drain.py, test_scenario.py, test_vault_incident.py, test_admin.py, test_decide.py, test_propagate.py, test_demo_snapshot.py, test_fixes.py, test_light_reads.py
+  test_graph.py, test_siblings.py, test_oracle_class.py, test_market_risk.py, test_exit_queue.py, test_drain.py, test_scenario.py, test_vault_incident.py, test_vault_book.py, test_admin.py, test_decide.py, test_propagate.py, test_demo_snapshot.py, test_fixes.py, test_light_reads.py
 pyproject.toml        project metadata, dependencies, ruff and pytest configuration
 ```
 
@@ -111,7 +112,8 @@ pyproject.toml        project metadata, dependencies, ruff and pytest configurat
 - `keys.example.ini` — template of the API keys and secrets (no values); the real `keys.ini` is git-ignored.
 - `erpc.yaml` — configuration of the optional local eRPC proxy (eRPC 0.3.0, six free upstreams, no key); `docs/erpc.md` is the setup guide. Its upstream list is mirrored in `docs/analysis/PROVIDERS.md`.
 - `docs/analysis/ANALYSIS_MONITORING.md` — design note: dependency graph, impact, monitoring, execution, and gaps of the current implementation (done / partial / missing).
-- `plan/` — the eleven plans (`defi-risk-dependency`, `morpho-vault-v2-watcher`, `morpho-user-watcher`, `lenders-and-timelocks`, `market-borrowers`, `admin-surface`, `exit-queue`, `drain-threshold`, `sibling-markets`, `incident-mode`, `vault-incident`).
+- `plan/` — the twelve plans (`defi-risk-dependency`, `morpho-vault-v2-watcher`, `morpho-user-watcher`, `lenders-and-timelocks`, `market-borrowers`, `admin-surface`, `exit-queue`, `drain-threshold`, `sibling-markets`, `incident-mode`, `vault-incident`, `vault-book`).
+- `examples/` — `rockawayx-ethereum.json`, the demo book of vaults and the template for any other (`analyze --book`).
 - `docs/` — `alert-runbook.md` (what each alert means and what to do), `glossary.md`, `registry-reference.md` (every `registry.json` key), `how-risk-is-computed.md`, `monte-carlo.md` (how `analyze`'s simulation works; its mindmap in `docs/img/`), `scenarios-and-breakeven.md`, `vault-depositor-scenarios.md`, `graph-propagation.md`, `how-a-block-is-analysed.md`, `websocket-vs-polling.md`, `user-watcher-options.md`, `exit-queue.md`, `erpc.md` (the optional local RPC proxy), `drain-threshold.md`, `graph-example.html/.json`.
 - `docs/external/` — third-party references, read-only; check behaviour against them before changing a rule:
   - `morpho/docs.morpho.org-developers-docs/` — Morpho developer docs (contracts, Bundles, addresses, Midnight, Vault V2 exit routes); `tests/test_watch_replay.py` checks the event selectors in `abi.py` against its `contracts/` pages, and skips that check when the folder is absent. **Git-ignored**: it exists only in the local checkout, so read it there; a fresh clone does not have it.
@@ -140,7 +142,7 @@ Python ≥ 3.10; CI runs the suite on 3.10, the floor `requires-python` in `pypr
 
 ```bash
 uv sync
-uv run pytest -q tests                                 # 183 tests, offline
+uv run pytest -q tests                                 # 188 tests, offline
 uv run python -m riskdep analyze --demo                # cached snapshot, no network → out/report.html/.json
 uv run python -m riskdep watch --replay                # re-run the recorded vault range offline
 uv run python -m riskdep watch --blocks 1000 --record  # live range, saved for --replay

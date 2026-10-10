@@ -43,6 +43,7 @@ class MarketHit:
     vault_loss: float
     oracle_class: str
     timing: str
+    vault_exposure: float = 0.0  # the vault's assets in this market: what the incident puts at risk
 
 
 @dataclass
@@ -64,6 +65,8 @@ class VaultIncident:
     verdict: str
     reason: str
     notes: list[str] = field(default_factory=list)
+    asset: str = ""  # the vault's asset address
+    asset_usd: float | None = None  # its USD price (DefiLlama), to add vaults in different assets into one book
 
     def lines(self) -> list[str]:
         s = self.symbol
@@ -145,6 +148,7 @@ def market_hit(
     drop: float,
     vault_share: float,
     profile: scenario.OracleProfile | None,
+    exposure: float = 0.0,
 ) -> MarketHit:
     """D99, pure: one market's liquidations and bad debt at the shocked oracle price, and the vault's part."""
     shocked = int(price * (1 - drop)) if price is not None else None
@@ -163,6 +167,7 @@ def market_hit(
         bad * vault_share,
         profile.kind if profile else OC.NOT_CLASSIFIED,
         nav_timing(profile),
+        exposure,
     )
 
 
@@ -211,9 +216,15 @@ def decide(
 
 
 def run(
-    f: S.Fetcher, vault: str, block: int, depositor: str | None, token_shocks: list[tuple[str, float]]
+    f: S.Fetcher,
+    vault: str,
+    block: int,
+    depositor: str | None,
+    token_shocks: list[tuple[str, float]],
+    profile_all: bool = False,
 ) -> VaultIncident:
-    """Read the vault and every borrower of its markets at `block`, then apply the incident (D98)."""
+    """Read the vault and every borrower of its markets at `block`, then apply the incident (D98). `profile_all`
+    reads every market's oracle, not only the hit ones, so a recording serves any later shock (D105)."""
     view = discover_vault(f, vault, block)
     dep = depositor.lower() if depositor else largest_depositor(f, vault)
     st = read_state(f, view, block, dep)
@@ -229,11 +240,14 @@ def run(
             if tok in (mp.collateral_token.lower(), mp.collateral_symbol.lower()):
                 drops[mid] = max(drops.get(mid, 0.0), v)
 
+    profiles = (
+        {mid: scenario.oracle_profile(f, params[mid].oracle, "latest") for mid in risk.markets} if profile_all else {}
+    )
     hits, loss_raw, exposure_raw = [], 0, 0
     for mid, d in drops.items():
         if mid not in risk.markets:
             continue  # below one whole token allocated: not followed (D47)
-        profile = scenario.oracle_profile(f, params[mid].oracle, "latest")
+        profile = profiles.get(mid) or scenario.oracle_profile(f, params[mid].oracle, "latest")
         h = market_hit(
             mid,
             risk.markets[mid],
@@ -243,6 +257,7 @@ def run(
             d,
             shares.get(mid, 0.0),
             profile,
+            st.markets[mid].vault_assets / unit,
         )
         hits.append(h)
         loss_raw += int(h.vault_loss * unit)
@@ -284,7 +299,17 @@ def run(
         verdict,
         reason,
         notes,
+        view.asset,
+        asset_usd(f, view.asset),
     )
+
+
+def asset_usd(f: S.Fetcher, asset: str) -> float | None:
+    """The vault asset's USD price from DefiLlama; None when it cannot be read (then the book assumes 1, and says so)."""
+    try:
+        return S.coin_prices(f, [asset]).get(f"ethereum:{asset}", {}).get("price")
+    except (S.SourceError, S.CacheMiss):
+        return None
 
 
 def write(inc: VaultIncident, out_dir: Path) -> Path:
