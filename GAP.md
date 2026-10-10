@@ -56,7 +56,7 @@ None of these gaps means the demo verdict is wrong. Every one of them points the
 | K13 | EXIT rule uses the mean only; CVaR 98 % of equity still gives REDUCE | biases to STAY | Bundi: yields cover the mean, not the tail | medium | S |
 | K14 | Point estimates without uncertainty; Poisson-style one event per layer | hides uncertainty | dispersion index 3.27; ξ unstable | medium | M |
 | K15 | Age factor and PT stress ×1.5 have no empirical basis | unknown | no study found | low | S |
-| K16 | Depositor loss and fixed-oracle drain still missing for vaults | missing | Team 2; deUSD, wstUSR | high | M |
+| K16 | Depositor loss under a scenario still missing for vaults (drain d\* done in the watches) | missing | Team 2; deUSD, wstUSR | high | M |
 
 ## 3. Probabilities
 
@@ -262,10 +262,10 @@ The `tail_budget` of 50 % of equity is a stated choice, but nothing ties it to t
 
 ### K16. The depositor still has no loss number
 
-`comparison_team.md` §4.3 already calls this the largest gap against the track's "impact" criterion. The exit queue model is done; two pieces are not.
+`comparison_team.md` §4.3 already calls this the largest gap against the track's "impact" criterion. The exit queue model and the drain threshold are done; one piece is not.
 
-1. **A depositor loss under a scenario:** Σ over the vault's markets of its share of supply × the market's bad debt at that drop. `market_risk.value()` already returns bad debt at a given drop.
-2. **The fixed-oracle drain d\*** (Team 2): with a linear-discount, hardcoded or NAV oracle, a depeg never liquidates, and borrowers can loop the depegged asset in until caps are full. That is what happened on wstUSR: the oracle marked $1.13 while the market was near $0.63. Caps, idle liquidity and the Public Allocator's `maxIn` set how much can be drained.
+1. **A depositor loss under a scenario:** Σ over the vault's markets of its share of supply × the market's bad debt at that drop. `market_risk.value()` already returns bad debt at a given drop. **Still missing.**
+2. ~~**The fixed-oracle drain d\*** (Team 2)~~ **done** in the watches (`riskdep/drain.py`, `DrainWindow` alert, `docs/drain-threshold.md`). With a linear-discount, hardcoded or NAV oracle, a depeg never liquidates, and borrowers can loop the depegged asset in until caps are full; that is what happened on wstUSR, where the oracle marked $1.13 while the market was near $0.63. What remains is to feed it into `analyze`: the drained amount is a loss channel for a depositor, and the probability of crossing d\* comes from the depeg prior (K5).
 
 Incidents add a third: the **realisation rule** depends on the vault version.
 - V1.0 realises bad debt for every holder at once.
@@ -294,7 +294,7 @@ The challenge also found choices that the evidence supports.
 | 2 | K1, K3, K5 | Fix known biases in the existing priors; one data call (TVL history) | S |
 | 3 | K7, K8 | Oracle structure: decides which channel a shock takes; sources now available | M |
 | 4 | K6 + named scenarios, K13 | Correlated stress and a tail-aware verdict; answers both teams | M |
-| 5 | K16 | Depositor loss and drain d\*; the track's use case | M |
+| 5 | K16 | Depositor loss under a scenario, and d\* fed into `analyze`; the track's use case | M |
 | 6 | K9, K14, K2, K4, K15 | Cascade loop, parameter uncertainty, off-chain priors, recalibration | M |
 
 ## 11. Resources
