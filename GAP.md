@@ -33,7 +33,7 @@ The model is careful and well documented, and every number has a stated basis. I
    - In Nov 2025, xUSD, deUSD and USDX depegged within days of one another, through lending links between issuers.
    - The model's layers are independent.
 
-Its base rates are also biased downward, by survivorship in the hack record (§3). Its severity tails are thin for synthetic dollars (§4).
+Its exploit priors rest entirely on a 5-year hack history. That history is biased downward by survivorship, and it is stale in a field whose attack mix changes every year. It should set the base rate only, with protocol-specific signals moving it within bounds (§3, K17–K18). Its severity tails are thin for synthetic dollars (§4).
 
 None of these gaps means the demo verdict is wrong. Every one of them points the same way, though: **more risk than reported**.
 
@@ -56,6 +56,8 @@ None of these gaps means the demo verdict is wrong. Every one of them points the
 | K13 | EXIT rule uses the mean only; CVaR 98 % of equity still gives REDUCE | biases to STAY | Bundi: yields cover the mean, not the tail | medium | S |
 | K14 | Point estimates without uncertainty; Poisson-style one event per layer | hides uncertainty | dispersion index 3.27; ξ unstable | medium | M |
 | K15 | Age factor and PT stress ×1.5 have no empirical basis | unknown | no study found | low | S |
+| K17 | Exploit prior rests only on a 5-year hack history; attack mix shifts yearly | stale, noisy | top classes change every year; a 2-year window raises Morpho Blue to 8.6 % | high | S |
+| K18 | No protocol-specific signal (admin powers, audit scope, insurance price, reputation) | blind to the protocol | 67.6 % of audited incidents outside audit scope (H1 2026); Nexus prices 1.05–1.44 %/yr | medium | S–M |
 | K16 | Depositor loss under a scenario still missing for vaults (drain d\* done in the watches) | missing | Team 2; deUSD, wstUSR | high | M |
 
 ## 3. Probabilities
@@ -74,6 +76,79 @@ A protocol that a hack destroyed is precisely the one that drops out. The regist
 
 - **Effect:** every exploit prior is too low. Measured against the 450 hacks that had a protocol id (145 + 305), the bias could reach about 3×; the exact factor needs each protocol's TVL at the date of its hack.
 - **Fix:** tier each protocol by its TVL at the hack date. DefiLlama's `/protocol/{slug}` returns TVL history. Show the rate with and without the dropped hacks.
+
+### K17. Hack history carries all the weight, over a window that is too long
+
+`exploit_p_year` comes entirely from past hacks: a TVL tier rate over 5 years, × a category multiplier, × an age factor. DeFi changes faster than that window.
+
+**The attack mix shifts from year to year.** Most frequent classifications in DefiLlama's hack record (snapshot):
+
+| Year | Hacks | Top classifications |
+|---|---|---|
+| 2021 | 127 | Protocol Logic, Token & Share Accounting, Oracle Manipulation |
+| 2022 | 184 | Access Control, Oracle Manipulation, Frontend & Infrastructure |
+| 2023 | 197 | Access Control, Oracle Manipulation, Protocol Logic |
+| 2024 | 217 | Access Control, Protocol Logic, Token & Share Accounting |
+| 2025 | 148 | Access Control, **Key Compromise**, Token & Share Accounting |
+| 2026 (to 10 Oct) | 292 | Access Control, Token & Share Accounting, Oracle Manipulation, **Bridge & Cross-Chain** |
+
+Other sources say the same thing:
+- **Chainalysis:** private-key compromise at centralised services was 88 % of Q1 2025 losses, and DeFi hack losses did not rise with TVL.
+- **Sentora:** the share of exploits that come from smart-contract bugs is shrinking.
+
+Designs also change. An immutable, formally verified core like Morpho Blue has little in common with the 2021 lending forks that fill the Lending category.
+
+**A shorter window does not lower the prior.** Here is `exploit_p_year` re-run on the snapshot with only the window changed:
+
+| Window | Hacks kept | ≥ $100M tier | Pendle | Morpho Blue | Ethena | Lido | Sky |
+|---|---|---|---|---|---|---|---|
+| 5 years (current) | 145 | 34 hacks, 2.66 %/yr | 1.21 % | 5.03 % | 1.33 % | 0.93 % | 2.62 % |
+| 3 years | 102 | 23, 2.99 % | 1.61 % | 5.99 % | 1.50 % | 1.05 % | 2.80 % |
+| 2 years | 85 | 22, 4.30 % | 1.66 % | **8.59 %** | 2.38 % | 1.50 % | 3.62 % |
+| 1 year | 59 | 17, 6.64 % | 3.71 % | 13.28 % | 5.29 % | 2.32 % | 2.32 % |
+
+The rates go **up** as the window shortens, for two reasons:
+- recent years had more hacks (2026 is already a record);
+- survivorship (K1) has had less time to remove recent victims.
+
+The rates also get **noisier**. The ≥ $100M tier rests on 22 hacks over 2 years, and one category multiplier can swing a protocol by 2×: Morpho Blue goes from 5.0 % to 8.6 %.
+
+So a 2-year window makes the history more **relevant** but not more **reliable**. The real issue is that this one noisy, backward-looking number is the whole exploit prior.
+
+**Fix: keep the history, cap its weight.**
+1. **Decay instead of cutting.** Weight each hack by its age with a half-life of about 1–2 years: a 2024 hack counts half as much as a 2025 one. That follows the shift in attack mix without discarding data. Put the half-life in `registry.json` with its basis.
+2. **Use the history for the level, not for the protocol.** History is good at one thing: how often protocols of this kind and size get hacked. Keep it as the **base rate** of the category and tier, and shrink small cells toward the overall rate (credibility weighting, as Bundi does).
+3. **Let protocol-specific signals move it, within bounds** (K18). The exploit prior becomes base rate × a protocol multiplier, the multiplier clipped to a stated range (for example 0.25×–4×). The history then sets the order of magnitude, the protocol's own evidence sets the position inside it, and neither can dominate.
+4. **Show both parts in the report:** "category base rate 2.7 %/yr, × 0.4 for immutable formally verified core with no exploit in 2.7 years → 1.1 %/yr". A reader can disagree with one factor without rejecting the whole number.
+
+This replaces the current age factor (K15), which becomes one input of the multiplier.
+
+### K18. Protocol-specific signals: audits, reputation, insurance, admin powers
+
+The model knows a protocol only by its TVL, category and age. Risk firms use more:
+- **Credora** starts from a base probability of default and applies modifiers (oracle risk, governance, curator track record, concentration).
+- **DeFiSafety** scores process quality: code, documentation, tests, admin controls, oracles. Its score decays as its report ages.
+- **Exponential** grades protocol risk from design, governance and security posture.
+
+These signals are harder to compute than a hack count, and none of them is proof. But they describe **this** protocol rather than its category.
+
+| Signal | What it says | Evidence | How to get it | Ease |
+|---|---|---|---|---|
+| **Admin powers**: upgradeable or not, who is admin, timelock, multisig threshold | Whether a key or a governance vote can change the code or drain funds; access control and key compromise are the most frequent hack classes since 2022 | Hack record table in K17 | **Already read** by `admin.py` (EIP-1967 slots, owner, Chainlink aggregator) for every watched contract | easy |
+| **Code changed since the last audit** | Whether the deployed code is still the audited code | In H1 2026, 46 of 68 incidents with a prior audit (67.6 %, 94 % of losses) had an attack path **outside every audit's scope** (Czech Technical University / ack3 preprint, via news) | Proxy `Upgraded` events (already watched by `admin.py`) after the last audit date | medium |
+| **Audits** (number, firms, dates) | Whether the code was reviewed | Weak alone. Halborn: about 20 % of the top-100 hacked protocols were audited. Sentora: about 66 % of hacks involved audited code. Exponential: no published audit → 68 % higher chance of a negative event. Stream and Elixir were both audited | DefiLlama `audits` is a status flag, not a count: on 2026-10-10 all 7 protocols checked show `"2"`, Stream and Elixir included, and 156 of 257 protocols ≥ $100M show `"0"`. The real list needs `audit_links` or a registry entry | hard |
+| **Insurance price** | What capital providers charge to cover a loss: a market-implied upper bound on the yearly probability × severity | Nexus Mutual × Symbiotic listing: Aave v3 1.23 %/yr, Pendle 1.05 %, selected Morpho vaults and markets 1.44 % (second-loss layer, launch prices) | Nexus Mutual `https://api.nexusmutual.io/v2/capacity`, keyless, 478 products with min/max annual price; the product-to-name mapping is not in that endpoint | medium |
+| **Time × TVL without exploit** (Lindy) | How much value the code has protected, and for how long | No study found; the argument holds for **immutable** code only, since each upgrade resets the clock. Mature, audited protocols were still exploited in 2025 (Balancer $128M, Cetus $220M) | DefiLlama TVL history × time since the last `Upgraded` event | medium |
+| **Formal verification, immutability** | Whether whole classes of bugs are excluded | Morpho Blue: immutable, formally verified, no core exploit found | Registry entry with a link | easy, by hand |
+| **Bug bounty** (max payout vs TVL) | Incentive to disclose rather than exploit | No study ties it to fewer hacks; a heuristic only | Immunefi pages, no official API | hard |
+| **Off-chain dependencies** (custodians, CEX, signing keys, fund manager) | Exposure the hack record does not see (K2) | Stream (manager loss), Resolv (cloud signing key) | Registry entry per issuer, from its docs | by hand |
+| **Reputation, team track record** | Response to past incidents; for vaults, the curator's history | Pendle paused and protected about $105M in the Penpie exploit; MEV Capital realised bad debt in Nov 2025, Steakhouse had no Resolv exposure | Registry entry with a dated basis | by hand, subjective |
+| **Third-party ratings** | An outside judgement to compare with | S&P rates USDe 5 (weak); Credora rates Morpho vaults | Credora, S&P reports; no keyless API found | hard |
+
+**What to keep in mind:**
+- **Reputation fails exactly when it matters.** Stream had an audit and well-known curators lent to it. Signals must stay bounded multipliers on a base rate, never a replacement for it.
+- **A by-hand signal is a judgement.** It goes in `registry.json` with a dated basis and a source, like the depeg priors, so it can be challenged and refreshed.
+- **Start with what is already read.** Admin powers and upgrades since the last audit come from `admin.py`, which the watches already run. The insurance price is one keyless call. Audits, reputation and ratings can follow, by hand, for the handful of protocols in the registry.
 
 ### K2. Losses that are not in a hack ledger
 
@@ -114,7 +189,7 @@ The expected loss per year still lands close to an independent estimate. 5.0 % �
 
 ### K15. Two parameters without a source
 
-- **Age factor** (×2 under one year, ×0.7 over three years). No survival study of DeFi protocols by age was found. Evidence runs both ways: attacks on old unmaintained contracts (Truebit, Yearn v1) against a falling loss per incident. Label it as a judgement in `registry.json`.
+- **Age factor** (×2 under one year, ×0.7 over three years). No survival study of DeFi protocols by age was found. Evidence runs both ways: attacks on old unmaintained contracts (Truebit, Yearn v1) against a falling loss per incident. Label it as a judgement in `registry.json`, and fold it into K17's protocol multiplier, where the time since the last upgrade (Lindy for immutable code) replaces the time since listing.
 - **PT stress ×1.5** (`pt_stress_extra_discount`). The basis is a sentence. Evidence now exists to calibrate it:
   - LlamaRisk's PT drop scenarios ($0.12 and $0.21 drops);
   - the Aave maximum discount rates for PT-sUSDe (21–31 %);
@@ -291,7 +366,8 @@ The challenge also found choices that the evidence supports.
 | Order | Gaps | Why first | Effort |
 |---|---|---|---|
 | 1 | K10, K11, K12 | The largest effect on a PT loop; IRM rules and PT pricing are deterministic, no new data source | S each |
-| 2 | K1, K3, K5 | Fix known biases in the existing priors; one data call (TVL history) | S |
+| 2 | K17, K1, K3, K5 | Decayed hack window as a category base rate only; fix known biases in the existing priors; one data call (TVL history) | S |
+| 2b | K18 (admin powers, upgrades since audit, insurance price) | Protocol multiplier from what `admin.py` already reads and one keyless Nexus Mutual call; audits and reputation by hand later | S–M |
 | 3 | K7, K8 | Oracle structure: decides which channel a shock takes; sources now available | M |
 | 4 | K6 + named scenarios, K13 | Correlated stress and a tail-aware verdict; answers both teams | M |
 | 5 | K16 | Depositor loss under a scenario, and d\* fed into `analyze`; the track's use case | M |
@@ -351,6 +427,22 @@ Vendor material (Gauntlet, Chaos Labs, LlamaRisk, Credora) is self-published. Ll
 - Webacy on PT oracles: https://www.webacy.com/blog/congratulations-your-oracle-works
 - Network simulation of DeFi systemic risk (stylised): https://nhsjs.com/2026/modeling-systemic-risk-in-decentralized-finance-a-network-simulation-approach/
 - Composability contagion review: https://arxiv.org/html/2508.12007v1
+
+### Protocol-specific signals (K17, K18)
+
+- Halborn, top-100 DeFi hacks (share audited): https://halborn.com/blog/post/halborn-all-time-top-100-defi-hacks-report-summary
+- Sentora figures on audited code in hacks (secondary): https://hackmd.io/@Extropy/auditWarn
+- Attack paths outside audit scope, H1 2026 (news report of a preprint, not read directly): https://www.kucoin.com/news/flash/680m-lost-in-defi-hacks-outside-audit-scope-in-h1-2026
+- Exponential, DeFi risk factors (no published audit): https://dlnews.com/articles/defi/study-on-defi-protocols-found-risk-factors/ and https://features.llama.fi/uploads/pdf/exponentialfi-report-evaluating-risk-in-defi.pdf
+- DefiLlama protocols (`audits`, `audit_links`, `listedAt`; queried 2026-10-10): https://api.llama.fi/protocols
+- Nexus Mutual capacity and prices (keyless): https://api.nexusmutual.io/v2/capacity
+- Nexus Mutual × Symbiotic listing prices: https://symbioticfi.notion.site/Nexus-Mutual-x-Symbiotic-2a781c079c17800bbe0dedc08a574b98
+- DeFiSafety process-quality scoring, time-decayed (discussion): https://gov.idle.finance/t/a-discussion-about-risk/1126
+- Lindy effect and upgradeable protocols (opinion): https://cointelegraph.com/opinion/how-lindy-effect-users-overconfident-de-fi-brands
+- 2025 exploits of mature protocols: https://blog.amberdata.io/defis-year-of-exploits-2b-lost-lessons-learned
+- Exploits moving away from smart contracts (Sentora): https://sentora.com/research/articles/the-pulse-exploits-moving-away-from-smart-contracts
+- 2025 loss mix (Chainalysis via ForkLog; PeckShield via Cointelegraph): https://forklog.com/en/losses-from-crypto-hacks-reached-3-4bn-in-2025/ and https://cointelegraph.com/news/crypto-3-4-billion-losses-2025-wallet-hacks
+- `fixtures/snapshot/` DefiLlama `/hacks` re-run with 5-, 3-, 2- and 1-year windows (K17 tables)
 
 ### Incidents
 

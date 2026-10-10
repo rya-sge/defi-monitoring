@@ -1,6 +1,6 @@
 # Goal: the DeFi Risk Dependency Challenge
 
-This file states what the project has to build, from the challenge brief. Every design choice in this repository answers to it; where the implementation stands against it is in `ANALYSIS_MONITORING.md` (gaps), `NEXT_STEP.md` (what comes next) and `comparison_team.md` (choices against the teammates' proposals).
+This file states what the project has to build, from the challenge brief (the original, a one-page PDF by Belem Capital for the EPFL Hackathon 2026, is `docs/hackaton_instruction/Hackathon_DeFi-Risk-Dependency-Challenge_EN_v1.pdf`; it is git-ignored, so only local checkouts have it). Every design choice in this repository answers to it; where the implementation stands against it is in `ANALYSIS_MONITORING.md` (gaps), `NEXT_STEP.md` (what comes next) and `comparison_team.md` (choices against the teammates' proposals).
 
 ## The challenge
 
