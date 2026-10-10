@@ -259,4 +259,5 @@ The full list, with impact and effort, is §5 of `ANALYSIS_MONITORING.md`.
 | `docs/websocket-vs-polling.md` | the choice of polling |
 | `docs/user-watcher-options.md` | the options behind `watch --user` |
 | `docs/graph-example.html` | a rendered dependency graph |
+| `NEXT_STEP.md` | what comes next, and what each step needs |
 | `CLAUDE.md` / `AGENTS.md` | conventions for editing the code |
