@@ -5,7 +5,7 @@ import time
 
 import pytest
 
-from riskdep import clock, cli, crosscheck, discover
+from riskdep import cli, clock, crosscheck, discover
 from riskdep import sources as S
 
 
@@ -28,8 +28,9 @@ def test_offline_demo_does_not_depend_on_today(tmp_path, monkeypatch):
 def _fake_oracle(monkeypatch, price):
     def rpc_call(f, to, sig, args=""):
         if sig == "price()":
-            return hex(int(price * 10 ** 24))       # PT 18 decimals, loan 6 decimals: scale 1e24
+            return hex(int(price * 10**24))  # PT 18 decimals, loan 6 decimals: scale 1e24
         return None
+
     monkeypatch.setattr(S, "rpc_call", rpc_call)
     monkeypatch.setattr(S, "rpc", lambda f, m, p: "0x")
 
@@ -63,11 +64,19 @@ class FakeF:
 
 
 def test_second_rpc_agrees_and_disagrees():
-    same = FakeF({(S.RPC, "eth_getBlockByNumber"): {"hash": "0xaa"},
-                  (crosscheck.SECOND_RPCS[0], "eth_getBlockByNumber"): {"hash": "0xaa"}})
+    same = FakeF(
+        {
+            (S.RPC, "eth_getBlockByNumber"): {"hash": "0xaa"},
+            (crosscheck.SECOND_RPCS[0], "eth_getBlockByNumber"): {"hash": "0xaa"},
+        }
+    )
     assert crosscheck.second_rpc(same, 1).ok is True
-    fork = FakeF({(S.RPC, "eth_getBlockByNumber"): {"hash": "0xaa"},
-                  (crosscheck.SECOND_RPCS[0], "eth_getBlockByNumber"): {"hash": "0xbb"}})
+    fork = FakeF(
+        {
+            (S.RPC, "eth_getBlockByNumber"): {"hash": "0xaa"},
+            (crosscheck.SECOND_RPCS[0], "eth_getBlockByNumber"): {"hash": "0xbb"},
+        }
+    )
     assert crosscheck.second_rpc(fork, 1).ok is False
     down = FakeF({(S.RPC, "eth_getBlockByNumber"): {"hash": "0xaa"}})
     assert crosscheck.second_rpc(down, 1).ok is None
@@ -75,9 +84,11 @@ def test_second_rpc_agrees_and_disagrees():
 
 def test_position_mismatch_is_reported(monkeypatch):
     # on-chain: 100 collateral units, 50 borrow shares worth 50 assets
-    word = lambda x: hex(x)[2:].rjust(64, "0")
-    pos = "0x" + word(0) + word(50 * 10 ** 6) + word(100 * 10 ** 18)
-    mk = "0x" + word(0) + word(0) + word(50) + word(50 * 10 ** 6)
+    def word(x):
+        return hex(x)[2:].rjust(64, "0")
+
+    pos = "0x" + word(0) + word(50 * 10**6) + word(100 * 10**18)
+    mk = "0x" + word(0) + word(0) + word(50) + word(50 * 10**6)
     monkeypatch.setattr(S, "rpc_batch", lambda f, calls, block: [pos, mk])
     assert crosscheck.morpho_position(None, "0x" + "00" * 32, "0x" + "11" * 20, 18, 0, 100.0, 50).ok is True
     assert crosscheck.morpho_position(None, "0x" + "00" * 32, "0x" + "11" * 20, 18, 0, 120.0, 50).ok is False
@@ -86,5 +97,6 @@ def test_position_mismatch_is_reported(monkeypatch):
 def test_unavailable_check_never_raises(monkeypatch):
     def boom(*a, **k):
         raise S.CacheMiss("x")
+
     monkeypatch.setattr(S, "rpc_batch", boom)
     assert crosscheck.morpho_position(None, "0x" + "00" * 32, "0x" + "11" * 20, 18, 6, 1.0, 1).ok is None

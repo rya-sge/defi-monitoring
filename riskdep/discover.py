@@ -9,7 +9,7 @@ from __future__ import annotations
 import copy
 import json
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 
 import networkx as nx
@@ -43,23 +43,23 @@ class Position:
     collateral_units: float
     collateral_symbol: str
     collateral_address: str
-    pt_price_usd: float               # market price of one PT
+    pt_price_usd: float  # market price of one PT
     collateral_decimals: int = 18
     debt_usd: float = 0.0
     loan_symbol: str | None = None
     loan_address: str | None = None
     lltv: float | None = None
-    lif: float | None = None           # Morpho liquidation incentive factor
+    lif: float | None = None  # Morpho liquidation incentive factor
     borrow_apy: float = 0.0
-    implied_apy: float = 0.0           # PT fixed yield to maturity
+    implied_apy: float = 0.0  # PT fixed yield to maturity
     maturity: str | None = None
     days_to_maturity: float = 0.0
-    oracle_mode: str = "none"          # market-tracking | fundamental | none
-    oracle_ambiguous: bool = False     # the inference could not tell the modes apart
-    pt_discount: float | None = None   # 1 − PT price in its accounting asset (Pendle API)
+    oracle_mode: str = "none"  # market-tracking | fundamental | none
+    oracle_ambiguous: bool = False  # the inference could not tell the modes apart
+    pt_discount: float | None = None  # 1 − PT price in its accounting asset (Pendle API)
     morpho_market: str | None = None
     borrower: str | None = None
-    debt_raw: int = 0                  # in loan-token units, as the Morpho API reports it
+    debt_raw: int = 0  # in loan-token units, as the Morpho API reports it
     loan_decimals: int = 18
     oracle_price: float | None = None  # loan units per PT, as the lending market sees it
     health_factor: float | None = None
@@ -120,11 +120,12 @@ def top_borrower(f: S.Fetcher, market_id: str) -> str:
     return items[0]["user"]["address"]
 
 
-ORACLE_GAP = 0.005      # oracle within 0.5 % of the PT market price → reads as market-tracking
+ORACLE_GAP = 0.005  # oracle within 0.5 % of the PT market price → reads as market-tracking
 
 
-def infer_oracle(f: S.Fetcher, oracle: str, coll_dec: int, loan_dec: int,
-                 pt_market_in_loan: float, pt_discount: float | None = None) -> tuple[str, float | None, str, bool]:
+def infer_oracle(
+    f: S.Fetcher, oracle: str, coll_dec: int, loan_dec: int, pt_market_in_loan: float, pt_discount: float | None = None
+) -> tuple[str, float | None, str, bool]:
     """Return (mode, oracle price in loan units per PT, evidence, ambiguous).
 
     The test compares the oracle with the PT market price. It cannot separate a market
@@ -142,18 +143,28 @@ def infer_oracle(f: S.Fetcher, oracle: str, coll_dec: int, loan_dec: int,
         shape += f", EIP-1167 clone of 0x{code[22:62]}"
     gap = price / pt_market_in_loan - 1
     if pt_discount is not None and abs(pt_discount) < 2 * ORACLE_GAP:
-        return "market-tracking", price, (
-            f"{shape}; reads {price:.4f} vs PT market {pt_market_in_loan:.4f} ({gap:+.2%}), but the PT trades only "
-            f"{pt_discount:.2%} below par: a market, linear-discount or par oracle would all read about the same. "
-            "Ambiguous; treated as market-tracking, the conservative case"), True
+        return (
+            "market-tracking",
+            price,
+            (
+                f"{shape}; reads {price:.4f} vs PT market {pt_market_in_loan:.4f} ({gap:+.2%}), but the PT trades only "
+                f"{pt_discount:.2%} below par: a market, linear-discount or par oracle would all read about the same. "
+                "Ambiguous; treated as market-tracking, the conservative case"
+            ),
+            True,
+        )
     if abs(gap) <= ORACLE_GAP:
         mode = "market-tracking"
-        why = (f"{shape}; reads {price:.4f} vs PT market {pt_market_in_loan:.4f} ({gap:+.2%}): "
-               "follows the market or a linear discount close to it; treated as market-tracking, the conservative case")
+        why = (
+            f"{shape}; reads {price:.4f} vs PT market {pt_market_in_loan:.4f} ({gap:+.2%}): "
+            "follows the market or a linear discount close to it; treated as market-tracking, the conservative case"
+        )
     else:
         mode = "fundamental"
-        why = (f"{shape}; reads {price:.4f} vs PT market {pt_market_in_loan:.4f} ({gap:+.2%}): "
-               "does not follow the market; a market depeg does not trigger liquidation, a loss of backing still does")
+        why = (
+            f"{shape}; reads {price:.4f} vs PT market {pt_market_in_loan:.4f} ({gap:+.2%}): "
+            "does not follow the market; a market depeg does not trigger liquidation, a loss of backing still does"
+        )
     return mode, price, why, False
 
 
@@ -182,20 +193,44 @@ def _build_pt_layers(f: S.Fetcher, pos: Position, pm: dict) -> None:
     dd = S.coin_drawdown(f, und)
     pos.underlying_drawdown_1y = dd["max_drawdown"] if dd["points"] else None
 
-    _add(g, "chain:ethereum", "chain", REGISTRY["chain"]["ethereum"]["label"], "registry",
-         "settlement for every contract below")
-    _add(g, f"asset:{pos.collateral_address}", "asset", pos.collateral_symbol, "Pendle API /markets",
-         f"PT {pos.collateral_address}, matures {pm['expiry'][:10]}, implied APY {pos.implied_apy:.2%}")
-    _add(g, f"amm:{pm['address']}", "amm", f"Pendle market {pm['name']} (PT/SY AMM + SY adapter)",
-         "Pendle API /markets/{m}/data",
-         f"liquidity ${pos.amm_liquidity_usd or 0:,.0f}, total TVL ${data.get('totalTvl', {}).get('usd', 0):,.0f}",
-         protocol="pendle")
-    issuer_label = f"{pos.underlying_symbol} ({reg['issuer']})" if reg else f"{pos.underlying_symbol} (unidentified issuer)"
-    _add(g, f"issuer:{und}", "issuer", issuer_label,
-         "Pendle API underlyingAsset + registry" if reg else "Pendle API underlyingAsset (not in registry)",
-         f"price ${meta.get('price', float('nan')):.4f} (DefiLlama coins); 1y max drawdown "
-         f"{(pos.underlying_drawdown_1y or 0):.2%} over {dd['points']} daily points",
-         registered=bool(reg))
+    _add(
+        g,
+        "chain:ethereum",
+        "chain",
+        REGISTRY["chain"]["ethereum"]["label"],
+        "registry",
+        "settlement for every contract below",
+    )
+    _add(
+        g,
+        f"asset:{pos.collateral_address}",
+        "asset",
+        pos.collateral_symbol,
+        "Pendle API /markets",
+        f"PT {pos.collateral_address}, matures {pm['expiry'][:10]}, implied APY {pos.implied_apy:.2%}",
+    )
+    _add(
+        g,
+        f"amm:{pm['address']}",
+        "amm",
+        f"Pendle market {pm['name']} (PT/SY AMM + SY adapter)",
+        "Pendle API /markets/{m}/data",
+        f"liquidity ${pos.amm_liquidity_usd or 0:,.0f}, total TVL ${data.get('totalTvl', {}).get('usd', 0):,.0f}",
+        protocol="pendle",
+    )
+    issuer_label = (
+        f"{pos.underlying_symbol} ({reg['issuer']})" if reg else f"{pos.underlying_symbol} (unidentified issuer)"
+    )
+    _add(
+        g,
+        f"issuer:{und}",
+        "issuer",
+        issuer_label,
+        "Pendle API underlyingAsset + registry" if reg else "Pendle API underlyingAsset (not in registry)",
+        f"price ${meta.get('price', float('nan')):.4f} (DefiLlama coins); 1y max drawdown "
+        f"{(pos.underlying_drawdown_1y or 0):.2%} over {dd['points']} daily points",
+        registered=bool(reg),
+    )
     for i, dep in enumerate((reg or {}).get("dependencies", [])):
         _add(g, f"offchain:{und}:{i}", "offchain", dep, "registry", "off-chain dependency of the issuer")
         g.add_edge(f"issuer:{und}", f"offchain:{und}:{i}", rel="relies on")
@@ -222,45 +257,84 @@ def discover_morpho_position(f: S.Fetcher, market_id: str, user: str | None = No
     units = int(p["state"]["collateral"]) / 10 ** coll["decimals"]
     pos = Position(
         label=f"Morpho borrower {user[:8]}…{user[-4:]} · {coll['symbol']} → {loan['symbol']}",
-        collateral_units=units, collateral_symbol=coll["symbol"], collateral_address=coll["address"].lower(),
-        pt_price_usd=coll["priceUsd"], collateral_decimals=coll["decimals"], debt_usd=p["state"]["borrowAssetsUsd"],
-        loan_symbol=loan["symbol"], loan_address=loan["address"].lower(),
-        lltv=lltv, lif=morpho_lif(lltv), borrow_apy=m["state"]["borrowApy"],
-        health_factor=p["healthFactor"], lending_liquidity_usd=m["state"]["liquidityAssetsUsd"],
-        morpho_market=market_id, borrower=user.lower(), debt_raw=int(p["state"]["borrowAssets"] or 0),
+        collateral_units=units,
+        collateral_symbol=coll["symbol"],
+        collateral_address=coll["address"].lower(),
+        pt_price_usd=coll["priceUsd"],
+        collateral_decimals=coll["decimals"],
+        debt_usd=p["state"]["borrowAssetsUsd"],
+        loan_symbol=loan["symbol"],
+        loan_address=loan["address"].lower(),
+        lltv=lltv,
+        lif=morpho_lif(lltv),
+        borrow_apy=m["state"]["borrowApy"],
+        health_factor=p["healthFactor"],
+        lending_liquidity_usd=m["state"]["liquidityAssetsUsd"],
+        morpho_market=market_id,
+        borrower=user.lower(),
+        debt_raw=int(p["state"]["borrowAssets"] or 0),
         loan_decimals=loan["decimals"],
     )
     pm = find_pendle_market(f, coll["address"])
     _build_pt_layers(f, pos, pm)
 
     pt_in_loan = coll["priceUsd"] / loan["priceUsd"]
-    mode, oprice, why, ambiguous = infer_oracle(f, m["oracleAddress"], coll["decimals"], loan["decimals"],
-                                                pt_in_loan, pos.pt_discount)
+    mode, oprice, why, ambiguous = infer_oracle(
+        f, m["oracleAddress"], coll["decimals"], loan["decimals"], pt_in_loan, pos.pt_discount
+    )
     pos.oracle_mode, pos.oracle_price, pos.oracle_ambiguous = mode, oprice, ambiguous
     if ambiguous:
-        pos.notes.append("Oracle behaviour is ambiguous (PT close to par): the report also shows the verdict "
-                         "if the oracle were fundamental.")
+        pos.notes.append(
+            "Oracle behaviour is ambiguous (PT close to par): the report also shows the verdict "
+            "if the oracle were fundamental."
+        )
 
     g = pos.graph
     mk = f"lending:{market_id}"
-    _add(g, mk, "lending", f"Morpho Blue market {coll['symbol']}/{loan['symbol']} (LLTV {lltv:.1%})",
-         "Morpho API marketById/marketPosition",
-         f"debt ${pos.debt_usd:,.0f}, HF {pos.health_factor:.3f}, utilization {m['state']['utilization']:.1%}, "
-         f"idle liquidity ${pos.lending_liquidity_usd:,.0f}, borrow APY {pos.borrow_apy:.2%}",
-         protocol="morpho-blue")
-    _add(g, f"oracle:{m['oracleAddress'].lower()}", "oracle", f"Oracle {m['oracleAddress'][:10]}…",
-         "Ethereum RPC eth_call price(), eth_getCode", why, mode=mode)
+    _add(
+        g,
+        mk,
+        "lending",
+        f"Morpho Blue market {coll['symbol']}/{loan['symbol']} (LLTV {lltv:.1%})",
+        "Morpho API marketById/marketPosition",
+        f"debt ${pos.debt_usd:,.0f}, HF {pos.health_factor:.3f}, utilization {m['state']['utilization']:.1%}, "
+        f"idle liquidity ${pos.lending_liquidity_usd:,.0f}, borrow APY {pos.borrow_apy:.2%}",
+        protocol="morpho-blue",
+    )
+    _add(
+        g,
+        f"oracle:{m['oracleAddress'].lower()}",
+        "oracle",
+        f"Oracle {m['oracleAddress'][:10]}…",
+        "Ethereum RPC eth_call price(), eth_getCode",
+        why,
+        mode=mode,
+    )
     sreg = REGISTRY["stables"].get(loan["address"].lower(), {})
-    _add(g, f"stable:{loan['address'].lower()}", "stable", f"{loan['symbol']} ({sreg.get('issuer', 'loan asset')})",
-         "Morpho API loanAsset + registry", sreg.get("basis", "loan asset"))
-    g.add_node("position", kind="position", label=pos.label, source="Morpho API",
-               evidence=f"{units:,.0f} {coll['symbol']} (${pos.collateral_usd:,.0f}) against ${pos.debt_usd:,.0f} {loan['symbol']}")
+    _add(
+        g,
+        f"stable:{loan['address'].lower()}",
+        "stable",
+        f"{loan['symbol']} ({sreg.get('issuer', 'loan asset')})",
+        "Morpho API loanAsset + registry",
+        sreg.get("basis", "loan asset"),
+    )
+    g.add_node(
+        "position",
+        kind="position",
+        label=pos.label,
+        source="Morpho API",
+        evidence=f"{units:,.0f} {coll['symbol']} (${pos.collateral_usd:,.0f}) against ${pos.debt_usd:,.0f} {loan['symbol']}",
+    )
     g.add_edge("position", mk, rel="borrows on")
     g.add_edge(mk, f"asset:{pos.collateral_address}", rel="collateral")
     g.add_edge(mk, f"oracle:{m['oracleAddress'].lower()}", rel="prices collateral with")
     g.add_edge(mk, f"stable:{loan['address'].lower()}", rel="debt in")
-    g.add_edge(f"oracle:{m['oracleAddress'].lower()}", f"amm:{pm['address']}",
-               rel="reads (inferred)" if mode == "market-tracking" else "independent of (inferred)")
+    g.add_edge(
+        f"oracle:{m['oracleAddress'].lower()}",
+        f"amm:{pm['address']}",
+        rel="reads (inferred)" if mode == "market-tracking" else "independent of (inferred)",
+    )
     g.add_edge(mk, "chain:ethereum", rel="settles on")
     return pos
 
@@ -272,12 +346,22 @@ def discover_pt_holding(f: S.Fetcher, pendle_market: str, pt_amount: float) -> P
     if "price" not in price:
         raise S.SourceError(f"no USD price for PT {pt} on DefiLlama")
     sym = price.get("symbol") or f"PT-{pm['name']}"
-    pos = Position(label=f"PT holding · {pt_amount:,.0f} {sym}", collateral_units=pt_amount,
-                   collateral_symbol=sym, collateral_address=pt, pt_price_usd=price["price"],
-                   collateral_decimals=int(price.get("decimals", 18)))
+    pos = Position(
+        label=f"PT holding · {pt_amount:,.0f} {sym}",
+        collateral_units=pt_amount,
+        collateral_symbol=sym,
+        collateral_address=pt,
+        pt_price_usd=price["price"],
+        collateral_decimals=int(price.get("decimals", 18)),
+    )
     _build_pt_layers(f, pos, pm)
-    pos.graph.add_node("position", kind="position", label=pos.label, source="input",
-                       evidence=f"{pt_amount:,.0f} PT (${pos.collateral_usd:,.0f})")
+    pos.graph.add_node(
+        "position",
+        kind="position",
+        label=pos.label,
+        source="input",
+        evidence=f"{pt_amount:,.0f} PT (${pos.collateral_usd:,.0f})",
+    )
     pos.graph.add_edge("position", f"asset:{pt}", rel="holds")
     return pos
 
@@ -285,20 +369,32 @@ def discover_pt_holding(f: S.Fetcher, pendle_market: str, pt_amount: float) -> P
 def exit_quote(f: S.Fetcher, pos: Position) -> dict:
     """Real Pendle quote to sell the whole PT balance into the loan asset (or the underlying)."""
     token_out = pos.loan_address or pos.underlying_address
-    amount_raw = str(int(pos.collateral_units * 10 ** pos.collateral_decimals))
-    url = (f"{S.PENDLE}/v2/sdk/1/markets/{pos.pendle_market}/swap?receiver=0x1111111111111111111111111111111111111111"
-           f"&slippage=0.01&enableAggregator=true&tokenIn={pos.collateral_address}&tokenOut={token_out}&amountIn={amount_raw}")
+    amount_raw = str(int(pos.collateral_units * 10**pos.collateral_decimals))
+    url = (
+        f"{S.PENDLE}/v2/sdk/1/markets/{pos.pendle_market}/swap?receiver=0x1111111111111111111111111111111111111111"
+        f"&slippage=0.01&enableAggregator=true&tokenIn={pos.collateral_address}&tokenOut={token_out}&amountIn={amount_raw}"
+    )
     try:
         d = f.get_json(url, transform=lambda r: {"data": r.get("data"), "method": r.get("method")})["data"]
         impact = abs(float(d["priceImpact"]))
         fee = float(d.get("fee", {}).get("usd", 0.0))
-        return {"source": "Pendle swap quote", "price_impact": impact, "fee_usd": fee,
-                "amount_out_raw": d.get("amountOut"), "estimated": False}
+        return {
+            "source": "Pendle swap quote",
+            "price_impact": impact,
+            "fee_usd": fee,
+            "amount_out_raw": d.get("amountOut"),
+            "estimated": False,
+        }
     except (S.SourceError, S.CacheMiss, KeyError, TypeError) as e:
         liq = pos.amm_liquidity_usd or 1.0
         impact = min(0.5, pos.collateral_usd / (2 * liq) * 0.01)
-        return {"source": f"AMM-depth estimate (quote failed: {str(e)[:80]})", "price_impact": impact,
-                "fee_usd": 0.0, "amount_out_raw": None, "estimated": True}
+        return {
+            "source": f"AMM-depth estimate (quote failed: {str(e)[:80]})",
+            "price_impact": impact,
+            "fee_usd": 0.0,
+            "amount_out_raw": None,
+            "estimated": True,
+        }
 
 
 def partial_exit_quote(f: S.Fetcher, pos: Position, fraction: float) -> dict:

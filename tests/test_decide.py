@@ -8,10 +8,22 @@ from riskdep.simulate import SimResult
 
 
 def pos(**kw):
-    base = dict(label="t", collateral_units=1000.0, collateral_symbol="PT-X", collateral_address="0x1",
-                pt_price_usd=1.0, debt_usd=900.0, lltv=0.915, lif=1.026, borrow_apy=0.04,
-                implied_apy=0.06, health_factor=1.017, oracle_mode="market-tracking",
-                underlying_drawdown_1y=0.02, graph=nx.DiGraph())
+    base = dict(
+        label="t",
+        collateral_units=1000.0,
+        collateral_symbol="PT-X",
+        collateral_address="0x1",
+        pt_price_usd=1.0,
+        debt_usd=900.0,
+        lltv=0.915,
+        lif=1.026,
+        borrow_apy=0.04,
+        implied_apy=0.06,
+        health_factor=1.017,
+        oracle_mode="market-tracking",
+        underlying_drawdown_1y=0.02,
+        graph=nx.DiGraph(),
+    )
     base.update(kw)
     return Position(**base)
 
@@ -41,7 +53,6 @@ def test_stay_when_carry_covers_and_tail_is_small():
 
 
 def test_reduce_when_liquidation_is_closer_than_the_stress():
-    d = verdict(pos(), sim(el=0.1, cvar99=1.0), QUOTE, depeg_mean=0.08,
-                resimulate=lambda p: sim(el=0.05))
+    d = verdict(pos(), sim(el=0.1, cvar99=1.0), QUOTE, depeg_mean=0.08, resimulate=lambda p: sim(el=0.05))
     assert d.verdict == "REDUCE"
     assert d.reduction is not None and d.reduction.new_liquidation_drop == pytest.approx(d.stress_drop)

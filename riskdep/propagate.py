@@ -28,9 +28,16 @@ class LossBreakdown:
     path: list[str] = field(default_factory=list)
 
 
-def loss(collateral_usd: float, debt_usd: float, lltv: float | None, lif: float | None,
-         oracle_mode: str, shocks: dict[str, float], recovery: float = 0.0,
-         pt_stress_extra: float = 0.5) -> LossBreakdown:
+def loss(
+    collateral_usd: float,
+    debt_usd: float,
+    lltv: float | None,
+    lif: float | None,
+    oracle_mode: str,
+    shocks: dict[str, float],
+    recovery: float = 0.0,
+    pt_stress_extra: float = 0.5,
+) -> LossBreakdown:
     v_true = collateral_usd
     v_oracle = collateral_usd
     path: list[str] = []
