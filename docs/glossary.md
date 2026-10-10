@@ -23,6 +23,8 @@ Plain-language definitions of the terms used in this repository's reports, alert
 | **Collateral** | The token a borrower posts as security; it is seized if the borrower is liquidated. |
 | **Oracle** | The contract that tells a market the price of its collateral in the loan token. Liquidations follow its price, not the market price. |
 | **Price feed** | A source an oracle reads, for example a Chainlink `ETH / USD` feed. One oracle can combine several feeds. |
+| **Price-tracking oracle** | An oracle whose price falls when the collateral's market price falls (a market feed, a Pendle TWAP). A depeg liquidates borrowers, and their sales can push the price further. `analyze` calls it *market-tracking*. |
+| **Constant-price oracle** | An oracle whose price does not follow the collateral's market price: a fixed value, an exchange rate, a NAV, a linear discount. A depeg liquidates nobody; once the collateral is worth less than the debt, the lenders bear the loss. `analyze` calls it *fundamental*. |
 | **LLTV** | Liquidation loan-to-value: the share of the collateral's oracle value a borrower's debt may reach before liquidation, for example 86 % or 91.5 %. |
 | **Health factor (HF)** | Collateral × oracle price × LLTV ÷ debt. Above 1 the position is safe; at 1 or below anyone can liquidate it. |
 | **Liquidation distance** | The fall in the oracle price that would bring the health factor to 1: 1 − 1/HF. An HF of 1.05 means a 4.8 % fall liquidates. |
@@ -120,6 +122,9 @@ Plain-language definitions of the terms used in this repository's reports, alert
 | **Admin** | A node that decides for a vault without its own capital at stake: owner, curator, allocator, sentinel. |
 | **External** | An off-chain dependency of a yield source, such as custodians or exchanges, listed in `registry.json`. |
 | **Edge** | A dependency between two nodes, derived from an on-chain attribute (a market's oracle, a vault's adapter), with the amount it carries where one exists. |
+| **Held market (seed)** | A Blue market an actor of the graph holds: one of a vault's markets, or one the address borrows from. The sibling search starts from these. |
+| **Sibling market** | A Blue market nobody in the graph holds that can move a held market's collateral price or shares its price inputs: same collateral, same underlying, a shared collateral-side feed or vault, or lending that collateral. It joins the held market through the shared node, never directly. |
+| **Wraps** | The edge from an ERC-4626 share to the token it redeems into (siUSD → iUSD): a loss of the underlying reaches the share. |
 
 ## Blockchain data and the watcher
 

@@ -172,6 +172,7 @@ The oracles actually used for PT markets combine several parts:
   - Classifying by price can't tell these apart near par. The demo PT is 0.62 % below par, so the result is ambiguous.
   - "Conservative" depends on who you are. Market-tracking is the worst case for a **borrower**; for a **lender** the linear discount is.
 - **Fix:** read the oracle's structure. The source is now verified on Etherscan (D68), and `admin.py` already reads `BASE_FEED_*` and `BASE_VAULT`. Map each known oracle type to its rule, and fall back to price inference only for unknown ones. `REPOSITORY_ADD.md` lists `morpho-blue-oracles`; for the Chainlink part its library says "Staleness is not checked".
+- **Status: partial.** `oracle_class.py` (plan `2026-10-10-sibling-markets`, D82–D84) reads the structure for the `graph` command: base vault, composites (`FEED_1`/`FEED_2`, as in the Ojo min(TWAP, linear) feed under PT-reUSD) and wrappers (`innerOracle`), Pendle's `twapDuration` and `baseDiscountPerYear`, then the feeds' round history, then names. It labels each oracle `price-tracking` or `constant-price`, still two classes, with the input that decided. `analyze` still uses the price inference, and a `MetaOracleDeviationTimelock` stays `not classified`.
 
 ### K8. Liquidation without any incident
 
