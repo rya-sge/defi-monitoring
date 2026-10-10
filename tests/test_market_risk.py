@@ -87,7 +87,7 @@ def test_concentration_shares_and_alert_on_crossing():
     r = value(spread, TOTALS, PRICE, INFO)
     assert r.top1_share == pytest.approx(1 / 8) and r.top3_share == pytest.approx(3 / 8)
     assert assess_concentration({}, {M: r}, {M: INFO}, 1) == []
-    one = value({**spread, "whale": pos(2_000, 100)}, TOTALS, PRICE, INFO)  # D113: 100 of 180 > 50 %
+    one = value({**spread, "whale": pos(2_000, 100)}, TOTALS, PRICE, INFO)  # D129: 100 of 180 > 50 %
     assert one.top_borrower == "whale"
     (a,) = assess_concentration({M: r}, {M: one}, {M: INFO}, 2)
     assert a.event == "BorrowerConcentration" and a.level == "warn" and "56%" in a.title

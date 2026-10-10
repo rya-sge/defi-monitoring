@@ -47,17 +47,17 @@ class MarketHit:
     oracle_class: str
     timing: str
     vault_exposure: float = 0.0  # the vault's assets in this market: what the incident puts at risk
-    via: str = ""  # D110: empty for the collateral itself; else the wrapping path, e.g. "PT-trUSD → trUSD"
-    seen: bool = True  # D111: False when the oracle does not follow a markdown of what the collateral wraps
-    event: str = "markdown"  # "markdown" (a token shock) or "default" (borrowers stop repaying, D114)
+    via: str = ""  # D126: empty for the collateral itself; else the wrapping path, e.g. "PT-trUSD → trUSD"
+    seen: bool = True  # D127: False when the oracle does not follow a markdown of what the collateral wraps
+    event: str = "markdown"  # "markdown" (a token shock) or "default" (borrowers stop repaying, D130)
     defaulters: list[str] = field(default_factory=list)
-    defaulted_debt: float = 0.0  # D114: the defaulters' debt
-    exit_route: str | None = None  # D115: the collateral's exit liquidity from the registry: none, thin, deep
-    no_liquidator_shortfall: float = 0.0  # D115: the loss if nobody liquidates (liquidity then stays locked)
-    top1_share: float = 0.0  # D112: the largest borrower's share of the market's debt, before the incident
+    defaulted_debt: float = 0.0  # D130: the defaulters' debt
+    exit_route: str | None = None  # D131: the collateral's exit liquidity from the registry: none, thin, deep
+    no_liquidator_shortfall: float = 0.0  # D131: the loss if nobody liquidates (liquidity then stays locked)
+    top1_share: float = 0.0  # D128: the largest borrower's share of the market's debt, before the incident
     top3_share: float = 0.0
-    grade: str | None = None  # D120: the Pharos grade of the collateral, or of the first graded token it wraps
-    pharos_exposure: float = 0.0  # D119: > 0 when the market is reached through Pharos's off-chain backing edges
+    grade: str | None = None  # D136: the Pharos grade of the collateral, or of the first graded token it wraps
+    pharos_exposure: float = 0.0  # D135: > 0 when the market is reached through Pharos's off-chain backing edges
 
 
 @dataclass
@@ -83,13 +83,13 @@ class VaultIncident:
     asset_usd: float | None = None  # its USD price (DefiLlama), to add vaults in different assets into one book
     events: list[str] = field(default_factory=list)  # each shock in words, in the order given
     labels: dict[str, str] = field(default_factory=dict)  # each shock's target as given → as the markets name it
-    pharos: str | None = None  # D122: the Pharos publication date used, None when Pharos was not read
-    common_mode: list[str] = field(default_factory=list)  # D121: collateral failing with the shocked token (Pharos)
+    pharos: str | None = None  # D138: the Pharos publication date used, None when Pharos was not read
+    common_mode: list[str] = field(default_factory=list)  # D137: collateral failing with the shocked token (Pharos)
 
     def lines(self) -> list[str]:
         s = self.symbol
         shock = "; ".join(self.events) or ", ".join(f"{k} −{v:.0%}" for k, v in self.shocks.items())
-        shock = shock or "no market of the vault matches the incident"  # D114: unmatched shocks are not described
+        shock = shock or "no market of the vault matches the incident"  # D130: unmatched shocks are not described
         out = [f"INCIDENT  {shock}  ·  {self.name} ({self.vault}), block {self.block}"]
         for h in self.hits:
             out.append(
@@ -170,7 +170,7 @@ def parse_token_shocks(items: list[str] | None) -> list[tuple[str, float]]:
 
 
 def parse_shocks(items: list[str] | None) -> list[tuple[str, str, float, int]]:
-    """D114: every vault incident shock, as (kind, target, value, n):
+    """D130: every vault incident shock, as (kind, target, value, n):
     token=<collateral address or symbol>:<fall>              ("token", target, fall, 0)
     borrower=<collateral, market id or all>:<recovery>[:<n>]  ("borrower", target, recovery, n): the n largest
                                                               borrowers of each matching market default, and their
@@ -219,7 +219,7 @@ def describe(shock: tuple, labels: dict[str, str] | None = None) -> str:
 
 
 def exit_route(collateral: str) -> str | None:
-    """D115: the collateral's exit liquidity on DEXs, from the registry (none, thin, deep), or None if not measured."""
+    """D131: the collateral's exit liquidity on DEXs, from the registry (none, thin, deep), or None if not measured."""
     e = REGISTRY["exit_liquidity"]["tokens"].get(collateral.lower())
     return e["route"] if e else None
 
@@ -227,7 +227,7 @@ def exit_route(collateral: str) -> str | None:
 def borrower_default(
     positions: dict[str, tuple[int, int]], totals: tuple[int, int], price: int, recovery: float, n: int
 ) -> tuple[int, int, list[str]]:
-    """D114, pure: the n largest borrowers stop repaying; their collateral is recovered at `recovery` of its oracle value.
+    """D130, pure: the n largest borrowers stop repaying; their collateral is recovered at `recovery` of its oracle value.
     Returns (debt defaulted, bad debt Σ max(0, debt − collateral value × recovery), the borrowers), raw loan units."""
     tba, tbs = totals
     ranked = sorted(((bs * (tba + 1) // (tbs + 10**6), u, c) for u, (c, bs) in positions.items() if bs), reverse=True)[
@@ -239,7 +239,7 @@ def borrower_default(
 
 
 def match_token(collateral: str, chain: list[str], symbols: dict[str, str], tok: str) -> tuple[str, str] | None:
-    """D110, pure: does the shocked token `tok` (an address or a symbol, lower case) reach this collateral? Returns
+    """D126, pure: does the shocked token `tok` (an address or a symbol, lower case) reach this collateral? Returns
     (via, the token's symbol): via is empty for the collateral itself, else the path "PT-trUSD → strUSD → trUSD"."""
     path = [collateral] + chain
     for i, t in enumerate(path):
@@ -252,7 +252,7 @@ def match_token(collateral: str, chain: list[str], symbols: dict[str, str], tok:
 def pharos_reach(
     snap: PH.Snapshot, collateral: str, chain: list[str], symbols: dict[str, str], tok: str
 ) -> tuple[tuple[str, str] | None, float]:
-    """D119, pure: does the shocked token reach this collateral through Pharos's off-chain backing? For the outermost
+    """D135, pure: does the shocked token reach this collateral through Pharos's off-chain backing? For the outermost
     token of the collateral's on-chain path that Pharos knows, the share of its backing that is the shocked token.
     Returns ((via, the shocked token's name), share), or (None, 0) below `pharos.min_exposure`."""
     target = PH.resolve(snap, tok)
@@ -274,7 +274,7 @@ def pharos_reach(
 
 
 def graded(snap: PH.Snapshot, collateral: str, chain: list[str], symbols: dict[str, str]) -> str | None:
-    """D120, pure: 'fxSAVE F 36' for the collateral or the first token of its path Pharos grades."""
+    """D136, pure: 'fxSAVE F 36' for the collateral or the first token of its path Pharos grades."""
     for t in [collateral] + chain:
         g = snap.grade(PH.resolve(snap, t, symbols.get(t)))
         if g:
@@ -297,7 +297,7 @@ def nav_timing(profile: scenario.OracleProfile | None) -> str:
 
 
 def hidden_shortfall(positions: dict[str, tuple[int, int]], totals: tuple[int, int], price: int, drop: float) -> int:
-    """D111, pure: Σ max(0, debt − collateral value × (1 − drop)), raw loan units: what lenders lose if the collateral
+    """D127, pure: Σ max(0, debt − collateral value × (1 − drop)), raw loan units: what lenders lose if the collateral
     is worth `drop` less while the oracle, which does not follow, liquidates nobody."""
     tba, tbs = totals
     out = 0
@@ -320,7 +320,7 @@ def market_hit(
     exposure: float = 0.0,
     via: str = "",
 ) -> MarketHit:
-    """D99, pure: one market's liquidations and bad debt at the shocked oracle price, and the vault's part. D111: when
+    """D99, pure: one market's liquidations and bad debt at the shocked oracle price, and the vault's part. D127: when
     the market is reached through what its collateral wraps (`via`) and its oracle does not track a market, the oracle
     does not move; the loss is the hidden shortfall, with nothing liquidated."""
     seen = not via or (profile is not None and profile.kind == OC.PRICE_TRACKING)
@@ -407,9 +407,9 @@ def run(
     pharos: PH.Snapshot | None = None,
 ) -> VaultIncident:
     """Read the vault and every borrower of its markets at `block`, then apply the incident (D98). `token_shocks` is
-    `parse_shocks`' list (token markdowns and borrower defaults, D114) or `parse_token_shocks`' pairs. `profile_all`
-    reads every market's oracle, not only the hit ones, so a recording serves any later shock (D105). `pharos`, when
-    given, adds grades, the off-chain backing a token shock also reaches, and common-mode groups (D117–D122)."""
+    `parse_shocks`' list (token markdowns and borrower defaults, D130) or `parse_token_shocks`' pairs. `profile_all`
+    reads every market's oracle, not only the hit ones, so a recording serves any later shock (D121). `pharos`, when
+    given, adds grades, the off-chain backing a token shock also reaches, and common-mode groups (D133–D138)."""
     shocks = normalise(token_shocks)
     view = discover_vault(f, vault, block)
     dep = depositor.lower() if depositor else largest_depositor(f, vault)
@@ -426,7 +426,7 @@ def run(
     drops: dict[str, float] = {}
     vias: dict[str, str] = {}
     names: dict[str, str] = {}
-    pexps: dict[str, float] = {}  # market → share of its collateral's backing the shocked token is (Pharos, D119)
+    pexps: dict[str, float] = {}  # market → share of its collateral's backing the shocked token is (Pharos, D135)
     defaults: dict[str, tuple[float, int]] = {}  # market → (recovery, n), the harshest when several apply
     for kind, tok, v, n in shocks:
         for mid, mp in params.items():
@@ -467,7 +467,7 @@ def run(
         d = drops.get(mid, 0.0)
         who: list[str] = []
         if mid in defaults and price is not None:
-            # D114: the defaulters leave the market's normal valuation; the others are valued as for a markdown
+            # D130: the defaulters leave the market's normal valuation; the others are valued as for a markdown
             recovery, n = defaults[mid]
             worth = int(price * (1 - d)) if d else price  # the collateral's value after a markdown, if any
             ddebt, dbad, who = borrower_default(positions, totals, worth, recovery, n)
@@ -505,7 +505,7 @@ def run(
                 pharos, params[mid].collateral_token, chains.get(params[mid].collateral_token, []), symbols
             )
         if d and price is not None and h.liquidatable_debt > 0:
-            # D115: nobody liquidates (no exit route): the lenders carry debt − collateral value, and wait
+            # D131: nobody liquidates (no exit route): the lenders carry debt − collateral value, and wait
             h.no_liquidator_shortfall = (
                 hidden_shortfall(positions, totals, price, d) / lu + (dbad / lu if who else 0.0)
             ) * h.vault_share
@@ -595,7 +595,7 @@ def run(
 def collateral_chains(
     f: S.Fetcher, tokens: set[str], block, depth: int = 4
 ) -> tuple[dict[str, list[str]], dict[str, str]]:
-    """D110: what each collateral wraps, level by level: a PT's Pendle underlying, an ERC-4626 share's asset()
+    """D126: what each collateral wraps, level by level: a PT's Pendle underlying, an ERC-4626 share's asset()
     (`siblings.underlyings`); and the symbols of every token met. A vault of vaults that answers neither stays opaque.
     The registry's stablecoins (USDC, USDT) end a chain, as in `siblings.family`: they are the loan assets."""
     from .siblings import underlyings

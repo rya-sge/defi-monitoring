@@ -105,16 +105,112 @@ The first four changes are what make the demo run. The last three are findings f
 
 ```
 scripts/fork/
-  start-fork.sh            anvil at FORK_BLOCK, prints the env to export
-  crisis-belem.sh          acts 0–7 as cast commands, each preceded by a one-line caption and a pause
-  DenyAllGate.sol          canReceiveAssets / canSendShares → false (forge create)
-  MGloEuroFeedV2.sol       act 6 implementation: same storage layout, wider band
-  alt-*.sh                 the alternative crises of §2
-plan/2026-10-1x-fork-demo.plan.md   decisions D… for §4
-tests/test_fork_replay.py           re-runs fixtures/replay/fork-belem/ offline and checks the alert sequence
+  README.md                how to run the demo, in five commands
+  foundry.toml             a small Foundry project for the two contracts (src = ".", solc pinned)
+  addresses.env            every address and constant the scripts use, sourced by all of them (no secrets)
+  start-fork.sh            starts anvil at FORK_BLOCK and checks it; prints the env to export
+  crisis-belem.sh          acts 0–7 of §2 as cast commands, with captions, pauses and checks
+  DenyAllGate.sol          the exit gate the curator sets in act 5
+  MGloEuroFeedV2.sol       the feed implementation installed in act 6, with a wider band
+  alt-redstone.sh, alt-pst-mint.sh, alt-fxsave-expiry.sh, alt-pendle-dump.sh   the alternative crises of §2
+  tapes/act-*.tape         vhs scripts, one per act, for the video
+plan/2026-10-1x-fork-demo.plan.md   decisions D… for the changes of §4
+fixtures/replay/fork-belem/         the recorded fork run (committed, like the other replays)
+tests/test_fork_replay.py           re-runs that recording offline and checks the alert sequence
 ```
 
-`crisis-belem.sh` stays idempotent from a fresh anvil: each run starts a new fork, so takes can be repeated.
+### `scripts/fork/addresses.env`
+
+One file for every address, so a fact re-read at a new fork block (step 1 of §8) changes in one place:
+- the vault and its market id;
+- the market parameters (EURCV, mGLOeuro, oracle `0x2b43…`, IRM `0x870a…`, LLTV 0.77);
+- the feed and its admin EOA;
+- the ProxyAdmin, the Midas timelock and its proposer and executor;
+- the curator Safe, the largest depositors, the borrower;
+- the computed thresholds (90,857 and 75,142).
+
+It holds public data only. The RPC key never goes here: `start-fork.sh` reads it from `keys.ini`.
+
+### `scripts/fork/start-fork.sh`
+
+- Reads the upstream archive RPC from `keys.ini` (`[rpc]`, git-ignored) without printing it. Takes `FORK_BLOCK` as an argument, or forks at `latest` and prints the block chosen.
+- Starts `anvil --fork-url … --fork-block-number … --chain-id 1 --block-time 12 --auto-impersonate`, and waits until `cast block-number` answers.
+- Checks that it forked the right chain: `cast chain-id` = 1, the vault's `totalAssets` is non-zero, and the feed answers 100,000 EUR.
+- Prints the two lines to export: `RISKDEP_RPC_URL=http://127.0.0.1:8545` and `RISKDEP_FORK=1`.
+- Retakes: with `--dump-state out/fork-B.json` the first run saves the forked state, and `--load-state` restarts from it in seconds, with no upstream call. `out/` is git-ignored.
+
+### `scripts/fork/crisis-belem.sh`
+
+The demo itself, run in the left pane.
+
+- **Structure:** `set -euo pipefail`; `source addresses.env`. Three helpers:
+  - `caption "Act 2: the issuer marks the NAV down 10 %"` prints a large one-line title;
+  - `pause` waits for Enter when run by hand, or sleeps N seconds under vhs;
+  - `send_as <address> <to> <sig> <args…>` wraps `cast send --unlocked --from`.
+- **Retakes:** `--act N` runs one act alone. Before each act the script takes an `evm_snapshot` and keeps its id, so `--retake N` reverts with `evm_revert` and plays the act again without restarting anvil.
+- **Each act ends with a check** (`cast call`) that fails loudly when the chain did not move as planned. A take then never shows `riskdep` reacting to nothing.
+- **The acts:**
+
+| Act | Commands | Check |
+|---|---|---|
+| 0 | `riskdep graph --vault $VAULT`, opened in the browser; `riskdep watch --vault $VAULT` is started in the right pane by hand | the feed answers 100,000 |
+| 1 | `riskdep analyze --vault $VAULT --shock token=mGLOeuro:0.10`, then `:0.30` | none (off-chain) |
+| 2 | `send_as $MIDAS_FEED_ADMIN $FEED "setRoundData(int256)" 9000000000000` | `latestRoundData` answers 90,000; the borrower's LTV is above 77 % |
+| 3 | give EURCV to a liquidator: impersonate a holder, or set its balance slot with `cast index` and `anvil_setStorageAt`. Then `approve` Morpho, and `liquidate((EURCV,mGLOeuro,oracle,irm,lltv), $BORROWER, seized, 0, 0x)` | the borrower's collateral fell. Skipped with a message if a token whitelist reverts |
+| 4 | for each large depositor: `send_as $HOLDER $VAULT "redeem(uint256,address,address)" <shares> $HOLDER $HOLDER`, as far as liquidity allows | the market's utilisation is 100 % |
+| 5 | `forge create DenyAllGate`. As the curator: `submit(bytes)` with `cast calldata "setReceiveAssetsGate(address)" $GATE`. Then anyone calls `setReceiveAssetsGate($GATE)` in the same block: the 0 s timelock has already passed | `receiveAssetsGate()` = `$GATE`; a test `redeem` reverts |
+| 6 | `forge create MGloEuroFeedV2`. As the timelock proposer: `schedule(ProxyAdmin, 0, upgradeAndCall(feed, impl, 0x), 0, salt, 172800)`. Then `evm_increaseTime 172800` and `evm_mine`. As the executor: `execute(…)`. As the feed admin: `setRoundData(7000000000000)` | the feed's implementation slot = the new impl; `latestRoundData` answers 70,000 |
+| 7 | `riskdep analyze --vault $VAULT --shock token=mGLOeuro:0.30` again, plus the watch's report | none |
+
+### `scripts/fork/DenyAllGate.sol`
+
+About 15 lines. It implements `IReceiveAssetsGate.canReceiveAssets(address)` and `ISendSharesGate.canSendShares(address)` from `vault-v2`, both returning `false`. It is the simplest gate a curator could legitimately set. That is the point of act 5: the risk is in the vault's settings, not in a bug. It compiles against the `docs/external/morpho/lib/vault-v2` interfaces through a `foundry.toml` remapping.
+
+### `scripts/fork/MGloEuroFeedV2.sol`
+
+The implementation act 6 installs through the timelock. A real Midas response to a 30 % fund loss would need the same: the deployed implementation has no setter for `minAnswer`, so only an upgrade can move the band.
+
+- **It must keep the storage layout** of `MGloEuroCustomAggregatorFeed` (implementation `0xbfd2…795a`). Two ways:
+  - the simple one: copy the verified source (`cast source` or Etherscan; check the licence first) and add one admin-only `setBand(min, max)` function after the existing ones;
+  - the shortcut: change only the `minAnswer` check.
+- **Check the layout** with `forge inspect … storageLayout` against the original before the take.
+- **Fallback** for a quick take: `anvil_setStorageAt` on the `minAnswer` slot skips the upgrade. It also skips the 48 h timelock, which is the point of the act, so it is for rehearsal only.
+
+### `scripts/fork/alt-*.sh`
+
+One file per alternative crisis of §2, each with the same helpers, its own check, and the `riskdep` command to run beside it:
+
+| Script | Action | Check |
+|---|---|---|
+| `alt-redstone.sh` | impersonate the 2-of-3 Safe `0x6906…`; upgrade the strUSD fundamental feed (ProxyAdmin `0x8223…`) to an implementation answering 0.70 | the strUSD market's oracle price −32 % |
+| `alt-pst-mint.sh` | impersonate the CCIP pool `0xbe77…`; `mint(attacker, 10M PST)` on the `BurnMintERC20` | PST supply +10M while the oracle still answers 1.138: the oracle does not see a bridge exploit |
+| `alt-fxsave-expiry.sh` | `evm_increaseTime` past 2026-10-29 | the PT-fxSAVE linear oracle answers 1.0; the PT is redeemable |
+| `alt-pendle-dump.sh` | sell a large PT-reUSD amount through the Pendle router into pool `0x1328…`, then warp 15 min (the 900 s TWAP) | the Ojo feed follows the TWAP side down |
+
+### `scripts/fork/tapes/act-*.tape`
+
+[vhs](https://github.com/charmbracelet/vhs) scripts, one per act. Each sets the font size, the window size and the typing speed, and uses `Hide`/`Show` around setup lines. Each calls `crisis-belem.sh --act N` with `pause` set to sleep. One act per file keeps retakes cheap. The output goes to `out/video/` (git-ignored); the cut is done outside the repository.
+
+### `plan/2026-10-1x-fork-demo.plan.md`
+
+The repository builds each feature from a plan with numbered decisions. The module docstrings cite them. This plan records the choices behind §4:
+- what `RISKDEP_FORK` turns off, and what it never turns off (the on-chain reads);
+- the clock on a fork (latest block timestamp);
+- the name and location of `--record-as`;
+- the timelock-queue events watched, and the alert levels;
+- the startup finding for 0 s exit gates;
+- reading the band of custom aggregators.
+
+It follows the format of the other plans in `plan/` (decisions, tracker, interview log).
+
+### `fixtures/replay/fork-belem/` and `tests/test_fork_replay.py`
+
+- **The recording:** one run of `crisis-belem.sh` with `riskdep watch --record-as fork-belem` saves every response the watch received. Like the other replays, it is committed with the change that needs it, so CI and the video can replay it offline.
+- **The test** re-runs the recording with `--replay` and asserts:
+  - the alert sequence and levels: oracle move (act 2), liquidatable borrower, withdrawals (act 4), critical exit gate (act 5), upgrade scheduled and then executed (act 6);
+  - the two thresholds (90,857 and 75,142 EUR) within rounding;
+  - that no "second RPC" critical appears, which proves the fork flag works.
+- **It also guards the demo:** if a later change breaks the demo, CI fails before the video is shown.
 
 ## 6. The video
 

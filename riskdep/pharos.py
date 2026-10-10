@@ -1,5 +1,5 @@
 """Pharos, keyless: issuer grades, off-chain backing and common-mode groups of stablecoins and yield dollars
-(plan 2026-10-11-pharos, D117–D122; docs/risk-assessment/outside-providers.md).
+(plan 2026-10-11-pharos, D133–D138; docs/risk-assessment/outside-providers.md).
 
 One public response, `GET https://api.pharos.watch/api/dependency-graph/v1`, carries everything used here:
   - nodes: a Safety Score (0–100) and letter grade per coin, and its `roles`: what backs it, with a weight
@@ -82,7 +82,7 @@ def parse(d: dict) -> Snapshot:
 
 
 def resolve(snap: Snapshot, token: str, symbol: str | None = None) -> str | None:
-    """D118, pure: a token (address or symbol, any case) → its Pharos id, or None. The registry's address map first,
+    """D134, pure: a token (address or symbol, any case) → its Pharos id, or None. The registry's address map first,
     then an exact id, then the only id whose first part is the symbol."""
     t = token.lower()
     if t in P["ids"]:
@@ -104,7 +104,7 @@ def name(pid: str) -> str:
 
 
 def exposure(snap: Snapshot, pid: str, target: str, depth: int = 4) -> tuple[float, list[str]]:
-    """D119, pure: the share of `pid`'s backing that is `target`, through Pharos's backing edges (a wrapper counts 1,
+    """D135, pure: the share of `pid`'s backing that is `target`, through Pharos's backing edges (a wrapper counts 1,
     a reserve basket its weight), multiplied along each path and summed over paths. Returns (share, the path of the
     largest contribution)."""
     if pid == target:
@@ -121,7 +121,7 @@ def exposure(snap: Snapshot, pid: str, target: str, depth: int = 4) -> tuple[flo
 
 
 def common_mode(snap: Snapshot, pid: str, among: dict[str, str]) -> list[str]:
-    """D121, pure: the coins in `among` (Pharos id → name) that share a narrow common-mode group with `pid`, in words:
+    """D137, pure: the coins in `among` (Pharos id → name) that share a narrow common-mode group with `pid`, in words:
     'strUSD (mint control, upgrade control)'."""
     out: dict[str, list[str]] = {}
     for kind, _, members in snap.groups.get(pid, []):

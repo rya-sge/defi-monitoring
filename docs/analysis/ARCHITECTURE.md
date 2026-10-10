@@ -304,11 +304,11 @@ The design decisions are numbered across twelve plans, in the order the incremen
 | `plan/2026-10-10-sibling-markets.plan.md` | sibling markets and oracle classes in the dependency graph; eRPC; the TVL floor | D75–D88 |
 | `plan/2026-10-10-incident-mode.plan.md` | incident mode: a known incident's impact, time to impact and verdict; alert impacts in `watch --user` | D89–D97 |
 | `plan/2026-10-11-vault-incident.plan.md` | incident mode for a vault depositor; curve widened to −30 and −50 % | D98–D103 |
-| `plan/2026-10-10-propagation-engine.plan.md` | the shock engine: a deterministic failure through the graph, driven by rules; calibrated on Pendle quotes | D104–D118 |
-| `plan/2026-10-11-vault-book.plan.md` | a book of vaults under one incident; recording any vault | D104–D109 |
-| `plan/2026-10-11-wrapped-collateral.plan.md` | a token shock reaches the markets whose collateral wraps it | D110–D111 |
-| `plan/2026-10-11-borrower-concentration.plan.md` | borrower concentration and default; exit liquidity; the no-liquidator branch | D112–D116 |
-| `plan/2026-10-11-pharos.plan.md` | Pharos, keyless: grades, off-chain backing, common-mode groups | D117–D122 |
+| `plan/2026-10-10-propagation-engine.plan.md` | the shock engine: a deterministic failure through the graph, driven by rules; calibrated on Pendle quotes | D104–D119 |
+| `plan/2026-10-11-vault-book.plan.md` | a book of vaults under one incident; recording any vault | D120–D125 |
+| `plan/2026-10-11-wrapped-collateral.plan.md` | a token shock reaches the markets whose collateral wraps it | D126–D127 |
+| `plan/2026-10-11-borrower-concentration.plan.md` | borrower concentration and default; exit liquidity; the no-liquidator branch | D128–D132 |
+| `plan/2026-10-11-pharos.plan.md` | Pharos, keyless: grades, off-chain backing, common-mode groups | D133–D138 |
 
 A change that departs from a decision is recorded in that plan's table.
 

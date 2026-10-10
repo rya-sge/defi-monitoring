@@ -69,7 +69,7 @@ def test_vault_mode_needs_a_token_shock(tmp_path):
         cli.main(["analyze", "--vault", BELEM, "--shock", "oracle=0.1", "--out", str(tmp_path)])
 
 
-# --- wrapped collateral (D110, D111)
+# --- wrapped collateral (D126, D127)
 
 
 def test_match_token_direct_and_through_wrappers():

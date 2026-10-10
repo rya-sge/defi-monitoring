@@ -4,7 +4,7 @@
 
 | Provider | Status | Key | Used in |
 |---|---|---|---|
-| [Pharos](#1-pharos) | **in use** since 2026-10-11 (plan `2026-10-11-pharos`, D117–D122) | none | `analyze --vault` / `--book`, `graph` |
+| [Pharos](#1-pharos) | **in use** since 2026-10-11 (plan `2026-10-11-pharos`, D133–D138) | none | `analyze --vault` / `--book`, `graph` |
 | [Nexus Mutual](#2-nexus-mutual-next) | next | none | planned: "stay and insure" in the verdict; an outside probability next to the breakeven p\* |
 | Credora | not planned | whitelist only | its published method is cited as a basis (`docs/analysis/EXTERNAL_SOURCE.md` §3) |
 
@@ -51,7 +51,7 @@ Not used: `dependency-scenarios/v1` (45 modelled shocks, but as score changes, n
 
 ### 1.3 From a token to a Pharos id
 
-Pharos ids are names, not addresses: `fxsave-f-x-protocol`, `iusd-infinifi`. `pharos.resolve` maps a token in this order (D118):
+Pharos ids are names, not addresses: `fxsave-f-x-protocol`, `iusd-infinifi`. `pharos.resolve` maps a token in this order (D134):
 
 1. `registry.json` `pharos.ids`: address → `{id, symbol}`. Needed when a symbol is ambiguous: three coins are called iUSD, two reUSD.
 2. An exact id: `token=iusd-infinifi:0.3` works.
@@ -63,17 +63,17 @@ A token that matches nothing is simply not graded. That is not an error.
 
 **In a vault or book incident** (`analyze --vault` / `--book --shock token=…`):
 
-- **Off-chain backing (D119).** A token shock already reaches the markets whose collateral is the token, or wraps it on-chain (a PT, an ERC-4626 share; plan `2026-10-11-wrapped-collateral`). Pharos adds a third path: a market whose collateral is backed **off-chain** by the shocked token, through a reserve. The market's fall is the shock × the share of the backing, multiplied along the path:
+- **Off-chain backing (D135).** A token shock already reaches the markets whose collateral is the token, or wraps it on-chain (a PT, an ERC-4626 share; plan `2026-10-11-wrapped-collateral`). Pharos adds a third path: a market whose collateral is backed **off-chain** by the shocked token, through a reserve. The market's fall is the shock × the share of the backing, multiplied along the path:
 
   ```
   fall(market) = shock × Σ over paths Π weights      (capped at 1, depth 4, ignored below pharos.min_exposure = 1 %)
   ```
 
-  The hit shows the path, e.g. `siUSD → iUSD ⇒ Pharos: iusd-infinifi → fxsave-f-x-protocol (16.4% of its backing)`. Such a market is reached through what its collateral holds, so the rule for wrapped collateral applies (D111): if the market's oracle tracks a market price, the fall is seen and borrowers are liquidated; if it is an exchange rate or a NAV, the oracle does not move, nothing is liquidated, and the loss is the hidden shortfall.
+  The hit shows the path, e.g. `siUSD → iUSD ⇒ Pharos: iusd-infinifi → fxsave-f-x-protocol (16.4% of its backing)`. Such a market is reached through what its collateral holds, so the rule for wrapped collateral applies (D127): if the market's oracle tracks a market price, the fall is seen and borrowers are liquidated; if it is an exchange rate or a NAV, the oracle does not move, nothing is liquidated, and the loss is the hidden shortfall.
 
   The assumption: a loss in the reserve passes to the token pro rata. A protocol with a loss waterfall (infiniFi slashes its locked tranche first) passes less to its senior token, so this is an upper bound for those.
-- **Grades (D120).** Each hit market shows the grade of its collateral, or of the first token it wraps that Pharos grades: `issuer grade (Pharos 2026-10-10): fxSAVE F 36`. The book lists the grades of every hit collateral. A grade is shown and never enters a loss: it is a judgement, not a probability.
-- **Common-mode groups (D121).** The tool lists the other collateral of the vault that shares a narrow group with the shocked token, as a note. A narrow group is one of these kinds, with at most `max_group_members` (12) members:
+- **Grades (D136).** Each hit market shows the grade of its collateral, or of the first token it wraps that Pharos grades: `issuer grade (Pharos 2026-10-10): fxSAVE F 36`. The book lists the grades of every hit collateral. A grade is shown and never enters a loss: it is a judgement, not a probability.
+- **Common-mode groups (D137).** The tool lists the other collateral of the vault that shares a narrow group with the shocked token, as a note. A narrow group is one of these kinds, with at most `max_group_members` (12) members:
   - mint control;
   - upgrade control;
   - reserve issuer;
@@ -105,7 +105,7 @@ PST (Huma), mGLOeuro (Midas), AUTO, PRIME, nvPRIME and wYLDS are not covered by 
 
 ### 1.6 Recording, offline runs, freshness
 
-The response is cached by the project's fetcher under `fixtures/replay/pharos/`. It is committed, like every fixture, so tests and the demo run offline (D122).
+The response is cached by the project's fetcher under `fixtures/replay/pharos/`. It is committed, like every fixture, so tests and the demo run offline (D138).
 
 | Run | Pharos is read from |
 |---|---|

@@ -52,12 +52,12 @@ The brief asks what an incident does "to your book". The sponsor's curator, Rock
 
 | id | Kind | Decision | Status | Source | Slice |
 |---|---|---|---|---|---|
-| D104 | contract | A book is a JSON file: `name`, `weighting` (`vault` or `depositor`, default `vault`), and `vaults`, each an address or `{address, label, depositor}`. Several `--vault` flags make an ad hoc book, in the `depositor` weighting when `--user` is given. Invalid or repeated addresses are refused | agreed, the person asked for books anyone can define | — | S1 |
-| D105 | module | `--record` reads each vault live at the head and saves every response, including every market's oracle profile, under `fixtures/replay/incident-<vault>/`; offline runs read that recording first, then the watch recording at its state block; `--live` reads the chain without saving | agreed, agent's default | — | S1 |
-| D106 | contract | Each vault enters the book in USD, at the DefiLlama price of its asset (EURCV differs from USDC); without a price, 1 USD per unit, and the book says so. `vault` weighting: the vault's total and loss; `depositor`: the depositor's position and its loss if it stays | agreed, agent's default | — | S1 |
-| D107 | contract | The headline: the incident, the book's loss and its share, the number of vaults hit, the largest loss, and which vault to act on first (the largest loss among the vaults where leaving first lowers the loss), or that none would | agreed, agent's default | the brief's "one number" | S1 |
-| D108 | contract | A token matches a market by the collateral's address or symbol, directly; a wrapper of the token (a PT, an ERC-4626 share) is not matched yet | agreed, found in S2: trUSD and wYLDS match no market, although PT-trUSD and etrUSD markets depend on them | — | S2 |
-| D109 | module | Each vault is read at its own block; recorded together, the RockawayX vaults are minutes apart | agreed, agent's default | — | S2 |
+| D120 | contract | A book is a JSON file: `name`, `weighting` (`vault` or `depositor`, default `vault`), and `vaults`, each an address or `{address, label, depositor}`. Several `--vault` flags make an ad hoc book, in the `depositor` weighting when `--user` is given. Invalid or repeated addresses are refused | agreed, the person asked for books anyone can define | — | S1 |
+| D121 | module | `--record` reads each vault live at the head and saves every response, including every market's oracle profile, under `fixtures/replay/incident-<vault>/`; offline runs read that recording first, then the watch recording at its state block; `--live` reads the chain without saving | agreed, agent's default | — | S1 |
+| D122 | contract | Each vault enters the book in USD, at the DefiLlama price of its asset (EURCV differs from USDC); without a price, 1 USD per unit, and the book says so. `vault` weighting: the vault's total and loss; `depositor`: the depositor's position and its loss if it stays | agreed, agent's default | — | S1 |
+| D123 | contract | The headline: the incident, the book's loss and its share, the number of vaults hit, the largest loss, and which vault to act on first (the largest loss among the vaults where leaving first lowers the loss), or that none would | agreed, agent's default | the brief's "one number" | S1 |
+| D124 | contract | A token matches a market by the collateral's address or symbol, directly; a wrapper of the token (a PT, an ERC-4626 share) is not matched yet | agreed, found in S2: trUSD and wYLDS match no market, although PT-trUSD and etrUSD markets depend on them | — | S2 |
+| D125 | module | Each vault is read at its own block; recorded together, the RockawayX vaults are minutes apart | agreed, agent's default | — | S2 |
 
 # Execution
 
@@ -66,7 +66,7 @@ The brief asks what an incident does "to your book". The sponsor's curator, Rock
 | Slice | Done when | Went on |
 |---|---|---|
 | S1 | a two-vault book adds up in both weightings; the headline names a vault to act on | — |
-| S2 | the seven RockawayX vaults recorded and run offline under a cut of each issuer token; 188 tests pass | D108 found: wrapped collateral is not matched |
+| S2 | the seven RockawayX vaults recorded and run offline under a cut of each issuer token; 188 tests pass | D124 found: wrapped collateral is not matched |
 
 ## Interview log
 

@@ -149,7 +149,7 @@ The thresholds of `watch --vault` and `watch --user`. Changing them changes when
 | `drain_margin` | fraction (points of discount) | 0.02 | `DrainWindow` warn: the collateral's discount to its oracle within this distance of d\*; critical at d\* |
 | `drain_check_every_blocks` | blocks | 25 | how often DefiLlama's prices are re-read for the drain threshold; oracle prices come with every state read |
 | `exit_queue_phi` | fraction of the other depositors' assets | 0.5 | the "behind φ of others" queue position of the exit-queue table; it also stands in for the contract holders in `ExitQueue` when the holder list is unavailable |
-| `concentration_top1_warn` | fraction of the market's debt | 0.5 | `BorrowerConcentration` warn: the largest borrower of a vault market holds at least this share (D113) |
+| `concentration_top1_warn` | fraction of the market's debt | 0.5 | `BorrowerConcentration` warn: the largest borrower of a vault market holds at least this share (D129) |
 | `concentration_min_borrowers` | count | 5 | `BorrowerConcentration` warn: a vault market with fewer borrowers |
 | `concentration_basis` | text | — | why |
 | `exit_queue_stuck_warn` | fraction of the position | 0.5 | `ExitQueue` warn: the share of the position stuck if every contract holder withdrew first; critical when the vault also carries unrealised bad debt |
@@ -195,7 +195,7 @@ The shock engine's propagation rules and settings (plan `2026-10-10-propagation-
 
 ## `exit_liquidity`
 
-How easily a collateral token can be sold on DEXs, per token address (plan `2026-10-11-borrower-concentration`, D115). Read by `vault_incident.py`: a markdown hit on a market whose collateral has `route` `none` or `thin` reports the loss if nobody liquidates, and the liquidity left locked; a hit token without an entry is named in a note. Measured once, by hand, so it ages: re-measure before relying on it.
+How easily a collateral token can be sold on DEXs, per token address (plan `2026-10-11-borrower-concentration`, D131). Read by `vault_incident.py`: a markdown hit on a market whose collateral has `route` `none` or `thin` reports the loss if nobody liquidates, and the liquidity left locked; a hit token without an entry is named in a note. Measured once, by hand, so it ages: re-measure before relying on it.
 
 | Key | Unit | Default | What it controls |
 |---|---|---|---|
@@ -207,7 +207,7 @@ How easily a collateral token can be sold on DEXs, per token address (plan `2026
 
 ## `pharos`
 
-How Pharos's keyless dependency graph is read (plan `2026-10-11-pharos`, D117–D122; `docs/risk-assessment/outside-providers.md`). Read by `pharos.py`, `vault_incident.py` and `graph.py`. No alert depends on it.
+How Pharos's keyless dependency graph is read (plan `2026-10-11-pharos`, D133–D138; `docs/risk-assessment/outside-providers.md`). Read by `pharos.py`, `vault_incident.py` and `graph.py`. No alert depends on it.
 
 | Key | Unit | Default | What it controls |
 |---|---|---|---|

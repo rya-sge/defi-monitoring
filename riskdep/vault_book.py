@@ -1,4 +1,4 @@
-"""A book of vaults under one incident (plan 2026-10-11-vault-book, D104–D109).
+"""A book of vaults under one incident (plan 2026-10-11-vault-book, D120–D125).
 
 A book is any list of Morpho Vault V2 vaults, in a JSON file or given on the command line, so a curator, a
 depositor or an analyst can define their own:
@@ -92,7 +92,7 @@ class BookIncident:
 
 
 def load(path: Path) -> Book:
-    """D104: read and check a book file."""
+    """D120: read and check a book file."""
     try:
         d = json.loads(Path(path).read_text())
     except (OSError, json.JSONDecodeError) as e:
@@ -133,7 +133,7 @@ def from_addresses(addresses: list[str], depositor: str | None = None) -> Book:
 
 
 def line(inc: VaultIncident, label: str | None, weighting: str) -> VaultLine:
-    """D106, pure: one vault's line in USD, in the book's weighting."""
+    """D122, pure: one vault's line in USD, in the book's weighting."""
     usd = inc.asset_usd if inc.asset_usd else 1.0
     exposure = sum(h.vault_exposure for h in inc.hits)
     if weighting == "depositor":
@@ -154,7 +154,7 @@ def line(inc: VaultIncident, label: str | None, weighting: str) -> VaultLine:
 
 
 def aggregate(book: Book, shocks: list[tuple], incidents: list[VaultIncident]) -> BookIncident:
-    """D107, pure: add the vaults up, and write the headline. `shocks` as `vault_incident.parse_shocks` gives them."""
+    """D123, pure: add the vaults up, and write the headline. `shocks` as `vault_incident.parse_shocks` gives them."""
     labels = {v.address: v.label for v in book.vaults}
     names = {k.lower(): k for i in incidents for k in i.shocks}  # the symbol as the vaults' markets name it
     for i in incidents:

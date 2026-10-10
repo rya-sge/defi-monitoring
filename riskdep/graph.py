@@ -626,7 +626,7 @@ def load(
 
 
 def annotate_pharos(g: Graph, snap) -> int:
-    """D120, D121: Pharos on the graph, keyless. Each asset Pharos covers gets its grade; what backs it off-chain
+    """D136, D137: Pharos on the graph, keyless. Each asset Pharos covers gets its grade; what backs it off-chain
     becomes a `backed by (Pharos)` edge, to the asset already in the graph or to an External node; a narrow common-mode
     group (one mint key, upgrade admin, reserve issuer or redemption rail) shared by two assets of the graph becomes an
     External node they both `share`. Returns the number of assets graded."""

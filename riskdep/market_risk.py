@@ -55,7 +55,7 @@ class MarketRisk:
     liquidatable_now: int  # debt of positions with HF ≤ 1
     unrealised_bad_debt: int
     curve: list[CurvePoint] = field(default_factory=list)
-    top1_share: float = 0.0  # D112: the largest borrower's share of the market's tracked debt
+    top1_share: float = 0.0  # D128: the largest borrower's share of the market's tracked debt
     top3_share: float = 0.0
     top_borrower: str | None = None
 
@@ -356,7 +356,7 @@ def assess_concentration(
     block: int,
     eligible: set[str] | None = None,
 ) -> list[Alert]:
-    """D113, pure: warn when one borrower holds at least `concentration_top1_warn` of a market's debt, or the market has
+    """D129, pure: warn when one borrower holds at least `concentration_top1_warn` of a market's debt, or the market has
     fewer than `concentration_min_borrowers` borrowers; for vault markets only above `utilization_min_share`. On
     crossing. A market owed by one or two borrowers depends on them repaying more than on any liquidation."""
     top1, few = W["concentration_top1_warn"], W["concentration_min_borrowers"]

@@ -24,7 +24,7 @@ Each step gives its goal, how it would be built, its size (**S** about a day, **
 
 | Criterion (weight) | Strong now | Still weak | Main gaps |
 |---|---|---|---|
-| Dependency discovery (30 %) | A PT position's five layers; vault → adapters → markets → borrowers and lenders; the admin surface; sibling Blue markets, `wraps` edges and an oracle class per input in `graph`; issuer NAV feeds recognised (Midas) | `analyze` does not use siblings or the admin surface; a wrapped collateral is not matched by a vault incident (D108); Blue only; Ethereum only; feed quality and TVL concentration not measured | K19, K23, K25, R5, D108, C5 |
+| Dependency discovery (30 %) | A PT position's five layers; vault → adapters → markets → borrowers and lenders; the admin surface; sibling Blue markets, `wraps` edges and an oracle class per input in `graph`; issuer NAV feeds recognised (Midas) | `analyze` does not use siblings or the admin surface; a wrapped collateral is not matched by a vault incident (D124); Blue only; Ethereum only; feed quality and TVL concentration not measured | K19, K23, K25, R5, D124, C5 |
 | Impact estimation (30 %) | Incident mode for a borrower and for a vault depositor; a book of vaults in USD; unrealised bad debt, curves to −50 %, exit queue, drain threshold | The rate and implied-yield channels of a PT loop; layers independent; no cascade; liquidity returned by liquidations not modelled; biased exploit priors | K10, K11, K6, K9, K1, K17 |
 | Decision usefulness (25 %) | A verdict given a known incident; time to impact from the oracle type; a book headline naming the vault to act on; alerts carrying an impact | No breakeven probability p\*; the uncertainty around a known incident is not drawn; the ex-ante verdict uses the mean only | K21, K13, K14 |
 | Working demo on real data (15 %) | The brief's sponsor's vault (Belem) and the curator's seven Ethereum vaults recorded; 188 offline tests; CI | The book mixes no borrow pockets; no HTML for vault and book incidents | K21 |
@@ -64,7 +64,7 @@ Steps of the two earlier versions that are now done, with their plans:
 
 | # | Step | Gaps | Size | Builds on |
 |---|---|---|---|---|
-| ~~**A1**~~ | ~~Look-through of wrapped collateral in vault incidents~~ **done** (plan `2026-10-11-wrapped-collateral`) | D108, K26 | S–M | `siblings.underlyings` |
+| ~~**A1**~~ | ~~Look-through of wrapped collateral in vault incidents~~ **done** (plan `2026-10-11-wrapped-collateral`) | D124, K26 | S–M | `siblings.underlyings` |
 | **A2** | Breakeven probability p\* for a position, a vault and a book; mixed books with borrow and PT pockets; Nexus Mutual (keyless) as an outside probability next to p\* and a "stay and insure" option (`docs/risk-assessment/outside-providers.md` §2) | K21, M6 | M | `vault_book.py`, `scenario.py`, `decide.py` |
 | **A3** | Detection → impact for vaults: an issuer NAV update triggers the vault incident; other alert types carry an impact | K20, K22 | S–M | `vault_incident.py`, the watches |
 | **A4** | Conditional Monte Carlo around a known incident | K6, K14 | M | `simulate.py`, `scenario.py`, `vault_incident.py` |
@@ -95,9 +95,9 @@ If time allows one phase, do **A**. If two, **A then B1, B5 and B6**: the PT loo
 
 ## 5. Phase A: complete the brief's chain
 
-### A1. Look-through of wrapped collateral (D108) — done
+### A1. Look-through of wrapped collateral (D124) — done
 
-**Status: done on 2026-10-11** (plan `2026-10-11-wrapped-collateral`, D110–D111). A token now reaches the markets whose collateral wraps it, with the path shown; a market whose oracle does not track a market counts a hidden shortfall. `token=trUSD:0.30` reaches two RockawayX vaults (1.61M USD). Left: etrUSD, a vault of vaults that answers no `asset()`, stays opaque; an issuer NAV oracle that reprices from its underlying is not detected as such.
+**Status: done on 2026-10-11** (plan `2026-10-11-wrapped-collateral`, D126–D127). A token now reaches the markets whose collateral wraps it, with the path shown; a market whose oracle does not track a market counts a hidden shortfall. `token=trUSD:0.30` reaches two RockawayX vaults (1.61M USD). Left: etrUSD, a vault of vaults that answers no `asset()`, stays opaque; an issuer NAV oracle that reprices from its underlying is not detected as such.
 
 **Why.** A vault incident matches a token only as the markets' direct collateral. A trUSD or wYLDS markdown finds no market in the RockawayX book, although PT-trUSD, PT-strUSD, etrUSD and wYLDS-based markets depend on those tokens (`ROCK-VAULT.md` §5.2).
 
@@ -195,7 +195,7 @@ Done: classification in `graph`, incident mode and the ex-ante simulation; the m
 
 ### B6. Liquidation cascade and returned liquidity (K9)
 
-**How:** a pure loop: at a fall d, the curves of every market holding the collateral (held and sibling, `graph`) give the collateral liquidated; its price impact (Pendle quotes for PTs, k·√Q otherwise) gives an extra fall, until stable. For vaults: the debt liquidators repay comes back as free liquidity in the market, which changes what can leave; for issuer-priced collateral, a liquidation needs a buyer of the issuer's token (D103). *Done:* the "no liquidator" branch (D115: the loss and the locked liquidity, from the registry's `exit_liquidity`) and the borrower default (D114). *Left:* the cascade, the returned liquidity, and the exit-liquidity price impact used as the cascade's slippage. **Size:** M.
+**How:** a pure loop: at a fall d, the curves of every market holding the collateral (held and sibling, `graph`) give the collateral liquidated; its price impact (Pendle quotes for PTs, k·√Q otherwise) gives an extra fall, until stable. For vaults: the debt liquidators repay comes back as free liquidity in the market, which changes what can leave; for issuer-priced collateral, a liquidation needs a buyer of the issuer's token (D103). *Done:* the "no liquidator" branch (D131: the loss and the locked liquidity, from the registry's `exit_liquidity`) and the borrower default (D130). *Left:* the cascade, the returned liquidity, and the exit-liquidity price impact used as the cascade's slippage. **Size:** M.
 
 ### B7. Tail-aware verdict and sampling error (K13, K14)
 

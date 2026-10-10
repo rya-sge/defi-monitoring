@@ -420,7 +420,7 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _vault_source(vault: str, args) -> tuple[S.Fetcher, int, bool]:
-    """D105: where a vault is read. `--record`: live at the head, every response saved under incident-<vault>/;
+    """D121: where a vault is read. `--record`: live at the head, every response saved under incident-<vault>/;
     `--live`: live, nothing saved; offline: the incident recording if there is one, else the watch recording at its
     state block. Returns (fetcher, block, read every oracle)."""
     w = discover.REGISTRY["watch"]
@@ -445,7 +445,7 @@ def _vault_source(vault: str, args) -> tuple[S.Fetcher, int, bool]:
 
 
 def _pharos(args):
-    """D122: Pharos's dependency graph, keyless and optional. Offline: the recording under fixtures/replay/pharos/;
+    """D138: Pharos's dependency graph, keyless and optional. Offline: the recording under fixtures/replay/pharos/;
     `--record` and `--refresh` re-read and save it; `--live` reads it without saving. None when it cannot be read."""
     from . import pharos
 
