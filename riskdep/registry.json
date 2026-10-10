@@ -245,6 +245,8 @@
     "oracle_divergence_warn": 0.03,
     "exit_queue_phi": 0.5,
     "exit_queue_stuck_warn": 0.5,
+    "divergence_check_every_blocks": 25,
+    "divergence_basis": "D97. The oracle-versus-market check (OracleDivergence) runs with every batch's oracle prices and DefiLlama prices at most 25 blocks old (~5 min), instead of only at the 300-block refresh: a synthetic dollar fell 97 % in 17 minutes (USR, Mar 2026).",
     "drain_buy_cost": 0.005,
     "drain_margin": 0.02,
     "drain_check_every_blocks": 25,

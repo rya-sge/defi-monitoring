@@ -49,7 +49,7 @@ The incident is **known** when the question is asked. The brief does not ask how
 | Incident type | Detected by | Delay |
 |---|---|---|
 | Oracle price moves sharply | oracle move ≥ 5 % between two reads; oracle stops answering | every batch (12 s polling, 2 blocks behind the head) |
-| Oracle disagrees with the market | `OracleDivergence`, warning from a 3 % gap against DefiLlama | **every 300 blocks, about 1 h** |
+| Oracle disagrees with the market | `OracleDivergence`, warning from a 3 % gap against DefiLlama | every batch, with DefiLlama prices at most 25 blocks (~5 min) old; it was every 300 blocks (~1 h) before D97 |
 | Collateral depegs below an oracle that does not follow it | `DrainWindow`, from the same gap | every 25 blocks, about 5 min |
 | Contract upgraded, admin or owner changed, feed replaced, token paused, outsized mint | admin-surface alerts | events every batch; storage slots every 300 blocks |
 | Morpho Blue owner actions | Blue owner events | every batch |
@@ -69,7 +69,7 @@ The incident is **known** when the question is asked. The brief does not ask how
 
 ### Two weaknesses of what is detected
 
-- **Too slow for the fastest incidents.** The oracle-versus-market check runs about once an hour; USR fell 97 % in 17 minutes. That check needs to run every few blocks, or be triggered by price-moving events such as large swaps in the collateral's pools.
+- **Too slow for the fastest incidents.** The oracle-versus-market check ran about once an hour; USR fell 97 % in 17 minutes. *(update 2026-10-10: it now runs every batch with market prices at most 25 blocks old, D97.)* A further step is to trigger it on price-moving events such as large swaps in the collateral's pools.
 - **Detection ends at the alert.** An alert says what happened, not what it costs the book, how fast, or what to do. That is the missing link to step 2 (`GAP.md` K20).
 
 ## 3. Step 2: compute the impact
@@ -172,7 +172,7 @@ Steps 1 to 3 together are the brief's chain end to end on one position: detect, 
 ## 8. Summary
 
 - **The brief asks a conditional question.** An incident is known; the work is its impact on the book, how fast it arrives, and whether to exit. Detection starts the chain but is not where the brief puts the difficulty.
-- **Detection is partial.** The watches catch many on-chain incidents within a batch, but the oracle-versus-market check runs about once an hour, off-chain incidents and the Pendle pool are not watched, and `analyze` detects nothing.
+- **Detection is partial.** The watches catch many on-chain incidents within a batch, but the oracle-versus-market check ran only about once an hour (now every batch with market prices at most 5 minutes old), off-chain incidents and the Pendle pool are not watched, and `analyze` detects nothing.
 - **The impact pieces exist but are not connected.** `propagate.loss`, the liquidation curves, the exit queue and the drain threshold compute impacts at fixed or drawn shocks, never at an observed one, and no alert triggers them.
 - **"How fast" is not an output**, although the oracle class and the timelocks needed for it are now readable.
 - **The current Monte Carlo answers a secondary question.** It prices incidents with guessed yearly probabilities. Its right use for the brief is conditional: force the observed incident, draw how it evolves and spreads, and compare the loss distribution of staying with the certain cost of exiting.

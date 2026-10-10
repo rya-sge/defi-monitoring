@@ -107,7 +107,7 @@ def verdict(
                 (
                     "The oracle is treated as following the PT market (not confirmed: see the oracle sensitivity line)"
                     if pos.oracle_ambiguous
-                    else "The oracle follows the PT market"
+                    else "The oracle is treated as following the PT market within the horizon (basis in the notes)"
                 )
                 + ", so a temporary depeg turns into a realised loss through liquidation."
             )

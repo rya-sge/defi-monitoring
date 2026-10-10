@@ -131,3 +131,24 @@ def test_divergence_alert_carries_the_impact():
     other = Alert("warn", 1, None, "OracleDivergence", "gap", "x", None, {"market": "0xother", "gap": 0.04})
     scenario.enrich_divergence([other], {"0xm": m}, {"0xm": st}, {})
     assert "incident" not in other.data  # not a borrowed market
+
+
+def test_ex_ante_mode_from_structure():
+    meta = P(
+        "meta-oracle",
+        timelock_s=57600,
+        live=P(OC.CONSTANT_PRICE),
+        other=P(OC.PRICE_TRACKING),
+        deviation_threshold=0.0075,
+    )
+    assert scenario.ex_ante_mode(meta, 30)[0] == "market-tracking"  # the switch happens within the horizon
+    assert scenario.ex_ante_mode(meta, 0.5)[0] == "fundamental"  # 16 h after a 12 h horizon
+    assert scenario.ex_ante_mode(P(OC.CONSTANT_PRICE), 30)[0] == "fundamental"
+    assert scenario.ex_ante_mode(P(OC.NOT_CLASSIFIED), 30) is None
+
+
+def test_demo_oracle_mode_is_no_longer_ambiguous(tmp_path):
+    assert cli.main(["analyze", "--demo", "--out", str(tmp_path), "--paths", "2000"]) == 0
+    pos = json.loads((tmp_path / "report.json").read_text())["position"]
+    assert pos["oracle_mode"] == "market-tracking" and not pos["oracle_ambiguous"]
+    assert any("within the 30-day horizon" in n for n in pos["notes"])

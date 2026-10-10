@@ -362,6 +362,10 @@ def run_user(opts: UserOptions) -> int:
             )
             vt.state = after_v
         admin_alerts = aw.step(f, batch.events, state_block, refresh)
+        raw = {mid: st.price for mid, st in after_b.items()}
+        for vt in vaults:
+            raw.update({mid: m.oracle_price for mid, m in vt.state.markets.items()})
+        admin_alerts += aw.check_divergence(f, batch.to_block, raw)
         scenario.enrich_divergence(admin_alerts, markets, after_b, profiles)
         alerts += admin_alerts
         if not light:

@@ -202,7 +202,7 @@ sequenceDiagram
   S->>R: events + state before and after
   R-->>O: alerts: terminal line + JSONL
   O->>O: save the cursor last
-  Note over P,O: every 300 blocks: cross-checks, lender refresh, borrowers refresh, admin-surface state and oracle divergence, position rediscovery
+  Note over P,O: every batch: oracle divergence from the batch's oracle prices and DefiLlama prices at most 25 blocks old (D97)<br/>every 300 blocks: cross-checks, lender refresh, borrowers refresh, admin-surface state, position rediscovery
 ```
 
 Details, with a real transaction decoded step by step: `docs/how-a-block-is-analysed.md`. Why polling rather than a WebSocket: `docs/websocket-vs-polling.md`.

@@ -224,6 +224,18 @@ def main(argv: list[str] | None = None) -> int:
                 ap.error("--pendle-market needs --pt-amount")
             pos = discover.discover_pt_holding(f, args.pendle_market, args.pt_amount)
 
+        # D96: the oracle mode from the oracle's structure when it decides, instead of the price inference
+        oracle = next((n.split(":", 1)[1] for n, a in pos.graph.nodes(data=True) if a.get("kind") == "oracle"), None)
+        profile = scenario.oracle_profile(f, oracle) if oracle else None
+        decided = scenario.ex_ante_mode(profile, max(1.0, min(args.horizon, pos.days_to_maturity or args.horizon)))
+        if decided:
+            mode0, why = decided
+            if mode0 != pos.oracle_mode or pos.oracle_ambiguous:
+                was = pos.oracle_mode + (", ambiguous" if pos.oracle_ambiguous else "")
+                pos.notes.append(f"Oracle mode {mode0}: {why} (the price inference said {was}).")
+            pos.oracle_mode, pos.oracle_ambiguous = mode0, False
+            pos.graph.nodes[f"oracle:{oracle}"]["mode"] = mode0
+
         checks = [crosscheck.second_rpc(f)]
         if pos.morpho_market:
             checks.append(
@@ -275,10 +287,6 @@ def main(argv: list[str] | None = None) -> int:
             )
         incident = None
         if shocks:
-            oracle = next(
-                (n.split(":", 1)[1] for n, a in pos.graph.nodes(data=True) if a.get("kind") == "oracle"), None
-            )
-            profile = scenario.oracle_profile(f, oracle) if oracle else None
             recovery = next((p.recovery for p in prs if p.event == "issuer_depeg"), 0.0)
             incident = scenario.assess(
                 pos, shocks, recovery, quote, profile, quote_for=lambda q, fr: discover.partial_exit_quote(f, q, fr)

@@ -69,12 +69,12 @@ With `--shock oracle=0.10` the oracle already reports the shocked price: the dem
 
 - **Its live source** is a Pendle linear-discount oracle (`baseDiscountPerYear`); its backup reads `USDe / USD`.
 - **A USDe depeg** therefore liquidates nothing for 16 hours. If the gap stays above 0.75 % and the challenge is accepted, the switch to the backup then liquidates the position.
-- **`analyze`'s price inference** classes the same oracle as market-tracking (ambiguous, near par), so the ex-ante Monte Carlo treats every depeg as an immediate liquidation: conservative for the borrower, but wrong on the timing (`GAP.md` K7).
+- **`analyze`'s price inference** classed the same oracle as market-tracking (ambiguous, near par). *Since D96* the ex-ante simulation takes the mode from the structure: still market-tracking, because the switch falls within the 30-day horizon, but on a stated basis rather than a guess. The 16 h delay is visible only in incident mode, since the simulation has no time axis (`GAP.md` K7).
 
 ### Left for later
 
 - **Other alert types** carry no impact yet: an upgrade of the oracle or the collateral token, an oracle move, `DrainWindow` for a vault depositor (which has its own impact already).
-- **Detection is as slow as before**: the oracle-versus-market check still runs every 300 blocks (`ANALYSIS_CURRENT.md` §7 step 6).
+- **Detection** was sped up afterwards (D97): the oracle-versus-market check runs every batch with market prices at most 25 blocks old, instead of every 300 blocks.
 - **The exit cost is today's quote**: in an incident the pool may be thinner (`GAP.md` K12).
 
 ## Task 2: the book, the breakeven and the headline

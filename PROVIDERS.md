@@ -119,7 +119,7 @@ Every request to the data providers goes through the cached fetcher of `riskdep/
 
 | Path | Used for | Code |
 |---|---|---|
-| `/prices/current/{chain:address,…}` | current token prices: PT holdings, and the independent price oracles are compared with (oracle divergence, and the drain threshold every 25 blocks) | `sources.coin_prices`, `discover.py`, `admin.py` |
+| `/prices/current/{chain:address,…}` | current token prices: PT holdings, and the independent price oracles are compared with (oracle divergence and the drain threshold, re-read at most every 25 blocks) | `sources.coin_prices`, `discover.py`, `admin.py` |
 | `/chart/{chain:address}` | one year of daily prices: the worst drawdown of a yield token | `sources.coin_drawdown`, `discover.py` |
 
 **Note.** Some tokens are not priced (no entry); the oracle comparison then reports "not checked" for that market.

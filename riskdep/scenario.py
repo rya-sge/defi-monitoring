@@ -137,6 +137,36 @@ def oracle_mode_for(profile: OracleProfile | None, fallback: str) -> str:
     return fallback
 
 
+def ex_ante_mode(profile: OracleProfile | None, horizon_days: float) -> tuple[str, str] | None:
+    """D96, pure: the oracle mode the ex-ante simulation should use, from the oracle's structure; None when the
+    structure does not decide (then `analyze` keeps its price inference). The simulation has no time axis, so a
+    meta-oracle that switches to a source following the market within the horizon is treated as following it."""
+    if profile is None or profile.kind == OC.NOT_CLASSIFIED:
+        return None
+    if profile.kind == OC.PRICE_TRACKING:
+        return "market-tracking", f"from its structure: {profile.basis}"
+    if profile.kind == OC.CONSTANT_PRICE:
+        return "fundamental", f"from its structure: {profile.basis}"
+    live, other = profile.live, profile.other
+    if not live or live.kind == OC.NOT_CLASSIFIED:
+        return None
+    if live.kind == OC.PRICE_TRACKING:
+        return "market-tracking", "a meta-oracle whose live source follows the market"
+    lock = profile.timelock_s
+    if other and other.kind == OC.PRICE_TRACKING and lock is not None:
+        if lock / 86400 <= horizon_days:
+            return (
+                "market-tracking",
+                f"a meta-oracle whose live source does not follow the market, but whose backup does and takes over "
+                f"after {lock / 3600:g} h, within the {horizon_days:.0f}-day horizon",
+            )
+        return (
+            "fundamental",
+            f"a meta-oracle whose switch ({lock / 3600:g} h) falls after the {horizon_days:.0f}-day horizon",
+        )
+    return "fundamental", "a meta-oracle with no source that follows the market"
+
+
 def time_to_impact(profile: OracleProfile | None, shocks: dict[str, float]) -> Timing:
     """D91: how long before the shocks reach the position's liquidation check."""
     if shocks.get("oracle"):
