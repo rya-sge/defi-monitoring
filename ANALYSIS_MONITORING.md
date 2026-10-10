@@ -88,7 +88,7 @@ Status: **done** for the paths the tool follows (vault → market, borrower → 
 
 For a market, the amount of collateral that becomes liquidatable for each oracle fall of 1 %, 2 %, … 20 % is the market's liquidation curve. It needs every borrower's position in the market, not only the user's. It says how much collateral would be sold into the market at once, and therefore how much price impact and bad debt a fall would cause.
 
-Status: **partial**. For one position, the tool knows the fall that liquidates it (`1 − 1/HF`) and simulates what happens after (`riskdep/propagate.py`). The market-wide curve is **missing**.
+Status: **done** for the watched markets (`riskdep/market_risk.py`): every borrower is listed, and each batch computes the debt liquidatable after a 2, 5, 10 and 20 % fall, with the bad debt it would leave. The price impact of the cascade itself is not simulated.
 
 ### DEX liquidity and slippage
 
@@ -135,7 +135,7 @@ A market liquidates on its oracle's price, not on the market price. A gap betwee
 |---|---|
 | The user's borrows: HF, liquidation distance, rate, actions on their behalf | done (`watch --user`) |
 | The user's vault deposits: exit capacity, losses, gates | done (`watch --vault`, `watch --user`) |
-| **Every borrower of the markets a vault holds**: underwater positions, i.e. bad debt not yet written off | missing; this is the earliest loss signal for a vault depositor |
+| Every borrower of the markets a vault holds: underwater positions, i.e. bad debt not yet written off | done: unrealised bad debt computed each batch, with the vault's and the depositor's share |
 | **Large holders of a vault**: whose exit would drain its liquidity | missing |
 
 ### Admins: transactions, key variables, delayed execution
@@ -169,7 +169,7 @@ Gaps found while building and testing the tool, ranked by how much they limit th
 
 | # | Gap | Impact | Effort |
 |---|---|---|---|
-| C1 | **Underwater borrowers in the markets a vault holds are not followed.** A loss can be avoided by depositors who exit before Blue writes off the bad debt, so this is the earliest signal for a vault depositor (Morpho's API calls it `bad_debt_unrealized`). | high | M |
+| C1 | ~~Underwater borrowers are not followed.~~ Done (plan `2026-10-10-market-borrowers`): unrealised bad debt in every held market, warn from 0.01 % of the vault, critical from 0.1 %. | — | done |
 | C2 | `analyze` supports only Pendle PT collateral; other collateral is refused. | high | M |
 | C3 | Direct Blue supply and Vault V1 deposits are not watched by `watch --user`. A V1 vault held through `MorphoVaultV1Adapter` is an opaque layer. | medium | M (supply S, V1 M) |
 | C4 | Adapters other than `MorphoMarketV1AdapterV2` (for example the `MidnightAdapter` in the vault-v2 repository) are listed as opaque. | medium | M |
@@ -180,7 +180,7 @@ Gaps found while building and testing the tool, ranked by how much they limit th
 | # | Gap | Impact | Effort |
 |---|---|---|---|
 | G1 | ~~Timelock lengths and abdications are not read.~~ Done (plan `2026-10-10-lenders-and-timelocks`): read at start, zero timelocks flagged, `Submit` with no notice critical. | — | done |
-| G2 | No market-wide liquidation curve, so a vault depositor cannot see how much collateral a 10 % fall would liquidate in each held market. | high | M |
+| G2 | ~~No liquidation curve.~~ Done (plan `2026-10-10-market-borrowers`): curve at −2/−5/−10/−20 % for every watched market, warn when a 5 % fall liquidates ≥ 25 % of the debt. | — | done |
 | G3 | Oracle admin, Blue owner and collateral-issuer admin actions are not watched. | medium | M |
 | G4 | No continuous comparison of the oracle with an independent market price. | medium | S |
 | G5 | Pending transactions are not watched. The free node streams them and `eth_simulateV1` can simulate them, but liquidations and large exits often use private relays. | low | M |
@@ -234,6 +234,6 @@ Gaps found while building and testing the tool, ranked by how much they limit th
 
 ### Suggested order
 
-1. **C1 with G2:** both need every borrower of the held markets; together they give a vault depositor the earliest loss signal and the size of the liquidation risk.
-2. **C2 and M3:** extend `analyze` beyond PT collateral, with a generic exit quote.
-3. **D5, then X1:** push alerts first, then execution with its own security design.
+1. **C2 and M3:** extend `analyze` beyond PT collateral, with a generic exit quote.
+2. **D5, then X1:** push alerts first, then execution with its own security design.
+3. **G3:** watch oracle admins, the Blue owner and collateral issuers.

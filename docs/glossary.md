@@ -29,6 +29,7 @@ Plain-language definitions of the terms used in this repository's reports, alert
 | **LIF (liquidation incentive factor)** | The liquidator's bonus, set by the LLTV: min(1.15, 1 / (0.3 × LLTV + 0.7)). At LLTV 91.5 %, a liquidator repaying 100 receives 102.6 of collateral. |
 | **Bad debt** | Debt left after a liquidation when the collateral did not cover it. Blue deducts it from the market's supply, so the lenders lose it. |
 | **Unrealised bad debt** | The uncovered debt of a borrower who is already underwater but not yet liquidated. Blue records nothing until the liquidation. |
+| **Liquidation curve** | For a market, the share of its debt that would become liquidatable after an oracle fall of 2, 5, 10 or 20 %. A steep curve means many positions would be liquidated, and their collateral sold, at once. |
 | **Utilisation** | Borrows ÷ supply in a market. At 100 % no lender can withdraw until borrowers repay. |
 | **Interest-rate model (IRM), AdaptiveCurveIRM** | The contract that sets a market's borrow rate from its utilisation. Morpho's AdaptiveCurveIRM targets 90 % utilisation; at 100 % the rate is 4 × the rate at target, and that target rate adapts over time. |
 | **Shares and assets** | Blue counts supply and debt in shares, converted to token amounts (assets) with the market's totals and small virtual amounts that protect against rounding attacks. |

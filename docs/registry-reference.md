@@ -121,7 +121,7 @@ The thresholds of `watch --vault` and `watch --user`. Changing them changes when
 | `confirmations` | blocks | 2 | how far behind the newest block the watcher stays |
 | `max_range` | blocks | 500 | largest block range read in one batch |
 | `state_window_blocks` | blocks | 64 | how far back state is read; older ranges use the oldest servable block |
-| `crosscheck_every_blocks` | blocks | 300 | cadence of cross-checks, lender refresh, exit quotes and position rediscovery |
+| `crosscheck_every_blocks` | blocks | 300 | cadence of cross-checks, lender refresh, exit quotes, position rediscovery and the full refresh of every market's borrowers |
 | `market_share_warn` | fraction of the vault | 0.25 | `Exposure` at start, and `Adapter.Allocate` raised to warn when a market crosses it |
 | `utilization_warn` | fraction | 0.99 | utilisation alerts, for vaults and borrows |
 | `utilization_min_share` | fraction of the vault | 0.10 | a vault market's utilisation is alerted only if it holds at least this share |
@@ -131,6 +131,10 @@ The thresholds of `watch --vault` and `watch --user`. Changing them changes when
 | `lender_max` | count | 5 | main lenders kept per market |
 | `lender_concentration_warn` | fraction of supply | 0.5 | `Lender` concentration warning at start |
 | `lender_withdraw_min_share` | fraction of supply | 0.05 | `Lender` withdrawal warning |
+| `unrealised_bad_debt_warn` | fraction of the vault | 0.0001 | `UnrealisedBadDebt` warn: the vault's share of a market's unrealised bad debt, from 0.01 % of its total assets |
+| `unrealised_bad_debt_critical` | fraction of the vault | 0.001 | `UnrealisedBadDebt` critical, from 0.1 % |
+| `curve_drop` | fraction | 0.05 | the oracle fall at which the liquidation curve is tested |
+| `curve_warn_share` | fraction of the market's borrows | 0.25 | `LiquidationCurve` warning: the debt liquidatable at `curve_drop` reaches this share |
 
 The health-factor levels of `watch --user` are not here: they are a command-line option, `--hf` (default `1.10,1.05,1.02`).
 

@@ -13,6 +13,7 @@ from pathlib import Path
 from . import borrower as B
 from . import borrower_rules as BR
 from . import crosscheck, discover
+from . import market_risk as MR
 from . import sources as S
 from .abi import MORPHO_BLUE, topic
 from .discover import REGISTRY
@@ -46,6 +47,7 @@ class UserOptions:
 class VaultTarget:
     view: object
     state: object
+    risk: object = None          # market_risk.VaultRisk: unrealised bad debt and curves of the vault's markets
 
     @property
     def addresses(self) -> set[str]:
@@ -136,12 +138,23 @@ def run_user(opts: UserOptions) -> int:
     for va in vault_addrs:
         view = discover_vault(f, va, state0)
         vaults.append(VaultTarget(view, read_state(f, view, state0, user)))
+    for vt in vaults:
+        vt.risk = MR.VaultRisk(f, vt.view, vt.state, state0)
+    # the curves of the borrowed markets, without the user's own position (D47)
+    binfo = {mid: MR.MarketInfo(mid, m.lltv, m.loan_decimals, m.loan_symbol, m.label) for mid, m in markets.items()}
+    btrack = MR.Tracker(binfo, exclude={user})
+    if binfo:
+        btrack.refresh(f, state0)
+    brisk = btrack.compute({mid: st.price for mid, st in before_b.items()})
 
     lenders = {mid: B.top_suppliers(f, markets[mid], state0) for mid in markets}
     if markets:
         borrow_table(p, f, markets, before_b, opts.levels, state0, quotes)
         lender_table(p, markets, lenders)
-        for al in BR.startup(before_b, markets, opts.levels, state0) + BR.lenders_startup(lenders, markets, state0):
+        MR.curve_table(p.line, brisk, binfo)
+        p.line("    (other borrowers only: your own position is excluded)")
+        for al in BR.startup(before_b, markets, opts.levels, state0) + BR.lenders_startup(lenders, markets, state0) \
+                + MR.assess_curves({}, brisk, binfo, state0):
             p.alert(al)
         for mid in markets:
             if mid in api_state:
@@ -152,7 +165,8 @@ def run_user(opts: UserOptions) -> int:
                     p.alert(Alert("warn", state0, None, "CrossCheck", f"Data sources disagree on {markets[mid].label}", c.detail))
     for vt in vaults:
         exposure_table(vt.view, vt.state, p)
-        for al in startup_findings(vt.view, vt.state):
+        MR.curve_table(p.line, vt.risk.risks, vt.risk.markets)
+        for al in startup_findings(vt.view, vt.state) + vt.risk.startup(vt.state, state0):
             p.alert(al)
     c = crosscheck.second_rpc(f, state0)
     if c.ok is False:
@@ -221,6 +235,10 @@ def run_user(opts: UserOptions) -> int:
             for mid in new:
                 if mid in markets:
                     lenders[mid] = B.top_suppliers(f, markets[mid], state_block)
+                    m = markets[mid]
+                    binfo[mid] = MR.MarketInfo(mid, m.lltv, m.loan_decimals, m.loan_symbol, m.label)
+            btrack = MR.Tracker(binfo, exclude={user})
+            btrack.refresh(f, state_block)
             p.line(f"new borrow market(s) found: {', '.join(markets[i].label for i in new if i in markets)}")
 
         after_b = B.read_borrows(f, markets, user, state_block) if markets else {}
@@ -228,11 +246,18 @@ def run_user(opts: UserOptions) -> int:
             start_apy.setdefault(mid, after_b[mid].apy)
         alerts = BR.assess_events(batch.events, user, markets, _by_address(lenders), before_b)
         alerts += BR.assess_states(before_b, after_b, markets, opts.levels, start_apy, batch.to_block)
+        refresh = batch.to_block - last_check >= W["crosscheck_every_blocks"]
+        if binfo:
+            btrack.refresh(f, state_block) if refresh else btrack.update(f, batch.events, state_block)
+            brisk_after = btrack.compute({mid: st.price for mid, st in after_b.items()})
+            alerts += MR.assess_curves(brisk, brisk_after, binfo, batch.to_block)
+            brisk = brisk_after
         for vt in vaults:
             own = vt.addresses
             evs = [e for e in batch.events if e.address in own or (e.contract == "blue" and e.name != "SetAuthorization")]
             after_v = read_state(f, vt.view, state_block, user)
             alerts += assess_batch(evs, Ctx(vt.view, vt.state, after_v), user, batch.to_block)
+            alerts += vt.risk.step(f, batch.events, after_v, state_block, batch.to_block, refresh)
             vt.state = after_v
         for al in alerts:
             p.alert(al)
@@ -262,7 +287,9 @@ def run_user(opts: UserOptions) -> int:
                     for va in up.vaults:
                         if va not in {vt.view.address for vt in vaults}:
                             view = discover_vault(f, va, state_block)
-                            vaults.append(VaultTarget(view, read_state(f, view, state_block, user)))
+                            vt_new = VaultTarget(view, read_state(f, view, state_block, user))
+                            vt_new.risk = MR.VaultRisk(f, view, vt_new.state, state_block)
+                            vaults.append(vt_new)
                             p.line(f"new Vault V2 deposit found: {view.name}")
                 except (S.SourceError, S.CacheMiss) as e:
                     p.line(f"WARN     position rediscovery failed ({str(e)[:80]}); watching the positions already found")

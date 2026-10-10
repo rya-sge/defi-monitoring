@@ -28,7 +28,7 @@ WARN     #26162630 tx 0x2dcc1a5fe8… 100% of PT-sUSDE-26NOV2026/USDC (LLTV 91.5
 
 Each JSONL line also carries `depositor_impact` (your share of a loss, in the vault's asset, negative for a loss) and `data` (the raw numbers behind the alert).
 
-Alerts printed at **start-up** describe a standing condition, not a new event: they repeat after each restart.
+Alerts printed at **start-up** describe a standing condition, not a new event: they repeat after each restart. The start-up output also prints a **liquidation-curve table** for every watched market: the number of borrowers, the share of the debt liquidatable now, the unrealised bad debt, and the share liquidatable after an oracle fall of 2, 5, 10 and 20 %.
 
 ## Before acting on any alert
 
@@ -45,6 +45,7 @@ Alerts printed at **start-up** describe a standing condition, not a new event: t
 | `Blue.Liquidate` · Bad debt in *market* | critical | A liquidation in a market the vault supplies left debt the collateral did not cover. The vault's share of it is a loss for every depositor; `depositor_impact` gives yours. | Whether other positions in that market are also underwater (the next bad debt). The size of the vault's allocation to the market. | The loss is already realised. Decide whether to stay, using exit capacity and the market's remaining exposure. |
 | `PendingLoss` · Loss recorded by an adapter, not yet accrued | critical | An adapter's assets fell below what the vault has recorded. Every deposit and withdrawal accrues it first, so it is already in the price you would exit at. | Which market lost value (look for a `Blue.Liquidate` with bad debt in the same batch). | Same as above: the loss is in the price. It is a signal that something happened, not a window to exit before others. |
 | `Vault.AccrueInterest` · Vault total assets fell | critical | The vault's share price dropped at an accrual. | The cause in the preceding batches. | As above. |
+| `UnrealisedBadDebt` · Unrealised bad debt in *market* | warn from 0.01 % of the vault, critical from 0.1 % | Borrowers in a market the vault supplies are underwater: their collateral no longer covers their debt, but Blue has not written it off yet. The vault's share and yours are in the detail. | The market's borrowers in the start-up curve table; whether liquidators are active (`Blue.Liquidate`). | The loss is not in the share price yet, and depositors who exit before the liquidation leave it to those who stay. Exit capacity is the constraint: see [exit routes](#exit-routes-from-cheapest-to-most-expensive). |
 | `Adapter.BurnShares` · Supply shares written off | critical | The curator wrote off the vault's position in a market (a timelocked action, so a `Submit` preceded it). | The market and the amount. | As above; review the curator's earlier `Submit` alerts. |
 
 ### Governance changes
@@ -74,6 +75,7 @@ Alerts printed at **start-up** describe a standing condition, not a new event: t
 | `Vault.ForceDeallocate` · Liquidity forced out of an adapter | warn | Someone paid the penalty to pull assets back to the vault, usually to exit. | Who, and how much. | A sign that others are leaving; check exit capacity. |
 | `Blue.Withdraw` / `Borrow` · *market* is ≥ 99 % utilised | warn | A market holding at least 10 % of the vault is fully borrowed: nothing more can leave it until borrowers repay. | Its share of the vault. | Exit capacity through that market is gone for now. |
 | `Oracle` · Oracle of *market* moved ±X % | warn | The collateral of a held market was repriced by at least 5 % between two reads. | The direction: a fall brings liquidations and possibly bad debt. | Watch the next batches for `Blue.Liquidate`. |
+| `LiquidationCurve` · A 5 % fall would liquidate X % of *market* | warn | In a market holding at least 10 % of the vault, a 5 % oracle fall would make at least 25 % of the debt liquidatable at once. Many liquidations together sell a lot of collateral into the market, which deepens the fall and can leave bad debt. | The start-up curve table: how the share grows at −10 and −20 %, and the bad debt column. | Weigh the vault's allocation to that market; nothing to do until prices move. |
 | `Caps` · *market* is being wound down | info (start-up) | Its cap is 0 but money is still allocated: the curator is leaving it. | — | Nothing. |
 | `Structure` · Adapter is opaque / forceDeallocate is free | info (start-up) | An adapter the tool does not expand, or a zero force-deallocation penalty. | — | Nothing; context for the other alerts. |
 | `Vault.Deposit` / `Withdraw` / `Transfer` · Your … / Large … | info | Your own movement, or someone else's above 1 % of the vault. | — | Nothing. |
@@ -112,6 +114,7 @@ Alerts printed at **start-up** describe a standing condition, not a new event: t
 | `Utilisation` · *market* is X % utilised | warn | The market is fully used: the rate model pushes the rate towards 4 × its target until lenders return or borrowers repay. | The rate in the next batches. | As above. |
 | `Lender` · X % of *market* is funded by *vault* | warn (start-up) | One lender holds most of the supply you borrow from. If its allocator moves the liquidity, which needs no timelock, the rate jumps. | Who the lender is; the graph (`riskdep graph --user <address>`) shows it. | Accept the dependency, or prefer markets with several lenders. |
 | `Lender` · Main lender *vault* withdrew from *market* | warn | A main lender took out at least 5 % of the market's supply. | The new utilisation and rate. | As for a rate rise. |
+| `LiquidationCurve` · A 5 % fall would liquidate X % of *market* | warn | Other borrowers of your market (your own position is excluded) hold at least 25 % of its debt within a 5 % fall of liquidation. Their liquidations would sell collateral into the market at once, which pushes the price, and your health factor, further down. | The start-up curve table, and your own liquidation distance. | Keep a larger margin than the curve's steep zone: if your liquidation sits just beyond theirs, their cascade can reach you. |
 
 ## Data and infrastructure alerts
 

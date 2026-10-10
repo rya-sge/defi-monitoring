@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from . import crosscheck
+from . import market_risk as MR
 from . import sources as S
 from .discover import REGISTRY
 from .poller import Poller
@@ -134,7 +135,9 @@ def run(opts: Options) -> int:
     if state0 != first_block:
         p.line(f"  note: events are checked from block {first_block + 1}; state older than block {state0} "
                "is not served by the free RPC, so state-based rules start there")
-    for al in startup_findings(view, before):
+    vrisk = MR.VaultRisk(f, view, before, state0)
+    MR.curve_table(p.line, vrisk.risks, vrisk.markets)
+    for al in startup_findings(view, before) + vrisk.startup(before, state0):
         p.alert(al)
     _cross_check(f, p, view, before, state0)
 
@@ -185,7 +188,11 @@ def run(opts: Options) -> int:
             poller.kinds, poller.market_ids = view.kinds, view.market_ids
             p.line(f"structure changed: rediscovered at block {state_block}")
         after = read_state(f, view, state_block, dep)
-        for al in assess_batch(batch.events, Ctx(view, before, after), dep, batch.to_block):
+        if set(MR.vault_markets(view, after)) != set(vrisk.markets):
+            vrisk = MR.VaultRisk(f, view, after, state_block)
+        refresh = batch.to_block - last_check >= W["crosscheck_every_blocks"]
+        for al in assess_batch(batch.events, Ctx(view, before, after), dep, batch.to_block) + \
+                vrisk.step(f, batch.events, after, state_block, batch.to_block, refresh):
             p.alert(al)
         poller.save(batch.to_block)
         unit = 10 ** view.decimals

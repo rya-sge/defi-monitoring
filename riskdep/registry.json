@@ -231,6 +231,10 @@
     "lender_min_share": 0.05,
     "lender_max": 5,
     "lender_concentration_warn": 0.5,
-    "lender_withdraw_min_share": 0.05
+    "lender_withdraw_min_share": 0.05,
+    "unrealised_bad_debt_warn": 0.0001,
+    "unrealised_bad_debt_critical": 0.001,
+    "curve_drop": 0.05,
+    "curve_warn_share": 0.25
   }
 }
