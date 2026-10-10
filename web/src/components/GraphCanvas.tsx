@@ -1,245 +1,252 @@
-import { useEffect, useRef } from 'react';
-import cytoscape from 'cytoscape';
-import type { Core, EdgeSingular, ElementDefinition, NodeSingular } from 'cytoscape';
+import { useMemo, useState } from 'react';
+import { MarkerType, Panel, ReactFlow, useNodesState, useReactFlow } from '@xyflow/react';
+import { Maximize, Minus, Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import '@xyflow/react/dist/base.css';
 import type { GraphEdge, GraphNode, GraphNodeKind } from '../api/types';
-import { KIND_COLOR, KIND_SHAPE, edgeLabel, edgeWidth } from '../lib/graph';
+import { detailValue } from '../lib/format';
+import { edgeLabel, edgeWidth, layoutGraph, nodeAmount, reach } from '../lib/graph';
+import { RiskEdge, RiskNode } from './GraphElements';
+import type { RiskEdgeType, RiskNodeType } from './GraphElements';
+
+export type FlowNeighbour = { id: string; label: string; kind: GraphNodeKind };
 
 export type GraphSelection =
-  | { type: 'node'; node: GraphNode; incoming: string[]; outgoing: string[] }
-  | { type: 'edge'; edge: GraphEdge; sourceLabel: string; targetLabel: string }
+  | {
+      type: 'node';
+      node: GraphNode;
+      /** Everything the node relies on, transitively (downstream). */
+      dependsOn: FlowNeighbour[];
+      /** Everything exposed to the node, transitively (upstream). */
+      exposed: FlowNeighbour[];
+      /** Incident edges, with the label of the node at the other end. */
+      edges: { edge: GraphEdge; other: string; outgoing: boolean }[];
+    }
+  | { type: 'edge'; id: string; edge: GraphEdge; sourceLabel: string; targetLabel: string }
   | null;
 
 export type GraphCanvasProps = {
   nodes: GraphNode[];
   edges: GraphEdge[];
-  /** Kinds currently shown; a node of a hidden kind is removed from the layout. */
+  /** Kinds currently shown; a node of a hidden kind is hidden with its edges. */
   visibleKinds: ReadonlySet<GraphNodeKind>;
   /** Free-text filter: matches label, id and details; non-matches are faded. */
   search: string;
+  /** The selection drives the focus: its whole upstream and downstream flow stays lit. */
+  selection: GraphSelection;
   onSelect: (selection: GraphSelection) => void;
-  /** Bumped by the caller to re-run the layout or fit the viewport. */
-  fitNonce: number;
-  layoutNonce: number;
 };
 
-type NodeData = GraphNode & { label: string };
-type EdgeData = GraphEdge & { id: string; label: string; w: number };
+const nodeTypes = { risk: RiskNode };
+const edgeTypes = { risk: RiskEdge };
+const FADED = 0.08;
+const edgeId = (index: number) => `e${index}`;
 
-function cssVar(name: string): string {
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+/** Lit nodes and edges, or null when nothing is focused. */
+type Lit = { nodes: Set<string>; edges: Set<string> } | null;
+
+/** The whole flow through the selection: upstream of its start, downstream of its end. */
+function flowLit(selection: GraphSelection, edges: GraphEdge[]): Lit {
+  if (!selection) return null;
+  const [from, to] =
+    selection.type === 'node'
+      ? [selection.node.id, selection.node.id]
+      : [selection.edge.source, selection.edge.target];
+  const up = reach(from, edges, true);
+  const down = reach(to, edges);
+  const lit = new Set(
+    edges.flatMap((e, i) =>
+      (up.has(e.source) && up.has(e.target)) || (down.has(e.source) && down.has(e.target))
+        ? [edgeId(i)]
+        : [],
+    ),
+  );
+  if (selection.type === 'edge') lit.add(selection.id);
+  return { nodes: new Set([...up, ...down]), edges: lit };
 }
 
+/** Search hits and their direct neighbours. */
+function searchLit(search: string, nodes: GraphNode[], edges: GraphEdge[]): Lit {
+  const query = search.trim().toLowerCase();
+  if (!query) return null;
+  const hits = new Set(
+    nodes
+      .filter((n) =>
+        `${n.label} ${n.id} ${JSON.stringify(n.details)}`.toLowerCase().includes(query),
+      )
+      .map((n) => n.id),
+  );
+  const lit = { nodes: new Set(hits), edges: new Set<string>() };
+  edges.forEach((e, i) => {
+    if (hits.has(e.source) || hits.has(e.target)) {
+      lit.edges.add(edgeId(i));
+      lit.nodes.add(e.source);
+      lit.nodes.add(e.target);
+    }
+  });
+  return lit;
+}
+
+function initialNodes(nodes: GraphNode[], edges: GraphEdge[]): RiskNodeType[] {
+  const positions = layoutGraph(nodes, edges);
+  return nodes.map((node) => ({
+    id: node.id,
+    type: 'risk',
+    position: positions.get(node.id) ?? { x: 0, y: 0 },
+    data: { node, amount: nodeAmount(node, edges) },
+  }));
+}
+
+/** Zoom in, zoom out, fit: shadcn buttons over React Flow's viewport API. */
+function ZoomControls() {
+  const { zoomIn, zoomOut, fitView } = useReactFlow();
+  const controls = [
+    { label: 'Zoom in', icon: Plus, run: () => void zoomIn() },
+    { label: 'Zoom out', icon: Minus, run: () => void zoomOut() },
+    { label: 'Fit view', icon: Maximize, run: () => void fitView({ padding: 0.1 }) },
+  ];
+  return (
+    <Panel position="bottom-right" className="flex flex-col">
+      {controls.map(({ label, icon: Icon, run }) => (
+        <Button
+          key={label}
+          type="button"
+          variant="outline"
+          size="icon-sm"
+          aria-label={label}
+          title={label}
+          onClick={run}
+          className="-mt-px first:mt-0"
+        >
+          <Icon />
+        </Button>
+      ))}
+    </Panel>
+  );
+}
+
+/**
+ * Laid out once per mount: the caller remounts it (with `key`) to re-run the layout,
+ * which also drops the user's drags.
+ */
 export function GraphCanvas({
   nodes,
   edges,
   visibleKinds,
   search,
+  selection,
   onSelect,
-  fitNonce,
-  layoutNonce,
 }: GraphCanvasProps) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const cyRef = useRef<Core | null>(null);
-  // Keeps the tap handlers stable (they are bound once, at mount) while always
-  // calling the newest callback. Written in an effect, never during render.
-  const onSelectRef = useRef(onSelect);
-  useEffect(() => {
-    onSelectRef.current = onSelect;
-  }, [onSelect]);
+  const [initial] = useState(() => initialNodes(nodes, edges));
+  const [rfNodes, , onNodesChange] = useNodesState(initial);
 
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const nodeEls: ElementDefinition[] = nodes.map((node) => ({
-      data: { ...node } satisfies NodeData,
-    }));
-    const edgeEls: ElementDefinition[] = edges.map((edge, index) => ({
-      data: {
-        ...edge,
-        id: `e${index}`,
-        label: edgeLabel(edge.amount, edge.unit),
-        w: edgeWidth(edge.amount),
-      } satisfies EdgeData,
-    }));
-
-    const fg = cssVar('--fg');
-    const line = cssVar('--line');
-    const muted = cssVar('--muted');
-    const edgeColor = cssVar('--edge');
-    const bg = cssVar('--bg');
-
-    const cy = cytoscape({
-      container,
-      elements: [...nodeEls, ...edgeEls],
-      wheelSensitivity: 0.2,
-      style: [
-        {
-          selector: 'node',
-          style: {
-            'background-color': (el: NodeSingular) =>
-              KIND_COLOR[el.data('kind') as GraphNodeKind] ?? KIND_COLOR.External,
-            shape: (el: NodeSingular) => KIND_SHAPE[el.data('kind') as GraphNodeKind] ?? 'ellipse',
-            label: 'data(label)',
-            'font-size': 10,
-            color: fg,
-            'text-valign': 'bottom',
-            'text-margin-y': 4,
-            width: 26,
-            height: 26,
-            'text-wrap': 'wrap',
-            'text-max-width': '120px',
-            'border-width': 1,
-            'border-color': line,
+  const rfEdges = useMemo<RiskEdgeType[]>(
+    () =>
+      edges.map((edge, index) => {
+        const hf = edge.details.health_factor;
+        // An edge that carries no amount (lends, priced by, reads…) is a dependency, not a
+        // flow of funds: drawn in the lighter hairline colour.
+        const colour = edge.amount != null ? 'var(--edge)' : 'var(--line)';
+        return {
+          id: edgeId(index),
+          type: 'risk',
+          source: edge.source,
+          target: edge.target,
+          // Sized in screen units, so a thick edge does not get a giant arrowhead.
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+            color: colour,
+            width: 14,
+            height: 14,
+            markerUnits: 'userSpaceOnUse',
           },
-        },
-        {
-          selector: 'node[kind="Actor"]',
-          style: {
-            width: 44,
-            height: 30,
-            'font-weight': 'bold',
-            'font-size': 11,
-            'text-max-width': '90px',
+          data: {
+            edge,
+            width: edgeWidth(edge.amount),
+            colour,
+            label: [edgeLabel(edge.amount, edge.unit), hf != null ? `HF ${detailValue(hf)}` : '']
+              .filter(Boolean)
+              .join(' · '),
           },
-        },
-        {
-          selector: 'node[kind="Asset"],node[kind="Oracle"],node[kind="External"]',
-          style: { 'min-zoomed-font-size': 9 },
-        },
-        {
-          selector: 'edge',
-          style: {
-            width: 'data(w)',
-            'line-color': edgeColor,
-            'target-arrow-color': edgeColor,
-            'target-arrow-shape': 'triangle',
-            'curve-style': 'bezier',
-            opacity: 0.75,
-            label: 'data(label)',
-            'font-size': 8,
-            color: muted,
-            'text-rotation': 'autorotate',
-            'text-background-color': bg,
-            'text-background-opacity': 0.8,
-          },
-        },
-        { selector: '.faded', style: { opacity: 0.08 } },
-        { selector: '.hidden', style: { display: 'none' } },
-        {
-          selector: ':selected',
-          style: { 'border-width': 3, 'border-color': fg, 'line-color': fg },
-        },
-      ],
-      layout: { name: 'preset' },
+        };
+      }),
+    [edges],
+  );
+
+  const lit = useMemo(
+    () => flowLit(selection, edges) ?? searchLit(search, nodes, edges),
+    [selection, search, nodes, edges],
+  );
+
+  const shownNodes = useMemo(
+    () =>
+      rfNodes.map((n) => ({
+        ...n,
+        hidden: !visibleKinds.has(n.data.node.kind),
+        selected: selection?.type === 'node' && selection.node.id === n.id,
+        style: { opacity: lit && !lit.nodes.has(n.id) ? FADED : 1 },
+      })),
+    [rfNodes, visibleKinds, lit, selection],
+  );
+
+  const shownEdges = useMemo(
+    () =>
+      rfEdges.map((e) => ({
+        ...e,
+        selected: selection?.type === 'edge' && selection.id === e.id,
+        style: { opacity: lit && !lit.edges.has(e.id) ? FADED : 0.85 },
+      })),
+    [rfEdges, lit, selection],
+  );
+
+  const byId = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
+  const neighbours = (ids: Set<string>, self: string): FlowNeighbour[] =>
+    [...ids].flatMap((id) => {
+      const n = byId.get(id);
+      return n && id !== self ? [{ id, label: n.label, kind: n.kind }] : [];
     });
-
-    cyRef.current = cy;
-
-    cy.on('tap', 'node', (event) => {
-      const node = event.target as NodeSingular;
-      cy.elements().addClass('faded');
-      node.closedNeighborhood().removeClass('faded');
-      const label = (id: string) => cy.getElementById(id).data('label') as string;
-      onSelectRef.current({
-        type: 'node',
-        node: node.data() as GraphNode,
-        outgoing: node
-          .outgoers('edge')
-          .map((e: EdgeSingular) => `${e.data('rel') as string} → ${label(e.target().id())}`),
-        incoming: node
-          .incomers('edge')
-          .map((e: EdgeSingular) => `${label(e.source().id())} → ${e.data('rel') as string}`),
-      });
-    });
-
-    cy.on('tap', 'edge', (event) => {
-      const edge = event.target as EdgeSingular;
-      cy.elements().addClass('faded');
-      edge.removeClass('faded');
-      edge.connectedNodes().removeClass('faded');
-      onSelectRef.current({
-        type: 'edge',
-        edge: edge.data() as GraphEdge,
-        sourceLabel: edge.source().data('label') as string,
-        targetLabel: edge.target().data('label') as string,
-      });
-    });
-
-    cy.on('tap', (event) => {
-      if (event.target === cy) {
-        cy.elements().removeClass('faded');
-        onSelectRef.current(null);
-      }
-    });
-
-    runLayout(cy);
-
-    return () => {
-      cy.destroy();
-      cyRef.current = null;
-    };
-  }, [nodes, edges]);
-
-  // Kind filter.
-  useEffect(() => {
-    const cy = cyRef.current;
-    if (!cy) return;
-    cy.batch(() => {
-      cy.nodes().forEach((node) => {
-        const hidden = !visibleKinds.has(node.data('kind') as GraphNodeKind);
-        node.toggleClass('hidden', hidden);
-      });
-    });
-  }, [visibleKinds]);
-
-  // Search: fade everything that is not a hit or a neighbour of one.
-  useEffect(() => {
-    const cy = cyRef.current;
-    if (!cy) return;
-    const query = search.trim().toLowerCase();
-    cy.elements().removeClass('faded');
-    if (!query) return;
-    const hits = cy.nodes().filter((node) => {
-      const haystack = `${node.data('label') as string} ${node.id()} ${JSON.stringify(
-        node.data('details'),
-      )}`.toLowerCase();
-      return haystack.includes(query);
-    });
-    cy.elements().addClass('faded');
-    hits.closedNeighborhood().removeClass('faded');
-  }, [search]);
-
-  useEffect(() => {
-    if (fitNonce > 0) cyRef.current?.fit(undefined, 30);
-  }, [fitNonce]);
-
-  useEffect(() => {
-    const cy = cyRef.current;
-    if (cy && layoutNonce > 0) runLayout(cy);
-  }, [layoutNonce]);
 
   return (
-    <div className="relative min-w-0">
-      <div
-        ref={containerRef}
-        className="size-full"
-        role="img"
-        aria-label="Interactive dependency graph"
-      />
-    </div>
+    <ReactFlow
+      className="absolute inset-0"
+      nodes={shownNodes}
+      edges={shownEdges}
+      nodeTypes={nodeTypes}
+      edgeTypes={edgeTypes}
+      onNodesChange={onNodesChange}
+      nodesConnectable={false}
+      minZoom={0.1}
+      fitView
+      fitViewOptions={{ padding: 0.1 }}
+      proOptions={{ hideAttribution: true }}
+      aria-label="Interactive dependency graph"
+      onNodeClick={(_, { data: { node } }) =>
+        onSelect({
+          type: 'node',
+          node,
+          dependsOn: neighbours(reach(node.id, edges), node.id),
+          exposed: neighbours(reach(node.id, edges, true), node.id),
+          edges: edges.flatMap((edge) => {
+            const outgoing = edge.source === node.id;
+            if (!outgoing && edge.target !== node.id) return [];
+            const other = byId.get(outgoing ? edge.target : edge.source);
+            return [{ edge, other: other?.label ?? '', outgoing }];
+          }),
+        })
+      }
+      onEdgeClick={(_, { id, data }) => {
+        if (!data) return;
+        onSelect({
+          type: 'edge',
+          id,
+          edge: data.edge,
+          sourceLabel: byId.get(data.edge.source)?.label ?? data.edge.source,
+          targetLabel: byId.get(data.edge.target)?.label ?? data.edge.target,
+        });
+      }}
+      onPaneClick={() => onSelect(null)}
+    >
+      <ZoomControls />
+    </ReactFlow>
   );
-}
-
-/** Breadth-first from the actors and admins — the same roots the CLI uses. */
-function runLayout(cy: Core): void {
-  const roots = cy
-    .nodes()
-    .filter((node) => node.data('kind') === 'Actor' || node.data('kind') === 'Admin');
-  cy.layout({
-    name: 'breadthfirst',
-    directed: true,
-    spacingFactor: 1.5,
-    ...(roots.length > 0 ? { roots } : {}),
-  }).run();
 }

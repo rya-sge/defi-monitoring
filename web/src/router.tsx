@@ -7,7 +7,12 @@ import {
 import { AppShell } from './components/AppShell';
 import { Loading } from './components/States';
 
-const rootRoute = createRootRoute({ component: AppShell });
+/** `?target=` selects one watch target (vault or "user-<address>"); absent means all. */
+const rootRoute = createRootRoute({
+  component: AppShell,
+  validateSearch: (search: Record<string, unknown>): { target?: string } =>
+    typeof search.target === 'string' && search.target ? { target: search.target } : {},
+});
 
 /* Recharts and Cytoscape are both heavy, and no page needs both. Splitting per
    route keeps the first paint off the critical path of either library. */

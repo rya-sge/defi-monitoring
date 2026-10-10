@@ -9,10 +9,10 @@
    are read in three ways and all three must keep working:
      - Tailwind utilities, through the `@theme inline` mapping further down;
      - `var(--line)` strings handed to Recharts, which land in SVG attributes;
-     - `getComputedStyle(document.documentElement)` in GraphCanvas, because
-       Cytoscape takes resolved colour strings and not CSS.
+     - `var(--…)` in the inline styles of the graph's nodes, edges and
+       arrowheads (GraphElements, GraphCanvas).
    So the names --bg, --fg, --muted, --line and --edge are part of the contract;
-   renaming one means updating GraphCanvas in the same commit.
+   renaming one means updating GraphElements and GraphCanvas in the same commit.
 
    Spacing rhythm. The step between a label and its value is visibly smaller
    than the step between two groups; that difference is the layout. The six
@@ -64,22 +64,22 @@
 }
 
 /* The Tailwind theme is a thin naming layer over those tokens, never a second
-   palette. shadcn's own token names are aliased onto the same four colours, so
-   a vendored component that still says `bg-background` or `border-input` paints
-   the one ground and the one hairline instead of introducing a surface. */
+   palette. shadcn's own token names are aliased onto them; its quiet surfaces
+   (muted, accent, secondary — hovers, open menus) are the ground with a little
+   ink mixed in, not a colour of their own. */
 @theme inline {
   --color-background: var(--bg);
   --color-foreground: var(--fg);
-  --color-muted: var(--bg);
+  --color-muted: color-mix(in srgb, var(--fg) 5%, var(--bg));
   --color-muted-foreground: var(--muted);
   --color-border: var(--line);
   --color-input: var(--line);
   --color-ring: var(--fg);
   --color-primary: var(--fg);
   --color-primary-foreground: var(--bg);
-  --color-secondary: var(--bg);
+  --color-secondary: color-mix(in srgb, var(--fg) 5%, var(--bg));
   --color-secondary-foreground: var(--fg);
-  --color-accent: var(--bg);
+  --color-accent: color-mix(in srgb, var(--fg) 6%, var(--bg));
   --color-accent-foreground: var(--fg);
   --color-popover: var(--bg);
   --color-popover-foreground: var(--fg);
@@ -87,6 +87,16 @@
   --color-card-foreground: var(--fg);
   --color-destructive: var(--critical);
   --color-destructive-foreground: var(--bg);
+
+  /* shadcn's sidebar: a ground a shade off the page, the same ink and hairline. */
+  --color-sidebar: color-mix(in srgb, var(--fg) 2.5%, var(--bg));
+  --color-sidebar-foreground: var(--fg);
+  --color-sidebar-primary: var(--fg);
+  --color-sidebar-primary-foreground: var(--bg);
+  --color-sidebar-accent: color-mix(in srgb, var(--fg) 6%, var(--bg));
+  --color-sidebar-accent-foreground: var(--fg);
+  --color-sidebar-border: var(--line);
+  --color-sidebar-ring: var(--fg);
 
   --color-edge: var(--edge);
   --color-info: var(--info);
@@ -99,22 +109,20 @@
   --default-font-family: var(--sans);
   --default-mono-font-family: var(--mono);
 
-  /* Square. A radius would be the one decorative decision on the page. */
-  --radius: 0px;
-  --radius-xs: 0px;
-  --radius-sm: 0px;
-  --radius-md: 0px;
-  --radius-lg: 0px;
-  --radius-xl: 0px;
-  --radius-2xl: 0px;
-  --radius-3xl: 0px;
+  /* A light radius on every control, on shadcn's scale. */
+  --radius: 0.5rem;
+  --radius-xs: calc(var(--radius) - 6px);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 
   --container-measure: 74ch;
 }
 
-/* Mono means "this came from the chain": addresses, hashes, amounts, block
-   numbers, health factors, counts. One utility so the two faces stay a
-   semantic split and not a per-call-site decision. */
+/* Mono is for identifiers only: addresses, hashes, market ids. Numbers —
+   amounts, block numbers, health factors, counts — stay in the UI face with
+   `tabular-nums`, and are never coloured: severity is said by a word. */
 @utility mono {
   font-family: var(--mono);
   font-size: 0.88em;
@@ -190,5 +198,11 @@
   p {
     max-width: var(--container-measure);
     margin-bottom: 14px;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
   }
 }

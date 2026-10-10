@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSelectedTarget } from '../api/hooks';
 import { subscribeWatch } from '../api/stream';
 import type { StreamStatus } from '../api/stream';
 import { USE_MOCKS } from '../api/client';
@@ -41,6 +42,7 @@ const STATUS_CLASS: Record<StreamStatus, string> = {
 
 export function WatchPage() {
   const [minLevel, setMinLevel] = useState<AlertLevel>('info');
+  const { target } = useSelectedTarget();
 
   return (
     <div className="mx-auto max-w-[1120px] px-5.5 pt-9 pb-14">
@@ -51,18 +53,25 @@ export function WatchPage() {
           ? 'Mock mode: a fixed set of alerts is replayed every 1.5 s, then the stream ends.'
           : 'Polling runs two blocks behind the head; deeper reorgs are not handled.'}
       </p>
-      {/* `min_level` is a server-side filter, so changing it must restart the
-          stream from scratch. Keying on it remounts the subscriber, which drops
+      {/* `min_level` and `target` are server-side filters, so changing either must restart the
+          stream from scratch. Keying on both remounts the subscriber, which drops
           the collected alerts without resetting state from inside an effect. */}
-      <WatchStream key={minLevel} minLevel={minLevel} onMinLevelChange={setMinLevel} />
+      <WatchStream
+        key={`${target ?? ''}:${minLevel}`}
+        target={target}
+        minLevel={minLevel}
+        onMinLevelChange={setMinLevel}
+      />
     </div>
   );
 }
 
 function WatchStream({
+  target,
   minLevel,
   onMinLevelChange,
 }: {
+  target?: string;
   minLevel: AlertLevel;
   onMinLevelChange: (level: AlertLevel) => void;
 }) {
@@ -74,14 +83,14 @@ function WatchStream({
   useEffect(
     () =>
       subscribeWatch(
-        { min_level: minLevel },
+        { target, min_level: minLevel },
         {
           onAlert: (alert) => setAlerts((previous) => [alert, ...previous]),
           onTick: (tick) => setTicks((previous) => [tick, ...previous].slice(0, 3)),
           onStatus: setStatus,
         },
       ),
-    [minLevel],
+    [target, minLevel],
   );
 
   const counts = useMemo(() => {
@@ -101,10 +110,10 @@ function WatchStream({
       <div className="my-5.5 flex flex-wrap gap-x-9 gap-y-5.5">
         {ALERT_LEVELS.map((level) => (
           <div key={level}>
-            <b className={cn('font-mono text-2xl font-semibold tabular-nums', LEVEL_TEXT[level])}>
-              {counts[level]}
-            </b>
-            <span className="block text-[0.8rem] text-muted-foreground">{level}</span>
+            <b className="text-2xl font-semibold tabular-nums">{counts[level]}</b>
+            <span className={cn('block text-[0.8rem] font-semibold', LEVEL_TEXT[level])}>
+              {level}
+            </span>
           </div>
         ))}
       </div>
@@ -129,7 +138,7 @@ function WatchStream({
       </div>
 
       {ticks.length > 0 ? (
-        <p className="mb-5.5 font-mono text-[0.8rem] text-muted-foreground">
+        <p className="mb-5.5 text-[0.8rem] text-muted-foreground tabular-nums">
           {ticks.map((tick) => (
             <span key={`${tick.block}-${tick.message}`} className="block">
               block {blockNumber(tick.block)} · {tick.message}
@@ -180,7 +189,7 @@ function AlertRow({
 
   return (
     // Rows, not cards: one hairline keeps two alerts from reading as one.
-    <li className="grid gap-1 border-b border-border py-3.5">
+    <li className="grid gap-1 border-b border-border/50 py-3.5">
       <div className="flex flex-wrap items-baseline gap-3.5 text-[0.8rem] text-muted-foreground">
         <span className={cn('font-bold', LEVEL_TEXT[alert.level])}>{alert.level}</span>
         <span>block {blockNumber(alert.block)}</span>
@@ -196,10 +205,7 @@ function AlertRow({
         <span className="mono">{alert.event}</span>
         {alert.depositor_impact != null ? (
           <span
-            className={cn(
-              'ml-auto font-mono font-semibold tabular-nums',
-              alert.depositor_impact < 0 ? 'text-critical' : 'text-ok',
-            )}
+            className="ml-auto font-semibold tabular-nums"
             title="Impact on your deposit, in the vault's asset"
           >
             {signedUsd(alert.depositor_impact)}

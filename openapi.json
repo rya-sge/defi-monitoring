@@ -680,6 +680,25 @@
         ],
         "title": "Health"
       },
+      "Liquidation": {
+        "properties": {
+          "drop": {
+            "type": "number",
+            "title": "Drop"
+          },
+          "debt_usd": {
+            "type": "number",
+            "title": "Debt Usd"
+          }
+        },
+        "type": "object",
+        "required": [
+          "drop",
+          "debt_usd"
+        ],
+        "title": "Liquidation",
+        "description": "One borrower of the position's market: the oracle fall that liquidates it, and its debt."
+      },
       "OracleSensitivity": {
         "properties": {
           "oracle_mode": {
@@ -1248,6 +1267,13 @@
               }
             ],
             "title": "Lending Liquidity Usd"
+          },
+          "liquidations": {
+            "items": {
+              "$ref": "#/components/schemas/Liquidation"
+            },
+            "type": "array",
+            "title": "Liquidations"
           },
           "notes": {
             "items": {

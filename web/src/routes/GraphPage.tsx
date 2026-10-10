@@ -1,44 +1,52 @@
 import { useMemo, useState } from 'react';
-import { useGraph } from '../api/hooks';
+import { X } from 'lucide-react';
+import { useGraph, useSelectedTarget } from '../api/hooks';
 import { GRAPH_NODE_KINDS } from '../api/types';
 import type { GraphNodeKind } from '../api/types';
 import { GraphCanvas } from '../components/GraphCanvas';
-import type { GraphSelection } from '../components/GraphCanvas';
+import type { FlowNeighbour, GraphSelection } from '../components/GraphCanvas';
 import { DetailsTable } from '../components/DetailsTable';
 import { ErrorState, Loading } from '../components/States';
-import { KIND_COLOR, KIND_DESCRIPTION } from '../lib/graph';
-import { edgeLabel } from '../lib/graph';
+import { KIND_COLOR, RISK_KEYS, edgeLabel, scopeToTarget } from '../lib/graph';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-const ASIDE_SUB = 'mb-3.5 text-[0.82rem] text-muted-foreground';
-const ASIDE_H3 = 'mt-5.5 mb-1 text-[0.82rem] font-bold text-muted-foreground';
-const ASIDE_LIST = 'grid max-w-measure list-disc gap-2 pl-[1.1em] text-[0.84rem]';
+const PANEL_H3 = 'mt-5.5 mb-1 text-[0.82rem] font-bold text-muted-foreground';
+
+/** Splits a details bag into the risk figures and the rest. */
+function splitRisk(details: Record<string, unknown>) {
+  const risk: Record<string, unknown> = {};
+  const rest: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(details)) {
+    if ((RISK_KEYS as readonly string[]).includes(key)) risk[key] = value;
+    else rest[key] = value;
+  }
+  return { risk, rest };
+}
 
 export function GraphPage() {
-  const { data, isPending, error } = useGraph();
+  const { target, isPending: targetPending } = useSelectedTarget();
+  // One graph holds every vault the selector offers (the selector lists them from it), so
+  // scoping is done here rather than with a live `?vault=` read per selection.
+  const { data: full, dataUpdatedAt, isPending, error } = useGraph();
+  const data = useMemo(() => full && scopeToTarget(full, target), [full, target]);
   const [hiddenKinds, setHiddenKinds] = useState<ReadonlySet<GraphNodeKind>>(new Set());
   const [search, setSearch] = useState('');
   const [selection, setSelection] = useState<GraphSelection>(null);
-  const [fitNonce, setFitNonce] = useState(0);
   const [layoutNonce, setLayoutNonce] = useState(0);
 
-  const counts = useMemo(() => {
-    const result = new Map<GraphNodeKind, number>();
-    for (const node of data?.nodes ?? []) {
-      result.set(node.kind, (result.get(node.kind) ?? 0) + 1);
-    }
-    return result;
-  }, [data]);
+  const presentKinds = useMemo(
+    () => GRAPH_NODE_KINDS.filter((kind) => data?.nodes.some((node) => node.kind === kind)),
+    [data],
+  );
 
   const visibleKinds = useMemo(
     () => new Set(GRAPH_NODE_KINDS.filter((kind) => !hiddenKinds.has(kind))),
     [hiddenKinds],
   );
 
-  if (isPending) return <Loading what="the dependency graph" />;
+  if (targetPending || isPending) return <Loading what="the dependency graph" />;
   if (error) return <ErrorState what="the dependency graph" error={error} />;
   if (!data) return <ErrorState what="the dependency graph" error="empty response" />;
 
@@ -52,138 +60,144 @@ export function GraphPage() {
   };
 
   return (
-    <div className="grid h-[calc(100vh-53px)] grid-cols-[340px_1fr] max-[860px]:h-auto max-[860px]:grid-cols-1 max-[860px]:grid-rows-[auto_70vh]">
-      <aside className="overflow-auto border-r border-border p-5.5 max-[860px]:border-r-0 max-[860px]:border-b [&_h2]:mt-9">
-        <h1 className="text-[1.05rem]">{data.title}</h1>
-        {/* The subtitle is the provenance line: chain, block, how it was read. */}
-        <p className={ASIDE_SUB}>{data.subtitle}</p>
+    <div className="relative h-full min-h-[70vh] overflow-hidden">
+      {/* Remounting re-runs the layout: on new data, or on Re-layout. */}
+      <GraphCanvas
+        key={`${target ?? ''}-${dataUpdatedAt}-${layoutNonce}`}
+        nodes={data.nodes}
+        edges={data.edges}
+        visibleKinds={visibleKinds}
+        search={search}
+        selection={selection}
+        onSelect={setSelection}
+      />
 
-        <h2>Node types</h2>
-        <div>
-          {GRAPH_NODE_KINDS.filter((kind) => (counts.get(kind) ?? 0) > 0).map((kind) => (
-            // The control and the colour key line up with the first line of the
-            // label, not with the middle of a description that wraps.
-            <Label
-              key={kind}
-              className="my-3.5 flex cursor-pointer items-start gap-2 text-[0.85rem] font-normal"
-            >
-              <Checkbox
-                className="mt-[0.28em]"
-                checked={!hiddenKinds.has(kind)}
-                onCheckedChange={() => toggleKind(kind)}
-              />
-              {/* The one place a colour chip is content: it keys the node colour
-                  in the canvas, alongside the shape that repeats it. */}
-              <span
-                className="mt-[0.28em] size-[11px] shrink-0"
-                style={{ background: KIND_COLOR[kind] }}
-              />
-              <span>
-                <b>{kind}</b>{' '}
-                <span className="text-muted-foreground">
-                  ({counts.get(kind)}) {KIND_DESCRIPTION[kind]}
-                </span>
-              </span>
-            </Label>
-          ))}
-        </div>
-        <p className={ASIDE_SUB}>
-          Shape repeats the colour: rounded box Actor, ellipse Pool, tag Asset, diamond Oracle,
-          triangle Admin, square External. Edge width grows with the amount carried (log scale, in
-          the edge's token). Click a node to isolate its neighbours.
-        </p>
-
-        <h2>Find</h2>
+      <div className="absolute top-3.5 left-3.5 flex gap-2 bg-background">
         <Label htmlFor="graph-search" className="sr-only">
           Filter nodes by symbol, address or market id
         </Label>
         <Input
           id="graph-search"
           type="search"
+          className="w-60"
           placeholder="symbol, address, market id…"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
-        <div className="mt-3.5 flex gap-2">
+        <Button type="button" variant="outline" onClick={() => setLayoutNonce((n) => n + 1)}>
+          Re-layout
+        </Button>
+      </div>
+
+      {/* Legend and kind filter in one: the colour chip keys the node colour. */}
+      <div className="absolute bottom-3.5 left-3.5 flex flex-wrap gap-1 rounded-md bg-background/80">
+        {presentKinds.map((kind) => (
+          <Button
+            key={kind}
+            type="button"
+            variant="ghost"
+            size="xs"
+            aria-pressed={!hiddenKinds.has(kind)}
+            onClick={() => toggleKind(kind)}
+            className="font-normal aria-[pressed=false]:opacity-40"
+          >
+            <span className="size-2.5" style={{ background: KIND_COLOR[kind] }} />
+            {kind}
+          </Button>
+        ))}
+      </div>
+
+      {/* The subtitle is the provenance line: chain, block, how it was read. */}
+      <p
+        className="absolute right-16 bottom-3.5 max-w-[40%] truncate text-[0.75rem] text-muted-foreground"
+        title={data.subtitle}
+      >
+        {data.subtitle}
+      </p>
+
+      {selection ? (
+        <aside className="absolute top-3.5 right-3.5 bottom-12 w-[340px] max-w-[calc(100%-28px)] overflow-auto rounded-lg border bg-background p-5.5 shadow-sm">
           <Button
             type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setFitNonce((n) => n + 1)}
+            variant="ghost"
+            size="icon"
+            className="absolute top-2 right-2"
+            aria-label="Close"
+            onClick={() => setSelection(null)}
           >
-            Fit
+            <X />
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setLayoutNonce((n) => n + 1)}
-          >
-            Re-layout
-          </Button>
-        </div>
-
-        <h2>Selection</h2>
-        <SelectionPanel selection={selection} />
-      </aside>
-
-      <GraphCanvas
-        nodes={data.nodes}
-        edges={data.edges}
-        visibleKinds={visibleKinds}
-        search={search}
-        onSelect={setSelection}
-        fitNonce={fitNonce}
-        layoutNonce={layoutNonce}
-      />
+          <SelectionPanel selection={selection} />
+        </aside>
+      ) : null}
     </div>
   );
 }
 
-function SelectionPanel({ selection }: { selection: GraphSelection }) {
-  if (!selection) return <p className="text-muted-foreground">Click a node or an edge.</p>;
+function KindCounts({ title, items }: { title: string; items: FlowNeighbour[] }) {
+  if (items.length === 0) return null;
+  const counts = new Map<GraphNodeKind, number>();
+  for (const item of items) counts.set(item.kind, (counts.get(item.kind) ?? 0) + 1);
+  return (
+    <>
+      <h3 className={PANEL_H3}>{title}</h3>
+      <p className="text-[0.86rem]">
+        {[...counts].map(([kind, count]) => (
+          <span key={kind} className="mr-3.5 inline-flex items-center gap-1.5">
+            <span className="size-2.5" style={{ background: KIND_COLOR[kind] }} />
+            {count} {kind}
+          </span>
+        ))}
+      </p>
+    </>
+  );
+}
 
+function SelectionPanel({ selection }: { selection: NonNullable<GraphSelection> }) {
   if (selection.type === 'node') {
-    const { node, incoming, outgoing } = selection;
+    const { node, dependsOn, exposed, edges } = selection;
+    const { risk, rest } = splitRisk(node.details);
+    const riskyEdges = edges.filter(({ edge }) => Object.keys(splitRisk(edge.details).risk).length);
     return (
-      <div>
+      <div className="pr-6">
         <p>
           <b>{node.label}</b> <span className="text-muted-foreground">{node.kind}</span>
         </p>
-        <DetailsTable details={node.details} />
-        {outgoing.length > 0 ? (
-          <>
-            <h3 className={ASIDE_H3}>Outgoing</h3>
-            <ul className={ASIDE_LIST}>
-              {outgoing.map((line) => (
-                <li key={`out-${line}`}>{line}</li>
-              ))}
-            </ul>
-          </>
-        ) : null}
-        {incoming.length > 0 ? (
-          <>
-            <h3 className={ASIDE_H3}>Incoming</h3>
-            <ul className={ASIDE_LIST}>
-              {incoming.map((line) => (
-                <li key={`in-${line}`}>{line}</li>
-              ))}
-            </ul>
-          </>
-        ) : null}
+        <h3 className={PANEL_H3}>Risk</h3>
+        <DetailsTable details={risk} />
+        <KindCounts title="Depends on" items={dependsOn} />
+        <KindCounts title="Exposed to it" items={exposed} />
+        {riskyEdges.map(({ edge, other, outgoing }) => (
+          <div key={`${edge.source}-${edge.target}-${edge.rel}`}>
+            <h3 className={PANEL_H3}>
+              {outgoing ? `${edge.rel} → ${other}` : `${other} → ${edge.rel}`}
+            </h3>
+            <DetailsTable details={splitRisk(edge.details).risk} />
+          </div>
+        ))}
+        <h3 className={PANEL_H3}>Details</h3>
+        <DetailsTable details={rest} />
       </div>
     );
   }
 
   const { edge, sourceLabel, targetLabel } = selection;
   const amount = edgeLabel(edge.amount, edge.unit);
+  const { risk, rest } = splitRisk(edge.details);
   return (
-    <div>
+    <div className="pr-6">
       <p>
         <b>{sourceLabel}</b> <span className="text-muted-foreground">— {edge.rel} →</span>{' '}
         <b>{targetLabel}</b>
       </p>
-      <DetailsTable details={{ ...(amount ? { amount } : {}), ...edge.details }} />
+      <h3 className={PANEL_H3}>Risk</h3>
+      <DetailsTable details={{ ...(amount ? { amount } : {}), ...risk }} />
+      {Object.keys(rest).length ? (
+        <>
+          <h3 className={PANEL_H3}>Details</h3>
+          <DetailsTable details={rest} />
+        </>
+      ) : null}
     </div>
   );
 }

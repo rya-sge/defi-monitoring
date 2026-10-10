@@ -1,53 +1,60 @@
-import { Link, Outlet } from '@tanstack/react-router';
-import { useHealth } from '../api/hooks';
+import { Bell, Gauge, Network } from 'lucide-react';
+import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
+import { useGraph, useHealth, useSelectedTarget, useTargets } from '../api/hooks';
 import { USE_MOCKS } from '../api/client';
+import { detailValue } from '../lib/format';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+} from './ui/sidebar';
 
-const NAV_BASE = 'text-[0.92rem] no-underline hover:underline';
-const NAV_ACTIVE = { className: 'font-bold text-foreground' };
-const NAV_INACTIVE = { className: 'text-muted-foreground hover:text-foreground' };
+const NAV = [
+  { to: '/', label: 'Position', icon: Gauge, exact: true },
+  { to: '/graph', label: 'Dependency graph', icon: Network, exact: false },
+  { to: '/watch', label: 'Alerts', icon: Bell, exact: false },
+] as const;
 
 export function AppShell() {
   const { data: health, error } = useHealth();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-10 flex flex-wrap items-baseline gap-5.5 border-b border-border bg-background px-5.5 py-3.5">
-        <div className="font-bold tracking-[-0.01em]">
-          riskdep
-          <span className="ml-2 text-[0.82rem] font-normal text-muted-foreground">
-            DeFi position risk · Morpho
-          </span>
-        </div>
-        <nav className="flex gap-3.5" aria-label="Main">
-          <Link
-            to="/"
-            className={NAV_BASE}
-            activeProps={NAV_ACTIVE}
-            inactiveProps={NAV_INACTIVE}
-            activeOptions={{ exact: true }}
-          >
-            Position
-          </Link>
-          <Link
-            to="/graph"
-            className={NAV_BASE}
-            activeProps={NAV_ACTIVE}
-            inactiveProps={NAV_INACTIVE}
-          >
-            Dependency graph
-          </Link>
-          <Link
-            to="/watch"
-            className={NAV_BASE}
-            activeProps={NAV_ACTIVE}
-            inactiveProps={NAV_INACTIVE}
-          >
-            Alerts
-          </Link>
-        </nav>
+    <SidebarProvider>
+      <Sidebar>
+        <SidebarHeader className="px-4 pt-3.5 font-bold tracking-[-0.01em]">riskdep</SidebarHeader>
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarMenu aria-label="Main">
+              {NAV.map(({ to, label, icon: Icon, exact }) => (
+                <SidebarMenuItem key={to}>
+                  <SidebarMenuButton
+                    asChild
+                    className="h-10 no-underline"
+                    isActive={exact ? pathname === to : pathname.startsWith(to)}
+                  >
+                    <Link to={to} search={(prev) => prev}>
+                      <Icon />
+                      {label}
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroup>
+        </SidebarContent>
         {/* Provenance, not ornament: where the numbers come from and how old
             they are. Only the failure spends colour. */}
-        <div className="ml-auto flex items-baseline gap-5.5 text-[0.8rem] text-muted-foreground">
+        <SidebarFooter className="px-4 pb-3.5 text-[0.75rem] text-muted-foreground">
           {USE_MOCKS ? <span>mock fixtures</span> : null}
           {health ? (
             <span title={`Backend mode: ${health.mode}`}>
@@ -56,11 +63,64 @@ export function AppShell() {
           ) : error ? (
             <span className="text-critical">backend unreachable</span>
           ) : null}
+        </SidebarFooter>
+      </Sidebar>
+      <SidebarInset className="h-svh min-w-0">
+        <div className="flex items-center gap-2 border-b px-5.5 py-2 text-[0.85rem] text-muted-foreground">
+          {/* Below md the sidebar is a sheet: this is the only way to open it there. */}
+          <SidebarTrigger className="md:hidden" />
+          <TargetSelect />
         </div>
-      </header>
-      <main className="min-h-0 flex-1">
-        <Outlet />
-      </main>
-    </div>
+        <div className="min-h-0 flex-1 overflow-auto">
+          <Outlet />
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
+  );
+}
+
+function TargetSelect() {
+  const { target } = useSelectedTarget();
+  const navigate = useNavigate();
+  const { data: targets } = useTargets();
+  const { data: graph } = useGraph();
+  // Every vault of the graph (the last one written, or the fixture) and every watched address,
+  // the watched targets first: they are the ones with alerts.
+  const watched = new Set(targets?.map((t) => t.target));
+  const options = (graph?.nodes ?? [])
+    .filter(
+      (n) => n.id.startsWith('user:') || detailValue(n.details.actor_type).startsWith('Vault'),
+    )
+    .map((n) => ({ value: n.id.replace(/^user:/, 'user-'), label: n.label }))
+    .sort(
+      (a, b) =>
+        Number(watched.has(b.value)) - Number(watched.has(a.value)) ||
+        a.label.localeCompare(b.label),
+    );
+
+  return (
+    <>
+      <span id="target-label">Vault</span>
+      <Select
+        value={target ?? ''}
+        onValueChange={(value) =>
+          void navigate({
+            to: '.',
+            search: (prev) => ({ ...prev, target: value }),
+          })
+        }
+      >
+        <SelectTrigger aria-labelledby="target-label" size="sm" className="w-72">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map(({ value, label }) => (
+            <SelectItem key={value} value={value}>
+              {label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </>
   );
 }

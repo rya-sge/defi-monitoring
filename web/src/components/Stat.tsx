@@ -9,8 +9,7 @@ export type StatProps = {
   tone?: StatTone;
 };
 
-const TONE: Record<Exclude<StatTone, 'neutral'>, string> = {
-  ok: 'text-ok',
+const TONE: Record<'warn' | 'critical', string> = {
   warn: 'text-warn',
   critical: 'text-critical',
 };
@@ -18,15 +17,14 @@ const TONE: Record<Exclude<StatTone, 'neutral'>, string> = {
 export function Stat({ label, value, note, tone = 'neutral' }: StatProps) {
   return (
     <div>
-      <div className="text-[0.8rem] text-muted-foreground">{label}</div>
-      <div
-        className={cn(
-          'mt-1 font-mono text-2xl font-semibold tracking-[-0.02em] tabular-nums',
-          tone !== 'neutral' && TONE[tone],
-        )}
-      >
-        {value}
+      <div className="text-[0.8rem] text-muted-foreground">
+        {label}
+        {/* Severity is a word beside the label; the number itself is never coloured. */}
+        {tone === 'warn' || tone === 'critical' ? (
+          <span className={cn('ml-2 font-semibold', TONE[tone])}>{tone}</span>
+        ) : null}
       </div>
+      <div className="mt-1 text-2xl font-semibold tracking-[-0.02em] tabular-nums">{value}</div>
       {note ? <div className="mt-1 text-[0.8rem] text-muted-foreground">{note}</div> : null}
     </div>
   );

@@ -73,6 +73,13 @@ class Target(BaseModel):
     last_block: int | None = None
 
 
+class Liquidation(BaseModel):
+    """One borrower of the position's market: the oracle fall that liquidates it, and its debt."""
+
+    drop: float
+    debt_usd: float
+
+
 class ReportPosition(BaseModel):
     label: str
     collateral_units: float
@@ -104,6 +111,7 @@ class ReportPosition(BaseModel):
     underlying_drawdown_1y: float | None = None
     amm_liquidity_usd: float | None = None
     lending_liquidity_usd: float | None = None
+    liquidations: list[Liquidation] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
     collateral_usd: float
     equity_usd: float

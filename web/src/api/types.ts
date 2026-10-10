@@ -96,11 +96,20 @@ export type AlertPage = {
   alerts: Alert[];
 };
 
+/** A watch target of `GET /api/targets`: a vault address, or "user-<address>". */
+export type Target = {
+  target: string;
+  alerts: number;
+  last_block: number | null;
+};
+
 /* ------------------------------------------------------------------ report */
 
 export type OracleMode = 'market-tracking' | 'fundamental' | (string & {});
 
 /** The 34 fields of `PositionFacts` as serialised by `riskdep/report.py`. */
+export type Liquidation = { drop: number; debt_usd: number };
+
 export type ReportPosition = {
   label: string;
   collateral_units: number;
@@ -136,6 +145,8 @@ export type ReportPosition = {
   underlying_drawdown_1y: number;
   amm_liquidity_usd: number;
   lending_liquidity_usd: number;
+  /** Every borrower of the market: the oracle fall that liquidates it, and its debt. Sorted by fall. */
+  liquidations: Liquidation[];
   /** Free-text notes: oracle ambiguity, cross-check results. */
   notes: string[];
   collateral_usd: number;

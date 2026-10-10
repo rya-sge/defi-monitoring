@@ -1,10 +1,12 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { useSearch } from '@tanstack/react-router';
 import { api } from './client';
-import type { AnalyzeRequest, GraphQuery, GraphResponse, Health, Report } from './types';
+import type { AnalyzeRequest, GraphQuery, GraphResponse, Health, Report, Target } from './types';
 
 export const queryKeys = {
   health: ['health'] as const,
   report: ['report'] as const,
+  targets: ['targets'] as const,
   graph: (query: GraphQuery) => ['graph', query] as const,
 };
 
@@ -37,4 +39,22 @@ export function useAnalyze() {
   return useMutation<Report, Error, AnalyzeRequest>({
     mutationFn: (body) => api.analyze(body),
   });
+}
+
+export function useTargets() {
+  return useQuery<Target[]>({
+    queryKey: queryKeys.targets,
+    queryFn: ({ signal }) => api.targets(signal),
+    staleTime: 60_000,
+  });
+}
+
+/** `?target=` from the URL, else the first watch target: one vault at a time, never all. */
+export function useSelectedTarget(): { target: string | undefined; isPending: boolean } {
+  const { target } = useSearch({ strict: false });
+  const targets = useTargets();
+  return {
+    target: target ?? targets.data?.[0]?.target,
+    isPending: !target && targets.isPending,
+  };
 }

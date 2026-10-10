@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-10 16:30 UTC",
+  "generated": "2026-10-10 22:37 UTC",
   "data_as_of": "2026-10-10 10:30 UTC",
   "mode": "offline",
   "position": {
@@ -33,6 +33,60 @@
     "underlying_drawdown_1y": 0.022542043409517265,
     "amm_liquidity_usd": 3819938.001241967,
     "lending_liquidity_usd": 764294.8894825589,
+    "liquidations": [
+      {
+        "drop": 0.00974156182244823,
+        "debt_usd": 2941765.460940477
+      },
+      {
+        "drop": 0.02429865039268031,
+        "debt_usd": 14081.808927150323
+      },
+      {
+        "drop": 0.02506992768360916,
+        "debt_usd": 101180.43163411015
+      },
+      {
+        "drop": 0.04754025231774417,
+        "debt_usd": 357127.9407923053
+      },
+      {
+        "drop": 0.050643376265230855,
+        "debt_usd": 3414155.976582684
+      },
+      {
+        "drop": 0.055777504633776065,
+        "debt_usd": 16113.986707863867
+      },
+      {
+        "drop": 0.07418417047985182,
+        "debt_usd": 16494.459962814868
+      },
+      {
+        "drop": 0.08845813723604656,
+        "debt_usd": 100402.21003073719
+      },
+      {
+        "drop": 0.11081448186775578,
+        "debt_usd": 10327.406806942574
+      },
+      {
+        "drop": 0.15140303407751377,
+        "debt_usd": 12022.742921941575
+      },
+      {
+        "drop": 0.2730902915992405,
+        "debt_usd": 579.1327005572954
+      },
+      {
+        "drop": 0.4547318693644561,
+        "debt_usd": 8018.9905267102495
+      },
+      {
+        "drop": 0.7011130058550987,
+        "debt_usd": 0.2713327885852303
+      }
+    ],
     "notes": [
       "Oracle behaviour is ambiguous (PT close to par): the report also shows the verdict if the oracle were fundamental.",
       "cross-check second RPC: ok \u2014 block 26162041 hash 0xe5e5121059\u2026 identical on https://eth.drpc.org",

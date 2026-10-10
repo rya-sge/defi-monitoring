@@ -5,6 +5,7 @@ import type {
   GraphResponse,
   Health,
   Report,
+  Target,
   WatchQuery,
 } from './types';
 import graphFixture from '../mocks/graph.json';
@@ -85,6 +86,20 @@ export const api = {
   analyze(body: AnalyzeRequest, signal?: AbortSignal): Promise<Report> {
     if (USE_MOCKS) return delay(MOCK_REPORT, 900);
     return post<Report>('/api/analyze', body, signal);
+  },
+
+  targets(signal?: AbortSignal): Promise<Target[]> {
+    if (USE_MOCKS) {
+      // The targets of the committed alert fixtures.
+      return delay(
+        [
+          '0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf',
+          'user-0xb03d620e49b6a21ea9d02142831c3f61c2fcbabc',
+          'user-0xdf81987465681d0515058fe0a47a3bd174012730',
+        ].map((target) => ({ target, alerts: 0, last_block: null })),
+      );
+    }
+    return get<Target[]>('/api/targets', signal);
   },
 
   /** One page of alerts after a block cursor. Pass the returned `cursor` back as `since`. */

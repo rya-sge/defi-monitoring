@@ -11,7 +11,10 @@ export default defineConfig({
     alias: { '@': path.resolve(import.meta.dirname, './src') },
   },
   server: {
+    // 127.0.0.1, not localhost (which may bind ::1 only): Caddy proxies belem.fuca.ch here.
+    host: '127.0.0.1',
     port: 5173,
+    allowedHosts: ['belem.fuca.ch'],
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:8000',

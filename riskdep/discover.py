@@ -36,6 +36,10 @@ TOP_BORROWER_QUERY = """query($id:String!){
  marketPositions(first:1, where:{marketUniqueKey_in:[$id], chainId_in:[1]}, orderBy: BorrowShares, orderDirection: Desc){
   items { user{address} } } }"""
 
+BORROWERS_QUERY = """query($id:String!){
+ marketPositions(first:1000, where:{marketUniqueKey_in:[$id], chainId_in:[1], borrowShares_gte:"1"}){
+  items { healthFactor state{ borrowAssetsUsd } } } }"""
+
 
 @dataclass
 class Position:
@@ -69,6 +73,7 @@ class Position:
     underlying_drawdown_1y: float | None = None
     amm_liquidity_usd: float | None = None
     lending_liquidity_usd: float | None = None
+    liquidations: list[dict] = field(default_factory=list)  # every borrower of the market: drop, debt_usd
     graph: nx.DiGraph = field(default_factory=nx.DiGraph)
     notes: list[str] = field(default_factory=list)
 
@@ -90,6 +95,17 @@ class Position:
 
 def _addr(pendle_id: str) -> str:
     return pendle_id.split("-", 1)[-1].lower()
+
+
+def market_liquidations(f: S.Fetcher, market_id: str) -> list[dict]:
+    """Every borrower of the market as (oracle fall that liquidates it, its debt), sorted by fall."""
+    items = S.morpho(f, BORROWERS_QUERY, {"id": market_id})["marketPositions"]["items"]
+    out = [
+        {"drop": max(0.0, 1 - 1 / i["healthFactor"]), "debt_usd": i["state"]["borrowAssetsUsd"]}
+        for i in items
+        if i["healthFactor"] and i["state"]["borrowAssetsUsd"]
+    ]
+    return sorted(out, key=lambda x: x["drop"])
 
 
 def morpho_lif(lltv: float) -> float:
@@ -274,6 +290,7 @@ def discover_morpho_position(f: S.Fetcher, market_id: str, user: str | None = No
         borrower=user.lower(),
         debt_raw=int(p["state"]["borrowAssets"] or 0),
         loan_decimals=loan["decimals"],
+        liquidations=market_liquidations(f, market_id),
     )
     pm = find_pendle_market(f, coll["address"])
     _build_pt_layers(f, pos, pm)

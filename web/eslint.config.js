@@ -36,6 +36,8 @@ export default tseslint.config(
     // Refresh rule forbids in our own files for good reason. Narrow override
     // rather than weakening the rule everywhere.
     files: ['src/components/ui/**/*.tsx'],
-    rules: { 'react-refresh/only-export-components': 'off' },
+    // Stock shadcn: SidebarMenuSkeleton picks a random width once, in a useMemo, which the
+    // React Compiler purity rule flags. Vendored code, left as shipped.
+    rules: { 'react-refresh/only-export-components': 'off', 'react-hooks/purity': 'off' },
   },
 );
