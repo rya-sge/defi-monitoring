@@ -8,7 +8,7 @@ import pytest
 from riskdep import clock, shock
 from riskdep import engine as EN
 from riskdep import graph as GR
-from riskdep.discover import morpho_lif
+from riskdep.discover import marginal_curve, morpho_lif
 
 F, ORC, M, C, L, V, U = "0xf", "0xo", "0xm", "0xc", "0xl", "0xv", "user:0xu"
 LIF = morpho_lif(0.86)  # 1.04384
@@ -138,28 +138,103 @@ def test_a_move_of_the_underlying_reaches_wrappers_and_pts():
     assert market(EN.run(g, [EN.Shock("0xy", "price", -0.3)]))["market_factor"] == pytest.approx(0.7)
 
 
-def squeeze_graph(liquidity):
-    g = graph("price-tracking", positions=[(100.0, 82.0)] * 10, free=0.0)  # HF 1.049: a 5 % fall liquidates all
+def pt_graph(pt_curve=None, pt_capacity=None, und_curve=None, und_capacity=None):
+    """C is a PT whose pool trades against the yield token Y; the market's oracle reads C's pool through the feed F
+    (a `tracks` edge), as a Pendle TWAP oracle does. Ten positions at HF 1.049: a 5 % fall liquidates them all."""
+    g = graph("price-tracking", positions=[(100.0, 82.0)] * 10, free=0.0)
+    for n in g["nodes"]:
+        if n["id"] == M:
+            n["details"]["oracle_tracks_bound"] = True
+        if n["id"] == C:
+            n["details"].update({"impact_curve": pt_curve or [], "capacity_usd": pt_capacity})
     g["nodes"] += [
         {
             "id": "pendle:0xc",
             "kind": "Pool",
             "label": "Pendle pool",
-            "details": {"liquidity_usd": liquidity, "implied_apy": 0.1, "days_to_maturity": 365},
-        }
+            "details": {"implied_apy": 0.1, "days_to_maturity": 365},
+        },
+        {
+            "id": "0xy",
+            "kind": "Asset",
+            "label": "Y",
+            "details": {"impact_curve": und_curve or [], "capacity_usd": und_capacity},
+        },
     ]
-    g["edges"] += [e(C, "pendle:0xc", "trades in / redeems through")]
+    g["edges"] += [
+        e(C, "pendle:0xc", "trades in / redeems through"),
+        e("pendle:0xc", "0xy", "yield source"),
+        e(F, C, "tracks"),
+    ]
     return g
 
 
-def test_the_squeeze_deepens_the_fall_down_to_the_pt_floor():
-    floor = 1.1 / 1.5  # a buyer holding a year to maturity at 50 % APY instead of 10 %
-    res = EN.run(squeeze_graph(200.0), [EN.Shock(C, "price", -0.05)])
-    assert res.converged
-    assert res.states[C].out["price"] == pytest.approx(0.95 * floor)
-    assert res.states[C].detail["sold_usd"] == pytest.approx(1000.0)  # the ten positions, at today's price
-    no_depth = EN.run(squeeze_graph(None), [EN.Shock(C, "price", -0.05)])
-    assert no_depth.states[C].out["price"] == pytest.approx(0.95)
+def test_the_oracle_follows_its_tracked_pool_once():
+    """A sale lowers the PT's pool price; the oracle reads it through its feed, not twice through the collateral."""
+    res = EN.run(pt_graph(pt_curve=[[100, 1.0], [1000, 0.9], [1e9, 0.8]]), [EN.Shock(C, "price", -0.05)])
+    d = market(res)
+    assert res.converged and d["positions_liquidated"] == 10
+    assert d["oracle_factor"] == pytest.approx(0.95 * 0.9) and d["market_factor"] == pytest.approx(0.95 * 0.9)
+
+
+def test_the_pt_floor_bounds_the_impact():
+    res = EN.run(pt_graph(pt_curve=[[100, 1.0], [1e9, 0.1]]), [EN.Shock(C, "price", -0.05)])
+    assert res.states[C].out["price"] == pytest.approx(0.95 * 1.1 / 1.5)  # a year to maturity, 10 % → 50 % APY
+
+
+def test_beyond_capacity_liquidations_cannot_finish():
+    res = EN.run(pt_graph(pt_curve=[[1e9, 1.0]], pt_capacity=300.0), [EN.Shock(C, "price", -0.05)])
+    d = market(res)
+    assert d["executed"] == pytest.approx(300 / res.states[C].detail["sold_usd"])
+    full = market(EN.run(pt_graph(pt_curve=[[1e9, 1.0]]), [EN.Shock(C, "price", -0.05)]))
+    assert d["liquidated_debt"] == pytest.approx(full["liquidated_debt"] * d["executed"])
+
+
+def test_a_pt_sale_goes_on_to_the_underlyings_exit_and_lowers_the_pts_worth_only():
+    res = EN.run(pt_graph(pt_curve=[[1e9, 1.0]], und_curve=[[100, 1.0], [1e9, 0.8]]), [EN.Shock(C, "price", -0.05)])
+    assert res.states["0xy"].detail["sold_usd"] > 100  # what liquidators got for the PT, sold for dollars
+    d = market(res)
+    assert d["oracle_factor"] == pytest.approx(0.95)  # the pool price, which the oracle reads, did not move
+    assert d["market_factor"] == pytest.approx(0.95 * 0.8)  # the PT's worth follows the underlying's exit
+
+
+def test_an_underlying_move_reaches_the_pts_worth_not_its_oracle():
+    """A PT_TO_ASSET oracle prices the PT against its underlying: a depeg of the underlying liquidates nobody."""
+    d = market(EN.run(pt_graph(), [EN.Shock("0xy", "price", -0.3)]))
+    assert d["oracle_factor"] == pytest.approx(1.0) and d["market_factor"] == pytest.approx(0.7)
+    assert d["positions_liquidated"] == 0 and d["insolvent"] == pytest.approx(10 * (82 - 70))
+
+
+def test_a_loan_token_move_read_by_a_quote_feed_changes_nothing():
+    g = graph("price-tracking", role="QUOTE_FEED_1")
+    g["edges"] += [e(F, L, "tracks")]
+    res = EN.run(g, [EN.Shock(L, "price", -0.1)])
+    assert M not in res.markets() and res.loss(V) == 0
+
+
+def test_the_constant_product_model_is_kept_for_comparison():
+    g = pt_graph()
+    g["nodes"][-2]["details"]["liquidity_usd"] = 200.0
+    cp = {
+        "node_rules": [
+            {
+                "id": "cp",
+                "when": {"node.kind": "Asset"},
+                "apply": "asset_price",
+                "params": {"impact": "constant_product", "depth": "pendle_pool"},
+            }
+        ]
+    }
+    res = EN.run(g, [EN.Shock(C, "price", -0.05)], cp)
+    assert res.states[C].detail["model"] == "constant_product" and res.states[C].out["price"] < 0.95
+
+
+def test_marginal_curves_from_quote_ladders():
+    curve, cap = marginal_curve([(1, 1.0), (3, 2.99), (6, 5.9), (10, 7.0)], 0.5)
+    assert cap == 6 and curve == [[1, 1.0], [3, pytest.approx(0.995)], [6, pytest.approx(0.97)]]
+    assert marginal_curve([(1, 1.0)], 0.5) == ([], None)
+    assert EN.curve_factor(curve, 0.5) == 1.0 and EN.curve_factor(curve, 4) == pytest.approx(0.97)
+    assert EN.curve_factor(curve, 100) == pytest.approx(0.97)  # past the last point: its factor
 
 
 @pytest.mark.parametrize(
@@ -234,17 +309,40 @@ def test_prime_feed_stuck_while_prime_falls(rockawayx):
     assert res.loss(VAULT) == pytest.approx(m["PRIME/USDC"]["lender_loss"] * share)
 
 
-def test_ojo_feed_reading_low_liquidates_both_pt_markets_and_squeezes(rockawayx):
+def node_id(gd, label):
+    return next(n["id"] for n in gd["nodes"] if n["label"] == label)
+
+
+def test_ojo_reading_low_liquidates_what_the_reusd_exit_can_absorb(rockawayx):
     res = EN.run(rockawayx, [EN.Shock(OJO, "reads-low", 0.1)])
     m = by_label(rockawayx, res)
     assert res.converged
-    assert (
-        m["PT-reUSD-10DEC2026/USDC"]["positions_liquidated"] > 0
-        and m["PT-reUSD-10DEC2026/USDT"]["positions_liquidated"] > 0
-    )
-    pt = next(n["id"] for n in rockawayx["nodes"] if n["label"] == "PT-reUSD-10DEC2026")
-    assert res.states[pt].detail["floor"] == pytest.approx(res.states[pt].detail["impact"])  # the floor binds
+    held, sib = m["PT-reUSD-10DEC2026/USDC"], m["PT-reUSD-10DEC2026/USDT"]
+    assert held["positions_liquidated"] > 0 and sib["positions_liquidated"] > 0
+    pt, reusd = res.states[node_id(rockawayx, "PT-reUSD-10DEC2026")], res.states[node_id(rockawayx, "reUSD")]
+    assert pt.detail["impact"] > 0.98  # the Pendle pool is deep: under 2 % at this size (quotes of 2026-10-10)
+    assert reusd.detail["absorbed_usd"] < reusd.detail["sold_usd"]  # selling the reUSD for dollars hits its capacity
+    assert 0 < held["executed"] < 1
     assert 0 < res.loss(VAULT) < 18.5e6
+
+
+def test_a_reusd_depeg_liquidates_nobody_in_the_pt_markets(rockawayx):
+    """The PT oracle (Pendle PT_TO_ASSET) never sees reUSD's market price: the loss is insolvent debt and a drain."""
+    res = EN.run(rockawayx, [EN.Shock(node_id(rockawayx, "reUSD"), "price", -0.3)])
+    d = by_label(rockawayx, res)["PT-reUSD-10DEC2026/USDC"]
+    assert d["positions_liquidated"] == 0 and d["oracle_factor"] == pytest.approx(1.0)
+    assert d["market_factor"] == pytest.approx(0.7) and d["drained"] > 0 and d["insolvent"] > 0
+
+
+def test_a_sibling_oracle_failure_reaches_our_pt_through_the_reusd_exit(rockawayx):
+    """The reUSD/USD feed of the sibling reUSD markets reads low: their liquidators sell reUSD, which lowers reUSD and
+    so our PT's worth, while our oracle stays put: no liquidation here, a thinner buffer."""
+    res = EN.run(rockawayx, [EN.Shock(node_id(rockawayx, "reUSD/USD exchange rate"), "reads-low", 0.15)])
+    m = by_label(rockawayx, res)
+    assert m["reUSD/USDC"]["positions_liquidated"] > 0
+    ours = m["PT-reUSD-10DEC2026/USDC"]
+    assert ours["market_factor"] < 1.0 and ours["oracle_factor"] == pytest.approx(1.0)
+    assert ours["positions_liquidated"] == 0
 
 
 def test_sweep_ranks_the_pt_oracle_first_for_a_reading_too_high(rockawayx):

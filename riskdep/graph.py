@@ -20,6 +20,7 @@ from __future__ import annotations
 import html
 import json
 import math
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -123,6 +124,7 @@ def _oracle(g: Graph, f, oracle: str, block) -> str:
         price_raw=str(price) if price is not None else "reverts",
         oracle_class=cls,
         class_basis=basis,
+        tracks_market=base[0].pendle_market() if not standard and base else None,
         source="price() and getters read on-chain; class from the base-side inputs (D82–D84)",
     )
     probes = {p.address: p for p in base if not p.vault}
@@ -155,6 +157,7 @@ def _oracle(g: Graph, f, oracle: str, block) -> str:
                 role_in_oracle=name,
                 oracle_class=fcls[0],
                 class_basis=fcls[1],
+                tracks_market=probes[addr].pendle_market() if addr in probes else None,
                 source="oracle getter, description() on-chain",
             )
             g.edge(oracle, fid, "reads", role=name)
@@ -200,6 +203,7 @@ def _market(g: Graph, f, m: B.BorrowMarket, block, quotes_pt: bool = True) -> st
         und = pm["underlyingAsset"].split("-", 1)[-1].lower()
         uid = _asset(g, f, und, block)
         g.edge(pool, uid, "yield source")
+        _ladders(g, f, m, pm, und, orc)
         reg = REGISTRY["issuers"].get(und)
         for i, dep in enumerate((reg or {}).get("dependencies", [])):
             ext = g.node(f"ext:{und}:{i}", "External", dep, source="registry.json")
@@ -284,6 +288,94 @@ def _wraps(g: Graph, f: S.Fetcher, und: dict[str, tuple[str, str]], block) -> No
                 "wraps",
                 note="an ERC-4626 share: redeems into this asset at the vault's exchange rate",
             )
+
+
+def _ladders(g: Graph, f: S.Fetcher, m: B.BorrowMarket, pm: dict, und: str, orc: str) -> None:
+    """Real Pendle quotes for selling the PT at growing sizes (engine D97, D98), turned into marginal-price curves:
+    on the PT, its pool against the underlying with no aggregator (the price a Pendle TWAP oracle reads); on the
+    underlying, the underlying received then sold for the loan token through the aggregator (the dollars a liquidator
+    gets). Sizes in USD at today's oracle price, the loan token counted at $1."""
+    try:
+        price = int(g.nodes[orc]["details"].get("price_raw"))
+    except (TypeError, ValueError):
+        return
+    usd_per_pt = price * 10**m.collateral_decimals / 10**36 / 10**m.loan_decimals
+    ratio = REGISTRY["engine"]["capacity_min_ratio"]
+    sizes = discover.ladder_sizes((pm.get("details") or {}).get("liquidity"))
+    pt = m.collateral_token
+    internal, refused = discover.quote_ladder(
+        f, pm["address"], pt, und, m.collateral_decimals, usd_per_pt, False, sizes
+    )
+    curve, cap = discover.marginal_curve(internal, ratio)
+    if refused and cap is None:
+        cap = internal[-1][0] if internal else 0.0  # Pendle could not route the next size: the pool is full there
+    if curve or cap is not None:
+        g.node(
+            pt,
+            "Asset",
+            "",
+            impact_curve=curve,
+            capacity_usd=cap,
+            impact_source="Pendle swap quotes: the PT sold into its pool for the underlying, no aggregator",
+        )
+    exits, refused2 = discover.quote_ladder(
+        f, pm["address"], pt, m.loan_token, m.collateral_decimals, usd_per_pt, True, sizes
+    )
+    got = dict(internal)
+    pts = [(got[usd], out) for usd, out in exits if usd in got]  # (underlying received, loan token received)
+    if pts and pts[0][0] and "impact_curve" not in g.nodes[und]["details"]:
+        usd_per_und = pts[0][1] / pts[0][0] / 10**m.loan_decimals
+        curve2, cap2 = discover.marginal_curve([(u * usd_per_und, out) for u, out in pts], ratio)
+        if refused2 and cap2 is None:
+            cap2 = pts[-1][0] * usd_per_und
+        if curve2 or cap2 is not None:
+            g.node(
+                und,
+                "Asset",
+                "",
+                impact_curve=curve2,
+                capacity_usd=cap2,
+                impact_source=f"Pendle swap quotes: the underlying sold for {m.loan_symbol} through the aggregator",
+            )
+
+
+PAIR = re.compile(r"^\s*([A-Za-z0-9.\-]+)\s*/\s*USD\s*$")
+
+
+def _tracks(g: Graph) -> None:
+    """Ties each oracle input to the market it reads (engine D100): a Pendle TWAP input → the PT of its pool; a
+    price-tracking 'SYM / USD' feed → the one asset of the graph with that symbol. An oracle whose base side reads a
+    tracked input is marked `tracks_bound`, and so are the markets it prices."""
+    pools = {n["details"].get("address", "").lower(): nid for nid, n in g.nodes.items() if nid.startswith("pendle:")}
+    pt_of_pool = {e["target"]: e["source"] for e in g.edges if e["rel"] == "trades in / redeems through"}
+    symbols: dict[str, list[str]] = {}
+    for nid, n in g.nodes.items():
+        if n["kind"] == "Asset":
+            symbols.setdefault(n["label"], []).append(nid)
+    for nid, n in list(g.nodes.items()):
+        if n["kind"] != "Oracle":
+            continue
+        d = n["details"]
+        pool = pools.get(d.get("tracks_market") or "")
+        pair = PAIR.match(n["label"]) if d.get("oracle_class") == "price-tracking" else None
+        if pool and pool in pt_of_pool:
+            g.edge(nid, pt_of_pool[pool], "tracks", note="a Pendle TWAP of this PT's pool (PT against its underlying)")
+        elif pair and len(symbols.get(pair.group(1), [])) == 1:
+            g.edge(nid, symbols[pair.group(1)][0], "tracks", note=f"the {pair.group(1)} / USD market")
+    tracked = {e["source"] for e in g.edges if e["rel"] == "tracks"}
+    for nid, n in g.nodes.items():
+        if n["kind"] == "Oracle" and n["details"].get("shape"):
+            bound = nid in tracked or any(
+                e["source"] == nid
+                and e["rel"] == "reads"
+                and str(e["details"].get("role", "")).startswith("BASE")
+                and e["target"] in tracked
+                for e in g.edges
+            )
+            g.node(nid, "Oracle", "", tracks_bound=bound)
+    for e in g.edges:
+        if e["rel"] == "priced by":
+            g.node(e["source"], "Pool", "", oracle_tracks_bound=g.nodes[e["target"]]["details"].get("tracks_bound"))
 
 
 def _market_state(g: Graph, f: S.Fetcher, markets: dict[str, B.BorrowMarket], block) -> None:
@@ -492,6 +584,7 @@ def build(
                 g.edge(nid, vid, verb[r])
     found, und = _siblings(g, f, held, block) if siblings and held else ({}, {})
     _wraps(g, f, und, block)
+    _tracks(g)
     _market_state(g, f, {**held, **found}, block)
     return g
 

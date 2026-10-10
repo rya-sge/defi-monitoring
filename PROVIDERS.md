@@ -41,7 +41,7 @@ Every request to the data providers goes through the cached fetcher of `riskdep/
 | Method | Used for | Code |
 |---|---|---|
 | `eth_blockNumber` | the chain head, for the watch loop and the cross-checks | `poller.py`, `watch.py`, `watch_user.py`, `crosscheck.py`, `cli.py` |
-| `eth_call` (single and JSON-RPC batches) | contract reads at a fixed block: Morpho Blue markets and positions, Vault V2 state, adapters, oracles and feeds, token metadata, rate models, the Vault V2 Public Allocator's settings (`0x00b8…1e27`); for the oracle class, each input's `latestRoundData`, the last 24 `getRoundData`, `FEED_1`/`FEED_2`/`innerOracle`, `twapDuration`, `baseDiscountPerYear`; for sibling markets, `asset()` of every candidate collateral | `sources.rpc_call`, `sources.rpc_batch` and every reader |
+| `eth_call` (single and JSON-RPC batches) | contract reads at a fixed block: Morpho Blue markets and positions, Vault V2 state, adapters, oracles and feeds, token metadata, rate models, the Vault V2 Public Allocator's settings (`0x00b8…1e27`); for the oracle class, each input's `latestRoundData`, the last 24 `getRoundData`, `FEED_1`/`FEED_2`/`innerOracle`, `twapDuration`, `baseDiscountPerYear`, and `market()` (the Pendle pool a TWAP input reads); for sibling markets, `asset()` of every candidate collateral | `sources.rpc_call`, `sources.rpc_batch` and every reader |
 | `eth_getLogs` | the events of new blocks: vaults and adapters, Morpho Blue on the watched market ids, authorisations, admin events, mints | `poller.py` |
 | `eth_getStorageAt` | proxy slots (EIP-1967, ZeppelinOS) of the admin surface | `admin.py` (via `sources.rpc_batch_methods`) |
 | `eth_getCode` | minimal-proxy (EIP-1167) detection; whether a vault holder is a contract or a wallet (EIP-7702 delegations count as wallets) | `admin.py`, `discover.py`, `graph.py`, `exit_queue.py` |
@@ -102,7 +102,7 @@ Every request to the data providers goes through the cached fetcher of `riskdep/
 |---|---|---|
 | `/v1/1/markets/active`, `/v1/1/markets/inactive` | finding the Pendle market of a PT; its SY, underlying and expiry; the underlying of every PT among the sibling candidates; the pool's liquidity and implied yield (`details`), the squeeze depth and PT floor of the shock engine | `discover.py` (also called by `admin.py`, `graph.py`, `watch_user.py`), `siblings.py` |
 | `/v2/1/markets/{market}/data` | implied yield, PT discount, liquidity | `discover.py` |
-| `/v2/sdk/1/markets/{market}/swap` | a real quote for selling PT collateral: price impact and fees of an exit or a de-lever | `discover.exit_quote` |
+| `/v2/sdk/1/markets/{market}/swap` | a real quote for selling PT collateral: price impact and fees of an exit or a de-lever; for `graph`, two ladders per PT at nine sizes (5 % to 5× the pool's liquidity): PT → underlying without the aggregator, PT → loan token with it, the shock engine's sale-impact curves (about 18 requests per PT; a refusal, MarketProportionTooHigh, ends a ladder) | `discover.exit_quote`, `discover.quote_ladder` |
 
 **Note.** The swap endpoint refuses quotes above 100M USD of input.
 

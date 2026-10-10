@@ -220,7 +220,13 @@ Details, with a real transaction decoded step by step: `docs/how-a-block-is-anal
 Then, by default (plan `2026-10-10-sibling-markets`):
 1. **Sibling markets.** `siblings.candidates` lists every Ethereum Blue market above the TVL floor, $1M supplied (Morpho API); `siblings.underlyings` reads each collateral's underlying (Pendle lists for PTs, `asset()` for ERC-4626 shares); the pure `siblings.match` keeps those linked to a held market by the same collateral, the same underlying, a shared base price input, or lending that collateral. Each is re-read on-chain and added like a held market, so it joins the graph through the shared asset, oracle or feed node.
 2. **Oracle classes.** `_oracle` probes each base-side input (`oracle_class.probe`: answer, description, round history, composite and structural getters) and `oracle_class.classify_oracle` labels the oracle `price-tracking`, `constant-price` or `not classified`, with its basis.
-3. **Wraps and market state.** An ERC-4626 asset gets a `wraps` edge to the token it redeems into; every Blue market, held or sibling, gets supply, borrow, the collateral of its borrowers and the liquidation curve from `market_risk`, the data the propagation engine of `docs/graph-propagation.md` needs.
+3. **Wraps, tracks and market state.**
+   - An ERC-4626 asset gets a `wraps` edge to the token it redeems into.
+   - An oracle input gets a `tracks` edge to the market it reads: a Pendle TWAP to its PT (from `market()`), a price-tracking "SYM / USD" feed to that asset.
+   - Each PT gets two Pendle quote ladders, turned into sale-impact curves with a capacity: PT → underlying, on the PT; PT → loan token, on the underlying.
+   - Every Blue market, held or sibling, gets supply, borrow, the collateral of its borrowers, its positions and the liquidation curve from `market_risk`.
+
+   That is the data the propagation engine needs.
 
 `--record` saves every response under `fixtures/replay/graph-<target>/` with a `meta.json` (block, targets, the time of the recording); `--replay` rebuilds the graph offline from it, with the recording's time as "now" (a PT's days to maturity).
 
@@ -247,7 +253,7 @@ Then, by default (plan `2026-10-10-sibling-markets`):
 | Alerts | `out/watch-*.jsonl` | the watch loops | one JSON object per alert |
 | Reports and graphs | `out/report.html/.json`, `out/graph.html/.json` | `report`, `graph` | `out/` is git-ignored |
 
-The `Fetcher` has four modes: `offline` (cache only; a miss is an error), `live` (cache first, network on a miss), `refresh` (network always, cache rewritten) and `direct` (network always, nothing cached; used by the live watches).
+The `Fetcher` has four modes: `offline` (cache only; a miss is an error), `live` (cache first, network on a miss), `refresh` (network always, cache rewritten; a request repeated in the same run gets its first answer, so a recording replays what it computed from) and `direct` (network always, nothing cached; used by the live watches).
 
 ## 6. Design principles
 
@@ -261,7 +267,7 @@ The `Fetcher` has four modes: `offline` (cache only; a miss is an error), `live`
 
 ## 7. Testing
 
-`uv run pytest -q tests` runs 186 tests, all offline:
+`uv run pytest -q tests` runs 196 tests, all offline:
 
 | Kind | Files | What it covers |
 |---|---|---|

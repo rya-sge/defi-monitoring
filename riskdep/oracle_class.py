@@ -45,6 +45,13 @@ class Probe:
     getters: dict[str, int] = field(default_factory=dict)  # structural getter of `oracle_getters` → its answer
     children: list[Probe] = field(default_factory=list)  # composite or wrapper inputs (`oracle_children_getters`)
     name: str | None = None  # verified contract name (Etherscan), the implementation's for a proxy
+    market: str | None = None  # `market()` of a Pendle oracle: the pool whose PT price it reads (engine D100)
+
+    def pendle_market(self) -> str | None:
+        """The Pendle pool this input, or one of its parts, reads with a TWAP."""
+        if self.market and self.getters.get("twapDuration()"):
+            return self.market
+        return next((m for c in self.children if (m := c.pendle_market())), None)
 
     @property
     def label(self) -> str:
@@ -138,8 +145,10 @@ def probe(f: S.Fetcher, address: str, block, vault: bool = False, depth: int = 0
     if vault:
         return p
     kids, getters = list(G["oracle_children_getters"]), [g["getter"] for g in G["oracle_getters"]]
-    sigs = ["decimals()", "description()", "latestRoundData()"] + kids + getters
+    sigs = ["decimals()", "description()", "latestRoundData()"] + kids + getters + ["market()"]
     res = S.rpc_batch(f, [_call(p.address, s) for s in sigs], block)
+    if res[-1] and _word(res[-1]):
+        p.market = ("0x" + res[-1][26:66]).lower()
     p.decimals, p.description = _word(res[0]), _string(res[1])
     latest = None
     if res[2]:
@@ -148,7 +157,7 @@ def probe(f: S.Fetcher, address: str, block, vault: bool = False, depth: int = 0
             p.answer = latest[1]
         except Exception:
             latest = None
-    for sig, raw in zip(getters, res[3 + len(kids) :]):
+    for sig, raw in zip(getters, res[3 + len(kids) : -1]):
         if raw and _word(raw) is not None:
             p.getters[sig] = _word(raw)
     children = [("0x" + raw[26:66]).lower() for raw in res[3 : 3 + len(kids)] if raw and _word(raw)]

@@ -42,7 +42,7 @@
 
 - **Design first.** Each mode was built from a plan in `plan/` (design, numbered decisions `D1…`, tracker, interview log). Module docstrings cite those decisions (e.g. `D21`, `D37`); read the matching plan row before changing behaviour it governs.
 - **Pure rules, I/O at the edges.** `rules.py`, `borrower_rules.py` and `propagate.py` are pure functions (decoded events + state before/after → alerts); network access lives in `sources.py`, `vault.py`, `borrower.py`, `poller.py`, `crosscheck.py`.
-- **One cached fetcher.** `sources.py` keys every request by a hash of (method, url, body) and stores it under `fixtures/snapshot/`, so a live run doubles as the offline demo snapshot. `RISKDEP_RPC_URL` changes where the main RPC's requests are sent, never the URL they are cached under. `--record` saves watch ranges under `fixtures/replay/<vault>/` or `fixtures/replay/user-<address>/`, and graphs under `fixtures/replay/graph-<target>/`; `--replay` re-runs them offline.
+- **One cached fetcher.** `sources.py` keys every request by a hash of (method, url, body) and stores it under `fixtures/snapshot/`, so a live run doubles as the offline demo snapshot. `RISKDEP_RPC_URL` changes where the main RPC's requests are sent, never the URL they are cached under. `--record` saves watch ranges under `fixtures/replay/<vault>/` or `fixtures/replay/user-<address>/`, and graphs under `fixtures/replay/graph-<target>/`; `--replay` re-runs them offline. A recording keeps the first answer to a request repeated in the same run, so the replay sees what the recorded run computed from.
 - **One clock.** `clock.py` makes offline runs use `fixtures/snapshot/as_of.json` as "now", so the demo is reproducible on any later day. Never call `time.time()`/`datetime.now()` directly in analysis code.
 - **Registry, not constants.** Facts, assumptions, priors and watch thresholds live in `riskdep/registry.json` (`watch` key for alert thresholds), each with a stated basis. So do the shock engine's propagation rules (`engine`): a new propagation behaviour is a rule first, and a new transmission function in `engine.py` only when no rule can express it.
 - **Alert levels** are `info` / `warn` / `critical`; the trigger tables are in `README.md`.
@@ -134,7 +134,7 @@ Python ≥ 3.10; CI runs the suite on 3.10, the floor `requires-python` in `pypr
 
 ```bash
 uv sync
-uv run pytest -q tests                                 # 186 tests, offline
+uv run pytest -q tests                                 # 196 tests, offline
 uv run python -m riskdep analyze --demo                # cached snapshot, no network → out/report.html/.json
 uv run python -m riskdep watch --replay                # re-run the recorded vault range offline
 uv run python -m riskdep watch --blocks 1000 --record  # live range, saved for --replay

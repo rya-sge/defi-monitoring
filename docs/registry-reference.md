@@ -175,9 +175,12 @@ The shock engine's propagation rules and settings (plan `2026-10-10-propagation-
 |---|---|---|---|
 | `eps` | fraction | 10⁻⁶ | an input that changes by less than this (relative) is not sent on again: the propagation has settled |
 | `max_evaluations` | node evaluations | 20,000 | budget of one run; when spent, the report warns that the numbers are not final |
-| `depth_usd` | USD by asset address | empty | a pool depth for the squeeze beside a PT's Pendle pool liquidity; without one, collateral sold by liquidations moves no price |
-| `edge_rules` | ordered list | 16 rules | how each effect crosses each edge: `id`, `effect`, `rel`, `direction`, `when`, `apply`, `params`, `basis`. The first match wins, and no match stops the effect |
-| `node_rules` | ordered list | `blue-market`, `asset`, `default` | each node's model: a Blue market evaluates its borrowers (`slippage`, `buy_cost`); an asset applies the squeeze (`depth`, `floor`, `stress_yield` 0.5); anything else combines its inputs |
+| `depth_usd` | USD by asset address | empty | a pool depth for the `constant_product` comparison model only |
+| `quote_sizes_x_liquidity` | multiples of a pool's liquidity | 0.05 … 5 (nine sizes) | the sizes of the two Pendle quote ladders the graph records per PT (PT → underlying, PT → loan token); the sale-impact curves come from them |
+| `quote_max_usd` | USD | 99,000,000 | the largest size quoted: Pendle refuses above 100M USD |
+| `capacity_min_ratio` | fraction of spot | 0.5 | a ladder's capacity: where the marginal price falls under this share of spot, or the amount received stops growing; a size Pendle cannot route also ends the ladder there |
+| `edge_rules` | ordered list | 32 rules | how each effect crosses each edge: `id`, `effect`, `rel`, `direction`, `when`, `apply`, `params`, `basis`. The first match wins, and no match stops the effect |
+| `node_rules` | ordered list | `blue-market`, `oracle-input`, `asset`, `default` | each node's model: a Blue market evaluates its borrowers (`slippage`, `buy_cost`); an oracle or feed drops its readings when frozen; an asset prices what is offered into its market (`impact`: `quotes` or `constant_product`, `floor`, `stress_yield` 0.5); anything else combines its inputs |
 | `basis` | text | — | why |
 
 **Changing a rule.** Prefer a `--rules` file for a study: the registry's rules are the defaults everyone gets. A change here keeps its `basis` honest and is followed by `python3 -m pytest -q tests/test_engine.py`. The drain threshold uses `watch.drain_buy_cost`.

@@ -16,7 +16,7 @@ All data comes from keyless public sources: the publicnode Ethereum RPC, the Mor
 
 ```bash
 uv sync                             # Python >= 3.10
-uv run pytest -q tests              # 186 tests, offline
+uv run pytest -q tests              # 196 tests, offline
 ```
 
 Outside an activated virtualenv, prefix the `python3 -m riskdep …` commands below with `uv run`.
@@ -128,7 +128,15 @@ In each Blue market it computes, from every borrower's position:
 - the debt left insolvent when nobody liquidates (a stuck or constant-price oracle);
 - the drain once the collateral's discount to its oracle passes d\*.
 
-Liquidated collateral is sold into its pool. Where the depth is known (a PT's Pendle pool), that sale lowers the price, the lower price reaches every market taking the collateral, and the loop runs until nothing moves (the squeeze; a PT does not fall below the price at which a buyer earns 50 % APY to maturity). Losses reach the vault by its share of each market, and a depositor (`--user`) by its share of the vault. The output gives the consequences per market and the path each loss took.
+Liquidated collateral is offered for sale, which lowers its price and reaches every market taking it, until nothing moves (the squeeze). The price impact comes from real Pendle quotes recorded with the graph, two ladders per PT:
+- **into its pool,** the price a Pendle TWAP oracle reads;
+- **for dollars,** the underlying the pool pays out.
+
+Past a market's capacity the rest cannot be sold, and those liquidations do not complete.
+
+Each oracle moves only with what it actually tracks. PT-reUSD's oracle prices the PT against reUSD, so a reUSD depeg liquidates nobody there: it leaves insolvent debt and a drain.
+
+Losses reach the vault by its share of each market, and a depositor (`--user`) by its share of the vault. The output gives the consequences per market and the path each loss took.
 
 How a shock crosses each edge is an ordered list of rules in `registry.json` (`engine`), with criteria on the edge, its two nodes and the effect. Change them, or pass a file with `--rules`, to propagate differently without touching the code. Everything, with worked examples and the rule format: `docs/shock-engine.md`.
 

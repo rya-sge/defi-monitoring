@@ -123,14 +123,14 @@ def report(gd: dict, res: EN.Result, line=print, max_path: int = 30) -> dict:
     for nid, st in res.states.items():
         if st.model == "asset_price" and st.detail:
             dd = st.detail
-            depth = (
-                f"a {_fmt(dd['depth_usd'])} pool" if dd["depth_usd"] else "a pool of unknown depth (no price impact)"
+            part = (
+                f", {dd['absorbed_usd'] / dd['sold_usd']:.0%} absorbed" if dd["absorbed_usd"] < dd["sold_usd"] else ""
             )
+            floor = f", floor {dd['floor']:.4f}" if dd.get("floor") and dd["impact"] == dd["floor"] else ""
             line(
-                f"  squeeze: {_fmt(dd['sold_usd'])} of {nodes[nid]['label']} (at today's price) sold into {depth}: "
-                f"impact × {dd['impact']:.4f}"
-                + (f", floor {dd['floor']:.4f}" if dd.get("floor") else "")
-                + f", price × {st.out.get('price', 1.0):.4f}"
+                f"  sold into {nodes[nid]['label']}'s market: {_fmt(dd['sold_usd'])} offered (at today's price){part}: "
+                f"impact × {dd['impact']:.4f}{floor}, price × {st.out.get('price', 1.0):.4f}"
+                + (" (no quotes: no impact)" if dd["impact"] == 1.0 and not floor else "")
             )
     losses = {}
     for aid, a in actors(gd).items():

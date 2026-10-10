@@ -132,6 +132,9 @@ Plain-language definitions of the terms used in this repository's reports, alert
 | **Insolvent debt** | Debt the collateral no longer covers at its market price while nobody liquidates it, because the oracle did not move or liquidating does not pay: the lenders' loss once the borrower walks away. |
 | **Squeeze** | Liquidations selling collateral into its pool, which lowers its price and liquidates more, in every market that takes it. |
 | **PT floor** | The price below which a PT's buyers to maturity step in: where it yields the engine's stress yield (50 % APY) until it redeems at par. |
+| **Tracks** | The edge from an oracle input to the market it reads: a Pendle TWAP to its PT's pool, a "SYM / USD" feed to that asset. A move of that market moves the reading; nothing else does. |
+| **Price and value (shock engine)** | An asset's `price` is its own market (its pool, its pair); its `value` is a move inherited from an underlying (a PT when reUSD depegs). An oracle reading the asset's own market or its accounting rate does not see a value move. |
+| **Capacity** | How much a market can absorb before its quotes stop: past it, liquidators cannot sell the collateral, and the liquidations that need that sale do not complete. |
 
 ## Blockchain data and the watcher
 

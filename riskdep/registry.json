@@ -326,6 +326,18 @@
     "eps": 1e-06,
     "max_evaluations": 20000,
     "depth_usd": {},
+    "quote_sizes_x_liquidity": [
+      0.05,
+      0.15,
+      0.3,
+      0.5,
+      0.75,
+      1,
+      1.5,
+      2.5,
+      5
+    ],
+    "quote_max_usd": 99000000,
     "edge_rules": [
       {
         "id": "loan-token-move",
@@ -333,6 +345,23 @@
         "rel": "lends",
         "apply": "stop",
         "basis": "a loan token's price move changes no amount owed or supplied in that token, and the vault counts in it"
+      },
+      {
+        "id": "loan-token-value",
+        "effect": "value",
+        "rel": "lends",
+        "apply": "stop",
+        "basis": "the same for a move inherited from an underlying"
+      },
+      {
+        "id": "tracks",
+        "effect": "price",
+        "rel": "tracks",
+        "apply": "pass",
+        "params": {
+          "as": "reading"
+        },
+        "basis": "D100: a feed reads the market it tracks (a Pendle TWAP its PT's pool, a 'SYM / USD' feed that pair): a move of that market moves the reading"
       },
       {
         "id": "base-feed",
@@ -364,6 +393,32 @@
         "basis": "a quote feed divides the price: reading m x moves it by 1/m"
       },
       {
+        "id": "base-feed-reading",
+        "effect": "reading",
+        "rel": "reads",
+        "when": {
+          "edge.role__in": [
+            "BASE_FEED_1",
+            "BASE_FEED_2"
+          ]
+        },
+        "apply": "pass",
+        "basis": "a base feed following its market moves the oracle with it"
+      },
+      {
+        "id": "quote-feed-reading",
+        "effect": "reading",
+        "rel": "reads",
+        "when": {
+          "edge.role__in": [
+            "QUOTE_FEED_1",
+            "QUOTE_FEED_2"
+          ]
+        },
+        "apply": "stop",
+        "basis": "D101: a quote feed following the loan token rescales the oracle and the collateral's worth alike in that token: no effect in loan units"
+      },
+      {
         "id": "frozen-base-feed",
         "effect": "frozen",
         "rel": "reads",
@@ -384,8 +439,22 @@
         "basis": "the oracle applies the vault's accounting rate (convertToAssets), not the share's market price"
       },
       {
+        "id": "vault-rate-value",
+        "effect": "value",
+        "rel": "converts through",
+        "apply": "stop",
+        "basis": "the vault's accounting rate does not follow its asset's market either"
+      },
+      {
         "id": "oracle-misreport",
         "effect": "misreport",
+        "rel": "priced by",
+        "apply": "pass",
+        "basis": "a market liquidates on its oracle's reading"
+      },
+      {
+        "id": "oracle-reading",
+        "effect": "reading",
         "rel": "priced by",
         "apply": "pass",
         "basis": "a market liquidates on its oracle's reading"
@@ -398,6 +467,19 @@
         "basis": "a frozen oracle no longer follows its collateral"
       },
       {
+        "id": "collateral-tracked-by-feed",
+        "effect": "price",
+        "rel": "takes as collateral",
+        "when": {
+          "to.oracle_tracks_bound": true
+        },
+        "apply": "collateral_price",
+        "params": {
+          "follows": false
+        },
+        "basis": "D100: the oracle reads its collateral's market through a tracked feed (rule tracks), not here; the collateral's worth still moves"
+      },
+      {
         "id": "collateral-tracking",
         "effect": "price",
         "rel": "takes as collateral",
@@ -408,7 +490,7 @@
         "params": {
           "follows": true
         },
-        "basis": "a price-tracking oracle follows its collateral's market: a fall liquidates borrowers"
+        "basis": "a price-tracking oracle with no tracked input is assumed to follow its collateral's market: a fall liquidates borrowers"
       },
       {
         "id": "collateral-constant",
@@ -434,25 +516,80 @@
         "basis": "D93: an oracle not classified is treated as not following, the lender's worse case (no liquidation, a silent loss)"
       },
       {
+        "id": "collateral-value",
+        "effect": "value",
+        "rel": "takes as collateral",
+        "apply": "collateral_price",
+        "basis": "D100: a move inherited from an underlying changes the collateral's worth; no oracle reading its own market or its accounting rate sees it"
+      },
+      {
+        "id": "collateral-exit",
+        "effect": "exit",
+        "rel": "takes as collateral",
+        "apply": "pass",
+        "basis": "D98: liquidations can sell only what the collateral's market absorbs"
+      },
+      {
         "id": "wrapper",
         "effect": "price",
         "rel": "wraps",
         "apply": "pass",
-        "basis": "an ERC-4626 share redeems into its asset: a move of the asset reaches the share"
+        "params": {
+          "as": "value"
+        },
+        "basis": "an ERC-4626 share redeems into its asset: a move of the asset's market changes the share's worth, not its own market or its rate"
+      },
+      {
+        "id": "wrapper-value",
+        "effect": "value",
+        "rel": "wraps",
+        "apply": "pass",
+        "basis": "a move inherited by the asset passes on to its share"
       },
       {
         "id": "pendle-underlying",
         "effect": "price",
         "rel": "yield source",
         "apply": "pass",
-        "basis": "a Pendle pool prices its PT against the yield token: a move of the yield token reaches the pool"
+        "params": {
+          "as": "value"
+        },
+        "basis": "D100: a PT is worth its underlying at maturity, so a move of the underlying's market changes the PT's worth; the pool prices PT against the underlying (PT_TO_ASSET / PT_TO_SY), so the pool price, which a Pendle oracle reads, does not move"
+      },
+      {
+        "id": "pendle-underlying-value",
+        "effect": "value",
+        "rel": "yield source",
+        "apply": "pass",
+        "basis": "a move inherited by the underlying passes on to the PT"
+      },
+      {
+        "id": "pendle-underlying-exit",
+        "effect": "exit",
+        "rel": "yield source",
+        "apply": "pass",
+        "basis": "PT liquidators sell the underlying they receive: if its market cannot absorb it, the PT's liquidations cannot complete"
       },
       {
         "id": "pendle-pt",
         "effect": "price",
         "rel": "trades in / redeems through",
         "apply": "pass",
-        "basis": "a PT trades in and redeems through its Pendle pool"
+        "basis": "a move of the Pendle pool's own price is the PT's market price"
+      },
+      {
+        "id": "pendle-pt-value",
+        "effect": "value",
+        "rel": "trades in / redeems through",
+        "apply": "pass",
+        "basis": "a move inherited through the pool passes on to the PT"
+      },
+      {
+        "id": "pendle-pt-exit",
+        "effect": "exit",
+        "rel": "trades in / redeems through",
+        "apply": "pass",
+        "basis": "the underlying's exit limit passes on to the PT"
       },
       {
         "id": "liquidation-sale",
@@ -460,7 +597,26 @@
         "rel": "takes as collateral",
         "direction": "dependencies",
         "apply": "liquidation_sale",
-        "basis": "liquidators sell the seized collateral into its pool"
+        "basis": "liquidators offer the seized collateral for sale into its market"
+      },
+      {
+        "id": "pt-onward",
+        "effect": "onward",
+        "rel": "trades in / redeems through",
+        "direction": "dependencies",
+        "apply": "pass",
+        "basis": "a PT sold into its pool comes out as underlying"
+      },
+      {
+        "id": "pool-onward",
+        "effect": "onward",
+        "rel": "yield source",
+        "direction": "dependencies",
+        "apply": "pass",
+        "params": {
+          "as": "sale"
+        },
+        "basis": "liquidators sell that underlying for dollars"
       },
       {
         "id": "supplier",
@@ -487,7 +643,15 @@
         "params": {
           "slippage": 0.0
         },
-        "basis": "D92: Blue liquidations, write-offs, insolvent debt and the drain"
+        "basis": "D92: Blue liquidations, write-offs, insolvent debt and the drain; D98, D99: only what the collateral's market absorbs is sold, and offers ratchet"
+      },
+      {
+        "id": "oracle-input",
+        "when": {
+          "node.kind": "Oracle"
+        },
+        "apply": "oracle_input",
+        "basis": "a frozen oracle or feed keeps its reading"
       },
       {
         "id": "asset",
@@ -496,18 +660,19 @@
         },
         "apply": "asset_price",
         "params": {
-          "depth": "pendle_pool",
+          "impact": "quotes",
           "floor": "pendle_maturity",
           "stress_yield": 0.5
         },
-        "basis": "D94: an asset's price takes the impact of the collateral sold into its pool when its depth is known (constant-product, reserves depth / 2), and a PT stops falling where a buyer holding to maturity earns stress_yield (50 % APY, judgement): it redeems at par then"
+        "basis": "D97, D98: an asset's own market price takes the impact of what is offered into it, from real Pendle quotes (a PT's pool; an underlying's sale for dollars), up to its capacity; a PT stops falling where a buyer holding to maturity earns stress_yield (50 % APY, judgement)"
       },
       {
         "id": "default",
         "apply": "combine",
-        "basis": "inputs combined: factors multiply, losses add"
+        "basis": "inputs combined: factors multiply, sales and losses add, exits take the smallest"
       }
     ],
-    "basis": "D89-D96 (plan 2026-10-10-propagation-engine). Rules are tried in order; the first edge rule whose effect, direction, rel and criteria match carries the effect, and no match stops it. --rules <file> puts a file's edge_rules and node_rules first. eps: relative change below which an input is not propagated again; max_evaluations bounds the squeeze loop. depth_usd: pool depth by asset address for the squeeze, beside a PT's Pendle pool liquidity; empty by default, so non-PT collateral sold by liquidations moves no price."
+    "basis": "D89-D101 (plan 2026-10-10-propagation-engine). Rules are tried in order; the first edge rule whose effect, direction, rel and criteria match carries the effect, and no match stops it. --rules <file> puts a file's edge_rules and node_rules first. eps: relative change below which an input is not propagated again; max_evaluations bounds the loop. quote_sizes_x_liquidity: the sale sizes of the Pendle quote ladders the graph records per PT, as multiples of the pool's liquidity, at most quote_max_usd (Pendle refuses above 100M USD); a size Pendle cannot route (MarketProportionTooHigh) ends the ladder and sets the capacity at the last size that went through; capacity_min_ratio: a ladder's capacity is where the marginal price falls under this share of spot or the amount received stops growing (2026-10-10: PT-reUSD into reUSD loses 0.57 % at $25M, reUSD into USDC stops near $12M). depth_usd: a depth for the constant_product comparison model only.",
+    "capacity_min_ratio": 0.5
   }
 }

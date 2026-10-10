@@ -6,13 +6,19 @@ The graph is graph.py's form: nodes with `id`, `kind`, `label`, `details`; edges
 travels against the edges, from a dependency to what depends on it, unless a rule sends it along an edge (a market's
 liquidation sales → its collateral).
 
-Effects a node can carry (D90), each input stored per (effect, source node, rule) so that a later round replaces it:
-  misreport  factor m on an oracle or feed: it reads m × what it should      combine: product
-  frozen     the oracle or feed no longer moves                               combine: any
-  price      factor f on an asset or a Pendle pool: market value × f          combine: product, × squeeze impact
-  sale       USD of collateral sold into an asset's pool by liquidations      combine: sum
-  loss       what lenders, a vault or a depositor lose, in the loan token     combine: sum
-  collateral (internal) the collateral's price factor and whether the market's oracle follows it
+Effects a node can carry (D90, D100), each input stored per (effect, source node, rule) so that a later round
+replaces it:
+  misreport  factor on an oracle or feed: it reads that × what it should             combine: product
+  reading    factor on an oracle or feed: the market it tracks moved                  combine: product
+  frozen     the oracle or feed no longer moves (its reading stays)                   combine: any
+  price      factor on an asset's own market price (its pool, its pair)               combine: product, × sale impact
+  value      factor on an asset's worth inherited from an underlying: no oracle sees it unless a feed tracks that
+             underlying                                                               combine: product
+  sale       USD (at today's price) offered for sale into an asset's market           combine: sum
+  onward     USD of the underlying received from a PT sale, sold on for dollars       combine: sum
+  exit       share of the offered sales the asset's market could absorb (D98)         combine: min
+  loss       what lenders, a vault or a depositor lose, in the loan token             combine: sum
+  collateral (internal) the collateral's price or value factor, and whether the market's oracle follows it
 
 Rules are data (registry.json `engine`, D91): for each edge, effect and direction the first matching edge rule names
 the transmission; for each node the first matching node rule names its model. Nothing here knows Morpho beyond the
@@ -29,7 +35,17 @@ from .discover import REGISTRY, morpho_lif
 from .drain import d_star
 
 E = REGISTRY["engine"]
-NEUTRAL = {"misreport": 1.0, "frozen": False, "price": 1.0, "sale": 0.0, "loss": 0.0}
+NEUTRAL = {
+    "misreport": 1.0,
+    "reading": 1.0,
+    "frozen": False,
+    "price": 1.0,
+    "value": 1.0,
+    "sale": 0.0,
+    "onward": 0.0,
+    "exit": 1.0,
+    "loss": 0.0,
+}
 MODES = ("reads-low", "reads-high", "frozen", "price")
 
 
@@ -217,19 +233,30 @@ class Result:
 def _combine(inputs: dict) -> dict:
     out: dict = {}
     for (eff, _src, _rule), v in inputs.items():
-        if eff in ("misreport", "price"):
+        if eff in ("misreport", "reading", "price", "value"):
             out[eff] = out.get(eff, 1.0) * v
         elif eff == "frozen":
             out[eff] = out.get(eff, False) or bool(v)
-        elif eff in ("sale", "loss"):
+        elif eff in ("sale", "onward", "loss"):
             out[eff] = out.get(eff, 0.0) + v
+        elif eff == "exit":
+            out[eff] = min(out.get(eff, 1.0), v)
     return out
 
 
 def model_combine(g, nid, st, params) -> tuple[dict, dict]:
     out = _combine(st.inputs)
-    out.pop("sale", None)  # only an asset's pool absorbs sales
+    out.pop("sale", None)  # only an asset's market absorbs sales
     return out, {}
+
+
+def model_oracle_input(g, nid, st, params) -> tuple[dict, dict]:
+    """An oracle or feed: a frozen one keeps its reading whatever the market it tracks does (a misreport still
+    applies: it is the value it is stuck at)."""
+    out, detail = model_combine(g, nid, st, params)
+    if out.get("frozen"):
+        out.pop("reading", None)
+    return out, detail
 
 
 def _depth(g, nid, params) -> float | None:
@@ -259,25 +286,54 @@ def _floor(g, nid, params) -> float:
     return 0.0
 
 
+def curve_factor(curve: list, sold: float) -> float:
+    """Pure: the marginal price factor after selling `sold` on a step curve [[sold up to, factor]] (D97)."""
+    factor = 1.0
+    for upto, f in curve:
+        factor = f
+        if sold <= upto:
+            break
+    return factor
+
+
 def model_asset_price(g, nid, st, params) -> tuple[dict, dict]:
-    """The asset's price: shocks and moves from what it wraps, times the impact of the collateral sold into its pool,
-    a constant-product pool with reserves depth / 2 on each side, bounded below by a floor (D94). No depth: the sale
-    moves nothing. Sales are valued at today's price, so the impact only grows as liquidations do."""
+    """The asset's own market price: shocks, times the impact of what is offered for sale into its market (D97, D98).
+
+    `impact: quotes` (default) reads the node's `impact_curve`, the marginal price after each size of real Pendle
+    quotes: for a PT, its pool against the underlying (what a Pendle TWAP oracle reads); for an underlying, its sale for
+    dollars. Past `capacity_usd` nothing more is absorbed: the price stays, and the share that went through is sent
+    back to the markets as `exit`. A PT never falls below its holder-to-maturity floor. `impact: constant_product`
+    keeps the older model on a depth (comparison only). No curve: the offer moves nothing. What a PT sale yields in
+    the underlying goes on (`onward`) to be sold for dollars."""
     out = _combine(st.inputs)
     sold = out.pop("sale", 0.0)
-    depth = _depth(g, nid, params)
-    impact, floor = 1.0, _floor(g, nid, params)
-    if sold > 0 and depth:
+    d = g.nodes[nid].get("details") or {}
+    impact, floor, executed, absorbed = 1.0, _floor(g, nid, params), 1.0, sold
+    model = params.get("impact", "quotes")
+    curve, capacity = d.get("impact_curve") or [], d.get("capacity_usd")
+    if sold > 0 and model == "quotes" and (curve or capacity is not None):
+        if capacity is not None and sold > capacity:
+            absorbed, executed = capacity, capacity / sold
+        impact = max(floor, curve_factor(curve, absorbed)) if curve else 1.0
+    elif sold > 0 and model == "constant_product" and (depth := _depth(g, nid, params)):
         r = depth / 2
         impact = max(floor, (r / (r + sold)) ** 2)
     if impact != 1.0:
         out["price"] = out.get("price", 1.0) * impact
-    detail = {"sold_usd": sold, "depth_usd": depth, "impact": impact, "floor": floor} if sold else {}
+    if executed < 1.0:
+        out["exit"] = min(out.get("exit", 1.0), executed)
+    if sold > 0 and any(e["rel"] == "trades in / redeems through" for e in g.outgoing.get(nid, [])):
+        out["onward"] = absorbed  # PT sold into its pool comes out as underlying, which liquidators sell for dollars
+    detail = (
+        {"sold_usd": sold, "absorbed_usd": absorbed, "impact": impact, "floor": floor, "model": model} if sold else {}
+    )
     return out, detail
 
 
-def _evaluate(positions, fo: float, fm: float, lltv: float, slip: float) -> dict:
-    """Pure: Blue's outcome for every position at oracle factor fo and market factor fm (D92)."""
+def _evaluate(positions, fo: float, fm: float, lltv: float, slip: float, executed: float = 1.0) -> dict:
+    """Pure: Blue's outcome for every position at oracle factor fo and market factor fm (D92). Only a share
+    `executed` of each liquidation can sell its collateral (D98); the rest is not liquidated, and what its collateral
+    no longer covers is insolvent. `sold` is what liquidators offer, all of it, at today's price."""
     lif = morpho_lif(lltv)
     pays = fo > 0 and (fm / fo) * (1 - slip) >= 1 / lif
     o = {"liquidated_debt": 0.0, "positions_liquidated": 0, "bad_debt": 0.0, "insolvent": 0.0, "sold": 0.0}
@@ -287,9 +343,10 @@ def _evaluate(positions, fo: float, fm: float, lltv: float, slip: float) -> dict
         vo, vm = value * fo, value * fm
         if vo * lltv < debt and pays:
             repaid = min(debt, vo / lif)
-            o["liquidated_debt"] += repaid
+            o["liquidated_debt"] += repaid * executed
             o["positions_liquidated"] += 1
-            o["bad_debt"] += max(0.0, debt - vo / lif)
+            o["bad_debt"] += max(0.0, debt - vo / lif) * executed
+            o["insolvent"] += max(0.0, debt - vm * (1 - slip)) * (1 - executed)
             o["sold"] += repaid * lif / fo  # the seized collateral, valued at today's price: a quantity, not a price
         else:
             o["insolvent"] += max(0.0, debt - vm * (1 - slip))
@@ -300,25 +357,35 @@ def model_blue_market(g, nid, st, params) -> tuple[dict, dict]:
     """A Morpho Blue market: liquidations, write-offs, insolvent debt and the drain, net of the state before the shock."""
     d = g.nodes[nid].get("details") or {}
     ins = st.inputs
-    m = 1.0
+    m = reading = 1.0
     frozen = False
-    f, follows = 1.0, False
+    fp = fv = 1.0
+    follows, executed = False, 1.0
     for (eff, _src, _rule), v in ins.items():
         if eff == "misreport":
             m *= v
+        elif eff == "reading":
+            reading *= v
         elif eff == "frozen":
             frozen = frozen or bool(v)
         elif eff == "collateral":
-            f *= v["factor"]
-            follows = follows or bool(v["follows"])
-    fo = m * (f if follows and not frozen else 1.0)
-    fm = f
+            if v.get("kind") == "value":
+                fv *= v["factor"]
+            else:
+                fp *= v["factor"]
+                follows = follows or bool(v["follows"])
+        elif eff == "exit":
+            executed = min(executed, v)
+    # the oracle moves by its misreport, by what its tracked inputs read, and by its collateral's own market only when
+    # it follows that market with no tracked input (D100); a move inherited from an underlying is never seen
+    fo = m * (1.0 if frozen else reading) * (fp if follows and not frozen else 1.0)
+    fm = fp * fv
     lltv = float(d.get("lltv_value") or 0.0)
     positions = d.get("_positions") or []
     slip = float(params.get("slippage", 0.0))
     if not lltv:
         return {}, {"error": "no LLTV on the node"}
-    now, after = _evaluate(positions, 1.0, 1.0, lltv, slip), _evaluate(positions, fo, fm, lltv, slip)
+    now, after = _evaluate(positions, 1.0, 1.0, lltv, slip), _evaluate(positions, fo, fm, lltv, slip, executed)
     delta = 1 - fm / fo if fo > 0 else 0.0
     threshold = d_star(lltv, float(params.get("buy_cost", REGISTRY["watch"]["drain_buy_cost"])))
     drained = float(d.get("free_liquidity") or 0.0) if delta > threshold else 0.0
@@ -326,11 +393,17 @@ def model_blue_market(g, nid, st, params) -> tuple[dict, dict]:
     net = {k: after[k] - now[k] for k in after}
     loss = max(0.0, net["bad_debt"] + net["insolvent"]) + drain_loss
     usd = d.get("loan_usd")
-    sold_usd = net["sold"] * usd if usd else 0.0
+    # ratchet (D99): a sale offered stays offered, so the loop settles even when falling prices make later
+    # liquidations unprofitable
+    sold_usd = max(net["sold"] * usd if usd else 0.0, float(st.out.get("sale", 0.0)) if st.out else 0.0)
     detail = {
         "oracle_factor": fo,
         "market_factor": fm,
         "oracle_misreport": m,
+        "oracle_reading": reading,
+        "collateral_price": fp,
+        "collateral_value": fv,
+        "executed": executed,
         "oracle_frozen": frozen,
         "oracle_follows": follows,
         "liquidated_debt": net["liquidated_debt"],
@@ -350,7 +423,12 @@ def model_blue_market(g, nid, st, params) -> tuple[dict, dict]:
     return {"loss": loss, "sale": sold_usd}, detail
 
 
-NODE_MODELS = {"combine": model_combine, "asset_price": model_asset_price, "blue_market": model_blue_market}
+NODE_MODELS = {
+    "combine": model_combine,
+    "oracle_input": model_oracle_input,
+    "asset_price": model_asset_price,
+    "blue_market": model_blue_market,
+}
 
 
 # --- edge transmissions: (graph, edge, from id, to id, effect, value, params, states) -> [(node, effect, value)]
@@ -367,7 +445,9 @@ def t_pass(g, e, frm, to, eff, val, p, states):
 
 
 def t_collateral_price(g, e, frm, to, eff, val, p, states):
-    return [(to, "collateral", {"factor": val, "follows": bool(p.get("follows"))})]
+    """asset → a market taking it: its own price (which the oracle may follow) or its inherited value (never)."""
+    kind = "value" if eff == "value" else "price"
+    return [(to, "collateral", {"factor": val, "follows": bool(p.get("follows")) and kind == "price", "kind": kind})]
 
 
 def t_liquidation_sale(g, e, frm, to, eff, val, p, states):

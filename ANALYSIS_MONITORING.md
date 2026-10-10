@@ -99,7 +99,7 @@ Status: **done** for the watched markets (`riskdep/market_risk.py`): every borro
 
 The cost of leaving, for the user or for liquidators, depends on how much collateral the market can absorb.
 
-Status: **partial**. Real Pendle quotes for PT collateral, including a re-quote for a partial de-lever. Other collateral is not quoted, and the liquidators' side (selling the seized collateral) is not modelled at all.
+Status: **partial**. Real Pendle quotes for PT collateral, including a re-quote for a partial de-lever. The shock engine models the liquidators' side for PTs: two quote ladders per PT (into its pool, then the underlying for dollars), with the capacity beyond which liquidations cannot complete. Collateral that is not a PT, or the underlying of one, has no quote, so its sales move no price.
 
 ### Limiting the propagation
 

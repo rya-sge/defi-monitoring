@@ -38,6 +38,7 @@ Each step below gives its goal, what it delivers, its size (**S** about a day, *
 | 8 | Correlated failures, portfolio view, refined priors | M2, M6, M1 | medium | M–L | your risk policy |
 | 9 | Execution: de-lever or exit through Morpho Bundles | X1 | high, risky | L | a security design and your signing setup |
 | 10 | CI, cleanup, versioning | T2, T4 | low | S | GitHub repository settings |
+| 11 | Backtest the shock engine on the 2026-08-25 PT-reUSD liquidations | K8, K9 | high | M | an archive RPC |
 
 ## 0. Validate what exists
 
@@ -231,6 +232,28 @@ Each step below gives its goal, what it delivers, its size (**S** about a day, *
 **Needs from you.**
 - Access to the GitHub repository settings, to enable Actions.
 - Your decision on `../projet/`: delete it, or keep it frozen with a note.
+
+## 11. Backtest the shock engine
+
+**Goal.** Test `riskdep shock` against a real episode before trusting its magnitudes. Its accounting follows Morpho Blue's code and its sale impact comes from real Pendle quotes, but no full episode has been replayed (`docs/shock-engine.md`, "Validation").
+
+**The episode.** On 2026-08-25, according to the source cited in `GAP.md` K8:
+- trading in YT-reUSD pushed PT-reUSD's implied yield from about 11 % to over 20 % in nine minutes;
+- a min(TWAP, linear) oracle fell 0.5 to 2.8 %;
+- Morpho liquidated 33 PT-reUSD positions, for about $946k of liquidation bonus, with no bad debt.
+
+**Delivers.**
+1. The graph rebuilt at the block before the event: positions, oracle and pool states.
+2. The oracle's measured fall applied as a shock.
+3. The predicted positions liquidated, debt repaid and bonus, against the `Liquidate` events of the following blocks.
+4. A report of the gap, and the rule or parameter changes it calls for (pool curve, timing, partial liquidations).
+
+**Size.** M.
+
+**Needs.**
+- **An archive RPC**, its URL in `keys.ini [rpc]` (empty today): the free node serves state only about 100 blocks back.
+- **The pool's curve at that time,** rebuilt from its reserves at that block: Pendle's quote API answers only for now.
+- **The event's block range and transactions,** to confirm the cited figures.
 
 ## What is already available
 

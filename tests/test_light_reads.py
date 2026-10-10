@@ -251,3 +251,13 @@ def test_other_errors_with_code_32005_are_passed_on():
     """Some nodes use -32005 for 'too many log results': resending would not help, so it is not throttling."""
     assert not S._throttled([{"id": 0, "error": {"code": -32005, "message": "query returned more than 10000 results"}}])
     assert S._throttled({"error": {"code": 429, "message": "slow down"}})
+
+
+def test_a_recording_keeps_the_first_answer_to_a_repeated_request(monkeypatch, tmp_path):
+    """The Pendle market list is read twice in a graph build: the replay must see the answer the run computed from."""
+    answers = iter([Resp(200, {"liquidity": 1}), Resp(200, {"liquidity": 2})])
+    monkeypatch.setattr(S.requests, "get", lambda url, timeout: next(answers))
+    f = S.Fetcher("refresh", tmp_path)
+    assert f.get_json("https://example.org/list") == {"liquidity": 1}
+    assert f.get_json("https://example.org/list") == {"liquidity": 1}
+    assert S.Fetcher("offline", tmp_path).get_json("https://example.org/list") == {"liquidity": 1}

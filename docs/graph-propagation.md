@@ -127,6 +127,7 @@ Steps 2 to 4 use the existing `market_risk.value()`, the same computation as poi
 - **No DebtRank weights.** Each node's effects are recomputed from its inputs until nothing moves, so the non-linear transmissions apply directly and a cycle (the squeeze) settles instead of being cut.
 - **Transmissions chosen by rules,** kept as data in `registry.json`, so propagation can depend on criteria without new code.
 - **The four failure modes come from one market model** that compares the oracle's factor with the market's.
+- **Calibrated in a second slice** (D97–D101). The sale impact comes from Pendle quote ladders with a capacity, and each oracle input is tied to the market it tracks. An underlying's depeg therefore reaches a PT's worth but not a PT_TO_ASSET oracle.
 
 Still missing: probabilities and the verdict (the Monte Carlo over failures), the run order of depositors, and `watch` and `analyze` using the engine.
 
