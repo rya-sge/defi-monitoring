@@ -32,7 +32,7 @@
 
 ## What this project is
 
-`riskdep` is a Python CLI (`python3 -m riskdep`) for the risk of DeFi positions on Ethereum, centred on Morpho. It has four subcommands: `analyze` (batch STAY / REDUCE / EXIT report for a Pendle PT used as Morpho Blue collateral), `watch` (follow a Morpho Vault V2 block by block and alert a depositor), `watch --user` (find every Blue borrow and Vault V2 deposit of an address and monitor them together) and `graph` (interactive dependency graph). All data comes from keyless public sources: the publicnode Ethereum RPC, the Morpho and Pendle APIs, DefiLlama.
+`riskdep` is a Python CLI (`python3 -m riskdep`) for the risk of DeFi positions on Ethereum, centred on Morpho. It has four subcommands: `analyze` (batch STAY / REDUCE / EXIT report for a Pendle PT used as Morpho Blue collateral), `watch` (follow a Morpho Vault V2 block by block and alert a depositor), `watch --user` (find every Blue borrow and Vault V2 deposit of an address and monitor them together) and `graph` (interactive dependency graph). All data comes from keyless public sources: the publicnode Ethereum RPC, the Morpho and Pendle APIs, DefiLlama. A React SPA in `web/` presents the same results in a browser.
 
 ## Key concepts
 
@@ -101,6 +101,40 @@ pyproject.toml        project metadata, dependencies, ruff and pytest configurat
 - `.pre-commit-config.yaml` — the pre-commit hooks: `ruff check --fix`, then `ruff format`.
 - `.github/workflows/ci.yml` — CI on every push, two parallel jobs on Python 3.10: `checks` (`ruff check`) and `tests` (`pytest`).
 
+## The web frontend (`web/`)
+
+React 19 + TypeScript 5.9 + Vite 7, TanStack Router (routes) and Query (fetching), Cytoscape for the graph, Recharts for the report charts. **pnpm**, not npm: `pnpm-lock.yaml` and `pnpm-workspace.yaml` are committed, and `allowBuilds: esbuild` in the workspace file is what lets esbuild run its install script. `web/.env` is committed on purpose — it holds the mock switch and no secret. Usage, the page-by-page tour and the `/api` contract are in `README.md`; what follows is what an agent needs before editing.
+
+```
+web/src/
+  main.tsx            QueryClient (retry 1, no refetch on focus) + RouterProvider
+  router.tsx          three routes, each a lazyRouteComponent
+  styles.css          every colour as a CSS custom property; light base, dark overrides
+  api/types.ts        hand-written shapes of the /api payloads
+  api/client.ts       fetch wrappers, the USE_MOCKS switch, one method per endpoint
+  api/hooks.ts        useHealth / useReport / useGraph / useAnalyze, with the query keys
+  api/stream.ts       subscribeWatch: EventSource, or the fixture replay when mocking
+  components/         AppShell (header, nav, health chip) · GraphCanvas · Kpi · DetailsTable · States
+  lib/format.ts       usd / percent / num / shortHash / etherscanUrl…, all null-tolerant
+  lib/graph.ts        kind colours and shapes, edge width, report-graph normalisation
+  routes/             PositionPage · GraphPage · WatchPage
+  mocks/              report.json, graph.json, alerts.ts
+```
+
+**Invariants.**
+
+- **The types are read off real output, not generated.** `api/types.ts` was written from `out/report.json` and `out/graph.json`, which are git-ignored, so `src/mocks/` is the only committed copy. Change a payload in `report.py` or `graph.py` and both the type and the fixture must follow, or mock mode silently renders the old shape.
+- **`inf`/`nan` arrive as `null`.** The report writer's `clean()` maps them, so a health factor with no debt or a risk multiple with no expected loss is `null`. Such fields are typed `number | null` and every formatter in `lib/format.ts` returns an em dash for null — keep that property when adding one.
+- **Two graph shapes, one renderer.** `/api/graph` returns the six capitalised kinds of `graph.py`; the graph embedded in a report is a serialised networkx graph with lowercase kinds and `from`/`to` edges. `lib/graph.ts` maps the second onto the first, and that mapping is a judgement call documented in place — not something the backend states.
+- **The palette is duplicated from `riskdep/graph.py`**, in `lib/graph.ts` (node colours and shapes, edge width curve) and in `styles.css` (the `--kind-*` tokens), so the SPA and the CLI's standalone HTML look like one tool. A colour change touches all three files.
+- **Mocks are the default, including with no `.env`:** `USE_MOCKS` is `import.meta.env.VITE_USE_MOCKS !== 'false'`. Every endpoint added to `api/client.ts` needs its fixture branch in the same commit, or mock mode breaks on that page.
+- **Two fixture alerts are invented.** The `critical` entries in `mocks/alerts.ts` are modelled on `docs/alert-runbook.md` because no recorded run has one; the header of that file says so. Never cite their `data` keys as the real event payload.
+- **SSE, not WebSocket:** named events `alert` and `tick`, one JSON object each. `min_level` is a server-side filter, so `WatchPage` restarts the stream by remounting on `key={minLevel}` rather than resetting state in an effect. The browser reconnects on its own; `onStatus` only reports the gap.
+- **Routes are lazy because Recharts and Cytoscape are heavy and no page needs both.** A new heavy dependency belongs behind `lazyRouteComponent`, not in the shell.
+- **`GraphCanvas` is the one imperative component.** Cytoscape is built in an effect, `onSelect` is held in a ref so the tap handlers bind once, and the CSS tokens are read with `getComputedStyle` at mount — so a runtime theme switch would need a re-init, which is why `data-theme` has no toggle yet.
+
+**Tooling.** TypeScript is strict with `noUnusedLocals`/`noUnusedParameters`, split into `tsconfig.app.json` (src) and `tsconfig.node.json` (vite config); eslint runs `recommendedTypeChecked` over both projects and makes `no-explicit-any` and `consistent-type-imports` errors. Prettier is 100 columns, single quotes, trailing commas — **not** ruff's 120, and the two should not be unified; the generated fixtures are in `.prettierignore`. There are no frontend tests and CI does not touch `web/`, so `pnpm lint && pnpm build` (the build type-checks with `tsc -b`) is the only gate — run both before handing work over.
+
 ## Dependencies (tested versions)
 
 Python ≥ 3.10; CI runs the suite on 3.10, the floor `requires-python` in `pyproject.toml` declares. `uv.lock` is the source of truth for versions; it currently pins requests 2.34.2, numpy 2.5.3, networkx 3.7, eth-utils 6.0.0, eth-abi 6.0.0, eth-hash 0.8.0 with pycryptodome 3.24.0, and in the `dev` group pytest 9.1.1 and ruff 0.17.0. `eth-hash[pycryptodome]` is a runtime dependency in its own right: `eth-abi`/`eth-utils` pull `eth-hash` in without a keccak backend, and `abi.py` needs one to compute event signatures — without the extra, `pytest` fails at collection with `ImportError: None of these hashing backends are installed`. The HTML outputs load Mermaid (report) and Cytoscape.js (graph) from a CDN.
@@ -118,6 +152,12 @@ uv run python -m riskdep graph --example               # out/graph.html + out/gr
 uv run ruff format . && uv run ruff check .            # format and lint, 120 columns
 ```
 
+```bash
+cd web && pnpm install                                 # pnpm, not npm
+pnpm dev                                               # http://localhost:5173, on the fixtures
+pnpm lint && pnpm build                                # eslint + prettier, then tsc -b + vite build
+```
+
 ## Conventions
 
 - Tests must stay offline: a new network call needs a cached snapshot or a recorded replay behind it.
@@ -127,4 +167,5 @@ uv run ruff format . && uv run ruff check .            # format and lint, 120 co
 - A behaviour change that departs from a plan decision is recorded in that plan's decision table.
 - Leave format and lint to ruff, at 120 columns, in pre-commit and in CI; never mix a style-only commit with a behaviour change.
 - `uv.lock` is committed: change a dependency with `uv add` / `uv lock`, never by editing the lock by hand — CI runs `uv sync --locked` and fails if the lock has drifted from `pyproject.toml`.
+- Never hand-edit `web/src/mocks/report.json` or `graph.json`: regenerate them with `analyze --demo` and `graph --example` and copy the files out of `out/`.
 - Package version lives in `pyproject.toml` and must stay in step with `riskdep/__init__.py` `__version__` (currently `0.1.0`); nothing in the code reads `__version__`, only the docs cite it. There is no `CHANGELOG.md` yet.

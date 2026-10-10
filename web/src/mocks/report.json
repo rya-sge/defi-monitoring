@@ -1,0 +1,418 @@
+{
+  "generated": "2026-10-10 16:30 UTC",
+  "data_as_of": "2026-10-10 10:30 UTC",
+  "mode": "offline",
+  "position": {
+    "label": "Morpho borrower 0xdf8198\u20262730 \u00b7 PT-sUSDE-26NOV2026 \u2192 USDC",
+    "collateral_units": 3961491.3541291417,
+    "collateral_symbol": "PT-sUSDE-26NOV2026",
+    "collateral_address": "0xb195b618ea52b77cb2a58846f452f59f8dfa9390",
+    "pt_price_usd": 0.9931144488589295,
+    "collateral_decimals": 18,
+    "debt_usd": 3413978.1910398337,
+    "loan_symbol": "USDC",
+    "loan_address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "lltv": 0.915,
+    "lif": 1.0261672652642382,
+    "borrow_apy": 0.03744299500647528,
+    "implied_apy": 0.05011036026253257,
+    "maturity": "2026-11-26T00:00:00.000Z",
+    "days_to_maturity": 46.562349537037036,
+    "oracle_mode": "market-tracking",
+    "oracle_ambiguous": true,
+    "pt_discount": 0.006218359665001505,
+    "morpho_market": "0x5613b170ded221c588b6e9637b910f49e5508680ceede207f44aa72e5c46cb05",
+    "borrower": "0xdf81987465681d0515058fe0a47a3bd174012730",
+    "debt_raw": 3414967744843,
+    "loan_decimals": 6,
+    "oracle_price": 0.9923459113394216,
+    "health_factor": 1.0533101401638634,
+    "pendle_market": "0x47ad2cd1dd15739a7a035b9d3b7828d916fef77e",
+    "underlying_address": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+    "underlying_symbol": "sUSDe",
+    "underlying_drawdown_1y": 0.022542043409517265,
+    "amm_liquidity_usd": 3819938.001241967,
+    "lending_liquidity_usd": 764294.8894825589,
+    "notes": [
+      "Oracle behaviour is ambiguous (PT close to par): the report also shows the verdict if the oracle were fundamental.",
+      "cross-check second RPC: ok \u2014 block 26162041 hash 0xe5e5121059\u2026 identical on https://eth.drpc.org",
+      "cross-check Morpho API vs chain: ok \u2014 collateral 3,961,491.35 on-chain vs 3,961,491.35 API (0.000%); debt 3,414,343.11 vs 3,414,967.74 (0.018%)"
+    ],
+    "collateral_usd": 3934214.302815377,
+    "equity_usd": 520236.1117755431,
+    "liquidation_drop": 0.05162164059430607
+  },
+  "graph": {
+    "nodes": [
+      {
+        "id": "chain:ethereum",
+        "kind": "chain",
+        "label": "Ethereum mainnet (settlement)",
+        "source": "registry",
+        "evidence": "settlement for every contract below"
+      },
+      {
+        "id": "asset:0xb195b618ea52b77cb2a58846f452f59f8dfa9390",
+        "kind": "asset",
+        "label": "PT-sUSDE-26NOV2026",
+        "source": "Pendle API /markets",
+        "evidence": "PT 0xb195b618ea52b77cb2a58846f452f59f8dfa9390, matures 2026-11-26, implied APY 5.01%"
+      },
+      {
+        "id": "amm:0x47ad2cd1dd15739a7a035b9d3b7828d916fef77e",
+        "kind": "amm",
+        "label": "Pendle market sUSDe (PT/SY AMM + SY adapter)",
+        "source": "Pendle API /markets/{m}/data",
+        "evidence": "liquidity $3,819,938, total TVL $25,630,791",
+        "protocol": "pendle"
+      },
+      {
+        "id": "issuer:0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+        "kind": "issuer",
+        "label": "sUSDe (Ethena)",
+        "source": "Pendle API underlyingAsset + registry",
+        "evidence": "price $1.2515 (DefiLlama coins); 1y max drawdown 2.25% over 365 daily points",
+        "registered": true
+      },
+      {
+        "id": "offchain:0x9d39a5de30e57443bff2a8307a4256c8797a3497:0",
+        "kind": "offchain",
+        "label": "Delta-hedged perp shorts on CEXs (funding-rate risk)",
+        "source": "registry",
+        "evidence": "off-chain dependency of the issuer"
+      },
+      {
+        "id": "offchain:0x9d39a5de30e57443bff2a8307a4256c8797a3497:1",
+        "kind": "offchain",
+        "label": "Off-exchange custodians (Copper, Ceffu, Cobo)",
+        "source": "registry",
+        "evidence": "off-chain dependency of the issuer"
+      },
+      {
+        "id": "offchain:0x9d39a5de30e57443bff2a8307a4256c8797a3497:2",
+        "kind": "offchain",
+        "label": "USDe mint/redeem desk (KYC'd, off-chain)",
+        "source": "registry",
+        "evidence": "off-chain dependency of the issuer"
+      },
+      {
+        "id": "offchain:0x9d39a5de30e57443bff2a8307a4256c8797a3497:3",
+        "kind": "offchain",
+        "label": "Staked ETH / BTC / stablecoin backing",
+        "source": "registry",
+        "evidence": "off-chain dependency of the issuer"
+      },
+      {
+        "id": "lending:0x5613b170ded221c588b6e9637b910f49e5508680ceede207f44aa72e5c46cb05",
+        "kind": "lending",
+        "label": "Morpho Blue market PT-sUSDE-26NOV2026/USDC (LLTV 91.5%)",
+        "source": "Morpho API marketById/marketPosition",
+        "evidence": "debt $3,413,978, HF 1.053, utilization 90.1%, idle liquidity $764,295, borrow APY 3.74%",
+        "protocol": "morpho-blue"
+      },
+      {
+        "id": "oracle:0xf8b29e7e9c00ce531434775f7923cc9fbca01b08",
+        "kind": "oracle",
+        "label": "Oracle 0xF8b29e7E\u2026",
+        "source": "Ethereum RPC eth_call price(), eth_getCode",
+        "evidence": "custom/unverified oracle, EIP-1167 clone of 0x9b4655239e91dc9e1f7599bb88fba41b4542de5b; reads 0.9923 vs PT market 0.9934 (-0.11%), but the PT trades only 0.62% below par: a market, linear-discount or par oracle would all read about the same. Ambiguous; treated as market-tracking, the conservative case",
+        "mode": "market-tracking"
+      },
+      {
+        "id": "stable:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "kind": "stable",
+        "label": "USDC (Circle)",
+        "source": "Morpho API loanAsset + registry",
+        "evidence": "Fiat-backed; depegged to ~0.88 on 2023-03-11 (SVB). For a borrower, a loan-asset depeg lowers the debt: no loss channel."
+      },
+      {
+        "id": "position",
+        "kind": "position",
+        "label": "Morpho borrower 0xdf8198\u20262730 \u00b7 PT-sUSDE-26NOV2026 \u2192 USDC",
+        "source": "Morpho API",
+        "evidence": "3,961,491 PT-sUSDE-26NOV2026 ($3,934,214) against $3,413,978 USDC"
+      }
+    ],
+    "edges": [
+      {
+        "from": "asset:0xb195b618ea52b77cb2a58846f452f59f8dfa9390",
+        "to": "amm:0x47ad2cd1dd15739a7a035b9d3b7828d916fef77e",
+        "rel": "minted by / exits through"
+      },
+      {
+        "from": "asset:0xb195b618ea52b77cb2a58846f452f59f8dfa9390",
+        "to": "issuer:0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+        "rel": "redeems into"
+      },
+      {
+        "from": "amm:0x47ad2cd1dd15739a7a035b9d3b7828d916fef77e",
+        "to": "chain:ethereum",
+        "rel": "settles on"
+      },
+      {
+        "from": "issuer:0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+        "to": "offchain:0x9d39a5de30e57443bff2a8307a4256c8797a3497:0",
+        "rel": "relies on"
+      },
+      {
+        "from": "issuer:0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+        "to": "offchain:0x9d39a5de30e57443bff2a8307a4256c8797a3497:1",
+        "rel": "relies on"
+      },
+      {
+        "from": "issuer:0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+        "to": "offchain:0x9d39a5de30e57443bff2a8307a4256c8797a3497:2",
+        "rel": "relies on"
+      },
+      {
+        "from": "issuer:0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+        "to": "offchain:0x9d39a5de30e57443bff2a8307a4256c8797a3497:3",
+        "rel": "relies on"
+      },
+      {
+        "from": "issuer:0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+        "to": "chain:ethereum",
+        "rel": "settles on"
+      },
+      {
+        "from": "lending:0x5613b170ded221c588b6e9637b910f49e5508680ceede207f44aa72e5c46cb05",
+        "to": "asset:0xb195b618ea52b77cb2a58846f452f59f8dfa9390",
+        "rel": "collateral"
+      },
+      {
+        "from": "lending:0x5613b170ded221c588b6e9637b910f49e5508680ceede207f44aa72e5c46cb05",
+        "to": "oracle:0xf8b29e7e9c00ce531434775f7923cc9fbca01b08",
+        "rel": "prices collateral with"
+      },
+      {
+        "from": "lending:0x5613b170ded221c588b6e9637b910f49e5508680ceede207f44aa72e5c46cb05",
+        "to": "stable:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "rel": "debt in"
+      },
+      {
+        "from": "lending:0x5613b170ded221c588b6e9637b910f49e5508680ceede207f44aa72e5c46cb05",
+        "to": "chain:ethereum",
+        "rel": "settles on"
+      },
+      {
+        "from": "oracle:0xf8b29e7e9c00ce531434775f7923cc9fbca01b08",
+        "to": "amm:0x47ad2cd1dd15739a7a035b9d3b7828d916fef77e",
+        "rel": "reads (inferred)"
+      },
+      {
+        "from": "position",
+        "to": "lending:0x5613b170ded221c588b6e9637b910f49e5508680ceede207f44aa72e5c46cb05",
+        "rel": "borrows on"
+      }
+    ]
+  },
+  "priors": [
+    {
+      "event": "chain",
+      "node": "chain:ethereum",
+      "layer": "Ethereum (settlement)",
+      "p_year": 0.01,
+      "a": 1.0,
+      "b": 199.0,
+      "basis": "No fund-losing consensus failure since the Merge; finality was lost twice for ~1h on 2023-05-11/12. Modelled as a 1%/yr liveness event costing ~0.5% (stuck exit, gas spike).",
+      "recovery": 0.0
+    },
+    {
+      "event": "issuer_depeg",
+      "node": "issuer:0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+      "layer": "sUSDe issuer (Ethena): depeg",
+      "p_year": 0.12,
+      "a": 1.6,
+      "b": 18.0,
+      "basis": "USDe printed ~0.65 on a single CEX order book during the 2025-10-10 liquidation cascade while on-chain pools stayed near peg, and dipped ~0.3% in Apr-2024 on negative funding. Modelled: 12%/yr chance of a depeg averaging ~8%, 75% of it recovered by the horizon.",
+      "recovery": 0.75
+    },
+    {
+      "event": "issuer_hack",
+      "node": "issuer:0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+      "layer": "sUSDe issuer (Ethena): exploit / loss of backing",
+      "p_year": 0.01328125,
+      "a": 1.2,
+      "b": 3.0,
+      "basis": "tier \u2265 $100M: 34 hacks / 256 protocols / 5y = 2.66%/yr; \u00d7 category 'Basis Trading' 0.50 (1 hacks / 29 protocols); \u00d7 age 1.0 (listed 2.7y ago) \u2192 1.33%/yr. Severity: Loss of a custodian or CEX holding hedges; Ethena's reserve fund covers the first slice. Mean ~29% of backing.",
+      "recovery": 0.0
+    },
+    {
+      "event": "amm",
+      "node": "amm:0x47ad2cd1dd15739a7a035b9d3b7828d916fef77e",
+      "layer": "Pendle market / SY adapter exploit",
+      "p_year": 0.012062722948870393,
+      "a": 0.8,
+      "b": 5.0,
+      "basis": "tier \u2265 $100M: 34 hacks / 256 protocols / 5y = 2.66%/yr; \u00d7 category 'Yield' 0.65 (6 hacks / 87 protocols); \u00d7 age 0.7 (listed before DefiLlama recorded dates) \u2192 1.21%/yr. Severity: A core-contract or SY-adapter exploit reaches PT holders directly. Mean ~14%: Pendle paused and protected ~$105M during the 2024-09 Penpie exploit (Penpie, a protocol built on Pendle, lost ~$27M).",
+      "recovery": 0.0
+    },
+    {
+      "event": "lending",
+      "node": "lending:0x5613b170ded221c588b6e9637b910f49e5508680ceede207f44aa72e5c46cb05",
+      "layer": "Morpho Blue exploit",
+      "p_year": 0.0503336641032002,
+      "a": 0.6,
+      "b": 6.0,
+      "basis": "tier \u2265 $100M: 34 hacks / 256 protocols / 5y = 2.66%/yr; \u00d7 category 'Lending' 1.89 (28 hacks / 139 protocols); \u00d7 age 1.0 (listed 2.7y ago) \u2192 5.03%/yr. Severity: Immutable core, formally verified; exploits of >=$100M lending protocols in the record took <1% of TVL (Aave V3 $0.9M, Venus $3.7M). Mean ~9% of collateral, deliberately above that record.",
+      "recovery": 0.0
+    },
+    {
+      "event": "oracle",
+      "node": "oracle:0xf8b29e7e9c00ce531434775f7923cc9fbca01b08",
+      "layer": "Oracle misprice / misconfiguration",
+      "p_year": 0.053631284916201116,
+      "a": 2.0,
+      "b": 18.0,
+      "basis": "24 misconfigured/stale-oracle hacks / 179 Lending+CDP protocols / 5y = 2.68%/yr; \u00d7 2.0 (implementation unverified) \u2192 5.36%/yr. Severity: Counts misconfigured / stale / predictable oracle exploits only (spot-price manipulation of thin tokens does not apply to a PT oracle), over Lending + CDP protocols >= $1M. Severity: the reading drops ~10% on average, enough to liquidate a high-LTV loop with no real loss of value.",
+      "recovery": 0.0
+    }
+  ],
+  "simulation": {
+    "horizon_days": 30,
+    "n": 20000,
+    "expected_loss_usd": 7080.478490925223,
+    "var95_usd": 0.0,
+    "cvar95_usd": 141609.56981850447,
+    "var99_usd": 470345.4782072409,
+    "cvar99_usd": 518872.0270563017,
+    "p_any_loss": 0.0209,
+    "p_liquidation": 0.0125,
+    "layers": [
+      {
+        "event": "issuer_depeg",
+        "layer": "sUSDe issuer (Ethena): depeg",
+        "node": "issuer:0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+        "p_horizon": 0.010451848287402976,
+        "mean_severity": 0.08163265306122448,
+        "standalone_loss_usd": 359761.0633133828,
+        "contribution_usd": 3760.1680534662537,
+        "liquidation_rate": 0.75625,
+        "example_path": [
+          "depeg \u22126.7%, PT market trough \u221210.0% seen by the oracle, 75% recovers",
+          "liquidated: 98.9% of collateral seized at the oracle price"
+        ],
+        "basis": "USDe printed ~0.65 on a single CEX order book during the 2025-10-10 liquidation cascade while on-chain pools stayed near peg, and dipped ~0.3% in Apr-2024 on negative funding. Modelled: 12%/yr chance of a depeg averaging ~8%, 75% of it recovered by the horizon."
+      },
+      {
+        "event": "oracle",
+        "layer": "Oracle misprice / misconfiguration",
+        "node": "oracle:0xf8b29e7e9c00ce531434775f7923cc9fbca01b08",
+        "p_horizon": 0.004520411520710144,
+        "mean_severity": 0.1,
+        "standalone_loss_usd": 334829.03235529625,
+        "contribution_usd": 1513.5650153271106,
+        "liquidation_rate": 0.7395,
+        "example_path": [
+          "oracle misreports \u22128.6%",
+          "liquidated: 97.4% of collateral seized at the oracle price"
+        ],
+        "basis": "24 misconfigured/stale-oracle hacks / 179 Lending+CDP protocols / 5y = 2.68%/yr; \u00d7 2.0 (implementation unverified) \u2192 5.36%/yr. Severity: Counts misconfigured / stale / predictable oracle exploits only (spot-price manipulation of thin tokens does not apply to a PT oracle), over Lending + CDP protocols >= $1M. Severity: the reading drops ~10% on average, enough to liquidate a high-LTV loop with no real loss of value."
+      },
+      {
+        "event": "lending",
+        "layer": "Morpho Blue exploit",
+        "node": "lending:0x5613b170ded221c588b6e9637b910f49e5508680ceede207f44aa72e5c46cb05",
+        "p_horizon": 0.004235763858714048,
+        "mean_severity": 0.09090909090909091,
+        "standalone_loss_usd": 251746.46388544235,
+        "contribution_usd": 1066.338573285018,
+        "liquidation_rate": 0.0,
+        "example_path": [
+          "lending market exploit: \u22125.3% of collateral stolen"
+        ],
+        "basis": "tier \u2265 $100M: 34 hacks / 256 protocols / 5y = 2.66%/yr; \u00d7 category 'Lending' 1.89 (28 hacks / 139 protocols); \u00d7 age 1.0 (listed 2.7y ago) \u2192 5.03%/yr. Severity: Immutable core, formally verified; exploits of >=$100M lending protocols in the record took <1% of TVL (Aave V3 $0.9M, Venus $3.7M). Mean ~9% of collateral, deliberately above that record."
+      },
+      {
+        "event": "issuer_hack",
+        "layer": "sUSDe issuer (Ethena): exploit / loss of backing",
+        "node": "issuer:0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+        "p_horizon": 0.0010983197935685585,
+        "mean_severity": 0.2857142857142857,
+        "standalone_loss_usd": 465241.0630851608,
+        "contribution_usd": 510.9834683673105,
+        "liquidation_rate": 0.9,
+        "example_path": [
+          "issuer_hack: value \u221223.8%",
+          "liquidated: 100.0% of collateral seized at the oracle price"
+        ],
+        "basis": "tier \u2265 $100M: 34 hacks / 256 protocols / 5y = 2.66%/yr; \u00d7 category 'Basis Trading' 0.50 (1 hacks / 29 protocols); \u00d7 age 1.0 (listed 2.7y ago) \u2192 1.33%/yr. Severity: Loss of a custodian or CEX holding hedges; Ethena's reserve fund covers the first slice. Mean ~29% of backing."
+      },
+      {
+        "event": "amm",
+        "layer": "Pendle market / SY adapter exploit",
+        "node": "amm:0x47ad2cd1dd15739a7a035b9d3b7828d916fef77e",
+        "p_horizon": 0.0009969877195422638,
+        "mean_severity": 0.13793103448275862,
+        "standalone_loss_usd": 354154.70154334174,
+        "contribution_usd": 353.08788825686736,
+        "liquidation_rate": 0.677,
+        "example_path": [
+          "amm: value \u22129.7%",
+          "liquidated: 98.6% of collateral seized at the oracle price"
+        ],
+        "basis": "tier \u2265 $100M: 34 hacks / 256 protocols / 5y = 2.66%/yr; \u00d7 category 'Yield' 0.65 (6 hacks / 87 protocols); \u00d7 age 0.7 (listed before DefiLlama recorded dates) \u2192 1.21%/yr. Severity: A core-contract or SY-adapter exploit reaches PT holders directly. Mean ~14%: Pendle paused and protected ~$105M during the 2024-09 Penpie exploit (Penpie, a protocol built on Pendle, lost ~$27M)."
+      },
+      {
+        "event": "chain",
+        "layer": "Ethereum (settlement)",
+        "node": "chain:ethereum",
+        "p_horizon": 0.000825713912150805,
+        "mean_severity": 0.005,
+        "standalone_loss_usd": 19912.007337987387,
+        "contribution_usd": 16.4416214778251,
+        "liquidation_rate": 0.0,
+        "example_path": [
+          "chain: value \u22120.4%"
+        ],
+        "basis": "No fund-losing consensus failure since the Merge; finality was lost twice for ~1h on 2023-05-11/12. Modelled as a 1%/yr liveness event costing ~0.5% (stuck exit, gas spike)."
+      }
+    ],
+    "interaction_usd": -140.10612925516216
+  },
+  "decision": {
+    "verdict": "REDUCE",
+    "headline": "REDUCE: a full exit costs more than it saves, but the carry ($5,697) does not cover the expected loss ($7,080); in the worst 1% of outcomes it loses $518,872 on average (100% of equity); a 5.2% oracle drop liquidates it, less than the 12.2% stress.",
+    "carry_usd": 5697.150222309612,
+    "exit_cost_usd": 78945.6861831538,
+    "expected_loss_usd": 7080.478490925223,
+    "net_stay_usd": -1383.3282686156108,
+    "risk_multiple_to_exit": 11.954394962705823,
+    "liquidation_drop": 0.05162164059430607,
+    "stress_drop": 0.12244897959183673,
+    "reduction": {
+      "sell_usd": 1293968.888314951,
+      "new_health_factor": 1.1395348837209303,
+      "new_liquidation_drop": 0.12244897959183676,
+      "cost_usd": 1023.0596811696073,
+      "expected_loss_usd": 4608.539835476373,
+      "cvar99_usd": 435116.1350249662,
+      "carry_usd": 4349.930232863594,
+      "source": "Pendle swap quote"
+    },
+    "reasons": [
+      "Over 30 days: expected loss $7,080 vs carry $5,697 (net $-1,383); leaving now costs $78,946 (1.99% price impact + fees, Pendle swap quote).",
+      "Driver: sUSDe issuer (Ethena): depeg: $3,760 of expected loss (1.05% chance over the horizon, $359,761 if it happens, liquidates 76% of the time).",
+      "Driver: Oracle misprice / misconfiguration: $1,514 of expected loss (0.45% chance over the horizon, $334,829 if it happens, liquidates 74% of the time).",
+      "A 5.16% fall in the oracle price liquidates the position (HF 1.053); the stress it should survive is 12.2% (underlying's worst 1-year drawdown 2.25%).",
+      "The oracle is treated as following the PT market (not confirmed: see the oracle sensitivity line), so a temporary depeg turns into a realised loss through liquidation.",
+      "De-lever: sell $1,293,969 of PT (33%) and repay debt \u2192 HF 1.140, liquidation at \u221212.2%; costs $1,023; expected loss $7,080 \u2192 $4,609, CVaR99 $518,872 \u2192 $435,116, carry $5,697 \u2192 $4,350.",
+      "A full exit would only pay if incident probabilities were 12.0\u00d7 the estimates.",
+      "Oracle sensitivity (inference ambiguous): if the oracle were fundamental, expected loss $4,179 (vs $7,080), P(liquidation) 0.46% (vs 1.25%), verdict REDUCE \u2014 the same."
+    ]
+  },
+  "exit_quote": {
+    "source": "Pendle swap quote",
+    "price_impact": 0.019935611246824574,
+    "fee_usd": 489.7192805294781,
+    "amount_out_raw": "3855481308325",
+    "estimated": false
+  },
+  "oracle_sensitivity": {
+    "oracle_mode": "fundamental",
+    "verdict": "REDUCE",
+    "expected_loss_usd": 4178.856869838755,
+    "cvar99_usd": 362572.85260304436,
+    "p_liquidation": 0.00455
+  }
+}

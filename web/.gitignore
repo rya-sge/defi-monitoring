@@ -1,0 +1,9 @@
+node_modules/
+dist/
+dist-ssr/
+.vite/
+node_modules/.vite/
+*.local
+.eslintcache
+.DS_Store
+*.tsbuildinfo

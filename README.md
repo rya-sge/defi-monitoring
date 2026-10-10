@@ -8,6 +8,8 @@ Risk tooling for DeFi positions on Ethereum, built with the charrette loop: desi
 
 How the system is built (components, data sources, data flow, state, testing): `ARCHITECTURE.md`.
 
+A browser UI over the same three outputs lives in `web/`.
+
 All data comes from keyless public sources: the publicnode Ethereum RPC, the Morpho and Pendle APIs, and DefiLlama.
 
 ## Install
@@ -88,6 +90,34 @@ Writes `out/report.html` and `out/report.json`.
 - **Data date.** An offline run uses the snapshot's date, `data/snapshot/as_of.json`, as "now", so the demo gives the same result on any later day. `--refresh` refetches everything and rewrites that date; `--live` fetches only what is missing and uses today's date.
 - **Oracle.** Whether the lending market's oracle follows the PT market is inferred by comparing their prices. When the PT trades within 1 % of par (near maturity), the test can't tell, so the report says *ambiguous* and shows the verdict under the other oracle behaviour too.
 
+## web: the browser UI
+
+A React single-page app in `web/`, one page per CLI mode: **Position** (the `analyze` report: verdict, KPIs, where the expected loss comes from, tail measures, exit and oracle sensitivity), **Dependency graph** (the `graph` output in Cytoscape, filterable by node kind, searchable, with a selection panel) and **Alerts** (the `watch` stream, newest first, with level counts and a minimum-level filter).
+
+```bash
+cd web
+pnpm install
+pnpm dev          # http://localhost:5173
+pnpm build        # tsc -b && vite build -> web/dist
+pnpm preview      # serve the build
+pnpm lint         # eslint + prettier --check
+pnpm format       # prettier --write
+```
+
+**It runs with no backend.** `VITE_USE_MOCKS` in `web/.env` defaults to true, and the hooks then resolve fixtures copied from real CLI output (`out/report.json`, `out/graph.json`, `out/watch-*.jsonl`) into `web/src/mocks/`. The alert stream is replayed one entry every 1.5 s, then ends. Two `critical` alerts in that fixture are **fabricated** — no recorded run has one, so their wording is modelled on `docs/alert-runbook.md`; everything else is verbatim recorded output.
+
+**The `/api` backend does not exist yet.** With `VITE_USE_MOCKS=false` the hooks hit the paths below, which Vite proxies to `http://127.0.0.1:8000`; until something serves them the UI shows "backend unreachable".
+
+| Endpoint | Serves |
+|---|---|
+| `GET /api/health` | `{status, mode, data_as_of}` — the mode chip in the header |
+| `GET /api/report` | the `analyze` report JSON |
+| `POST /api/analyze` | run `analyze` for a market or user and return the report |
+| `GET /api/graph?user=&vault=&block=` | the `graph` JSON |
+| `GET /api/watch/stream?vault=&user=&min_level=` | Server-Sent Events, named `alert` and `tick` (no buffering) |
+
+**Limits.** Read-only: no wallet, no transaction, no form to launch a run — the Position and Graph pages read whatever the backend serves for the default position, and the alert stream passes only `min_level` (the `vault` and `user` filters and `POST /api/analyze` are typed and wired in the client, but no page offers them). Dark mode follows the system; the `data-theme` override the stylesheet supports has no toggle. The browser reconnects a dropped stream by itself, and the gap is shown meanwhile. No frontend tests, and CI does not build `web/`.
+
 ## Layout
 
 ```
@@ -100,4 +130,6 @@ riskdep/     sources · abi · vault · poller · rules · watch (watch --vault)
              cli · registry.json (facts, assumptions, thresholds)
 data/        snapshot/ (analyze demo), replay/<vault>/ and replay/user-<address>/ (recorded watch ranges)
 tests/
+web/         React SPA: src/api (client, hooks, SSE, types) · src/routes (the three pages)
+             src/components · src/lib · src/mocks (fixtures from real CLI output)
 ```

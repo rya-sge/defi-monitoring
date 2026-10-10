@@ -1,0 +1,5 @@
+dist/
+node_modules/
+src/mocks/graph.json
+src/mocks/report.json
+pnpm-lock.yaml
