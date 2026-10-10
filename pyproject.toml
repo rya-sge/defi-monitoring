@@ -10,10 +10,13 @@ dependencies = [
     "eth-utils>=2.0",
     "eth-abi>=4.0",
     "eth-hash[pycryptodome]>=0.5",
+    "fastapi>=0.143.0",
+    "uvicorn>=0.54.0",
 ]
 
 [dependency-groups]
 dev = [
+    "httpx2>=2.13.1",
     "pytest>=7.0",
     "ruff>=0.14",
 ]

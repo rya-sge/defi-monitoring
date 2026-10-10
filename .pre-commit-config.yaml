@@ -5,14 +5,17 @@ repos:
       - id: ruff-check
         args: [--fix]
       - id: ruff-format
-  # - repo: https://github.com/pre-commit/pre-commit-hooks
-  #   rev: v6.0.0
-  #   hooks:
-  #     - id: trailing-whitespace
-  #       exclude: ^data/
-  #     - id: end-of-file-fixer
-  #       exclude: ^data/
-  #     - id: check-yaml
-  #     - id: check-merge-conflict
-  #     - id: check-added-large-files
-  #       args: [--maxkb=2048]
+
+  - repo: local
+    hooks:
+      # Prettier over web/ only: the repo root is ruff's (120 columns), web/ is
+      # prettier's (100). Pinned to the version in web/pnpm-lock.yaml, and run in
+      # pre-commit's own node env so the hook works without web/node_modules.
+      # `exclude` mirrors web/.prettierignore, which prettier does not read from here.
+      - id: prettier
+        name: prettier (web/)
+        language: node
+        additional_dependencies: ["prettier@3.9.9"]
+        entry: prettier --write --ignore-unknown
+        files: ^web/
+        exclude: ^web/(pnpm-lock\.yaml|src/mocks/(graph|report|shock-trace|vaults|markets)\.json)$

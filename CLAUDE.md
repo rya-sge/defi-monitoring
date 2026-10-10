@@ -8,11 +8,17 @@
 >
 > So end a piece of work by leaving the tree ready and handing over the **one-line commit message** the note below asks for. If several commits are wanted — a style-only commit split from a behaviour commit, say — hand over the staging and commit commands for each, in order, and let the author run them.
 
+> **Note — no browser automation:** do not work on this project through Claude for Chrome, or any other tool that drives a browser on your behalf. Check the UI the ordinary way: `pnpm dev` and look at it.
+
 > **Note — merge conflicts are expected:** several developers work on this project in parallel, so a merge with `main` can conflict even when nothing is wrong: two people edited the same line for different reasons. Treat each side as an intentional change, not an error to discard.
 >
 > To resolve one: read both sides and the commits behind them (`git log --oneline <branch> -- <file>`), check which one matches the current code (the code wins over prose), and keep both intents when they are compatible rather than picking a side. If the two intents contradict and the code does not decide, ask the author. Remove every marker, `git add` the file, and hand over the merge commit as the note above says.
 
 > **Note — be concise:** keep every summary, report and explanation short and direct. Lead with the result, state what changed and what it costs, stop. No preamble, no restating the request, no recap of steps the reader just watched, no closing paragraph that says the same thing again. Prose only where a table or a one-line command would not do.
+
+> **Note — take the simplest route:** solve the problem that was asked with the plainest thing that works. No speculative abstraction, no configuration knob nobody requested, no extra layer in case the requirement grows — if it grows, add it then. Do not deliberate at length over a choice whose options are equivalent in practice: pick one, say which in a clause, move on. A long chain of reasoning about a small change is a sign the change is being made too big.
+>
+> The same applies to the code itself: write the fewest lines that read clearly. Reuse what the module already has instead of adding a parallel helper, delete rather than comment out, and prefer one direct expression to a staircase of intermediates. Concise is not cryptic — a name that explains itself beats a comment explaining a short one.
 
 > **Note — commit messages:** After each group of modifications or each feature added, always provide a **one-line GitHub commit message** (Conventional-Commits style, e.g. `feat: ...`, `fix: ...`, `docs: ...`).
 >
@@ -38,7 +44,7 @@
 
 **Read `docs/hackaton_instruction/GOAL.md` first:** it states the challenge this project answers (the DeFi Risk Dependency Challenge), what is expected, and how it is judged (dependency discovery 30 %, impact estimation 30 %, decision usefulness 25 %, working demo on real data 15 %). Weigh every change against it. The original brief is `docs/hackaton_instruction/Hackathon_DeFi-Risk-Dependency-Challenge_EN_v1.pdf` (one page, Belem Capital, EPFL Hackathon 2026): read it too, it holds what `GOAL.md` does not, such as the worked trade-off (a book in ten 10 % pockets, one affected, 11 % slippage to unwind: make stay-vs-exit explicit), the scope examples (oracle and feed-quality analysis, vaults deploying into an external venue such as a perp exchange, protocols concentrating a large share of on-chain TVL) and the exact criterion wording ("depth and correctness", "is the number defensible"). **Git-ignored**: the file is local only and its notice forbids copying it, so quote from it sparingly and never commit it.
 
-`riskdep` is a Python CLI (`python3 -m riskdep`) for the risk of DeFi positions on Ethereum, centred on Morpho. It has five subcommands: `analyze` (batch STAY / REDUCE / EXIT report for a Pendle PT used as Morpho Blue collateral), `watch` (follow a Morpho Vault V2 block by block and alert a depositor), `watch --user` (find every Blue borrow and Vault V2 deposit of an address and monitor them together), `graph` (interactive dependency graph, with the sibling markets of the held ones and each oracle's class) and `shock` (apply a failure to a node of that graph and propagate it to every market, vault and depositor, by rules kept in `registry.json`). All data comes from public sources: the publicnode Ethereum RPC, the Morpho and Pendle APIs, DefiLlama, all keyless; Pharos, keyless and optional (issuer grades, off-chain backing, common-mode groups; `docs/risk-assessment/outside-providers.md`); and Etherscan, whose key in `keys.ini` is optional (without it, an oracle's source verification reads "not checked", and an oracle input only its name would classify reads "not classified").
+`riskdep` is a Python CLI (`python3 -m riskdep`) for the risk of DeFi positions on Ethereum, centred on Morpho. It has five subcommands: `analyze` (batch STAY / REDUCE / EXIT report for a Pendle PT used as Morpho Blue collateral), `watch` (follow a Morpho Vault V2 block by block and alert a depositor), `watch --user` (find every Blue borrow and Vault V2 deposit of an address and monitor them together), `graph` (interactive dependency graph, with the sibling markets of the held ones and each oracle's class) and `shock` (apply a failure to a node of that graph and propagate it to every market, vault and depositor, by rules kept in `registry.json`). All data comes from public sources: the publicnode Ethereum RPC, the Morpho and Pendle APIs, DefiLlama, all keyless; Pharos, keyless and optional (issuer grades, off-chain backing, common-mode groups; `docs/risk-assessment/outside-providers.md`); and Etherscan, whose key in `keys.ini` is optional (without it, an oracle's source verification reads "not checked", and an oracle input only its name would classify reads "not classified"). A React SPA in `web/` presents the same results in a browser.
 
 ## Key concepts
 
@@ -58,6 +64,12 @@
 riskdep/
   __main__.py         entry point → cli.main
   cli.py              argparse: analyze, watch, graph
+  pipeline.py         one analyse end to end, shared by the CLI and the API (no I/O of its own)
+  api/
+    main.py           FastAPI assembly, CORS, lifespan, /api/health
+    schemas.py        the published contract, mirrored by openapi.json
+    artifacts.py      the only reader of out/, and the fetch lock
+    routes/           one module per resource: graph, report, alerts, dashboard (vault, market)
   sources.py          keyless HTTP/RPC sources behind one cached fetcher (fixtures/snapshot/)
   clock.py            single clock; snapshot date when offline
   abi.py              Morpho Blue / Vault V2 / adapter event and function signatures
@@ -82,6 +94,8 @@ riskdep/
   vault_book.py       a book of vaults (file or --vault flags) under one incident, added up in USD
   exit_queue.py       a depositor's place in a run on a vault: recovery and loss by queue position
   admin.py            admin surface of the watched markets: upgrades, owners, feeds, pauses, mints, oracle divergence
+  # web dashboard
+  dashboard.py        a Vault V2's market allocation and a market's borrowers by liquidating fall (Morpho API)
   # graph
   graph.py            dependency graph as JSON + Cytoscape.js HTML
   siblings.py         sibling markets: other Blue markets sharing a held market's collateral, underlying or price input
@@ -98,7 +112,7 @@ riskdep/
   report.py           HTML + JSON report
 tests/                pytest, all offline (snapshot + recorded replays)
   test_watch_rules.py, test_watch_replay.py, test_borrower.py, test_watch_user_replay.py,
-  test_graph.py, test_siblings.py, test_oracle_class.py, test_engine.py, test_market_risk.py, test_exit_queue.py, test_drain.py, test_scenario.py, test_vault_incident.py, test_vault_book.py, test_pharos.py, test_admin.py, test_decide.py, test_propagate.py, test_demo_snapshot.py, test_fixes.py, test_light_reads.py
+  test_graph.py, test_siblings.py, test_oracle_class.py, test_engine.py, test_market_risk.py, test_exit_queue.py, test_drain.py, test_scenario.py, test_vault_incident.py, test_vault_book.py, test_pharos.py, test_admin.py, test_decide.py, test_propagate.py, test_demo_snapshot.py, test_fixes.py, test_light_reads.py, test_api.py, test_dashboard.py
 pyproject.toml        project metadata, dependencies, ruff and pytest configuration
 ```
 
@@ -116,7 +130,7 @@ pyproject.toml        project metadata, dependencies, ruff and pytest configurat
 - `keys.example.ini` — template of the API keys and secrets (no values); the real `keys.ini` is git-ignored.
 - `erpc.yaml` — configuration of the optional local eRPC proxy (eRPC 0.3.0, six free upstreams, no key); `docs/erpc.md` is the setup guide. Its upstream list is mirrored in `docs/analysis/PROVIDERS.md`.
 - `docs/analysis/ANALYSIS_MONITORING.md` — design note: dependency graph, impact, monitoring, execution, and gaps of the current implementation (done / partial / missing).
-- `plan/` — the sixteen plans (`defi-risk-dependency`, `morpho-vault-v2-watcher`, `morpho-user-watcher`, `lenders-and-timelocks`, `market-borrowers`, `admin-surface`, `exit-queue`, `drain-threshold`, `sibling-markets`, `incident-mode`, `propagation-engine`, `vault-incident`, `vault-book`, `wrapped-collateral`, `borrower-concentration`, `pharos`).
+- `plan/` — the seventeen plans (`defi-risk-dependency`, `morpho-vault-v2-watcher`, `morpho-user-watcher`, `lenders-and-timelocks`, `market-borrowers`, `admin-surface`, `exit-queue`, `drain-threshold`, `sibling-markets`, `incident-mode`, `propagation-engine`, `vault-incident`, `vault-book`, `wrapped-collateral`, `borrower-concentration`, `pharos`, and `web-graph-react-flow` for the SPA's graph).
 - `examples/` — `rockawayx-ethereum.json`, the demo book of vaults and the template for any other (`analyze --book`).
 - `docs/` — `alert-runbook.md` (what each alert means and what to do), `glossary.md`, `registry-reference.md` (every `registry.json` key), `how-risk-is-computed.md`, `monte-carlo.md` (how `analyze`'s simulation works; its mindmap in `docs/img/`), `scenarios-and-breakeven.md`, `vault-depositor-scenarios.md`, `graph-propagation.md`, `how-a-block-is-analysed.md`, `websocket-vs-polling.md`, `user-watcher-options.md`, `exit-queue.md`, `erpc.md` (the optional local RPC proxy), `shock-engine.md` (the shock engine and its rules), `shock-trace.md` (the propagation trace for a front end, example in `shock-trace-example.json`), `drain-threshold.md`, `graph-example.html/.json`.
 - `docs/external/` — third-party references, read-only; check behaviour against them before changing a rule:
@@ -143,10 +157,50 @@ pyproject.toml        project metadata, dependencies, ruff and pytest configurat
 - `fixtures/snapshot/` (analyze demo cache + `as_of.json`) and `fixtures/replay/` (recorded watch ranges, graphs, vault incidents, and the Pharos snapshot under `pharos/`) — test fixtures; do not delete or regenerate casually. **Tracked in git, not ignored, on purpose:** every test runs offline from these cached responses, so CI and any fresh clone need them; a cache file present on one machine only makes a test pass locally and fail in CI. They used to live under `data/`, which `.gitignore` ignores, and new cache files were silently left out of commits (the exit-queue test failed in CI for that reason). So a new cached response (`--record`, `--live`, or a live fetch into these folders) is committed with the change that needs it: check `git status fixtures/`. They hold public responses only: API keys go on the request, never into a cache file (`sources.Fetcher`, `secret`).
 - `out/` — run outputs (reports, alert `.jsonl`, cursors); git-ignored.
 - `conftest.py` — puts the repo root on `sys.path` for tests.
+- `openapi.json` — the committed front/back contract, generated from `riskdep/api/`; CI fails if it has drifted.
 - `pyproject.toml` — project metadata, the runtime dependencies, the `dev` dependency group, and the ruff and pytest configuration.
 - `uv.lock` — the exact resolved version of every dependency; committed, because this is an application and not a library.
-- `.pre-commit-config.yaml` — the pre-commit hooks: `ruff check --fix`, then `ruff format`.
-- `.github/workflows/ci.yml` — CI on every push, two parallel jobs on Python 3.10: `checks` (`ruff check`) and `tests` (`pytest`).
+- `.pre-commit-config.yaml` — the pre-commit hooks: `ruff check --fix`, then `ruff format`, then `prettier --write` over `web/` only. Prettier is pinned to the version in `web/pnpm-lock.yaml` and runs in pre-commit's own node environment, so the hook does not need `web/node_modules`; its `exclude` repeats `web/.prettierignore`, which prettier cannot find from the repo root.
+- `.github/workflows/ci.yml` — CI on every push, three parallel jobs: `checks` (`ruff check` plus the `openapi.json` drift check) and `tests` (`pytest`) on Python 3.10, and `web` (`pnpm lint && pnpm build`) on Node 22 with pnpm 11.
+
+## The web frontend (`web/`)
+
+React 19 + TypeScript 5.9 + Vite 7, TanStack Router (routes) and Query (fetching), **Tailwind CSS v4 + shadcn/ui** for the interface, React Flow (`@xyflow/react`, laid out with dagre) for the graph, Recharts for the report charts. **pnpm**, not npm: `pnpm-lock.yaml` and `pnpm-workspace.yaml` are committed, and `allowBuilds: esbuild` in the workspace file is what lets esbuild run its install script. `web/.env` is committed on purpose — it holds the mock switch and no secret. Usage, the page-by-page tour and the `/api` contract are in `README.md`; what follows is what an agent needs before editing.
+
+```
+web/src/
+  main.tsx            QueryClient (retry 1, no refetch on focus) + RouterProvider
+  router.tsx          five routes, each a lazyRouteComponent; `/` is the vault, `/market/$marketId` a market
+  index.css           the Tailwind entry: the raw palette, the @theme mapping, the base layer
+  api/types.ts        hand-written shapes of the /api payloads
+  api/client.ts       fetch wrappers, the USE_MOCKS switch, one method per endpoint
+  api/hooks.ts        useHealth / useReport / useGraph / useAnalyze, with the query keys
+  api/stream.ts       subscribeWatch: polls /api/alerts with a block cursor, or replays the fixtures when mocking
+  components/         AppShell (shadcn `Sidebar`: nav with icons + provenance; top bar with the target selector) · GraphCanvas · GraphElements (the custom node and edge) · Stat · DetailsTable · States
+  components/ui/      vendored shadcn primitives, stock (sidebar brings sheet, tooltip, skeleton and hooks/use-mobile.ts)
+  lib/format.ts       usd / percent / num / shortHash / etherscanUrl…, all null-tolerant
+  lib/utils.ts        re-exports `cn` from the `cn` package, where `components.json` tells `shadcn add` to import it
+  lib/graph.ts        kind colours, shapes and icons, node amounts, dagre layout, flow reach, edge width, report-graph normalisation
+  routes/             VaultPage (follows the top-bar selector) · MarketPage · GraphPage · ImpactPage (a shock trace, one view per tab) · WatchPage
+  mocks/              report.json, graph.json, vaults.json, markets.json, shock-trace.json (a copy of docs/shock-trace-example.json), alerts.ts
+```
+
+**Invariants.**
+
+- **The types are read off real output, not generated.** `api/types.ts` was written from `out/report.json` and `out/graph.json`, which are git-ignored, so `src/mocks/` is the only committed copy. Change a payload in `report.py` or `graph.py` and both the type and the fixture must follow, or mock mode silently renders the old shape.
+- **`inf`/`nan` arrive as `null`.** The report writer's `clean()` maps them, so a health factor with no debt or a risk multiple with no expected loss is `null`. Such fields are typed `number | null` and every formatter in `lib/format.ts` returns an em dash for null — keep that property when adding one.
+- **Two graph shapes, one renderer.** `/api/graph` returns the six capitalised kinds of `graph.py`; the graph embedded in a report is a serialised networkx graph with lowercase kinds and `from`/`to` edges. `lib/graph.ts` maps the second onto the first, and that mapping is a judgement call documented in place — not something the backend states.
+- **The node colours are duplicated from `riskdep/graph.py` into `lib/graph.ts`** (with the edge width curve), so the SPA and the CLI's standalone HTML read alike. A colour change touches both files. The shapes are not shared: the SPA draws by role (`nodeRole`: circle asset; near-square vault or pool, rounded for an address; hexagon for what holds no assets, smaller for a price feed than for its oracle — D64), the CLI keeps its Cytoscape shapes (D66). It lives in TypeScript and not in the Tailwind theme on purpose: there colour is *data*, keyed to the shape that repeats it, and not part of the interface palette.
+- **`index.css` holds the raw palette; the Tailwind theme is a naming layer over it, never a second palette.** `--bg`, `--fg`, `--muted`, `--line` and `--edge` are a contract with two consumers that cannot read Tailwind: Recharts takes `var(--line)` strings that land in SVG attributes, and the graph's nodes, edges and arrowheads use `var(--bg)`, `var(--fg)` and `var(--edge)` in inline styles. Renaming one means updating `GraphElements` and `GraphCanvas` in the same commit. shadcn's own token names (`--color-background`, `--color-border`, `--color-card`…) are aliased onto the same values, so a vendored component that still says `bg-card` paints the one ground instead of introducing a surface.
+- **The vendored shadcn components are stock** (`pnpm dlx shadcn add --overwrite` is safe), with two local edits: `TableRow` draws its hairline at `border-border/50`, and Prettier reformats them. The sidebar's colours are mapped onto the palette in `@theme` (`--color-sidebar*`), not the hsl values the CLI writes; the CLI's `tw-animate-css` import and `.dark` class variant are dropped (dark mode follows the system and the `data-theme` attribute), so `animate-*` classes are inert; `eslint.config.js` turns `react-hooks/purity` off for `components/ui/**` because the stock `SidebarMenuSkeleton` calls `Math.random` in a `useMemo`. The theme gives every control a light radius (`--radius: 0.5rem`, shadcn's scale), and the quiet surfaces (`muted`, `accent`, `secondary`) are the ground with 5–6 % ink. Colour is reserved for severity — `info` / `warn` / `critical` / `ok`, plus the graph's data palette — and is carried by a **word**, never by a number: no figure is ever coloured. Prose, labels **and numbers** use the system UI stack, numbers with `tabular-nums`; the `mono` utility is for identifiers only (addresses, hashes, market ids, event names).
+- **Impact has no endpoint yet:** `api.shockTrace()` returns the committed example trace in both modes; refresh `mocks/shock-trace.json` by copying `docs/shock-trace-example.json` whenever the test that keeps that file current regenerates it.
+- **Mocks are the default, including with no `.env`:** `USE_MOCKS` is `import.meta.env.VITE_USE_MOCKS !== 'false'`. Every endpoint added to `api/client.ts` needs its fixture branch in the same commit, or mock mode breaks on that page.
+- **Two fixture alerts are invented.** The `critical` entries in `mocks/alerts.ts` are modelled on `docs/alert-runbook.md` because no recorded run has one; the header of that file says so. Never cite their `data` keys as the real event payload.
+- **SSE, not WebSocket:** named events `alert` and `tick`, one JSON object each. `min_level` is a server-side filter, so `WatchPage` restarts the stream by remounting on `key={minLevel}` rather than resetting state in an effect. The browser reconnects on its own; `onStatus` only reports the gap.
+- **Routes are lazy because Recharts and React Flow are heavy; only Impact needs both.** A new heavy dependency belongs behind `lazyRouteComponent`, not in the shell.
+- **`GraphCanvas` lays out once per mount.** dagre runs in the initial state, and the page remounts the canvas with `key` to re-lay out (on new data or Re-layout), which also drops the user's drags. Focus, kind filter and search are derived from props, never stored. Names and edge labels counter-scale with the zoom (`clamp(1/zoom, 1, 2.5)`, D65); the amount inside a node scales with it. React Flow's `base.css` only is imported, and its `<Controls>` are not used: zoom and fit are shadcn `Button`s over `useReactFlow()` in a `<Panel>`.
+
+**Tooling.** TypeScript is strict with `noUnusedLocals`/`noUnusedParameters`, split into `tsconfig.app.json` (src) and `tsconfig.node.json` (vite config); eslint runs `recommendedTypeChecked` over both projects and makes `no-explicit-any` and `consistent-type-imports` errors, with `react-refresh/only-export-components` turned off for `src/components/ui/**` alone, because the generated primitives export their variants next to the component. Prettier is 100 columns, single quotes, trailing commas — **not** ruff's 120, and the two should not be unified; the generated fixtures are in `.prettierignore`. There are no frontend tests, so `pnpm lint && pnpm build` (the build type-checks with `tsc -b`) is the whole gate — the `web` CI job runs exactly that, and the pre-commit `prettier` hook formats `web/` before it gets there. Run both before handing work over.
 
 ## Dependencies (tested versions)
 
@@ -156,7 +210,7 @@ Python ≥ 3.10; CI runs the suite on 3.10, the floor `requires-python` in `pypr
 
 ```bash
 uv sync
-uv run pytest -q tests                                 # 242 tests, offline
+uv run pytest -q tests                                 # 257 tests, offline
 uv run python -m riskdep analyze --demo                # cached snapshot, no network → out/report.html/.json
 uv run python -m riskdep watch --replay                # re-run the recorded vault range offline
 uv run python -m riskdep watch --blocks 1000 --record  # live range, saved for --replay
@@ -167,6 +221,13 @@ uv run python -m riskdep shock --vault 0xE0181090c22579B6A217f1522cbf8c9f1F0C196
 uv run ruff format . && uv run ruff check .            # format and lint, 120 columns
 ~/.local/bin/erpc erpc.yaml                            # optional local RPC proxy (docs/erpc.md), in its own terminal
 export RISKDEP_RPC_URL=http://127.0.0.1:4000/main/evm/1  # route live runs through it; unset to go direct
+uv run uvicorn riskdep.api:app --reload                # the HTTP API for web/, docs at /docs
+```
+
+```bash
+cd web && pnpm install                                 # pnpm, not npm
+pnpm dev                                               # http://localhost:5173, on the fixtures
+pnpm lint && pnpm build                                # eslint + prettier, then tsc -b + vite build
 ```
 
 ## Conventions
@@ -177,7 +238,10 @@ export RISKDEP_RPC_URL=http://127.0.0.1:4000/main/evm/1  # route live runs throu
 - Any change that adds, removes or replaces a data provider, endpoint, query or browser script (RPC, API, CDN) updates `docs/analysis/PROVIDERS.md` in the same commit.
 - Keys and secrets go only in `keys.ini` (git-ignored, `chmod 600`), never in code, docs or committed files; a new key gets its name, with no value, in `keys.example.ini`. Do not use `.env` files for this project.
 - Rule modules stay pure (no I/O); put fetching in the source/state modules.
+- `api/` routes and validates, nothing else: a new rule or threshold goes in the rule modules and `registry.json`, never in a route. Change a payload and you must regenerate `openapi.json` in the same commit.
+- The API never hosts the watcher. `watch` is its own process writing `out/watch-*.jsonl`; the API reads it with a block cursor.
 - A behaviour change that departs from a plan decision is recorded in that plan's decision table.
 - Leave format and lint to ruff, at 120 columns, in pre-commit and in CI; never mix a style-only commit with a behaviour change.
 - `uv.lock` is committed: change a dependency with `uv add` / `uv lock`, never by editing the lock by hand — CI runs `uv sync --locked` and fails if the lock has drifted from `pyproject.toml`.
+- Never hand-edit `web/src/mocks/report.json`, `graph.json`, `vaults.json` or `markets.json`: regenerate them with `analyze --demo`, `graph --example` and `python -m riskdep.dashboard` with every Vault V2 of the fixture graph (offline, from the snapshot) and copy the files out of `out/`.
 - Package version lives in `pyproject.toml` and must stay in step with `riskdep/__init__.py` `__version__` (currently `0.1.0`); nothing in the code reads `__version__`, only the docs cite it. There is no `CHANGELOG.md` yet.

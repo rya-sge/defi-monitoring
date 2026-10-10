@@ -33,6 +33,7 @@ Every external service the project calls, what it is used for, and what is known
 | Etherscan | `https://api.etherscan.io/v2/api` | REST API | yes, `keys.ini` `[etherscan]` | whether an oracle's source is verified; an unclassified oracle input's contract name | `riskdep/sources.py` (`ETHERSCAN`) |
 | jsDelivr | `https://cdn.jsdelivr.net` | CDN (browser) | no | Mermaid in the `analyze` report | `riskdep/report.py` |
 | cdnjs | `https://cdnjs.cloudflare.com` | CDN (browser) | no | Cytoscape.js in the graph page | `riskdep/graph.py` |
+| DefiLlama token icons | `https://token-icons.llamao.fi` | image CDN (browser) | no | token logos in the web graph's Asset nodes | `web/src/lib/graph.ts` (`nodeIcon`) |
 
 Every request to the data providers goes through the cached fetcher of `riskdep/sources.py`, except the CDN scripts, which the browser loads when a report is opened.
 
@@ -89,10 +90,10 @@ Every request to the data providers goes through the cached fetcher of `riskdep/
 | Query (root field) | Used for | Code |
 |---|---|---|
 | `userByAddress` | an address's Blue positions and Vault V2 deposits | `positions.py` |
-| `marketPositions` | a market's borrowers (`borrowShares_gte`), its main suppliers (ordered by supply shares), the largest borrower of a market | `market_risk.py`, `borrower.py`, `discover.py` |
+| `marketPositions` | a market's borrowers (`borrowShares_gte`), its main suppliers (ordered by supply shares), the largest borrower of a market, every borrower's health factor and debt (the dashboard's liquidation chart, first 1000 per market) | `market_risk.py`, `borrower.py`, `discover.py`, `dashboard.py` |
 | `marketById`, `marketPosition` | the `analyze` position and its market | `discover.py` |
-| `vaultV2ByAddress` | the largest depositor of a vault; its holders, first 100 by size, for the exit queue; its allocators and sentinels (graph); its total assets (cross-check) | `vault.py`, `exit_queue.py`, `graph.py`, `crosscheck.py` |
-| `markets` | every Ethereum Blue market with at least `graph.sibling_min_tvl_usd` supplied (its TVL, `supplyAssetsUsd_gte`): collateral, loan token, oracle and its base feeds and vault, borrow in USD; pages of 500 (136 markets at $1M on 2026-10-10) | `siblings.py` |
+| `vaultV2ByAddress` | the largest depositor of a vault; its holders, first 100 by size, for the exit queue; its allocators and sentinels (graph); its total assets (cross-check); its name, total assets, liquidity and each Blue market adapter's supply per market (dashboard) | `vault.py`, `exit_queue.py`, `graph.py`, `crosscheck.py`, `dashboard.py` |
+| `markets` | every Ethereum Blue market with at least `graph.sibling_min_tvl_usd` supplied (its TVL, `supplyAssetsUsd_gte`): collateral, loan token, oracle and its base feeds and vault, borrow in USD; pages of 500 (136 markets at $1M on 2026-10-10); by id (`uniqueKey_in`), a vault's markets: LLTV, collateral price, supply, borrow, liquidity, utilization, borrow rate (dashboard) | `siblings.py`, `dashboard.py` |
 
 **Notes.** One page holds up to 1,000 items; `list_borrowers` pages with `skip`. Indexed data can lag the chain; the API-vs-chain cross-check warns beyond 0.5 %.
 
@@ -160,6 +161,10 @@ These are not data sources: the browser loads them when a report is opened, at a
 |---|---|---|
 | Mermaid 11.4.1 | `https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js` | `out/report.html` (`analyze`) |
 | Cytoscape.js 3.30.2 | `https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.2/cytoscape.min.js` | `out/graph.html`, `docs/graph-example.html` |
+
+## Images loaded by the web frontend
+
+The SPA's dependency graph draws each Asset node with its logo from `https://token-icons.llamao.fi/icons/tokens/1/<address>?h=64&w=64` (keyless, served as WebP, by lowercase address). The response carries no CORS header, which a plain `<img>` does not need. An unknown token returns 404 and the node falls back to the Lucide `Coins` glyph. Other node kinds use inline Lucide glyphs and fetch nothing.
 
 ## Defined but unused
 

@@ -1,0 +1,167 @@
+"""The HTTP API (riskdep/api.py), offline: artifacts from out/, analysis from the snapshot.
+
+The artifact routes need `out/report.json` and `out/graph.json`, which are git-ignored, so each
+test writes what it needs into a tmp_path and points `api.OUT` at it. `POST /api/analyze` reads
+the committed snapshot and writes nothing.
+"""
+
+import json
+
+import pytest
+from fastapi.testclient import TestClient
+
+from riskdep import clock, pipeline, report
+from riskdep import graph as GR
+from riskdep import sources as S
+from riskdep.api import app, artifacts
+
+
+@pytest.fixture
+def client(tmp_path, monkeypatch):
+    # artifacts.OUT is read at call time, so pointing it at tmp_path is enough
+    monkeypatch.setattr(artifacts, "OUT", tmp_path)
+    with TestClient(app) as c:
+        yield c
+
+
+@pytest.fixture
+def report_file(tmp_path):
+    f = S.Fetcher("offline")
+    clock.set_as_of(json.loads((S.SNAPSHOT_DIR / "as_of.json").read_text())["as_of"])
+    res = pipeline.analyze(f, paths=2000)
+    payload = report.to_dict(
+        res.position, res.priors, res.simulation, res.decision, res.quote, "offline", res.oracle_alt
+    )
+    (tmp_path / "report.json").write_text(json.dumps(payload, default=str))
+    return payload
+
+
+@pytest.fixture
+def graph_file(tmp_path):
+    g = GR.Graph()
+    g.node("0xaa", "Actor", "Address 0xaa…", address="0xaa")
+    g.node("0xbb", "Pool", "Market", lltv=0.915)
+    g.edge("0xaa", "0xbb", "borrows from", 1000.0, "USDC")
+    doc = GR.to_dict(g, "test graph", GR.subtitle_for(26_000_000))
+    (tmp_path / "graph.json").write_text(json.dumps(doc, default=str))
+    return doc
+
+
+def test_health_reports_the_snapshot_date(client):
+    body = client.get("/api/health").json()
+    assert body["status"] == "ok" and body["mode"] == "offline"
+    assert body["data_as_of"].endswith("UTC")
+
+
+def test_missing_artifacts_say_which_command_to_run(client):
+    for path in ("/api/report", "/api/graph"):
+        r = client.get(path)
+        assert r.status_code == 404
+        assert "python -m riskdep" in r.json()["detail"]
+
+
+def test_graph_serves_the_written_artifact(client, graph_file):
+    body = client.get("/api/graph").json()
+    assert body["title"] == "test graph"
+    assert [n["kind"] for n in body["nodes"]] == ["Actor", "Pool"]
+    # the whole graph comes in one payload: the client traverses it, no per-node endpoint
+    assert body["edges"] == [
+        {"source": "0xaa", "target": "0xbb", "rel": "borrows from", "amount": 1000.0, "unit": "USDC", "details": {}}
+    ]
+
+
+def test_report_keeps_the_shape_the_ui_consumes(client, report_file):
+    body = client.get("/api/report").json()
+    assert body["decision"]["verdict"] in {"STAY", "REDUCE", "EXIT"}
+    assert body["simulation"]["layers"] and body["priors"]
+    assert body["position"]["collateral_usd"] > 0
+    # networkx serialisation, not the /api/graph shape: the alias must survive the response model
+    assert set(body["graph"]["edges"][0]) == {"from", "to", "rel"}
+
+
+def test_analyze_runs_on_the_snapshot_without_touching_out(client, tmp_path):
+    body = client.post("/api/analyze", json={"paths": 2000, "horizon": 30}).json()
+    assert body["decision"]["verdict"] in {"STAY", "REDUCE", "EXIT"}
+    assert body["simulation"]["n"] == 2000
+    assert not list(tmp_path.iterdir())
+
+
+def test_analyze_rejects_an_out_of_range_horizon(client):
+    assert client.post("/api/analyze", json={"horizon": 0}).status_code == 422
+
+
+def test_analyze_needs_an_amount_with_a_pendle_market(client):
+    r = client.post("/api/analyze", json={"pendle_market": "0x47ad2cd1dd15739a7a035b9d3b7828d916fef77e"})
+    assert r.status_code == 422 and "pt_amount" in r.json()["detail"]
+
+
+def _write_alerts(out_dir, name, rows):
+    (out_dir / f"watch-{name}.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
+
+
+ROWS = [
+    {"level": "info", "block": 100, "tx": None, "event": "Exposure", "title": "a", "detail": "", "data": {}},
+    {"level": "warn", "block": 101, "tx": "0x" + "11" * 32, "event": "Caps", "title": "b", "detail": "", "data": {}},
+    {
+        "level": "critical",
+        "block": 102,
+        "tx": None,
+        "event": "BadDebt",
+        "title": "c",
+        "detail": "",
+        "depositor_impact": -12.5,
+        "data": {},
+    },
+]
+
+
+def test_targets_lists_each_watch_file(client, tmp_path):
+    _write_alerts(tmp_path, "0xvault", ROWS)
+    _write_alerts(tmp_path, "user-0xabc", ROWS[:1])
+    body = client.get("/api/targets").json()
+    assert {t["target"]: (t["alerts"], t["last_block"]) for t in body} == {
+        "0xvault": (3, 102),
+        "user-0xabc": (1, 100),
+    }
+
+
+def test_alerts_cursor_only_returns_what_is_new(client, tmp_path):
+    _write_alerts(tmp_path, "0xvault", ROWS)
+    first = client.get("/api/alerts").json()
+    assert first["cursor"] == 102 and len(first["alerts"]) == 3
+    assert first["counts"] == {"info": 1, "warn": 1, "critical": 1}
+
+    again = client.get("/api/alerts", params={"since": first["cursor"]}).json()
+    assert again["alerts"] == [] and again["cursor"] == 102
+
+
+def test_alerts_level_is_a_floor_not_an_equality(client, tmp_path):
+    _write_alerts(tmp_path, "0xvault", ROWS)
+    body = client.get("/api/alerts", params={"level": "warn"}).json()
+    assert [a["level"] for a in body["alerts"]] == ["warn", "critical"]
+    assert body["alerts"][-1]["depositor_impact"] == -12.5
+
+
+def test_alerts_on_an_unknown_target_points_at_the_listing(client, tmp_path):
+    _write_alerts(tmp_path, "0xvault", ROWS)
+    r = client.get("/api/alerts", params={"target": "nope"})
+    assert r.status_code == 404 and "/api/targets" in r.json()["detail"]
+
+
+def test_alerts_with_no_watch_output_says_so(client):
+    r = client.get("/api/alerts")
+    assert r.status_code == 404 and "riskdep watch" in r.json()["detail"]
+
+
+def test_openapi_is_served_and_names_every_route(client):
+    paths = client.get("/openapi.json").json()["paths"]
+    assert set(paths) == {
+        "/api/health",
+        "/api/graph",
+        "/api/report",
+        "/api/analyze",
+        "/api/targets",
+        "/api/alerts",
+        "/api/vault/{address}",
+        "/api/market/{market_id}",
+    }

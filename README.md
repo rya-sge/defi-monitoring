@@ -10,13 +10,17 @@ Risk tooling for DeFi positions on Ethereum, built with the charrette loop: desi
 
 How the system is built (components, data sources, data flow, state, testing): `docs/analysis/ARCHITECTURE.md`.
 
+A browser UI over the same three outputs lives in `web/`.
+
 All data comes from keyless public sources: the publicnode Ethereum RPC, the Morpho and Pendle APIs, and DefiLlama.
+
+> **Note — no browser automation.** Do not work on this project through Claude for Chrome, or any other tool that drives a browser on your behalf. Check the UI the ordinary way: `pnpm dev` and look at it.
 
 ## Install
 
 ```bash
 uv sync                             # Python >= 3.10
-uv run pytest -q tests              # 221 tests, offline
+uv run pytest -q tests              # 257 tests, offline
 ```
 
 Outside an activated virtualenv, prefix the `python3 -m riskdep …` commands below with `uv run`.
@@ -194,6 +198,51 @@ A book file lists vault addresses, each with an optional `label` and `depositor`
 - **Data date.** An offline run uses the snapshot's date, `fixtures/snapshot/as_of.json`, as "now", so the demo gives the same result on any later day. `--refresh` refetches everything and rewrites that date; `--live` fetches only what is missing and uses today's date.
 - **Oracle.** Whether the lending market's oracle follows the PT market is read from the oracle's structure when it decides (its inputs' class; a meta-oracle through its live source and its switch within the horizon, D96). Otherwise it is inferred by comparing prices; when the PT trades within 1 % of par (near maturity), that test can't tell, so the report says *ambiguous*. The report always shows the verdict under the other oracle behaviour too.
 
+## web: the browser UI
+
+A React single-page app in `web/`, one page per CLI mode: **Vault** (the vault picked in the top bar: total assets, liquidity, its Blue markets by allocation, and the liquidations of their borrowers by collateral price drop — debt per 0.5 % bucket and its running total, weighted by the vault's share of each market), **Market** (one of those markets, opened from the vault's table: supply, borrow, utilization, rate, and the same liquidation chart for its borrowers), **Dependency graph** (the `graph` output in React Flow: shape by role, icon and amount inside each node, arrows; filterable by node kind, searchable, and a selection lights the node's whole upstream and downstream flow and opens a risk panel), **Impact** (a `shock` trace in six tabs — summary tables, the graph with reached nodes ringed, the path behind a loss, the liquidation sales as a Sankey, the losses round by round, a node × round matrix; for now always the committed example, `docs/shock-trace-example.json`) and **Alerts** (the `watch` stream, newest first, with level counts and a minimum-level filter).
+
+Tailwind CSS v4 with stock shadcn/ui primitives: a light radius on every control, faint table rules. Colour is reserved for severity — `info`, `warn`, `critical`, `ok` — and is carried by a word, never by a number, so an alert reads the same without it. The one other colour on screen is the dependency graph's six node kinds, which are data and are mirrored from `riskdep/graph.py`. Numbers are set in the UI face with tabular figures; only identifiers (addresses, hashes, market ids) are monospace.
+
+```bash
+cd web
+pnpm install
+pnpm dev          # http://localhost:5173
+pnpm build        # tsc -b && vite build -> web/dist
+pnpm preview      # serve the build
+pnpm lint         # eslint + prettier --check
+pnpm format       # prettier --write
+```
+
+**It runs with no backend.** `VITE_USE_MOCKS` in `web/.env` defaults to true, and the hooks then resolve fixtures copied from real CLI output (`out/report.json`, `out/graph.json`, `out/watch-*.jsonl`) into `web/src/mocks/`. The alert stream is replayed one entry every 1.5 s, then ends. Two `critical` alerts in that fixture are **fabricated** — no recorded run has one, so their wording is modelled on `docs/alert-runbook.md`; everything else is verbatim recorded output.
+
+**The backend.** `riskdep/api/` is a FastAPI app serving the routes below; Vite proxies `/api` to it. With `VITE_USE_MOCKS=false` the hooks hit it for real.
+
+```bash
+uv run uvicorn riskdep.api:app --reload      # http://127.0.0.1:8000, docs at /docs
+```
+
+It owns no risk logic: `pipeline.analyze` computes, `report.to_dict` and `graph.to_dict` shape, the API routes. The watcher is **not** hosted — `python -m riskdep watch` stays its own process and appends to `out/watch-*.jsonl`, which `GET /api/alerts` reads with a block cursor. One poll loop per target however many browsers are open, and either side can restart without the other.
+
+`openapi.json` is committed and is the contract: regenerate it with the command below, and CI fails if it has drifted from the code.
+
+```bash
+uv run python -c "import json,riskdep.api as a; print(json.dumps(a.app.openapi(), indent=2))" > openapi.json
+```
+
+| Endpoint | Serves |
+|---|---|
+| `GET /api/health` | `{status, mode, data_as_of}` — the mode chip in the header |
+| `GET /api/vault/{address}` | a Vault V2 read live from the Morpho API: its markets by allocation and their borrowers' liquidations |
+| `GET /api/market/{market_id}` | a Blue market read live from the Morpho API: its state and every borrower's liquidating fall |
+| `GET /api/report` | the last `analyze` report written to `out/` |
+| `POST /api/analyze` | run `analyze` (market, user, horizon, paths, live) and return the report; writes nothing |
+| `GET /api/graph?user=&vault=&block=` | the dependency graph; with no user and no vault, the last one written to `out/` |
+| `GET /api/targets` | one entry per `out/watch-*.jsonl`: the watch targets with alerts |
+| `GET /api/alerts?target=&since=&level=&limit=` | alerts after a block cursor; pass the returned `cursor` back as `since` |
+
+**Limits.** Read-only: no wallet, no transaction, no form to launch a run — the Vault, Graph and Alerts pages follow the vault selector of the top bar, one vault at a time: it lists every vault of the last graph and the watched addresses, starts on the first watch target, and only watched targets have alerts, and `POST /api/analyze` is typed and wired in the client but no page offers it. Dark mode follows the system; the `data-theme` override the palette supports has no toggle yet (the graph reads the colour tokens live, so one would need no re-init). Alerts arrive by polling `/api/alerts` every 3 s with a block cursor, not over a socket; a failed poll is surfaced and retried on the next tick. No frontend tests; CI does build `web/` and checks its formatting (`pnpm lint && pnpm build`).
+
 ## Layout
 
 ```
@@ -206,4 +255,6 @@ riskdep/     sources · abi · vault · poller · rules · market_risk · drain 
              cli · registry.json (facts, assumptions, thresholds)
 fixtures/    snapshot/ (analyze demo), replay/<vault>/ and replay/user-<address>/ (recorded watch ranges); tracked in git, the tests read them
 tests/
+web/         React SPA: src/api (client, hooks, SSE, types) · src/routes (the three pages)
+             src/components · src/lib · src/mocks (fixtures from real CLI output)
 ```

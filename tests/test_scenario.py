@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from riskdep import cli, decide, discover, scenario
+from riskdep import cli, decide, discover, pipeline, scenario
 from riskdep import oracle_class as OC
 from riskdep import sources as S
 from riskdep.borrower import BorrowMarket, BorrowState
@@ -18,7 +18,7 @@ DEMO_ORACLE = "0xf8b29e7e9c00ce531434775f7923cc9fbca01b08"
 @pytest.fixture(scope="module")
 def demo():
     f = S.Fetcher("offline", SNAP)
-    return f, discover.discover_morpho_position(f, cli.DEMO_MARKET, cli.DEMO_USER)
+    return f, discover.discover_morpho_position(f, pipeline.DEMO_MARKET, pipeline.DEMO_USER)
 
 
 QUOTE = {"price_impact": 0.02, "fee_usd": 500.0, "source": "test quote"}

@@ -774,17 +774,16 @@ document.getElementById("lay").onclick=relayout;
 </script></body></html>"""
 
 
+def to_dict(g: Graph, title: str, subtitle: str) -> dict:
+    """The graph as plain JSON-ready data. `write` persists this; the API serves it."""
+    return {"title": title, "subtitle": subtitle, "nodes": list(g.nodes.values()), "edges": g.edges}
+
+
 def write(g: Graph, out_html: Path, title: str, subtitle: str) -> tuple[Path, Path]:
     out_html.parent.mkdir(parents=True, exist_ok=True)
     out_html.write_text(to_html(g, title, subtitle))
     out_json = out_html.with_suffix(".json")
-    out_json.write_text(
-        json.dumps(
-            {"title": title, "subtitle": subtitle, "nodes": list(g.nodes.values()), "edges": g.edges},
-            indent=1,
-            default=str,
-        )
-    )
+    out_json.write_text(json.dumps(to_dict(g, title, subtitle), indent=1, default=str))
     return out_html, out_json
 
 
