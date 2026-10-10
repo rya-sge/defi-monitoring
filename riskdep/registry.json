@@ -218,7 +218,8 @@
   "tail_budget_basis": "Recommend reducing when CVaR99, the average loss of the worst 1 % of simulated months, exceeds 50 % of equity.",
   "incident": {
     "reduce_margin": 0.01,
-    "basis": "D90. Incident mode sizes a partial sale so that liquidation sits this far beyond the oracle drop the incident causes: one point of margin, so a small further move does not liquidate the reduced position."
+    "exit_min_gain": 0.05,
+    "basis": "D90. Incident mode sizes a partial sale so that liquidation sits this far beyond the oracle drop the incident causes: one point of margin, so a small further move does not liquidate the reduced position. exit_min_gain (D101): for a vault depositor, leaving first is recommended only when it cuts the incident's loss by at least 5 %; a depositor that is most of the vault loses about the same either way."
   },
   "watch": {
     "market_share_warn": 0.25,

@@ -124,7 +124,7 @@ def test_market_nodes_carry_what_the_engine_needs(rockawayx):
     m = _markets(rockawayx)
     for name, n in m.items():
         d = n["details"]
-        assert [p["oracle_fall"] for p in d["liquidation_curve"]] == [0.02, 0.05, 0.1, 0.2], name
+        assert [p["oracle_fall"] for p in d["liquidation_curve"]] == [0.02, 0.05, 0.1, 0.2, 0.3, 0.5], name
         assert d["total_borrow"] > 0 and d["collateral_of_borrowers"] > 0, name
     five = next(p for p in m["PT-reUSD-10DEC2026/USDC"]["details"]["liquidation_curve"] if p["oracle_fall"] == 0.05)
     assert five["liquidatable_debt"] > 30e6 and five["collateral_liquidatable"] > five["liquidatable_debt"]

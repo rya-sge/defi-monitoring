@@ -9,7 +9,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import clock, crosscheck, decide, discover, priors, report, scenario, simulate
+from . import clock, crosscheck, decide, discover, priors, report, scenario, simulate, vault_incident
 from . import sources as S
 
 # D14: largest borrower of Morpho market PT-sUSDE-26NOV2026 / USDC, cached in fixtures/snapshot.
@@ -35,6 +35,11 @@ def main(argv: list[str] | None = None) -> int:
     a.add_argument("--paths", type=int, default=20000, help="Monte Carlo paths")
     a.add_argument("--live", action="store_true", help="fetch on cache miss")
     a.add_argument("--refresh", action="store_true", help="always fetch and rewrite the cache")
+    a.add_argument(
+        "--vault",
+        help="incident mode for a Vault V2 depositor (with --shock token=<collateral>:<fall>, and --user for the "
+        "depositor); offline it reads fixtures/replay/<vault>/",
+    )
     a.add_argument(
         "--shock",
         action="append",
@@ -204,6 +209,8 @@ def main(argv: list[str] | None = None) -> int:
             print("stopped; the cursor points at the last fully processed block", file=sys.stderr)
             return 0
 
+    if args.vault:
+        return _vault_incident(ap, args)
     try:
         shocks = scenario.parse_shocks(args.shock)
     except ValueError as e:
@@ -324,4 +331,41 @@ def main(argv: list[str] | None = None) -> int:
     for c in checks:
         print(f"  {c.line}")
     print(f"report: {hp}\njson:   {jp}\nnetwork calls: {f.network_calls}")
+    return 0
+
+
+def _vault_incident(ap, args) -> int:
+    """`analyze --vault`: a known incident on a vault's collateral, for a depositor (plan 2026-10-11-vault-incident)."""
+    try:
+        token_shocks = vault_incident.parse_token_shocks(args.shock)
+    except ValueError as e:
+        ap.error(str(e))
+    if not token_shocks:
+        ap.error("--vault needs --shock token=<collateral address or symbol>:<fall>, e.g. token=mGLOeuro:0.30")
+    vault = args.vault.lower()
+    w = discover.REGISTRY["watch"]
+    rdir = REPLAY_DIR / vault
+    try:
+        if args.live or args.refresh:
+            f = S.Fetcher("direct")
+            block = int(S.rpc(f, "eth_blockNumber", []), 16) - w["confirmations"]
+        else:
+            if not (rdir / "start.json").exists():
+                ap.error(
+                    f"no recording for {vault} in {rdir}: run with --live, or record it with watch --blocks --record"
+                )
+            f = S.Fetcher("offline", rdir)
+            block = (
+                json.loads((rdir / "start.json").read_text())["head"] - w["confirmations"] - w["state_window_blocks"]
+            )
+        inc = vault_incident.run(f, vault, block, args.user, token_shocks)
+    except S.CacheMiss as e:
+        print(f"recording incomplete: {e}", file=sys.stderr)
+        return 2
+    except S.SourceError as e:
+        print(f"data source error: {e}", file=sys.stderr)
+        return 3
+    for line in inc.lines():
+        print(line)
+    print(f"json:   {vault_incident.write(inc, Path(args.out))}")
     return 0

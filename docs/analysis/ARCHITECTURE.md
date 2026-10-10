@@ -93,8 +93,9 @@ flowchart TB
 
 | Module | Imports |
 |---|---|
-| `cli` | `clock`, `crosscheck`, `decide`, `discover`, `graph`, `priors`, `report`, `scenario`, `simulate`, `sources`, `watch`, `watch_user` |
+| `cli` | `clock`, `crosscheck`, `decide`, `discover`, `graph`, `priors`, `report`, `scenario`, `simulate`, `sources`, `vault_incident`, `watch`, `watch_user` |
 | `scenario` | `decide`, `discover`, `oracle_class`, `propagate`, `sources`, `vault` |
+| `vault_incident` | `discover`, `exit_queue`, `market_risk`, `oracle_class`, `scenario`, `sources`, `vault` |
 | `watch` | `admin`, `crosscheck`, `discover`, `drain`, `exit_queue`, `market_risk`, `poller`, `rules`, `sources`, `vault` |
 | `watch_user` | `abi`, `admin`, `borrower`, `borrower_rules`, `crosscheck`, `discover`, `drain`, `exit_queue`, `market_risk`, `poller`, `positions`, `rules`, `scenario`, `sources`, `vault`, `watch` |
 | `report` | `clock`, `decide`, `discover`, `priors`, `simulate` |
@@ -134,6 +135,7 @@ The layers, from the bottom:
 - **Rules and models.** Pure functions from state to alerts or numbers:
   - `rules.py` (vault) and `borrower_rules.py` (borrows) map decoded events and before/after state to alerts;
   - `market_risk.py` values every borrower of a market;
+  - `vault_incident.py` is incident mode for a vault depositor: a collateral's oracle price falls, every borrower of the hit markets is valued at the new price, and the vault's and the depositor's losses, what can leave and a verdict follow;
   - `scenario.py` is incident mode: the impact of a known incident, its time to impact and the verdict with the incident certain, and the impact attached to `OracleDivergence` alerts in `watch --user`;
   - `drain.py` computes each vault market's drain threshold d\* and what a drain would take (`docs/drain-threshold.md`);
   - `exit_queue.py` models a run on a vault: what a depositor recovers at par and loses at each queue position (`docs/exit-queue.md`);
@@ -273,6 +275,7 @@ The design decisions are numbered across nine plans, in the order the increments
 | `plan/2026-10-10-drain-threshold.plan.md` | when a depeg empties a market: d\*, the Public Allocator, `DrainWindow` | D69–D74 |
 | `plan/2026-10-10-sibling-markets.plan.md` | sibling markets and oracle classes in the dependency graph | D75–D85 |
 | `plan/2026-10-10-incident-mode.plan.md` | incident mode: a known incident's impact, time to impact and verdict; alert impacts in `watch --user` | D89–D95 |
+| `plan/2026-10-11-vault-incident.plan.md` | incident mode for a vault depositor; curve widened to −30 and −50 % | D98–D103 |
 
 A change that departs from a decision is recorded in that plan's table.
 

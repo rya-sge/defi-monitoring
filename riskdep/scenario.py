@@ -351,7 +351,9 @@ def assess(
     if verdict != "STAY" and timing.seconds == 0:
         notes.append("the impact is immediate: leaving only helps if it is done before the liquidation lands")
     if quote.get("source"):
-        notes.append("the exit cost is today's quote; in the incident the pool may be thinner (docs/analysis/GAP.md K12)")
+        notes.append(
+            "the exit cost is today's quote; in the incident the pool may be thinner (docs/analysis/GAP.md K12)"
+        )
     if profile and mode != pos.oracle_mode:
         notes.append(f"oracle mode from its class ({profile.kind}), not from the price inference ({pos.oracle_mode})")
     return IncidentResult(

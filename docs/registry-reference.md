@@ -111,6 +111,7 @@ The conservative default for a yield token not in `issuers`: a 15 % yearly depeg
 | `pt_stress_extra_discount` | multiplier | during a depeg, an oracle that follows the PT market sees the depeg × (1 + this), because the PT trades below its backing as the Pendle pool drains (0.5) | `propagate.py`, `simulate.py`, `decide.py` |
 | `gas_exit_usd` | USD | gas cost added to every exit and de-lever estimate (25) | `decide.py` |
 | `tail_budget` | fraction of equity | REDUCE when CVaR 99 % exceeds this share of the equity (0.5) | `decide.py` |
+| `incident.exit_min_gain` | fraction of the loss | vault incident mode: EXIT only when leaving first cuts the depositor's loss by at least this share (0.05) | `vault_incident.py` |
 | `incident.reduce_margin` | fraction | incident mode: the partial sale puts liquidation this far beyond the incident's oracle drop (0.01) | `scenario.py` |
 
 ## `watch`

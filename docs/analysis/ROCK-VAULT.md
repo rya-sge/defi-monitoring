@@ -182,7 +182,15 @@ Both commands were run, and the recordings are in `fixtures/replay/graph-0xd6d4�
 - **The two mGLOeuro borrowers** borrow 3.68M EURCV against 52.58 mGLOeuro, worth 5.26M EUR at the NAV: about 70 % of collateral, against a 77 % LLTV. A NAV cut of about 9 % or more makes them liquidatable; bad debt starts only past a cut of about 25 %, where the collateral divided by the liquidation incentive (1.074) no longer covers the debt. The watch's curve stops at a 20 % fall, so it shows no bad debt for this market.
 - **Governance:** seven risk-increasing changes have no timelock (fees, fee recipients, `setIsAllocator`, `setForceDeallocatePenalty`, the adapter's skim recipient); adding an adapter or raising a cap takes 3 days; the gates are abdicated.
 
-**For the next step** (incident mode for vaults): the incident that matters here is "Midas marks mGLOeuro's NAV down by x %". Its impact is the bad debt of a 100 %-lender market, nearly all of it on one depositor, with 78 % of that depositor's position unable to leave.
+**Incident mode for vaults, run on 2026-10-11** (`analyze --vault 0xd6d4…48ec --shock token=mGLOeuro:<cut>`, plan `2026-10-11-vault-incident`):
+
+| Midas NAV cut | Debt liquidatable in mGLOeuro/EURCV | Bad debt (all on the vault) | Share of the vault | Verdict for the 99.46 % depositor |
+|---|---|---|---|---|
+| −10 % | 3.68M of 3.68M (both borrowers) | 0 | 0 % | STAY: the collateral still covers the debt |
+| −30 % | 3.68M | 251,761 EURCV | 5.3 % | STAY: leaving first saves 382 (0.2 %) |
+| −50 % | 3.68M | 1,230,838 EURCV | 26.1 % | STAY: leaving first saves 1,867 (0.2 %) |
+
+The incident lands at once when Midas publishes the new NAV: the oracle is the issuer's own figure, so no market move announces it. For the largest depositor, leaving first changes almost nothing, because it is 99.46 % of the vault and the loss falls on it either way; withdrawing the 1.03M that can leave only reduces its exposure to a further cut. A small depositor in the same vault would be told to EXIT: the first 1.03M out leaves the loss to those who stay.
 
 ## 6. Registry additions this needs
 

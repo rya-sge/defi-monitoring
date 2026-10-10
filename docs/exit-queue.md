@@ -115,7 +115,7 @@ The model needs a loss L to share out. It takes it from the borrower positions t
 | Case | L, the vault's loss | X, the exposure that carries it |
 |---|---|---|
 | now | the vault's share of each market's **unrealised bad debt** | the vault's assets in the markets with unrealised bad debt |
-| all collateral −2, −5, −10, −20 % | the vault's share of each market's bad debt if **every** collateral gapped down by that much at once | the vault's assets in the markets with bad debt at that fall |
+| all collateral −2, −5, −10, −20, −30, −50 % (−30 and −50 added by D98) | the vault's share of each market's bad debt if **every** collateral gapped down by that much at once | the vault's assets in the markets with bad debt at that fall |
 
 The "all collateral" rows are a deliberately simple stress: they reuse the liquidation-curve points (D50) and move every market together. Named scenarios per collateral (BTC −50 %, a USDe depeg, a feed misreport) are point 4.3 of `docs/analysis/comparison_team.md` and `docs/vault-depositor-scenarios.md`.
 
