@@ -107,7 +107,7 @@ def verdict(
                 (
                     "The oracle is treated as following the PT market (not confirmed: see the oracle sensitivity line)"
                     if pos.oracle_ambiguous
-                    else "The oracle follows the PT market"
+                    else "The oracle is treated as following the PT market within the horizon (basis in the notes)"
                 )
                 + ", so a temporary depeg turns into a realised loss through liquidation."
             )
@@ -176,3 +176,27 @@ def verdict(
         else "No modelled loss."
     )
     return Decision(v, head, carry, exit_cost, el, net_stay, mult, ld, stress, reduction, reasons)
+
+
+def verdict_given(
+    loss_usd: float,
+    exit_cost_usd: float,
+    reduction_cost_usd: float | None = None,
+    loss_after_reduction_usd: float | None = None,
+) -> tuple[str, str]:
+    """Pure: the verdict when the incident is certain (plan 2026-10-10-incident-mode). No probability enters: staying
+    costs `loss_usd`, leaving costs `exit_cost_usd`, and a partial sale costs its own price plus what is still lost."""
+    reduce_total = (
+        reduction_cost_usd + loss_after_reduction_usd
+        if reduction_cost_usd is not None and loss_after_reduction_usd is not None
+        else None
+    )
+    if reduce_total is not None and reduce_total < min(loss_usd, exit_cost_usd):
+        return (
+            "REDUCE",
+            f"selling part of the collateral costs ${reduction_cost_usd:,.0f} and leaves a loss of "
+            f"${loss_after_reduction_usd:,.0f}, less than staying (${loss_usd:,.0f}) or exiting (${exit_cost_usd:,.0f})",
+        )
+    if loss_usd > exit_cost_usd:
+        return "EXIT", f"staying loses ${loss_usd:,.0f}, more than the ${exit_cost_usd:,.0f} it costs to leave now"
+    return "STAY", f"staying loses ${loss_usd:,.0f}, less than the ${exit_cost_usd:,.0f} it costs to leave now"

@@ -8,7 +8,7 @@ Risk tooling for DeFi positions on Ethereum, built with the charrette loop: desi
 - **`graph`**: draws the dependency graph of a vault or an address, with the sibling markets around it. Plan: `plan/2026-10-10-sibling-markets.plan.md`.
 - **`shock`**: applies a failure to a node of that graph (an oracle reading low or high, a frozen feed, a collateral falling) and propagates it to every market, vault and depositor, by rules you can change. Plan: `plan/2026-10-10-propagation-engine.plan.md`.
 
-How the system is built (components, data sources, data flow, state, testing): `ARCHITECTURE.md`.
+How the system is built (components, data sources, data flow, state, testing): `docs/analysis/ARCHITECTURE.md`.
 
 All data comes from keyless public sources: the publicnode Ethereum RPC, the Morpho and Pendle APIs, and DefiLlama.
 
@@ -16,12 +16,12 @@ All data comes from keyless public sources: the publicnode Ethereum RPC, the Mor
 
 ```bash
 uv sync                             # Python >= 3.10
-uv run pytest -q tests              # 196 tests, offline
+uv run pytest -q tests              # 221 tests, offline
 ```
 
 Outside an activated virtualenv, prefix the `python3 -m riskdep …` commands below with `uv run`.
 
-`RISKDEP_RPC_URL` (optional) sends the main RPC's requests to another endpoint, for example a local node, a proxy or a paid endpoint with its key. Cached requests, snapshots and replays keep the public URL, so the offline tests are unaffected and the key is never written to a file. See `PROVIDERS.md`.
+`RISKDEP_RPC_URL` (optional) sends the main RPC's requests to another endpoint, for example a local node, a proxy or a paid endpoint with its key. Cached requests, snapshots and replays keep the public URL, so the offline tests are unaffected and the key is never written to a file. See `docs/analysis/PROVIDERS.md`.
 
 **Faster live runs: eRPC (optional).** The free RPC throttles long runs such as `graph`; riskdep then waits and resends, which is slow but loses nothing. A local eRPC proxy spreads the calls over six free endpoints instead (RockawayX graph: 43 s direct, 20 s through eRPC; the example graph: 8 to 12 min direct, 3 min through eRPC). It takes one binary, the committed `erpc.yaml`, and one variable:
 
@@ -89,7 +89,7 @@ python3 -m riskdep graph --vault <vault> --record                    # save ever
 python3 -m riskdep graph --vault 0xE0181090c22579B6A217f1522cbf8c9f1F0C1965 --replay   # RockawayX USDC Yield, offline
 ```
 
-Builds the graph of `ANALYSIS_MONITORING.md` §1 from live data. Actors are addresses, vaults, and the main lenders of the borrowed markets. Pools are Blue markets and Pendle pools. It also draws assets, oracles with the feeds they read, and vault admins. The output is an interactive HTML page (Cytoscape.js from cdnjs) plus the same data as JSON. `docs/graph-example.html` is a rendered example, built before sibling markets existed.
+Builds the graph of `docs/analysis/ANALYSIS_MONITORING.md` §1 from live data. Actors are addresses, vaults, and the main lenders of the borrowed markets. Pools are Blue markets and Pendle pools. It also draws assets, oracles with the feeds they read, and vault admins. The output is an interactive HTML page (Cytoscape.js from cdnjs) plus the same data as JSON. `docs/graph-example.html` is a rendered example, built before sibling markets existed.
 
 **Sibling markets** (plan `2026-10-10-sibling-markets`). For every Blue market an address or vault of the graph holds, `graph` also adds the other Blue markets that can move its collateral's price or share its price inputs, drawn dashed:
 
@@ -136,7 +136,7 @@ Past a market's capacity the rest cannot be sold, and those liquidations do not 
 
 Each oracle moves only with what it actually tracks. PT-reUSD's oracle prices the PT against reUSD, so a reUSD depeg liquidates nobody there: it leaves insolvent debt and a drain.
 
-Losses reach the vault by its share of each market, and a depositor (`--user`) by its share of the vault. The output gives the consequences per market and the path each loss took.
+Losses reach the vault by its share of each market, and a depositor (`--user`) by its share of the vault. The output gives the consequences per market and the path each loss took. `out/shock-<vault>.trace.json` holds the same propagation as data, every step tied to an edge of the graph, for a front end to animate: format in `docs/shock-trace.md`, a committed example in `docs/shock-trace-example.json`.
 
 How a shock crosses each edge is an ordered list of rules in `registry.json` (`engine`), with criteria on the edge, its two nodes and the effect. Change them, or pass a file with `--rules`, to propagate differently without touching the code. Everything, with worked examples and the rule format: `docs/shock-engine.md`.
 
@@ -146,12 +146,25 @@ How a shock crosses each edge is an ordered list of rules in `registry.json` (`e
 python3 -m riskdep analyze --demo                 # cached real snapshot, no network
 python3 -m riskdep analyze --live --morpho-market <uniqueKey> [--user <addr>]
 python3 -m riskdep analyze --live --pendle-market <market> --pt-amount <n>
+python3 -m riskdep analyze --demo --shock oracle=0.10            # incident mode: a known incident
+python3 -m riskdep analyze --demo --shock issuer_depeg=0.08 --shock amm=0.03
 ```
 
 Writes `out/report.html` and `out/report.json`.
 
+**Incident mode** (`--shock EVENT=SEVERITY`, events `chain`, `issuer_hack`, `issuer_depeg`, `amm`, `oracle`, `lending`). The brief's question starts from a known incident, so `--shock` gives the incident's impact with no probability: the loss, whether the position is liquidated, how long before the oracle passes the shock on (from the oracle's type; a meta-oracle through its live source, and after its switch), and a verdict with the incident certain (REDUCE if a partial sale is cheapest, EXIT if staying loses more than leaving, STAY otherwise). The ex-ante Monte Carlo verdict follows it. Plan: `plan/2026-10-10-incident-mode.plan.md`.
+
+**Incident mode for a vault depositor** (`--vault`):
+
+```bash
+python3 -m riskdep analyze --vault 0xd6d4b804014ef27836dbe9f8f6bf6c71251548ec --shock token=mGLOeuro:0.30
+python3 -m riskdep analyze --live --vault <vault> --shock token=<collateral address or symbol>:<fall> [--user <depositor>]
+```
+
+The incident is a fall of a collateral's oracle price, such as an issuer marking its NAV down. For each market of the vault holding that collateral, the tool values every borrower at the shocked price: the debt liquidatable and the bad debt. It then gives the vault's loss, the depositor's loss if it stays and if it leaves first (with what can leave now), how fast the incident lands (at once on publication for an issuer NAV oracle), and a verdict. Offline it reads the vault's watch recording; the Belem RWA EURCV vault is recorded. Output: the terminal and `out/vault-incident-<vault>.json`. Plan: `plan/2026-10-11-vault-incident.plan.md`.
+
 - **Data date.** An offline run uses the snapshot's date, `fixtures/snapshot/as_of.json`, as "now", so the demo gives the same result on any later day. `--refresh` refetches everything and rewrites that date; `--live` fetches only what is missing and uses today's date.
-- **Oracle.** Whether the lending market's oracle follows the PT market is inferred by comparing their prices. When the PT trades within 1 % of par (near maturity), the test can't tell, so the report says *ambiguous* and shows the verdict under the other oracle behaviour too.
+- **Oracle.** Whether the lending market's oracle follows the PT market is read from the oracle's structure when it decides (its inputs' class; a meta-oracle through its live source and its switch within the horizon, D96). Otherwise it is inferred by comparing prices; when the PT trades within 1 % of par (near maturity), that test can't tell, so the report says *ambiguous*. The report always shows the verdict under the other oracle behaviour too.
 
 ## Layout
 

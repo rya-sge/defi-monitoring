@@ -426,7 +426,7 @@ def partial_exit_quote(f: S.Fetcher, pos: Position, fraction: float) -> dict:
     return exit_quote(f, part)
 
 
-# --- sale-size ladders for the shock engine's squeeze (plan 2026-10-10-propagation-engine, D97, D98)
+# --- sale-size ladders for the shock engine's squeeze (plan 2026-10-10-propagation-engine, D112, D113)
 
 
 def quote_ladder(

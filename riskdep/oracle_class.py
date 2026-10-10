@@ -45,11 +45,11 @@ class Probe:
     getters: dict[str, int] = field(default_factory=dict)  # structural getter of `oracle_getters` → its answer
     children: list[Probe] = field(default_factory=list)  # composite or wrapper inputs (`oracle_children_getters`)
     name: str | None = None  # verified contract name (Etherscan), the implementation's for a proxy
-    market: str | None = None  # `market()` of a Pendle oracle: the pool whose PT price it reads (engine D100)
+    market: str | None = None  # `market()` of a Pendle TWAP input: the pool whose PT price it reads (engine D115)
 
     def pendle_market(self) -> str | None:
-        """The Pendle pool this input, or one of its parts, reads with a TWAP."""
-        if self.market and self.getters.get("twapDuration()"):
+        """The Pendle pool this input, or one of its parts, reads with a TWAP (once `read_pendle_markets` ran)."""
+        if self.market:
             return self.market
         return next((m for c in self.children if (m := c.pendle_market())), None)
 
@@ -145,10 +145,8 @@ def probe(f: S.Fetcher, address: str, block, vault: bool = False, depth: int = 0
     if vault:
         return p
     kids, getters = list(G["oracle_children_getters"]), [g["getter"] for g in G["oracle_getters"]]
-    sigs = ["decimals()", "description()", "latestRoundData()"] + kids + getters + ["market()"]
+    sigs = ["decimals()", "description()", "latestRoundData()"] + kids + getters
     res = S.rpc_batch(f, [_call(p.address, s) for s in sigs], block)
-    if res[-1] and _word(res[-1]):
-        p.market = ("0x" + res[-1][26:66]).lower()
     p.decimals, p.description = _word(res[0]), _string(res[1])
     latest = None
     if res[2]:
@@ -157,7 +155,7 @@ def probe(f: S.Fetcher, address: str, block, vault: bool = False, depth: int = 0
             p.answer = latest[1]
         except Exception:
             latest = None
-    for sig, raw in zip(getters, res[3 + len(kids) : -1]):
+    for sig, raw in zip(getters, res[3 + len(kids) :]):
         if raw and _word(raw) is not None:
             p.getters[sig] = _word(raw)
     children = [("0x" + raw[26:66]).lower() for raw in res[3 : 3 + len(kids)] if raw and _word(raw)]
@@ -171,6 +169,18 @@ def probe(f: S.Fetcher, address: str, block, vault: bool = False, depth: int = 0
     if classify_input(p)[0] == NOT_CLASSIFIED:  # the name is the last resort: it needs the optional Etherscan key
         p.name = _contract_name(f, p.address)
     return p
+
+
+def read_pendle_markets(f: S.Fetcher, p: Probe, block) -> None:
+    """Fill `market` on every Pendle TWAP input (one with a `twapDuration`) of a probe tree, one call each, so that the
+    graph can tie the input to its pool (engine D115). Kept out of `probe`'s batch, which the other modes share: the
+    batch's cache key stays the one their recordings hold."""
+    if p.getters.get("twapDuration()"):
+        raw = S.rpc_batch(f, [_call(p.address, "market()")], block)[0]
+        if raw and _word(raw):
+            p.market = ("0x" + raw[26:66]).lower()
+    for c in p.children:
+        read_pendle_markets(f, c, block)
 
 
 def _history(f: S.Fetcher, address: str, latest: tuple, block) -> list[int]:
@@ -190,3 +200,28 @@ def _history(f: S.Fetcher, address: str, latest: tuple, block) -> list[int]:
             break  # a feed without real rounds returns its latest answer for any id
         points.append((r[3], r[1]))
     return [a for _, a in reversed(points)]
+
+
+MORPHO_ORACLE_GETTERS = [
+    "BASE_VAULT()",
+    "BASE_FEED_1()",
+    "BASE_FEED_2()",
+    "QUOTE_VAULT()",
+    "QUOTE_FEED_1()",
+    "QUOTE_FEED_2()",
+]
+
+
+def classify_market_oracle(
+    f: S.Fetcher, oracle: str, block
+) -> tuple[str, str, list[Probe], list[tuple[str, str]], bool]:
+    """(class, basis, base-side probes, (role, address) of each non-zero getter, is a Morpho ChainlinkOracleV2) of a
+    market oracle. A custom oracle (no ChainlinkOracleV2 getters) is read as one input (D83)."""
+    res = S.rpc_batch(f, [_call(oracle, s) for s in MORPHO_ORACLE_GETTERS], block)
+    feeds = [(name[:-2], "0x" + r[-40:]) for name, r in zip(MORPHO_ORACLE_GETTERS, res) if r and int(r, 16)]
+    standard = any(r is not None for r in res)
+    base = [probe(f, a, block, vault="VAULT" in n) for n, a in feeds if n in BASE_ROLES]
+    if not standard:
+        base = [probe(f, oracle, block)]
+    cls, basis = classify_oracle(base, standard)
+    return cls, basis, base, feeds, standard

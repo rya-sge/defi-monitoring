@@ -9,8 +9,8 @@
 #
 # Upstreams: tested on 2026-10-10 with riskdep's own call patterns (30-call eth_call batches at a block 60 behind the
 # head, eth_getLogs, eth_getStorageAt). dRPC and 1RPC are left out on purpose: riskdep's block-hash cross-check calls
-# dRPC directly, and routing the main RPC through it would compare that node with itself (PROVIDERS.md). 1RPC answers
-# 410 "discontinued" anyway. Keep PROVIDERS.md in step with this list.
+# dRPC directly, and routing the main RPC through it would compare that node with itself (docs/analysis/PROVIDERS.md). 1RPC answers
+# 410 "discontinued" anyway. Keep docs/analysis/PROVIDERS.md in step with this list.
 #
 # Pinned: eRPC 0.3.0 (2026-09-21).
 

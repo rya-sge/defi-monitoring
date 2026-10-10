@@ -216,6 +216,11 @@
   "gas_exit_usd": 25,
   "tail_budget": 0.5,
   "tail_budget_basis": "Recommend reducing when CVaR99, the average loss of the worst 1 % of simulated months, exceeds 50 % of equity.",
+  "incident": {
+    "reduce_margin": 0.01,
+    "exit_min_gain": 0.05,
+    "basis": "D90. Incident mode sizes a partial sale so that liquidation sits this far beyond the oracle drop the incident causes: one point of margin, so a small further move does not liquidate the reduced position. exit_min_gain (D101): for a vault depositor, leaving first is recommended only when it cuts the incident's loss by at least 5 %; a depositor that is most of the vault loses about the same either way."
+  },
   "watch": {
     "market_share_warn": 0.25,
     "utilization_warn": 0.99,
@@ -241,6 +246,8 @@
     "oracle_divergence_warn": 0.03,
     "exit_queue_phi": 0.5,
     "exit_queue_stuck_warn": 0.5,
+    "divergence_check_every_blocks": 25,
+    "divergence_basis": "D97. The oracle-versus-market check (OracleDivergence) runs with every batch's oracle prices and DefiLlama prices at most 25 blocks old (~5 min), instead of only at the 300-block refresh: a synthetic dollar fell 97 % in 17 minutes (USR, Mar 2026).",
     "drain_buy_cost": 0.005,
     "drain_margin": 0.02,
     "drain_check_every_blocks": 25,
@@ -288,6 +295,11 @@
         "match": "NetAssetValueChainlinkAdapter",
         "class": "constant-price",
         "basis": "net asset value reported by the issuer (contract name)"
+      },
+      {
+        "match": "CustomAggregator",
+        "class": "constant-price",
+        "basis": "Midas custom aggregator feed: the issuer's admin publishes the NAV by transaction (contract name, e.g. MGloEuroCustomAggregatorFeed behind an upgradeable proxy; mGLOeuro read 100,000 EUR on 2026-08-04 and 2026-09-23, its only two rounds)"
       },
       {
         "match": "TranchesChainlinkOracle",
@@ -361,7 +373,7 @@
         "params": {
           "as": "reading"
         },
-        "basis": "D100: a feed reads the market it tracks (a Pendle TWAP its PT's pool, a 'SYM / USD' feed that pair): a move of that market moves the reading"
+        "basis": "D115: a feed reads the market it tracks (a Pendle TWAP its PT's pool, a 'SYM / USD' feed that pair): a move of that market moves the reading"
       },
       {
         "id": "base-feed",
@@ -416,7 +428,7 @@
           ]
         },
         "apply": "stop",
-        "basis": "D101: a quote feed following the loan token rescales the oracle and the collateral's worth alike in that token: no effect in loan units"
+        "basis": "D116: a quote feed following the loan token rescales the oracle and the collateral's worth alike in that token: no effect in loan units"
       },
       {
         "id": "frozen-base-feed",
@@ -477,7 +489,7 @@
         "params": {
           "follows": false
         },
-        "basis": "D100: the oracle reads its collateral's market through a tracked feed (rule tracks), not here; the collateral's worth still moves"
+        "basis": "D115: the oracle reads its collateral's market through a tracked feed (rule tracks), not here; the collateral's worth still moves"
       },
       {
         "id": "collateral-tracking",
@@ -513,21 +525,21 @@
         "params": {
           "follows": false
         },
-        "basis": "D93: an oracle not classified is treated as not following, the lender's worse case (no liquidation, a silent loss)"
+        "basis": "D108: an oracle not classified is treated as not following, the lender's worse case (no liquidation, a silent loss)"
       },
       {
         "id": "collateral-value",
         "effect": "value",
         "rel": "takes as collateral",
         "apply": "collateral_price",
-        "basis": "D100: a move inherited from an underlying changes the collateral's worth; no oracle reading its own market or its accounting rate sees it"
+        "basis": "D115: a move inherited from an underlying changes the collateral's worth; no oracle reading its own market or its accounting rate sees it"
       },
       {
         "id": "collateral-exit",
         "effect": "exit",
         "rel": "takes as collateral",
         "apply": "pass",
-        "basis": "D98: liquidations can sell only what the collateral's market absorbs"
+        "basis": "D113: liquidations can sell only what the collateral's market absorbs"
       },
       {
         "id": "wrapper",
@@ -554,7 +566,7 @@
         "params": {
           "as": "value"
         },
-        "basis": "D100: a PT is worth its underlying at maturity, so a move of the underlying's market changes the PT's worth; the pool prices PT against the underlying (PT_TO_ASSET / PT_TO_SY), so the pool price, which a Pendle oracle reads, does not move"
+        "basis": "D115: a PT is worth its underlying at maturity, so a move of the underlying's market changes the PT's worth; the pool prices PT against the underlying (PT_TO_ASSET / PT_TO_SY), so the pool price, which a Pendle oracle reads, does not move"
       },
       {
         "id": "pendle-underlying-value",
@@ -630,7 +642,7 @@
         "effect": "loss",
         "rel": "deposits in",
         "apply": "depositor_loss",
-        "basis": "a vault's loss is shared by its depositors pro rata to their shares (D95; the run order comes with step 2)"
+        "basis": "a vault's loss is shared by its depositors pro rata to their shares (D110; the run order comes with step 2)"
       }
     ],
     "node_rules": [
@@ -643,7 +655,7 @@
         "params": {
           "slippage": 0.0
         },
-        "basis": "D92: Blue liquidations, write-offs, insolvent debt and the drain; D98, D99: only what the collateral's market absorbs is sold, and offers ratchet"
+        "basis": "D107: Blue liquidations, write-offs, insolvent debt and the drain; D113, D114: only what the collateral's market absorbs is sold, and offers ratchet"
       },
       {
         "id": "oracle-input",
@@ -664,7 +676,7 @@
           "floor": "pendle_maturity",
           "stress_yield": 0.5
         },
-        "basis": "D97, D98: an asset's own market price takes the impact of what is offered into it, from real Pendle quotes (a PT's pool; an underlying's sale for dollars), up to its capacity; a PT stops falling where a buyer holding to maturity earns stress_yield (50 % APY, judgement)"
+        "basis": "D112, D113: an asset's own market price takes the impact of what is offered into it, from real Pendle quotes (a PT's pool; an underlying's sale for dollars), up to its capacity; a PT stops falling where a buyer holding to maturity earns stress_yield (50 % APY, judgement)"
       },
       {
         "id": "default",
@@ -672,7 +684,7 @@
         "basis": "inputs combined: factors multiply, sales and losses add, exits take the smallest"
       }
     ],
-    "basis": "D89-D101 (plan 2026-10-10-propagation-engine). Rules are tried in order; the first edge rule whose effect, direction, rel and criteria match carries the effect, and no match stops it. --rules <file> puts a file's edge_rules and node_rules first. eps: relative change below which an input is not propagated again; max_evaluations bounds the loop. quote_sizes_x_liquidity: the sale sizes of the Pendle quote ladders the graph records per PT, as multiples of the pool's liquidity, at most quote_max_usd (Pendle refuses above 100M USD); a size Pendle cannot route (MarketProportionTooHigh) ends the ladder and sets the capacity at the last size that went through; capacity_min_ratio: a ladder's capacity is where the marginal price falls under this share of spot or the amount received stops growing (2026-10-10: PT-reUSD into reUSD loses 0.57 % at $25M, reUSD into USDC stops near $12M). depth_usd: a depth for the constant_product comparison model only.",
+    "basis": "D104-D116 (plan 2026-10-10-propagation-engine). Rules are tried in order; the first edge rule whose effect, direction, rel and criteria match carries the effect, and no match stops it. --rules <file> puts a file's edge_rules and node_rules first. eps: relative change below which an input is not propagated again; max_evaluations bounds the loop. quote_sizes_x_liquidity: the sale sizes of the Pendle quote ladders the graph records per PT, as multiples of the pool's liquidity, at most quote_max_usd (Pendle refuses above 100M USD); a size Pendle cannot route (MarketProportionTooHigh) ends the ladder and sets the capacity at the last size that went through; capacity_min_ratio: a ladder's capacity is where the marginal price falls under this share of spot or the amount received stops growing (2026-10-10: PT-reUSD into reUSD loses 0.57 % at $25M, reUSD into USDC stops near $12M). depth_usd: a depth for the constant_product comparison model only.",
     "capacity_min_ratio": 0.5
   }
 }

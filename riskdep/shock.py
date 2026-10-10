@@ -1,5 +1,5 @@
 """The `shock` command: build or replay a dependency graph, apply shocks with the propagation engine, and print what
-each market, each vault and a depositor lose, with the path the loss took (plan 2026-10-10-propagation-engine, D89).
+each market, each vault and a depositor lose, with the path the loss took (plan 2026-10-10-propagation-engine, D104).
 """
 
 from __future__ import annotations
@@ -165,6 +165,241 @@ def _label_path(text: str, nodes: dict) -> str:
         if nid in text:
             text = text.replace(nid, n["label"])
     return text
+
+
+TRACE_FORMAT = "riskdep.shock-trace/1"
+FACTORS = ("misreport", "reading", "price", "value")
+
+
+def _unit(eff: str, node: dict, edges_of: dict) -> str | None:
+    if eff in FACTORS:
+        return "factor"
+    if eff in ("sale", "onward"):
+        return "USD"
+    if eff == "exit":
+        return "share"
+    if eff == "loss":
+        if node["details"].get("loan_unit"):
+            return node["details"]["loan_unit"]
+        return next((t for rel, t in edges_of.get(node["id"], []) if rel == "denominated in"), None)
+    return None
+
+
+def _display(eff: str, val, unit: str | None) -> str:
+    if eff in FACTORS:
+        return f"{eff} ×{val:.4f} ({val - 1:+.2%})"
+    if eff == "frozen":
+        return "frozen" if val else "not frozen"
+    if eff == "collateral":
+        follows = ", the oracle follows" if val.get("follows") else ""
+        return f"collateral {val.get('kind', 'price')} ×{val['factor']:.4f} ({val['factor'] - 1:+.2%}){follows}"
+    if eff in ("sale", "onward"):
+        return f"{_fmt(val)} USD {'offered for sale' if eff == 'sale' else 'of underlying sold on'}"
+    if eff == "exit":
+        return f"{val:.0%} of the offer absorbed"
+    if eff == "loss":
+        return f"loss {_fmt(val)}" + (f" {unit}" if unit else "")
+    return f"{eff} {val}"
+
+
+def _change(eff: str, val):
+    """The move a step carries, signed, in the effect's unit: a factor's change, an amount, a share not absorbed."""
+    if eff in FACTORS:
+        return val - 1
+    if eff == "collateral":
+        return val["factor"] - 1
+    if eff == "exit":
+        return val - 1
+    if eff in ("sale", "onward", "loss"):
+        return val
+    return None
+
+
+def _moved(out: dict) -> dict:
+    """The effects of a node's output that differ from neutral."""
+    keep = {}
+    for eff, v in out.items():
+        n = EN.NEUTRAL.get(eff)
+        if n is None or (isinstance(n, bool) and bool(v) != n) or (not isinstance(n, bool) and abs(v - n) > 1e-12):
+            keep[eff] = v
+    return keep
+
+
+def _headline(n: dict, st: EN.NodeState, unit: str | None, shocked: list[EN.Shock]) -> str:
+    """One short line for a node's final state, for a label or a tooltip."""
+    parts = [s.label.split(" ", 1)[1] for s in shocked]
+    d, out = st.detail or {}, _moved(st.out)
+    if st.model == "blue_market" and d:
+        u = f" {d.get('loan_unit')}" if d.get("loan_unit") else ""
+        if d.get("positions_liquidated"):
+            executed = d.get("executed", 1.0)
+            parts.append(
+                f"{d['positions_liquidated']} positions liquidatable"
+                + (f", only {executed:.0%} of their collateral sells" if executed < 1.0 else "")
+                + f": {_fmt(d['liquidated_debt'])}{u} repaid, lenders lose {_fmt(d['lender_loss'])}{u}"
+            )
+        elif d.get("lender_loss"):
+            parts.append(
+                f"no liquidation, lenders lose {_fmt(d['lender_loss'])}{u}"
+                + (f" (drained {_fmt(d['drained'])}{u})" if d.get("drained") else "")
+            )
+        else:
+            parts.append(f"oracle ×{d['oracle_factor']:.4f}, market ×{d['market_factor']:.4f}, no liquidation")
+        return "; ".join(parts)
+    if st.model == "asset_price" and d:
+        parts.append(f"{_fmt(d['sold_usd'])} USD offered, {d['absorbed_usd'] / d['sold_usd']:.0%} absorbed")
+    for eff in ("misreport", "reading", "frozen", "price", "value"):
+        if eff in out and not (eff == "misreport" and shocked):
+            parts.append(_display(eff, out[eff], unit))
+    if "loss" in out:
+        total = n["details"].get("total_assets_value")
+        parts.append(
+            f"loses {_fmt(out['loss'])}"
+            + (f" {unit}" if unit else "")
+            + (f" ({out['loss'] / total:.3%} of its {_fmt(total)})" if total else "")
+        )
+    return "; ".join(parts) or "reached, nothing moves"
+
+
+def _status(st: EN.NodeState, shocked: bool) -> str:
+    out = _moved(st.out)
+    if shocked:
+        return "shocked"
+    if out.get("loss"):
+        return "loss"
+    d = st.detail or {}
+    if d.get("liquidated_debt"):
+        return "liquidations"
+    if st.model == "blue_market" and d:
+        return "moved" if abs(d["oracle_factor"] - 1) > 1e-12 or abs(d["market_factor"] - 1) > 1e-12 else "reached"
+    return "moved" if out else "reached"
+
+
+def trace(
+    gd: dict, res: EN.Result, block: int | None = None, as_of: str | None = None, extra: dict | None = None
+) -> dict:
+    """The propagation as data for a front end (D119): the graph with stable edge ids (`e<i>`, the position in its edge
+    list, as graph.html numbers them), each step over an edge in order and by wave, each evaluation, every touched
+    node's final state with a headline and the steps that hold its inputs, and the steps behind each loss."""
+    nodes = {n["id"]: n for n in gd["nodes"]}
+    edges_of: dict[str, list] = {}
+    for e in gd["edges"]:
+        edges_of.setdefault(e["source"], []).append((e["rel"], nodes[e["target"]]["label"]))
+    loss_unit = {nid: _unit("loss", nodes[nid], edges_of) for nid in res.states}
+    holder: dict[tuple, int] = {}
+    steps = []
+    for s in res.trace:
+        unit = _unit(s.effect, nodes[s.target], edges_of)
+        holder[(s.target, s.effect, s.source, s.rule)] = s.seq
+        steps.append(
+            {
+                "seq": s.seq,
+                "wave": s.wave,
+                "edge": f"e{s.edge}" if s.edge is not None else None,
+                "source": s.source,
+                "target": s.target,
+                "direction": s.direction,
+                "effect": s.effect,
+                "value": s.value,
+                "change": _change(s.effect, s.value),
+                "unit": unit,
+                "display": _display(s.effect, s.value, unit),
+                "rule": s.rule,
+                "replaces": s.replaces,
+            }
+        )
+    by_node: dict[str, list[EN.Shock]] = {}
+    for sh in res.shocks:
+        by_node.setdefault(sh.node, []).append(sh)
+
+    def inputs(nid: str) -> list[int]:
+        st = res.states.get(nid)
+        return sorted(holder[(nid, e, src, r)] for (e, src, r) in st.inputs if src != "shock") if st else []
+
+    def behind(nid: str) -> list[int]:
+        seen, todo, out = set(), [nid], set()
+        while todo:
+            x = todo.pop()
+            if x in seen:
+                continue
+            seen.add(x)
+            for q in inputs(x):
+                out.add(q)
+                todo.append(res.trace[q - 1].source)
+        return sorted(out)
+
+    def evaluation(ev: EN.Evaluation) -> dict:
+        """The node's state right after this evaluation: what a front end shows from this wave on."""
+        st = EN.NodeState(out=ev.out, detail=ev.detail, model=ev.model)
+        return {
+            "seq": ev.seq,
+            "wave": ev.wave,
+            "node": ev.node,
+            "model": ev.model,
+            "status": _status(st, ev.node in by_node),
+            "headline": _headline(nodes[ev.node], st, loss_unit[ev.node], by_node.get(ev.node, [])),
+            "effects": _moved(ev.out),
+            "detail": {k: v for k, v in ev.detail.items() if k != "before"},
+        }
+
+    first_wave = {}
+    for ev in res.log:
+        first_wave.setdefault(ev.node, ev.wave)
+    final = {}
+    for nid, st in res.states.items():
+        final[nid] = {
+            "status": _status(st, nid in by_node),
+            "headline": _headline(nodes[nid], st, loss_unit[nid], by_node.get(nid, [])),
+            "model": st.model or None,
+            "effects": _moved(st.out),
+            "loss_unit": loss_unit[nid] if "loss" in st.out else None,
+            "detail": st.detail or {},
+            "inputs": inputs(nid),
+            "first_wave": first_wave.get(nid),
+        }
+    waves = []
+    for w in sorted({ev.wave for ev in res.log} | {s.wave for s in res.trace}):
+        waves.append(
+            {
+                "wave": w,
+                "evaluated": list(dict.fromkeys(ev.node for ev in res.log if ev.wave == w)),
+                "steps": [s.seq for s in res.trace if s.wave == w],
+            }
+        )
+    used, rules = {s.rule for s in res.trace}, {}
+    for r in EN.rules_from(extra)[0] + EN.DEFAULT_EDGE_RULES:  # a rules file's rule comes first, as in the run
+        if r.id in used:
+            rules.setdefault(r.id, {"apply": r.apply, "effect": r.effect, "rel": r.rel, "basis": r.basis})
+    return {
+        "format": TRACE_FORMAT,
+        "block": block,
+        "as_of": as_of,
+        "note": "Waves are rounds of a fixed-point iteration, not time: a value can overshoot in an early wave and settle "
+        "lower. Only the final state (`nodes`) is the answer; `evaluations_log` shows how the loop got there.",
+        "shocks": [
+            {
+                "node": s.node,
+                "mode": s.mode,
+                "size": s.size,
+                "label": f"{nodes[s.node]['label']} {s.label.split(' ', 1)[1]}",
+            }
+            for s in res.shocks
+        ],
+        "converged": res.converged,
+        "evaluations": res.evaluations,
+        "graph": {
+            "nodes": [
+                {**n, "details": {k: v for k, v in n["details"].items() if not k.startswith("_")}} for n in gd["nodes"]
+            ],
+            "edges": [{"id": f"e{i}", **e} for i, e in enumerate(gd["edges"])],
+        },
+        "rules": rules,
+        "steps": steps,
+        "evaluations_log": [evaluation(ev) for ev in res.log],
+        "waves": waves,
+        "nodes": final,
+        "paths": {nid: behind(nid) for nid, f in final.items() if f["status"] == "loss"},
+    }
 
 
 def run_sweep(gd: dict, mode: str, size: float, extra: dict | None, top: int, line=print) -> list[dict]:

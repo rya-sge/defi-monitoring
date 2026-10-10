@@ -1,6 +1,6 @@
 # The drain threshold: when a depeg empties a market
 
-This document explains the drain threshold built into both watches (`watch --vault` and each vault deposit of `watch --user`). It answers a question the exit queue (`docs/exit-queue.md`) leaves open: **until when can a depositor still get out?** On a market whose oracle does not follow the collateral's market price, a depeg past a computable threshold lets anyone borrow all of the market's free liquidity in one block, and that liquidity never comes back. The model comes from Team 2's feedback (`teammate/team2.md`, "Fixed oracles"), and closes item 2 of `comparison_team.md` §5. A [learn section](#learn-what-you-need-to-understand) at the end explains the concepts used.
+This document explains the drain threshold built into both watches (`watch --vault` and each vault deposit of `watch --user`). It answers a question the exit queue (`docs/exit-queue.md`) leaves open: **until when can a depositor still get out?** On a market whose oracle does not follow the collateral's market price, a depeg past a computable threshold lets anyone borrow all of the market's free liquidity in one block, and that liquidity never comes back. The model comes from Team 2's feedback (`teammate/team2.md`, "Fixed oracles"), and closes item 2 of `docs/analysis/comparison_team.md` §5. A [learn section](#learn-what-you-need-to-understand) at the end explains the concepts used.
 
 Every number below comes from **Sentora RLUSD Main**, from the recorded replay at block 26,162,932 (2026-10-10).
 

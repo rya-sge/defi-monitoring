@@ -135,6 +135,7 @@ Plain-language definitions of the terms used in this repository's reports, alert
 | **Tracks** | The edge from an oracle input to the market it reads: a Pendle TWAP to its PT's pool, a "SYM / USD" feed to that asset. A move of that market moves the reading; nothing else does. |
 | **Price and value (shock engine)** | An asset's `price` is its own market (its pool, its pair); its `value` is a move inherited from an underlying (a PT when reUSD depegs). An oracle reading the asset's own market or its accounting rate does not see a value move. |
 | **Capacity** | How much a market can absorb before its quotes stop: past it, liquidators cannot sell the collateral, and the liquidations that need that sale do not complete. |
+| **Wave (shock trace)** | One round of the shock engine's loop: wave 0 evaluates the shocked nodes, wave n + 1 the nodes wave n changed, until nothing moves. A round, not a moment: an early wave can overshoot the settled value (`docs/shock-trace.md`). |
 
 ## Blockchain data and the watcher
 

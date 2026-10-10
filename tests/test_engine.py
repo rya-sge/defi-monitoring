@@ -1,6 +1,7 @@
 """The propagation engine: each transmission and node model on a small graph with numbers worked by hand, the rule
 criteria, and scenarios on the recorded RockawayX USDC Yield graph (plan 2026-10-10-propagation-engine, US20, US21)."""
 
+import json
 from pathlib import Path
 
 import pytest
@@ -83,7 +84,7 @@ def test_a_quote_feed_reading_high_lowers_the_price_and_liquidates():
         ("price-tracking", [EN.Shock(C, "price", -0.3)], 80 - 70 / LIF),  # liquidated, Blue's write-off
         ("constant-price", [EN.Shock(C, "price", -0.3)], 10 + 100 * (1 - 0.7 / 0.86)),  # insolvent + drain
         ("price-tracking", [EN.Shock(C, "price", -0.3), EN.Shock(F, "frozen")], 10 + 100 * (1 - 0.7 / 0.86)),
-        ("not classified", [EN.Shock(C, "price", -0.3)], 10 + 100 * (1 - 0.7 / 0.86)),  # D93
+        ("not classified", [EN.Shock(C, "price", -0.3)], 10 + 100 * (1 - 0.7 / 0.86)),  # D108
     ],
 )
 def test_a_collateral_fall_depends_on_the_oracle(cls, shocks, expected):
@@ -275,6 +276,26 @@ def test_the_path_names_every_hop_and_rule():
     assert [r for r in ("supplier", "oracle-misreport", "base-feed") if not any(f"[{r}]" in ln for ln in lines)] == []
 
 
+def test_the_trace_ties_every_step_to_an_edge_a_wave_and_the_final_state():
+    gd = graph()
+    res = EN.run(gd, [EN.Shock(F, "reads-high", 0.2)])
+    t = json.loads(json.dumps(shock.trace(gd, res, 1, "2026-10-10T00:00:00Z")))  # JSON as written, no Python types
+    edges = {x["id"]: x for x in t["graph"]["edges"]}
+    assert [s["seq"] for s in t["steps"]] == list(range(1, len(t["steps"]) + 1))
+    assert [s["wave"] for s in t["steps"]] == sorted(s["wave"] for s in t["steps"]) and t["steps"][0]["wave"] == 0
+    for s in t["steps"]:
+        x = edges[s["edge"]]
+        ends = (x["target"], x["source"]) if s["direction"] == "dependents" else (x["source"], x["target"])
+        assert ends == (s["source"], s["target"])
+    last = {ev["node"]: ev for ev in t["evaluations_log"]}
+    assert all(t["nodes"][n]["effects"] == ev["effects"] for n, ev in last.items())
+    assert t["nodes"][F]["status"] == "shocked" and t["nodes"][V]["status"] == "loss"
+    assert t["nodes"][V]["headline"].startswith("loses ")
+    chain = [t["steps"][q - 1] for q in t["paths"][V]]
+    assert chain[0]["source"] == F and {s["rule"] for s in chain} >= {"base-feed", "oracle-misreport", "supplier"}
+    assert set(t["rules"]) == {s["rule"] for s in t["steps"]}
+
+
 # --- the recorded RockawayX USDC Yield graph
 
 ROCKAWAYX = (
@@ -352,3 +373,28 @@ def test_sweep_ranks_the_pt_oracle_first_for_a_reading_too_high(rockawayx):
         "Ojo PT Feed Pendle Chainlink-compatible Oracle",
     }
     assert rows[0]["vault_loss"] > 0
+
+
+EXAMPLE = Path(__file__).resolve().parent.parent / "docs" / "shock-trace-example.json"
+
+
+def test_the_trace_of_the_ojo_shock_leads_from_the_feed_to_the_vault(rockawayx):
+    res = EN.run(rockawayx, [EN.Shock(OJO, "reads-low", 0.1)])
+    t = shock.trace(rockawayx, res)
+    chain = [t["steps"][q - 1] for q in t["paths"][VAULT]]
+    assert chain[0]["source"] == OJO and chain[-1]["target"] == VAULT
+    assert {"tracks", "liquidation-sale", "pt-onward", "supplier"} <= {s["rule"] for s in chain}
+    replaced = [s for s in t["steps"] if s["replaces"]]
+    assert replaced  # the loop revises what it sent: the vault's loss, the sales
+    for s in replaced:
+        old = t["steps"][s["replaces"] - 1]
+        assert old["seq"] < s["seq"] and all(old[k] == s[k] for k in ("source", "target", "effect", "rule"))
+    assert t["nodes"][VAULT]["status"] == "loss" and "USDC" in t["nodes"][VAULT]["headline"]
+
+
+def test_the_committed_trace_example_is_current(rockawayx):
+    """docs/shock-trace-example.json is what `shock --replay --shock "Ojo PT:reads-low:10%"` writes today."""
+    ex = json.loads(EXAMPLE.read_text())
+    res = EN.run(rockawayx, [EN.Shock(OJO, "reads-low", 0.1)])
+    now = json.loads(json.dumps(shock.trace(rockawayx, res, ex["block"], ex["as_of"]), default=str))
+    assert now == ex, "regenerate docs/shock-trace-example.json (docs/shock-trace.md says how)"

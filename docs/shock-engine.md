@@ -1,6 +1,6 @@
 # The shock engine: what happens to a vault when a node fails
 
-`riskdep shock` applies a failure to one or several nodes of the dependency graph and propagates it. The failure can be an oracle or feed that reads low, reads high or freezes, or a collateral whose market price falls. The command prints what each market, each vault and a depositor lose, and the path the loss took. How a failure crosses each edge is decided by **rules**, which are data in `riskdep/registry.json`; you can change them or add your own without touching the code. Plan: `plan/2026-10-10-propagation-engine.plan.md` (D89–D96).
+`riskdep shock` applies a failure to one or several nodes of the dependency graph and propagates it. The failure can be an oracle or feed that reads low, reads high or freezes, or a collateral whose market price falls. The command prints what each market, each vault and a depositor lose, and the path the loss took. How a failure crosses each edge is decided by **rules**, which are data in `riskdep/registry.json`; you can change them or add your own without touching the code. Plan: `plan/2026-10-10-propagation-engine.plan.md` (D104–D111).
 
 This is step 1, a deterministic what-if. Step 2 will draw failures at random with probabilities and give a stay / reduce / exit verdict.
 
@@ -36,7 +36,7 @@ A shock is `<node>:<mode>[:<size>]`:
 - **node:** an address, a market id, or a fragment of a label that matches one node only (`"PRIME / WYLDS"`, `"Ojo PT"`).
 - **mode:** `reads-low` and `reads-high` (an oracle or feed misreports by the size), `frozen` (it stops moving), or `price` (an asset's market price moves by the size; `price:30%` means a fall).
 
-Several `--shock` options are applied together: a stuck feed *and* a falling collateral is one scenario. The JSON goes to `out/shock-<vault>.json` (or `out/shock-sweep-<vault>.json`).
+Several `--shock` options are applied together: a stuck feed *and* a falling collateral is one scenario. The JSON goes to `out/shock-<vault>.json` (or `out/shock-sweep-<vault>.json`). A single run also writes `out/shock-<vault>.trace.json`, every step of the propagation tied to an edge of the graph, for a front end to draw (`docs/shock-trace.md`, with a committed example).
 
 ## Reading the output
 
@@ -272,12 +272,12 @@ A node rule has `id`, `when` (on `node.<field>`), `apply` (`blue_market` with `s
 | Which price an oracle follows | Pendle oracles read on-chain (`baseOracleType` 1 = PT_TO_ASSET for PT-reUSD), Chainlink-style feed names | the tracked binding covers Pendle TWAPs and "SYM / USD" feeds; other price-tracking oracles fall back to their class |
 | A full episode | a real event | **not yet** (below) |
 
-**Future step: a backtest.** On 2026-08-25, according to the source cited in `GAP.md` K8, trading in YT-reUSD pushed PT-reUSD's implied yield from about 11 % to over 20 % in nine minutes, a min(TWAP, linear) oracle fell 0.5 to 2.8 %, Morpho liquidated 33 PT-reUSD positions, borrowers paid about $946k of liquidation bonus, and no bad debt was left. Replaying it would be the first test of the engine against reality:
+**Future step: a backtest.** On 2026-08-25, according to the source cited in `docs/analysis/GAP.md` K8, trading in YT-reUSD pushed PT-reUSD's implied yield from about 11 % to over 20 % in nine minutes, a min(TWAP, linear) oracle fell 0.5 to 2.8 %, Morpho liquidated 33 PT-reUSD positions, borrowers paid about $946k of liquidation bonus, and no bad debt was left. Replaying it would be the first test of the engine against reality:
 1. Rebuild the graph at the block before the event: positions, oracle and pool states.
 2. Apply the oracle's measured fall as a shock.
 3. Compare the predicted positions liquidated, debt repaid and bonus with the `Liquidate` events of the following blocks.
 
-It needs an archive RPC, because the free node serves state only about 100 blocks back and `keys.ini [rpc]` is empty. It also needs Pendle quotes from that time, which the API does not serve, so the pool curve would come from the pool's reserves at that block. Listed in `NEXT_STEP.md`.
+It needs an archive RPC, because the free node serves state only about 100 blocks back and `keys.ini [rpc]` is empty. It also needs Pendle quotes from that time, which the API does not serve, so the pool curve would come from the pool's reserves at that block. Listed in `docs/analysis/NEXT_STEP.md`.
 
 ## Limits
 

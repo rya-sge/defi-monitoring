@@ -85,7 +85,9 @@ The tool builds the list of layers from the data, not by hand:
 - within 0.5 % of each other → **market-tracking**: the oracle follows the market, so a market dip can trigger a liquidation;
 - further apart → **fundamental**: the oracle does not follow the market (for example a fixed or slowly accruing price), so a market dip does not liquidate, but a real loss of backing still does.
 
-This test cannot decide when the PT itself trades within 1 % of its redemption value, near maturity, because every kind of oracle then reads about the same price. The demo PT is 0.62 % below par, so the result is flagged **ambiguous**. The tool then assumes market-tracking, the case with more liquidations, and section 7 shows the result under the other assumption.
+This test cannot decide when the PT itself trades within 1 % of its redemption value, near maturity, because every kind of oracle then reads about the same price. The demo PT is 0.62 % below par, so the price test is **ambiguous**.
+
+Since D96 (plan `2026-10-10-incident-mode`), the oracle's structure decides first when it can. The demo oracle is a `MetaOracleDeviationTimelock`: its live source is a Pendle linear discount, which does not follow the market, and its backup reads `USDe / USD`, which does, and takes over 16 h after a deviation above 0.75 % is challenged. Within the 30-day horizon a lasting depeg reaches the backup, so the simulation treats the oracle as market-tracking, now on that basis rather than as a guess. `analyze --shock` shows the 16 h delay that the simulation, which has no time axis, cannot.
 
 ## 3. How likely is an incident on each layer
 
@@ -221,7 +223,7 @@ where $t$ is the target distance. It then gets a real quote for that smaller sal
 
 ## 7. How sure is the result
 
-**Oracle sensitivity.** When the oracle inference is ambiguous, as for the demo, the tool re-runs the simulation with the other oracle behaviour:
+**Oracle sensitivity.** The tool re-runs the simulation with the other oracle behaviour, so the reader sees how much the verdict rests on it:
 
 | | Market-tracking (used) | Fundamental |
 |---|---|---|

@@ -232,6 +232,15 @@ class AdminWatch:
             self.divergence = div
         return alerts
 
+    def check_divergence(self, f: S.Fetcher, block: int, oracle_raw: dict[str, int | None]) -> list[Alert]:
+        """D97: the oracle-versus-market check between full refreshes, every `divergence_check_every_blocks`, from the
+        oracle prices the watch already read at this batch and DefiLlama's prices (shared with the drain check)."""
+        prices = self.fresh_prices(f, block, W["divergence_check_every_blocks"])
+        div = self.divergence_at({m: r for m, r in oracle_raw.items() if m in self.markets}, prices)
+        alerts = assess_divergence(self.divergence, div, self.markets, block)
+        self.divergence = {**self.divergence, **div}
+        return alerts
+
     def startup(self, block: int) -> list[Alert]:
         up = [c for c in self.contracts.values() if c.upgradeable]
         out = []

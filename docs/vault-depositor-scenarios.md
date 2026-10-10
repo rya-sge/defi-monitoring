@@ -1,6 +1,6 @@
 # A vault depositor's loss under a scenario
 
-This document details point 4.3 of `comparison_team.md`: today no mode of the tool answers "how much do I lose if X happens?" for someone who **deposits** in a Morpho vault, which is the track's actual use case. It explains how such a loss arises, computes it on a real vault from data the tool already collects, and describes the `analyze --vault` mode that would report it. A [learn section](#learn-what-you-need-to-understand) at the end explains the concepts used.
+This document details point 4.3 of `docs/analysis/comparison_team.md`: today no mode of the tool answers "how much do I lose if X happens?" for someone who **deposits** in a Morpho vault, which is the track's actual use case. It explains how such a loss arises, computes it on a real vault from data the tool already collects, and describes the `analyze --vault` mode that would report it. A [learn section](#learn-what-you-need-to-understand) at the end explains the concepts used.
 
 Every number comes from **Sentora RLUSD Main**, the largest Morpho Vault V2 on Ethereum, rebuilt offline from the recorded replay at block 26,162,932 (2026-10-10). The depositor is the vault's largest holder (`0xb03d…babc`). The computation uses the tool's own function `market_risk.value()` on the 154 borrowers of the vault's 7 active markets.
 

@@ -11,10 +11,10 @@
 ```mermaid
 flowchart TB
   %% tracker
-  ST["📍 state · 2026-10-10<br/>repo: defi-monitoring at ad2adb5, not committed<br/>deployed: nothing, local CLI<br/>next: nothing, increment delivered<br/>blocked: the backtest (S6) on an archive RPC<br/>parked: step 2, random shocks and the stay / reduce / exit verdict"]
+  ST["📍 state · 2026-10-11<br/>repo: defi-monitoring, add/shock-command with main merged in (38e6185), not committed<br/>deployed: nothing, local CLI<br/>next: the front end reads the trace (someone else)<br/>blocked: the backtest (S6) on an archive RPC<br/>parked: step 2, random shocks and the stay / reduce / exit verdict"]
 
   subgraph SL1["Slice 1 · US20, US21 · the engine"]
-    S1.1["✅ S1.1 engine.py: effects, rule matching, edge and node<br/>transmissions, the Blue market model, the squeeze loop<br/>went on: sales valued at today's price; a PT floor (D94)"]
+    S1.1["✅ S1.1 engine.py: effects, rule matching, edge and node<br/>transmissions, the Blue market model, the squeeze loop<br/>went on: sales valued at today's price; a PT floor (D109)"]
   end
 
   subgraph SL2["Slice 2 · US20 · the graph carries what the engine needs"]
@@ -33,18 +33,23 @@ flowchart TB
     S5.1["✅ S5.1 sale impact from Pendle quotes, capacity, the exit for dollars;<br/>oracle inputs tied to what they track; pytest 196 passed<br/>run: recordings kept the last of two answers (fixed)"]
   end
 
+  subgraph SL7["Slice 7 · asked after S5 · the trace for a front end"]
+    S7.1["✅ S7.1 engine steps carry their edge, wave and the step they replace;<br/>shock.trace → out/shock-*.trace.json, docs/shock-trace.md and an example<br/>run: pytest 221 passed"]
+  end
+
   subgraph SL6["Slice 6 · future · backtest"]
-    S6.1["S6.1 replay the 2026-08-25 PT-reUSD liquidations<br/>needs an archive RPC (NEXT_STEP.md step 11)"]
+    S6.1["S6.1 replay the 2026-08-25 PT-reUSD liquidations<br/>needs an archive RPC (docs/analysis/NEXT_STEP.md step 11)"]
   end
 
   ST ~~~ S1.1
-  S1.1 --> S2.1 --> S3.1 --> S4.1 --> S5.1 --> S6.1
+  S1.1 --> S2.1 --> S3.1 --> S4.1 --> S5.1 --> S7.1
+  S5.1 --> S6.1
 
   classDef done stroke:#4a9d5f,stroke-width:2px,fill:#7f7f7f1a
   classDef next stroke:#d08b28,stroke-width:2px,fill:#7f7f7f1a
   classDef todo stroke-dasharray:4 3
   classDef state stroke:#8a8a8a,stroke-width:1px,fill:#7f7f7f12
-  class S1.1,S2.1,S3.1,S4.1,S5.1 done
+  class S1.1,S2.1,S3.1,S4.1,S5.1,S7.1 done
   class S6.1 todo
   class ST state
 ```
@@ -123,23 +128,26 @@ New behaviour that a rule cannot express needs a new transmission function in `e
 
 ## 8. Decisions
 
+Numbered D89–D103 until the merge with `main` on 2026-10-11, where the incident-mode plans already held those numbers: every decision of this plan moved up by 15, in the code and the docs alike.
+
 | id | Kind | Decision | Status | Source | Slice |
 |---|---|---|---|---|---|
-| D89 | module | A pure `engine.py` reading only the graph, and `shock.py` for I/O and the report; the command is `shock`, so as not to clash with `simulate.py` (the Monte Carlo of `analyze`) | agreed, agent's default | — | S1, S3 |
-| D90 | contract | Five effects (`misreport`, `frozen`, `price`, `sale`, `loss`), each stored per (effect, source, rule) and combined by product, any or sum; propagation against the edges except where a rule says otherwise | agreed, agent's default | `docs/graph-propagation.md` §4, §8 (simultaneous shocks) | S1 |
-| D91 | contract | Rules are data: ordered edge and node rules in `registry.json`, first match wins, criteria on the edge, both nodes and the effect value with suffix operators; `--rules` prepends a file's rules; no match stops the effect | agreed, the person: "define rules also later on such that we propagate differently depending on some criteria" | — | S1 |
-| D92 | contract | The Blue market model of §2: liquidation when the oracle says so and liquidating pays at the market price, Blue's write-off when the collateral is gone, the insolvent debt otherwise, plus the drain past d\*; full liquidation of each liquidatable position | agreed, agent's default | morpho-blue `liquidate`; `market_risk.value`; `drain.py` | S1 |
-| D93 | contract | `not classified` oracles do not follow their collateral by default (the lender's worse case: no liquidation, a silent loss); one rule, overridable | agreed, agent's default | GAP.md K7: "conservative" depends on the actor | S1 |
-| D94 | contract | The squeeze prices only assets with a known depth: a PT's Pendle pool liquidity, or `engine.depth_usd[<asset>]`; constant-product impact with R = depth / 2 on the collateral sold, valued at today's price; a PT does not fall below the price where a buyer to maturity earns `stress_yield` (50 %); ε = 10⁻⁶ and an evaluation budget, with a warning when it runs out. Sales of a market lending something other than a registry stablecoin are not converted to USD and do not move a price | agreed, agent's default; valuation at today's price and the PT floor found in S1 | GAP.md K9 (no slippage or cascade in `analyze`) | S1 |
-| D95 | contract | Baseline: today's market value equals today's oracle value (fm = fo = 1 before the shock); the depositor's loss is pro rata | agreed, agent's default; the run order comes with step 2 | — | S1 |
-| D96 | module | The graph carries the engine's inputs (positions, LLTV, free liquidity, loan price, vault total, pool liquidity), read during the build with no new request, so a recorded graph replays the engine offline | agreed, agent's default | — | S2 |
-| D97 | contract | Sale impact from real Pendle quotes, replacing the constant-product default: per PT, a ladder PT → underlying without the aggregator (the pool price a Pendle TWAP reads) and a ladder PT → loan token through it (the underlying sold for dollars), at 5 % to 5× the pool's liquidity, at most $99M; each turned into a step curve of the marginal price relative to spot, on the PT and on its underlying | agreed, the person: "do 1-2 now"; found in the accuracy review: constant product was about 100× too steep (−88 % for $12M where Pendle quotes −0.59 %), and the cliff is in the exit for dollars ($12.35M for reUSD), not in the pool (−0.57 % at $25M) | Pendle quotes 2026-10-10 | S5 |
-| D98 | contract | Capacity: a ladder ends where Pendle refuses the next size (MarketProportionTooHigh) or the marginal price falls under `capacity_min_ratio` (½) of spot; beyond it the offer is not sold, the price stays, and the share absorbed (`exit`) limits the liquidations that can complete; the rest stays insolvent where the collateral no longer covers it. A PT's sale goes on to its underlying's exit (`onward`) | agreed, agent's default | the Pendle refusal message | S5 |
-| D99 | contract | Sales ratchet: a market's offer never decreases between evaluations, so the loop settles when falling prices make later liquidations unprofitable; each market is evaluated at the final prices | agreed, agent's default; found in S5: without it, a falling exit price stopped liquidations, which cut sales, which lifted the price | — | S5 |
-| D100 | contract | Oracle inputs tied to what they track: a `tracks` edge from a Pendle TWAP input to its PT (from `market()`) and from a price-tracking "SYM / USD" feed to that asset; a move of an asset's own market reaches the oracle as a `reading` through it; a move inherited from an underlying is a `value` that no oracle sees unless a feed tracks that underlying; following the collateral by class stays only for price-tracking oracles with no tracked input | agreed, the person: "do 1-2 now"; found in the review: PT-reUSD's oracle is PT_TO_ASSET (`baseOracleType` 1), it reads 0.9818 while reUSD trades at about $1.106 | on-chain `baseOracleType`, `market()` | S5 |
-| D101 | contract | A quote feed's reading of the loan token's market is stopped: it rescales the oracle and the collateral's worth alike in loan units; a frozen oracle or feed drops its readings | agreed, agent's default | — | S5 |
-| D102 | scope | The backtest of the 2026-08-25 PT-reUSD liquidations is parked as a future slice (S6): it needs an archive RPC and the pool's curve at that time | agreed, the person: "let's document step 3 as a future thing" | `GAP.md` K8 | S6 |
-| D103 | contract | A recording keeps the first answer to a request repeated within the run (the Pendle market list, read for a PT and for the sibling search), so the replay sees what the recorded run computed from; a missing cached quote fails the replay instead of reading as a refusal | agreed, found in S5: the replay sized its quotes from a later list and missed them | — | S5 |
+| D104 | module | A pure `engine.py` reading only the graph, and `shock.py` for I/O and the report; the command is `shock`, so as not to clash with `simulate.py` (the Monte Carlo of `analyze`) | agreed, agent's default | — | S1, S3 |
+| D105 | contract | Five effects (`misreport`, `frozen`, `price`, `sale`, `loss`), each stored per (effect, source, rule) and combined by product, any or sum; propagation against the edges except where a rule says otherwise | agreed, agent's default | `docs/graph-propagation.md` §4, §8 (simultaneous shocks) | S1 |
+| D106 | contract | Rules are data: ordered edge and node rules in `registry.json`, first match wins, criteria on the edge, both nodes and the effect value with suffix operators; `--rules` prepends a file's rules; no match stops the effect | agreed, the person: "define rules also later on such that we propagate differently depending on some criteria" | — | S1 |
+| D107 | contract | The Blue market model of §2: liquidation when the oracle says so and liquidating pays at the market price, Blue's write-off when the collateral is gone, the insolvent debt otherwise, plus the drain past d\*; full liquidation of each liquidatable position | agreed, agent's default | morpho-blue `liquidate`; `market_risk.value`; `drain.py` | S1 |
+| D108 | contract | `not classified` oracles do not follow their collateral by default (the lender's worse case: no liquidation, a silent loss); one rule, overridable | agreed, agent's default | docs/analysis/GAP.md K7: "conservative" depends on the actor | S1 |
+| D109 | contract | The squeeze prices only assets with a known depth: a PT's Pendle pool liquidity, or `engine.depth_usd[<asset>]`; constant-product impact with R = depth / 2 on the collateral sold, valued at today's price; a PT does not fall below the price where a buyer to maturity earns `stress_yield` (50 %); ε = 10⁻⁶ and an evaluation budget, with a warning when it runs out. Sales of a market lending something other than a registry stablecoin are not converted to USD and do not move a price | agreed, agent's default; valuation at today's price and the PT floor found in S1 | docs/analysis/GAP.md K9 (no slippage or cascade in `analyze`) | S1 |
+| D110 | contract | Baseline: today's market value equals today's oracle value (fm = fo = 1 before the shock); the depositor's loss is pro rata | agreed, agent's default; the run order comes with step 2 | — | S1 |
+| D111 | module | The graph carries the engine's inputs (positions, LLTV, free liquidity, loan price, vault total, pool liquidity), read during the build with no new request, so a recorded graph replays the engine offline | agreed, agent's default | — | S2 |
+| D112 | contract | Sale impact from real Pendle quotes, replacing the constant-product default: per PT, a ladder PT → underlying without the aggregator (the pool price a Pendle TWAP reads) and a ladder PT → loan token through it (the underlying sold for dollars), at 5 % to 5× the pool's liquidity, at most $99M; each turned into a step curve of the marginal price relative to spot, on the PT and on its underlying | agreed, the person: "do 1-2 now"; found in the accuracy review: constant product was about 100× too steep (−88 % for $12M where Pendle quotes −0.59 %), and the cliff is in the exit for dollars ($12.35M for reUSD), not in the pool (−0.57 % at $25M) | Pendle quotes 2026-10-10 | S5 |
+| D113 | contract | Capacity: a ladder ends where Pendle refuses the next size (MarketProportionTooHigh) or the marginal price falls under `capacity_min_ratio` (½) of spot; beyond it the offer is not sold, the price stays, and the share absorbed (`exit`) limits the liquidations that can complete; the rest stays insolvent where the collateral no longer covers it. A PT's sale goes on to its underlying's exit (`onward`) | agreed, agent's default | the Pendle refusal message | S5 |
+| D114 | contract | Sales ratchet: a market's offer never decreases between evaluations, so the loop settles when falling prices make later liquidations unprofitable; each market is evaluated at the final prices | agreed, agent's default; found in S5: without it, a falling exit price stopped liquidations, which cut sales, which lifted the price | — | S5 |
+| D115 | contract | Oracle inputs tied to what they track: a `tracks` edge from a Pendle TWAP input to its PT (from `market()`, read by the graph alone in its own call, only for an input with a `twapDuration`, so that the probe batch the incident modes share keeps the cache key their recordings hold) and from a price-tracking "SYM / USD" feed to that asset; a move of an asset's own market reaches the oracle as a `reading` through it; a move inherited from an underlying is a `value` that no oracle sees unless a feed tracks that underlying; following the collateral by class stays only for price-tracking oracles with no tracked input | agreed, the person: "do 1-2 now"; found in the review: PT-reUSD's oracle is PT_TO_ASSET (`baseOracleType` 1), it reads 0.9818 while reUSD trades at about $1.106 | on-chain `baseOracleType`, `market()` | S5 |
+| D116 | contract | A quote feed's reading of the loan token's market is stopped: it rescales the oracle and the collateral's worth alike in loan units; a frozen oracle or feed drops its readings | agreed, agent's default | — | S5 |
+| D117 | scope | The backtest of the 2026-08-25 PT-reUSD liquidations is parked as a future slice (S6): it needs an archive RPC and the pool's curve at that time | agreed, the person: "let's document step 3 as a future thing" | `docs/analysis/GAP.md` K8 | S6 |
+| D118 | contract | A recording keeps the first answer to a request repeated within the run (the Pendle market list, read for a PT and for the sibling search), so the replay sees what the recorded run computed from; a missing cached quote fails the replay instead of reading as a refusal | agreed, found in S5: the replay sized its quotes from a later list and missed them | — | S5 |
+| D119 | contract | The trace for a front end: `shock` also writes `out/shock-<target>.trace.json` (`riskdep.shock-trace/1`): the graph with edge ids `e<i>` (the position in its edge list, as `graph.html` numbers them), every step with its edge, direction, wave, value, change, unit and the step it replaces, every evaluation's state, every touched node's final state with a status and a headline, and the steps behind each loss; `docs/shock-trace-example.json` is kept current by a test | agreed, the person: "create some graph trace we can expose in the frontend how the shock propagates (just the trace, someone else will implement the frontend part)" | — | S7 |
 
 # Execution
 
@@ -147,11 +155,12 @@ New behaviour that a rule cannot express needs a new transmission function in `e
 
 | Slice | Done when | Went on |
 |---|---|---|
-| S1 | every transmission and every criterion operator has a pure test; the squeeze converges | the first squeeze valued sales at the price after impact: a lower price meant fewer dollars sold, the price rebounded, and the loop oscillated until the budget ran out (the vault's loss and its path disagreed). Sales are now valued at today's price, a quantity, so the loop only deepens and settles in about 10 evaluations. Without a floor, $100M of PT into a $12M pool sent the price to zero; a PT floor at a 50 % APY to maturity was added (D94). A position already liquidatable before the shock counts Blue's write-off as its baseline |
+| S1 | every transmission and every criterion operator has a pure test; the squeeze converges | the first squeeze valued sales at the price after impact: a lower price meant fewer dollars sold, the price rebounded, and the loop oscillated until the budget ran out (the vault's loss and its path disagreed). Sales are now valued at today's price, a quantity, so the loop only deepens and settles in about 10 evaluations. Without a floor, $100M of PT into a $12M pool sent the price to zero; a PT floor at a 50 % APY to maturity was added (D109). A position already liquidatable before the shock counts Blue's write-off as its baseline |
 | S2 | the RockawayX recording replays with the new fields, no new request | days to a PT's maturity depend on "now": a recording keeps `as_of` in its `meta.json` and a replay uses it (the RockawayX fixture's was set from its responses' fetch time) |
 | S3 | `shock --replay` prints the US20 scenarios on RockawayX; `--sweep` ranks the oracles | PRIME / WYLDS frozen + PRIME −30 %: the vault loses 122.8k (0.67 %), its PRIME/PYUSD sibling 21.2M; Ojo reads 10 % low: 157 positions liquidated, the vault loses 235.8k; sweep reads-high 20 %: the PT-reUSD oracle and feed first (94.0k each) |
 | S4 | tests pass offline, `docs/shock-engine.md` written, registry and docs updated | the documented example rules file runs as written; 186 tests pass |
-| S5 | the quote curves and the tracked binding replay offline; the PT-reUSD oracle ignores a reUSD depeg; a sibling's oracle failure reaches our PT through the reUSD exit | Ojo reads 10 % low: 133 positions liquidatable, the reUSD exit absorbs 13 % of the offer, the vault loses 6.9k (235.8k under constant product); reUSD −30 %: no liquidation, the vault loses 1.60M through insolvent debt and a drain; reUSD/USD feed of the siblings reads 15 % low: reUSD −3.9 %, our PT's worth with it, our oracle unmoved. A recording overwrote the first Pendle list with a second one, so the replay sized its quotes differently (D103). 196 tests pass |
+| S5 | the quote curves and the tracked binding replay offline; the PT-reUSD oracle ignores a reUSD depeg; a sibling's oracle failure reaches our PT through the reUSD exit | Ojo reads 10 % low: 133 positions liquidatable, the reUSD exit absorbs 13 % of the offer, the vault loses 6.9k (235.8k under constant product); reUSD −30 %: no liquidation, the vault loses 1.60M through insolvent debt and a drain; reUSD/USD feed of the siblings reads 15 % low: reUSD −3.9 %, our PT's worth with it, our oracle unmoved. A recording overwrote the first Pendle list with a second one, so the replay sized its quotes differently (D118). 196 tests pass |
+| S7 | the trace ties every step to an edge and a wave, its final state matches the last evaluation, and the committed example equals a fresh replay | the loop's waves are not time: the vault's loss reads 27.1k, then 51.8k, then 7.2k before it settles at 6.9k, so the file says only the final state is the answer. 221 tests pass |
 | S6 | (future) the replayed episode within a stated tolerance of the 33 liquidations and $946k bonus | — |
 
 ## Interview log

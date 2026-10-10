@@ -7,7 +7,7 @@ import pytest
 from riskdep import exit_queue as EQ
 from riskdep import sources as S
 from riskdep.cli import DEMO_VAULT, REPLAY_DIR, main
-from riskdep.market_risk import CurvePoint, MarketRisk
+from riskdep.market_risk import CURVE_DROPS, CurvePoint, MarketRisk
 
 M = 10**6  # amounts in millions, unit 1
 
@@ -59,9 +59,9 @@ def test_a_7702_delegated_wallet_is_not_a_contract():
 
 
 def test_loss_cases_take_the_vault_share_of_each_market():
-    r = MarketRisk("m1", 3, 100, 0, 10, [CurvePoint(d, 0, 0, 40 if d >= 0.1 else 0) for d in (0.02, 0.05, 0.1, 0.2)])
+    r = MarketRisk("m1", 3, 100, 0, 10, [CurvePoint(d, 0, 0, 40 if d >= 0.1 else 0) for d in CURVE_DROPS])
     cases = EQ.loss_cases({"m1": r}, {"m1": 0.5}, {"m1": 60})
-    assert [(c.loss, c.exposure) for c in cases] == [(5, 60), (0, 0), (0, 0), (20, 60), (20, 60)]
+    assert [(c.loss, c.exposure) for c in cases] == [(5, 60), (0, 0), (0, 0)] + [(20, 60)] * (len(CURVE_DROPS) - 2)
 
 
 def test_alert_warns_then_turns_critical_once_on_crossing():

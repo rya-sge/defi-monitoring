@@ -36,6 +36,8 @@
 
 ## What this project is
 
+**Read `docs/hackaton_instruction/GOAL.md` first:** it states the challenge this project answers (the DeFi Risk Dependency Challenge), what is expected, and how it is judged (dependency discovery 30 %, impact estimation 30 %, decision usefulness 25 %, working demo on real data 15 %). Weigh every change against it. The original brief is `docs/hackaton_instruction/Hackathon_DeFi-Risk-Dependency-Challenge_EN_v1.pdf` (one page, Belem Capital, EPFL Hackathon 2026): read it too, it holds what `GOAL.md` does not, such as the worked trade-off (a book in ten 10 % pockets, one affected, 11 % slippage to unwind: make stay-vs-exit explicit), the scope examples (oracle and feed-quality analysis, vaults deploying into an external venue such as a perp exchange, protocols concentrating a large share of on-chain TVL) and the exact criterion wording ("depth and correctness", "is the number defensible"). **Git-ignored**: the file is local only and its notice forbids copying it, so quote from it sparingly and never commit it.
+
 `riskdep` is a Python CLI (`python3 -m riskdep`) for the risk of DeFi positions on Ethereum, centred on Morpho. It has five subcommands: `analyze` (batch STAY / REDUCE / EXIT report for a Pendle PT used as Morpho Blue collateral), `watch` (follow a Morpho Vault V2 block by block and alert a depositor), `watch --user` (find every Blue borrow and Vault V2 deposit of an address and monitor them together) `graph` (interactive dependency graph, with the sibling markets of the held ones and each oracle's class) and `shock` (apply a failure to a node of that graph and propagate it to every market, vault and depositor, by rules kept in `registry.json`). All data comes from public sources: the publicnode Ethereum RPC, the Morpho and Pendle APIs, DefiLlama, all keyless; and Etherscan, whose key in `keys.ini` is optional (without it, an oracle's source verification reads "not checked", and an oracle input only its name would classify reads "not classified").
 
 ## Key concepts
@@ -74,6 +76,8 @@ riskdep/
   # both watches
   market_risk.py      every borrower of the watched markets: unrealised bad debt, liquidation curves
   drain.py            drain threshold of each vault market: d*, the drainable amount, the Public Allocator
+  scenario.py         incident mode: a known incident's impact, time to impact and verdict; alert impacts
+  vault_incident.py   incident mode for a vault depositor: a collateral's oracle price falls (NAV markdown)
   exit_queue.py       a depositor's place in a run on a vault: recovery and loss by queue position
   admin.py            admin surface of the watched markets: upgrades, owners, feeds, pauses, mints, oracle divergence
   # graph
@@ -92,26 +96,31 @@ riskdep/
   report.py           HTML + JSON report
 tests/                pytest, all offline (snapshot + recorded replays)
   test_watch_rules.py, test_watch_replay.py, test_borrower.py, test_watch_user_replay.py,
-  test_graph.py, test_siblings.py, test_oracle_class.py, test_engine.py, test_market_risk.py, test_exit_queue.py, test_drain.py, test_admin.py, test_decide.py, test_propagate.py, test_demo_snapshot.py, test_fixes.py, test_light_reads.py
+  test_graph.py, test_siblings.py, test_oracle_class.py, test_engine.py, test_market_risk.py, test_exit_queue.py, test_drain.py, test_scenario.py, test_vault_incident.py, test_admin.py, test_decide.py, test_propagate.py, test_demo_snapshot.py, test_fixes.py, test_light_reads.py
 pyproject.toml        project metadata, dependencies, ruff and pytest configuration
 ```
 
 ## Other important files
 
-- `ARCHITECTURE.md` — how the system is built: modes, components and their imports, data sources and trust, data flow, state, testing, decision index.
+- `docs/hackaton_instruction/Hackathon_DeFi-Risk-Dependency-Challenge_EN_v1.pdf` — the original challenge brief (PDF, git-ignored, local only); the source of `GOAL.md`.
+- `docs/hackaton_instruction/GOAL.md` — the challenge brief: what to build, what is expected, the judging criteria and their weights, and where the repository answers each.
+- `docs/analysis/ARCHITECTURE.md` — how the system is built: modes, components and their imports, data sources and trust, data flow, state, testing, decision index.
 - `README.md` — usage of every mode, alert trigger tables, limits.
-- `NEXT_STEP.md` — the recommended next steps, with what each needs (decisions, sources, credentials, infrastructure).
-- `PROVIDERS.md` — every external provider (RPC, APIs, CDNs): endpoints, queries, limits, trust model. Keep it current.
+- `docs/analysis/ANALYSIS_CURRENT.md` — the latest assessment (2026-10-10): the brief read as detect → impact → how fast → decide, where the tool stands on each step, why the Monte Carlo should become conditional on the observed incident, and the resulting order of work. Read it before `docs/analysis/NEXT_TASK.md`.
+- `docs/analysis/NEXT_TASK.md` — the two tasks to implement next (incident mode; the book with the breakeven p\* and a headline), file by file, with tests and the order of work.
+- `docs/analysis/NEXT_STEP_V2.md` — the current proposal for what to build next, ordered by the brief's judging weights, from `docs/analysis/GAP.md` (K1–K25) and the teammates' feedback; supersedes the order of `docs/analysis/NEXT_STEP.md`.
+- `docs/analysis/NEXT_STEP.md` — version 1 of the next steps; still the reference for what each of its steps needs (decisions, sources, credentials, infrastructure).
+- `docs/analysis/PROVIDERS.md` — every external provider (RPC, APIs, CDNs): endpoints, queries, limits, trust model. Keep it current.
 - `keys.example.ini` — template of the API keys and secrets (no values); the real `keys.ini` is git-ignored.
-- `erpc.yaml` — configuration of the optional local eRPC proxy (eRPC 0.3.0, six free upstreams, no key); `docs/erpc.md` is the setup guide. Its upstream list is mirrored in `PROVIDERS.md`.
-- `ANALYSIS_MONITORING.md` — design note: dependency graph, impact, monitoring, execution, and gaps of the current implementation (done / partial / missing).
-- `plan/` — the ten plans (`defi-risk-dependency`, `morpho-vault-v2-watcher`, `morpho-user-watcher`, `lenders-and-timelocks`, `market-borrowers`, `admin-surface`, `exit-queue`, `drain-threshold`, `sibling-markets`, `propagation-engine`).
-- `docs/` — `alert-runbook.md` (what each alert means and what to do), `glossary.md`, `registry-reference.md` (every `registry.json` key), `how-risk-is-computed.md`, `scenarios-and-breakeven.md`, `vault-depositor-scenarios.md`, `graph-propagation.md`, `how-a-block-is-analysed.md`, `websocket-vs-polling.md`, `user-watcher-options.md`, `exit-queue.md`, `erpc.md` (the optional local RPC proxy), `shock-engine.md` (the shock engine and its rules), `drain-threshold.md`, `graph-example.html/.json`.
+- `erpc.yaml` — configuration of the optional local eRPC proxy (eRPC 0.3.0, six free upstreams, no key); `docs/erpc.md` is the setup guide. Its upstream list is mirrored in `docs/analysis/PROVIDERS.md`.
+- `docs/analysis/ANALYSIS_MONITORING.md` — design note: dependency graph, impact, monitoring, execution, and gaps of the current implementation (done / partial / missing).
+- `plan/` — the twelve plans (`defi-risk-dependency`, `morpho-vault-v2-watcher`, `morpho-user-watcher`, `lenders-and-timelocks`, `market-borrowers`, `admin-surface`, `exit-queue`, `drain-threshold`, `sibling-markets`, `incident-mode`, `vault-incident`, `propagation-engine`).
+- `docs/` — `alert-runbook.md` (what each alert means and what to do), `glossary.md`, `registry-reference.md` (every `registry.json` key), `how-risk-is-computed.md`, `monte-carlo.md` (how `analyze`'s simulation works; its mindmap in `docs/img/`), `scenarios-and-breakeven.md`, `vault-depositor-scenarios.md`, `graph-propagation.md`, `how-a-block-is-analysed.md`, `websocket-vs-polling.md`, `user-watcher-options.md`, `exit-queue.md`, `erpc.md` (the optional local RPC proxy), `shock-engine.md` (the shock engine and its rules), `shock-trace.md` (the propagation trace for a front end, example in `shock-trace-example.json`), `drain-threshold.md`, `graph-example.html/.json`.
 - `docs/external/` — third-party references, read-only; check behaviour against them before changing a rule:
   - `morpho/docs.morpho.org-developers-docs/` — Morpho developer docs (contracts, Bundles, addresses, Midnight, Vault V2 exit routes); `tests/test_watch_replay.py` checks the event selectors in `abi.py` against its `contracts/` pages, and skips that check when the folder is absent. **Git-ignored**: it exists only in the local checkout, so read it there; a fresh clone does not have it.
   - `morpho/lib/morpho-blue` (`8e26ca6a`) and `morpho/lib/vault-v2` (`d992cb84`) — Morpho Blue and Vault V2 sources: events, liquidation and shares maths, authorisation, adapters, timelocks, gates.
   - `morpho/lib/morpho-blue-oracles` (`9d2a0b66`) — Morpho's standard oracles: `MorphoChainlinkOracleV2` (price = base vault × base feeds ÷ quote vault × quote feeds) and the wstETH exchange-rate adapter.
-  - `morpho/lib/metamorpho-v1.1` (`3b17547e`) — Morpho Vault V1.1 (MetaMorpho): supply and withdraw queues, caps, `lostAssets`; the source for watching Vault V1 deposits (step 4 of `NEXT_STEP.md`).
+  - `morpho/lib/metamorpho-v1.1` (`3b17547e`) — Morpho Vault V1.1 (MetaMorpho): supply and withdraw queues, caps, `lostAssets`; the source for watching Vault V1 deposits (step 4 of `docs/analysis/NEXT_STEP.md`).
   - `pendle/docs.pendle.finance-pendle-v2-dev-docs/` — Pendle V2 developer docs (contracts, oracles, integration, backend API).
   - `pendle/lib/pendle-core-v2-public` (`87685c89`), `pendle/lib/Pendle-SY-Public` (`73676d93`), `pendle/lib/external-integration` (`1694fea0`) — Pendle core (PT/YT, markets, router, oracles), SY wrappers, integration examples.
   - `docs.etherscan.io-api-reference-docs/` — Etherscan API V2 reference (`getsourcecode`, `getabi`, …); the key is in `keys.ini`.
@@ -134,7 +143,7 @@ Python ≥ 3.10; CI runs the suite on 3.10, the floor `requires-python` in `pypr
 
 ```bash
 uv sync
-uv run pytest -q tests                                 # 196 tests, offline
+uv run pytest -q tests                                 # 221 tests, offline
 uv run python -m riskdep analyze --demo                # cached snapshot, no network → out/report.html/.json
 uv run python -m riskdep watch --replay                # re-run the recorded vault range offline
 uv run python -m riskdep watch --blocks 1000 --record  # live range, saved for --replay
@@ -152,7 +161,7 @@ export RISKDEP_RPC_URL=http://127.0.0.1:4000/main/evm/1  # route live runs throu
 - Tests must stay offline: a new network call needs a cached snapshot or a recorded replay behind it.
 - New thresholds or assumptions go in `registry.json` with their basis, not as literals in code, and in `docs/registry-reference.md`.
 - A new or changed alert gets its row in `docs/alert-runbook.md`.
-- Any change that adds, removes or replaces a data provider, endpoint, query or browser script (RPC, API, CDN) updates `PROVIDERS.md` in the same commit.
+- Any change that adds, removes or replaces a data provider, endpoint, query or browser script (RPC, API, CDN) updates `docs/analysis/PROVIDERS.md` in the same commit.
 - Keys and secrets go only in `keys.ini` (git-ignored, `chmod 600`), never in code, docs or committed files; a new key gets its name, with no value, in `keys.example.ini`. Do not use `.env` files for this project.
 - Rule modules stay pure (no I/O); put fetching in the source/state modules.
 - A behaviour change that departs from a plan decision is recorded in that plan's decision table.

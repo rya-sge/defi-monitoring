@@ -1,12 +1,12 @@
 """Propagation engine: a deterministic shock through the dependency graph, driven by rules (plan
-2026-10-10-propagation-engine, D89–D96).
+2026-10-10-propagation-engine, D104–D111).
 
 The graph is graph.py's form: nodes with `id`, `kind`, `label`, `details`; edges with `source`, `target`, `rel`,
 `amount`, `unit`, `details`. An edge points from a node to what it depends on (a market → its oracle), so a shock
 travels against the edges, from a dependency to what depends on it, unless a rule sends it along an edge (a market's
 liquidation sales → its collateral).
 
-Effects a node can carry (D90, D100), each input stored per (effect, source node, rule) so that a later round
+Effects a node can carry (D105, D115), each input stored per (effect, source node, rule) so that a later round
 replaces it:
   misreport  factor on an oracle or feed: it reads that × what it should             combine: product
   reading    factor on an oracle or feed: the market it tracks moved                  combine: product
@@ -16,11 +16,11 @@ replaces it:
              underlying                                                               combine: product
   sale       USD (at today's price) offered for sale into an asset's market           combine: sum
   onward     USD of the underlying received from a PT sale, sold on for dollars       combine: sum
-  exit       share of the offered sales the asset's market could absorb (D98)         combine: min
+  exit       share of the offered sales the asset's market could absorb (D113)         combine: min
   loss       what lenders, a vault or a depositor lose, in the loan token             combine: sum
   collateral (internal) the collateral's price or value factor, and whether the market's oracle follows it
 
-Rules are data (registry.json `engine`, D91): for each edge, effect and direction the first matching edge rule names
+Rules are data (registry.json `engine`, D106): for each edge, effect and direction the first matching edge rule names
 the transmission; for each node the first matching node rule names its model. Nothing here knows Morpho beyond the
 `blue_market` model; a new behaviour a rule cannot express is a new function in TRANSMISSIONS or NODE_MODELS.
 """
@@ -188,9 +188,11 @@ class _Graph:
         self.nodes = {n["id"]: n for n in graph["nodes"]}
         self.incoming: dict[str, list[dict]] = {}
         self.outgoing: dict[str, list[dict]] = {}
-        for e in graph["edges"]:
+        self.edge_index: dict[int, int] = {}  # id(edge) → its position in the graph's edge list (the trace's edge id)
+        for i, e in enumerate(graph["edges"]):
             self.outgoing.setdefault(e["source"], []).append(e)
             self.incoming.setdefault(e["target"], []).append(e)
+            self.edge_index[id(e)] = i
 
 
 @dataclass
@@ -203,12 +205,33 @@ class NodeState:
 
 @dataclass
 class Step:
+    """One effect carried over one edge (D119): `edge` is the edge's position in the graph's edge list, `direction`
+    `dependents` against it or `dependencies` along it; `wave` is the wave of the evaluation that sent it, and
+    `replaces` the earlier step whose value this one supersedes (same target, effect, source and rule)."""
+
     source: str
     target: str
     effect: str
     value: object
     rule: str
     basis: str
+    seq: int = 0
+    wave: int = 0
+    edge: int | None = None
+    direction: str = ""
+    replaces: int | None = None
+
+
+@dataclass
+class Evaluation:
+    """One run of a node's model: in wave 0 the shocked nodes, in wave n + 1 the nodes a wave-n evaluation changed."""
+
+    seq: int
+    wave: int
+    node: str
+    model: str
+    out: dict
+    detail: dict
 
 
 @dataclass
@@ -218,6 +241,7 @@ class Result:
     evaluations: int
     shocks: list[Shock]
     converged: bool = True
+    log: list[Evaluation] = field(default_factory=list)
 
     def loss(self, node: str) -> float:
         st = self.states.get(node)
@@ -287,7 +311,7 @@ def _floor(g, nid, params) -> float:
 
 
 def curve_factor(curve: list, sold: float) -> float:
-    """Pure: the marginal price factor after selling `sold` on a step curve [[sold up to, factor]] (D97)."""
+    """Pure: the marginal price factor after selling `sold` on a step curve [[sold up to, factor]] (D112)."""
     factor = 1.0
     for upto, f in curve:
         factor = f
@@ -297,7 +321,7 @@ def curve_factor(curve: list, sold: float) -> float:
 
 
 def model_asset_price(g, nid, st, params) -> tuple[dict, dict]:
-    """The asset's own market price: shocks, times the impact of what is offered for sale into its market (D97, D98).
+    """The asset's own market price: shocks, times the impact of what is offered for sale into its market (D112, D113).
 
     `impact: quotes` (default) reads the node's `impact_curve`, the marginal price after each size of real Pendle
     quotes: for a PT, its pool against the underlying (what a Pendle TWAP oracle reads); for an underlying, its sale for
@@ -331,8 +355,8 @@ def model_asset_price(g, nid, st, params) -> tuple[dict, dict]:
 
 
 def _evaluate(positions, fo: float, fm: float, lltv: float, slip: float, executed: float = 1.0) -> dict:
-    """Pure: Blue's outcome for every position at oracle factor fo and market factor fm (D92). Only a share
-    `executed` of each liquidation can sell its collateral (D98); the rest is not liquidated, and what its collateral
+    """Pure: Blue's outcome for every position at oracle factor fo and market factor fm (D107). Only a share
+    `executed` of each liquidation can sell its collateral (D113); the rest is not liquidated, and what its collateral
     no longer covers is insolvent. `sold` is what liquidators offer, all of it, at today's price."""
     lif = morpho_lif(lltv)
     pays = fo > 0 and (fm / fo) * (1 - slip) >= 1 / lif
@@ -377,7 +401,7 @@ def model_blue_market(g, nid, st, params) -> tuple[dict, dict]:
         elif eff == "exit":
             executed = min(executed, v)
     # the oracle moves by its misreport, by what its tracked inputs read, and by its collateral's own market only when
-    # it follows that market with no tracked input (D100); a move inherited from an underlying is never seen
+    # it follows that market with no tracked input (D115); a move inherited from an underlying is never seen
     fo = m * (1.0 if frozen else reading) * (fp if follows and not frozen else 1.0)
     fm = fp * fv
     lltv = float(d.get("lltv_value") or 0.0)
@@ -393,7 +417,7 @@ def model_blue_market(g, nid, st, params) -> tuple[dict, dict]:
     net = {k: after[k] - now[k] for k in after}
     loss = max(0.0, net["bad_debt"] + net["insolvent"]) + drain_loss
     usd = d.get("loan_usd")
-    # ratchet (D99): a sale offered stays offered, so the loop settles even when falling prices make later
+    # ratchet (D114): a sale offered stays offered, so the loop settles even when falling prices make later
     # liquidations unprofitable
     sold_usd = max(net["sold"] * usd if usd else 0.0, float(st.out.get("sale", 0.0)) if st.out else 0.0)
     detail = {
@@ -490,37 +514,42 @@ def _changed(a, b, eps: float) -> bool:
 
 
 def run(graph, shocks: list[Shock], extra: dict | None = None) -> Result:
-    """Apply the shocks and propagate until nothing moves (ε) or the evaluation budget is spent (D94)."""
+    """Apply the shocks and propagate until nothing moves (ε) or the evaluation budget is spent (D109)."""
     g = graph if isinstance(graph, _Graph) else _Graph(graph)
     xe, xn = rules_from(extra)
     edge_rules, node_rules = xe + DEFAULT_EDGE_RULES, xn + DEFAULT_NODE_RULES
     eps, budget = float(E["eps"]), int(E["max_evaluations"])
     states: dict[str, NodeState] = {}
     trace: list[Step] = []
-    queue, queued = deque(), set()
+    log: list[Evaluation] = []
+    last: dict[tuple, int] = {}  # (target, effect, source, rule) → seq of the step holding that input
+    queue, queued, wave = deque(), set(), {}
 
-    def push(nid):
+    def push(nid, w):
         if nid not in queued:
             queue.append(nid)
             queued.add(nid)
+            wave[nid] = w
 
     for sh in shocks:
         if sh.node not in g.nodes:
             raise KeyError(f"no node {sh.node} in the graph")
         eff, val = sh.effect()
         states.setdefault(sh.node, NodeState()).inputs[(eff, "shock", sh.mode)] = val
-        push(sh.node)
+        push(sh.node, 0)
 
     evaluations = 0
     while queue and evaluations < budget:
         nid = queue.popleft()
         queued.discard(nid)
         evaluations += 1
+        w = wave[nid]
         node, st = g.nodes[nid], states[nid]
         rule = next((r for r in node_rules if matches(r.when, {"node": node})), None)
         model = NODE_MODELS[rule.apply] if rule else model_combine
         out, detail = model(g, nid, st, rule.params if rule else {})
         st.out, st.detail, st.model = out, detail, rule.apply if rule else "combine"
+        log.append(Evaluation(evaluations, w, nid, st.model, dict(out), dict(detail)))
         for eff, val in out.items():
             if eff in NEUTRAL and not _changed(val, NEUTRAL[eff], eps):
                 continue
@@ -546,9 +575,13 @@ def run(graph, shocks: list[Shock], extra: dict | None = None) -> Result:
                     key = (eff2, nid, r.id)
                     if key not in tst.inputs or _changed(tst.inputs[key], val2, eps):
                         tst.inputs[key] = val2
-                        trace.append(Step(nid, target, eff2, val2, r.id, r.basis))
-                        push(target)
-    return Result(states, trace, evaluations, list(shocks), converged=not queue)
+                        seq = len(trace) + 1
+                        step = Step(nid, target, eff2, val2, r.id, r.basis, seq, w, g.edge_index.get(id(e)), direction)
+                        step.replaces = last.get((target, *key))
+                        last[(target, *key)] = seq
+                        trace.append(step)
+                        push(target, w + 1)
+    return Result(states, trace, evaluations, list(shocks), converged=not queue, log=log)
 
 
 def path(result: Result, node: str, depth: int = 0, seen: frozenset = frozenset()) -> list[str]:

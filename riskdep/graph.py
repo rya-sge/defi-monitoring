@@ -1,6 +1,6 @@
 """Dependency graph of an address's Morpho positions and of vaults, as JSON and as an interactive HTML page.
 
-Node types follow ANALYSIS_MONITORING.md §1:
+Node types follow docs/analysis/ANALYSIS_MONITORING.md §1:
   Actor     whose capital is at stake: an address with positions, or a Vault V2 (adapters folded in)
   Pool      where liquidity sits and is priced: a Blue market, a Pendle pool
   Asset     a token; a vault's share token only where another protocol reuses it (an oracle conversion)
@@ -36,8 +36,6 @@ from .abi import MORPHO_BLUE
 from .discover import REGISTRY
 from .positions import discover_user
 from .vault import _call, _symbol, _uint, discover_vault, read_state
-
-ORACLE_GETTERS = ["BASE_VAULT()", "BASE_FEED_1()", "BASE_FEED_2()", "QUOTE_VAULT()", "QUOTE_FEED_1()", "QUOTE_FEED_2()"]
 
 
 class Graph:
@@ -105,15 +103,11 @@ def _oracle(g: Graph, f, oracle: str, block) -> str:
         return oracle
     code = S.rpc(f, "eth_getCode", [oracle, hex(block)]) or ""
     impl = "0x" + code[22:62] if code.startswith("0x363d3d373d3d3d363d73") else None
-    res = S.rpc_batch(f, [_call(oracle, s) for s in ORACLE_GETTERS], block)
-    feeds = [(name[:-2], "0x" + r[-40:]) for name, r in zip(ORACLE_GETTERS, res) if r and int(r, 16)]
-    shape = "Morpho ChainlinkOracleV2" if any(r is not None for r in res) else "custom (no ChainlinkOracleV2 getters)"
+    cls, basis, base, feeds, standard = OC.classify_market_oracle(f, oracle, block)
+    for p in base:
+        OC.read_pendle_markets(f, p, block)
+    shape = "Morpho ChainlinkOracleV2" if standard else "custom (no ChainlinkOracleV2 getters)"
     price = _uint(S.rpc_batch(f, [_call(oracle, "price()")], block)[0])
-    standard = shape.startswith("Morpho")
-    base = [OC.probe(f, a, block, vault="VAULT" in n) for n, a in feeds if n in OC.BASE_ROLES]
-    if not standard:
-        base = [OC.probe(f, oracle, block)]  # a custom oracle is read as one input (D83)
-    cls, basis = OC.classify_oracle(base, standard)
     g.node(
         oracle,
         "Oracle",
@@ -291,7 +285,7 @@ def _wraps(g: Graph, f: S.Fetcher, und: dict[str, tuple[str, str]], block) -> No
 
 
 def _ladders(g: Graph, f: S.Fetcher, m: B.BorrowMarket, pm: dict, und: str, orc: str) -> None:
-    """Real Pendle quotes for selling the PT at growing sizes (engine D97, D98), turned into marginal-price curves:
+    """Real Pendle quotes for selling the PT at growing sizes (engine D112, D113), turned into marginal-price curves:
     on the PT, its pool against the underlying with no aggregator (the price a Pendle TWAP oracle reads); on the
     underlying, the underlying received then sold for the loan token through the aggregator (the dollars a liquidator
     gets). Sizes in USD at today's oracle price, the loan token counted at $1."""
@@ -343,7 +337,7 @@ PAIR = re.compile(r"^\s*([A-Za-z0-9.\-]+)\s*/\s*USD\s*$")
 
 
 def _tracks(g: Graph) -> None:
-    """Ties each oracle input to the market it reads (engine D100): a Pendle TWAP input → the PT of its pool; a
+    """Ties each oracle input to the market it reads (engine D115): a Pendle TWAP input → the PT of its pool; a
     price-tracking 'SYM / USD' feed → the one asset of the graph with that symbol. An oracle whose base side reads a
     tracked input is marked `tracks_bound`, and so are the markets it prices."""
     pools = {n["details"].get("address", "").lower(): nid for nid, n in g.nodes.items() if nid.startswith("pendle:")}
@@ -407,7 +401,7 @@ def _market_state(g: Graph, f: S.Fetcher, markets: dict[str, B.BorrowMarket], bl
             [c * price // 10**36 / ld, b * (tba + 1) // (tbs + 10**6) / ld]
             for c, b in tracker.positions.get(mid, {}).values()
             if b and price is not None
-        ]  # collateral value at today's oracle price and debt, in loan units: the engine's input (D96)
+        ]  # collateral value at today's oracle price and debt, in loan units: the engine's input (D111)
         g.node(
             mid,
             "Pool",

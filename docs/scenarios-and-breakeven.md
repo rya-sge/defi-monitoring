@@ -1,6 +1,6 @@
 # Scenarios and breakeven probabilities
 
-This document details point 4.2 of `comparison_team.md`: how `analyze` decides today from estimated probabilities, why the teammates question that, and how named scenarios with a **breakeven probability** would complement it. Every number comes from the offline demo position (a Morpho Blue borrower using PT-sUSDE-26NOV2026 as collateral, data as of 2026-10-10) and was computed with the tool's own loss function, `propagate.loss()`. A [learn section](#learn-what-you-need-to-understand) at the end explains the concepts used.
+This document details point 4.2 of `docs/analysis/comparison_team.md`: how `analyze` decides today from estimated probabilities, why the teammates question that, and how named scenarios with a **breakeven probability** would complement it. Every number comes from the offline demo position (a Morpho Blue borrower using PT-sUSDE-26NOV2026 as collateral, data as of 2026-10-10) and was computed with the tool's own loss function, `propagate.loss()`. A [learn section](#learn-what-you-need-to-understand) at the end explains the concepts used.
 
 ## Contents
 

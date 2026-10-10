@@ -130,3 +130,17 @@ def test_long_address_lists_are_split_and_optional_failures_tolerated(tmp_path):
     assert len(sent) == 3 and all(len(q["address"]) <= MAX_ADDRESSES for q in sent)
     assert all("_optional" not in q for q in f.bodies)
     assert len(p.warnings) == 3
+
+
+def test_divergence_checked_between_refreshes_from_batch_prices():
+    """D97: the check uses the batch's oracle price and cached DefiLlama prices, and alerts once on crossing."""
+    from riskdep.admin import AdminWatch
+
+    m = BorrowMarket("0xm", "0xloan", "0xcoll", "0xorc", "0xirm", int(0.915e18), "USDC", "PT", 6, 18)
+    aw = AdminWatch.__new__(AdminWatch)
+    aw.markets, aw.divergence, aw.llama_block = {"0xm": m}, {"0xm": 0.0}, 100
+    aw.llama = {"ethereum:0xcoll": {"price": 0.90}, "ethereum:0xloan": {"price": 1.0}}
+    at_par = 10**24  # 1.0 USDC per PT at 36 + 6 − 18 = 24 decimals
+    first = aw.check_divergence(None, 110, {"0xm": at_par, "0xother": at_par})
+    assert [a.event for a in first] == ["OracleDivergence"] and aw.divergence["0xm"] == pytest.approx(1 / 0.9 - 1)
+    assert aw.check_divergence(None, 111, {"0xm": at_par}) == []  # no repeat while above the threshold

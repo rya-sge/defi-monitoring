@@ -117,6 +117,7 @@ def write(
     out_dir: Path,
     mode: str,
     oracle_alt: dict | None = None,
+    incident=None,
 ) -> tuple[Path, Path]:
     out_dir.mkdir(parents=True, exist_ok=True)
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
@@ -178,13 +179,39 @@ def write(
             f"<div class='kpi'><div class='k'>One-off cost</div><div class='v'>{_usd(r.cost_usd)}</div></div></div></div>"
         )
     notes = "".join(f"<li>{e(n)}</li>" for n in pos.notes)
+    inc = ""
+    if incident:
+        ic = {"STAY": "var(--stay)", "REDUCE": "var(--reduce)", "EXIT": "var(--exit)"}[incident.verdict]
+        shock = ", ".join(
+            f"{k} −{v:.1%}" if k != "issuer_depeg" else f"depeg −{v:.1%}" for k, v in incident.shocks.items()
+        )
+        red_txt = ""
+        if incident.reduction:
+            r = incident.reduction
+            red_txt = (
+                f"<li>De-lever: sell {_usd(r['sell_usd'])} ({r['share']:.0%}) for {_usd(r['cost_usd'])}; "
+                f"{'still liquidated' if r['liquidated_after'] else 'no liquidation'}, loss {_usd(r['loss_after_usd'])} "
+                f"({e(r['source'])}).</li>"
+            )
+        inc = (
+            f"<h2>Incident: {e(shock)}</h2>"
+            f"<div class='card verdict' style='--c:{ic}'><div class='tag'>{incident.verdict}</div>"
+            f"<p>{e(incident.reason)}.</p><ul>"
+            f"<li>{'Liquidated' if incident.liquidated else 'Not liquidated'}; loss {_usd(incident.loss_usd)} "
+            f"({incident.loss_share_of_equity:.1%} of equity); the oracle's value falls {incident.oracle_drop:.1%}.</li>"
+            f"<li>How fast: {e(incident.timing.text)}.</li>"
+            f"<li>Exit now: {_usd(incident.exit_cost_usd)} ({e(incident.exit_source)}).</li>{red_txt}"
+            + "".join(f"<li>{e(x)}</li>" for x in incident.path)
+            + "".join(f"<li class='muted'>{e(x)}</li>" for x in incident.notes)
+            + "</ul></div><h2>Ex ante: before any incident (Monte Carlo)</h2>"
+        )
 
     doc = f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>Position Risk Report</title>
 <style>{CSS}</style></head><body><main>
 <h1>{e(pos.label)}</h1>
 <p class="muted">Generated {now} · data as of <b>{data_as_of}</b> ({e(mode)}) · horizon {sim.horizon_days:.0f} days (maturity {e((pos.maturity or "")[:10])}) · {sim.n:,} Monte Carlo paths</p>
-<div class="card verdict" style="--c:{color}"><div class="tag">{dec.verdict}</div><p>{e(dec.headline.split(": ", 1)[-1])}</p>
+{inc}<div class="card verdict" style="--c:{color}"><div class="tag">{dec.verdict}</div><p>{e(dec.headline.split(": ", 1)[-1])}</p>
 <ul>{"".join(f"<li>{e(r)}</li>" for r in dec.reasons)}</ul></div>
 <div class="grid">{kpi_html}</div>
 {red}
@@ -241,6 +268,7 @@ theme:(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'default')}});}
         "decision": asdict(dec),
         "exit_quote": quote,
         "oracle_sensitivity": oracle_alt,
+        "incident": incident.to_json() if incident else None,
     }
     jp = out_dir / "report.json"
     jp.write_text(json.dumps(clean(payload), indent=2, default=str))

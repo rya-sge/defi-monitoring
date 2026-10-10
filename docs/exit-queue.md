@@ -1,6 +1,6 @@
 # The exit queue: a depositor's place in a run on a vault
 
-This document explains the run / queue model built into both watches (`watch --vault` and `watch --user`). It answers the question a Morpho Vault V2 depositor faces when something goes wrong: **if everyone heads for the exit, how much of my position gets out, and how much of the loss do I end up carrying?** The model comes from Team 2's feedback (`teammate/team2.md`, "Run / queue model"), and closes item 1 of `comparison_team.md` §5. A [learn section](#learn-what-you-need-to-understand) at the end explains the concepts used.
+This document explains the run / queue model built into both watches (`watch --vault` and `watch --user`). It answers the question a Morpho Vault V2 depositor faces when something goes wrong: **if everyone heads for the exit, how much of my position gets out, and how much of the loss do I end up carrying?** The model comes from Team 2's feedback (`teammate/team2.md`, "Run / queue model"), and closes item 1 of `docs/analysis/comparison_team.md` §5. A [learn section](#learn-what-you-need-to-understand) at the end explains the concepts used.
 
 Every number below comes from **Sentora RLUSD Main**, the largest Morpho Vault V2 on Ethereum, from the recorded replay at block 26,162,932 (2026-10-10). The depositor is its largest holder (`0xb03d…babc`).
 
@@ -115,9 +115,9 @@ The model needs a loss L to share out. It takes it from the borrower positions t
 | Case | L, the vault's loss | X, the exposure that carries it |
 |---|---|---|
 | now | the vault's share of each market's **unrealised bad debt** | the vault's assets in the markets with unrealised bad debt |
-| all collateral −2, −5, −10, −20 % | the vault's share of each market's bad debt if **every** collateral gapped down by that much at once | the vault's assets in the markets with bad debt at that fall |
+| all collateral −2, −5, −10, −20, −30, −50 % (−30 and −50 added by D98) | the vault's share of each market's bad debt if **every** collateral gapped down by that much at once | the vault's assets in the markets with bad debt at that fall |
 
-The "all collateral" rows are a deliberately simple stress: they reuse the liquidation-curve points (D50) and move every market together. Named scenarios per collateral (BTC −50 %, a USDe depeg, a feed misreport) are point 4.3 of `comparison_team.md` and `docs/vault-depositor-scenarios.md`.
+The "all collateral" rows are a deliberately simple stress: they reuse the liquidation-curve points (D50) and move every market together. Named scenarios per collateral (BTC −50 %, a USDe depeg, a feed misreport) are point 4.3 of `docs/analysis/comparison_team.md` and `docs/vault-depositor-scenarios.md`.
 
 ## 6. Reading the output: Sentora RLUSD Main
 
@@ -170,7 +170,7 @@ On the replay the warn fires at start-up: 100 % of the position would be stuck b
 - **Holders are read now, not at the replay's block.** The list and the code checks are cached in the replays from a request made the same day as the recording.
 - **The "all collateral" cases are crude.** Every collateral falls by the same amount at once, as a gap, with no liquidation on the way and no slippage.
 - **Not modelled here:** MEV ordering within a block. The drain of a market whose oracle does not follow the market, with the Public Allocator's inflow, is now modelled separately and taken out of the exit queue's liquidity (`docs/drain-threshold.md`).
-- **Vault V2 only.** Vault V1 deposits are not watched yet (step 4 of `NEXT_STEP.md`).
+- **Vault V2 only.** Vault V1 deposits are not watched yet (step 4 of `docs/analysis/NEXT_STEP.md`).
 
 ## 9. Code and tests
 
