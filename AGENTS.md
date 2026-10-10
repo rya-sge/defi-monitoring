@@ -36,19 +36,19 @@
 
 ## What this project is
 
-`riskdep` is a Python CLI (`python3 -m riskdep`) for the risk of DeFi positions on Ethereum, centred on Morpho. It has four subcommands: `analyze` (batch STAY / REDUCE / EXIT report for a Pendle PT used as Morpho Blue collateral), `watch` (follow a Morpho Vault V2 block by block and alert a depositor), `watch --user` (find every Blue borrow and Vault V2 deposit of an address and monitor them together) and `graph` (interactive dependency graph). All data comes from public sources: the publicnode Ethereum RPC, the Morpho and Pendle APIs, DefiLlama, all keyless; and Etherscan, whose key in `keys.ini` is optional (without it, an oracle's source verification reads "not checked").
+`riskdep` is a Python CLI (`python3 -m riskdep`) for the risk of DeFi positions on Ethereum, centred on Morpho. It has four subcommands: `analyze` (batch STAY / REDUCE / EXIT report for a Pendle PT used as Morpho Blue collateral), `watch` (follow a Morpho Vault V2 block by block and alert a depositor), `watch --user` (find every Blue borrow and Vault V2 deposit of an address and monitor them together) and `graph` (interactive dependency graph, with the sibling markets of the held ones and each oracle's class). All data comes from public sources: the publicnode Ethereum RPC, the Morpho and Pendle APIs, DefiLlama, all keyless; and Etherscan, whose key in `keys.ini` is optional (without it, an oracle's source verification reads "not checked", and an oracle input only its name would classify reads "not classified").
 
 ## Key concepts
 
 - **Design first.** Each mode was built from a plan in `plan/` (design, numbered decisions `D1…`, tracker, interview log). Module docstrings cite those decisions (e.g. `D21`, `D37`); read the matching plan row before changing behaviour it governs.
 - **Pure rules, I/O at the edges.** `rules.py`, `borrower_rules.py` and `propagate.py` are pure functions (decoded events + state before/after → alerts); network access lives in `sources.py`, `vault.py`, `borrower.py`, `poller.py`, `crosscheck.py`.
-- **One cached fetcher.** `sources.py` keys every request by a hash of (method, url, body) and stores it under `fixtures/snapshot/`, so a live run doubles as the offline demo snapshot. `RISKDEP_RPC_URL` changes where the main RPC's requests are sent, never the URL they are cached under. `--record` saves watch ranges under `fixtures/replay/<vault>/` or `fixtures/replay/user-<address>/`; `--replay` re-runs them offline.
+- **One cached fetcher.** `sources.py` keys every request by a hash of (method, url, body) and stores it under `fixtures/snapshot/`, so a live run doubles as the offline demo snapshot. `RISKDEP_RPC_URL` changes where the main RPC's requests are sent, never the URL they are cached under. `--record` saves watch ranges under `fixtures/replay/<vault>/` or `fixtures/replay/user-<address>/`, and graphs under `fixtures/replay/graph-<target>/`; `--replay` re-runs them offline.
 - **One clock.** `clock.py` makes offline runs use `fixtures/snapshot/as_of.json` as "now", so the demo is reproducible on any later day. Never call `time.time()`/`datetime.now()` directly in analysis code.
 - **Registry, not constants.** Facts, assumptions, priors and watch thresholds live in `riskdep/registry.json` (`watch` key for alert thresholds), each with a stated basis.
 - **Alert levels** are `info` / `warn` / `critical`; the trigger tables are in `README.md`.
 - **Watch loop invariant:** discover, read state, poll, assess, alert, and save the cursor **last** (`out/watch-*.cursor`), so a restart resumes without skipping blocks. Polling runs 2 blocks behind the head every 12 s; deeper reorgs are not handled. A live batch with no event reads only what moves without one (`vault.read_light`, `borrower.read_prices`); any event, gap, undecoded log or refresh, and `watch.full_state_every_blocks`, force a full read (D61). Replays and `--blocks` runs always read in full.
 - **Cross-checks never stop a run:** block hash against a second RPC (critical on mismatch), Morpho API against chain state (warn, 0.5 % tolerance); a check that cannot run prints "not checked".
-- **Free-RPC limits:** state is servable only ~64–90 blocks back (state-based rules on older ranges start at the oldest servable block); at most 9 addresses per `eth_getLogs` filter (the poller splits longer lists); recent ranges are intermittently refused as "archive" (the poller retries). Admin-surface filters are optional: a refusal is a warning, not a gap.
+- **Free-RPC limits:** state is servable only ~64–90 blocks back (state-based rules on older ranges start at the oldest servable block); at most 9 addresses per `eth_getLogs` filter (the poller splits longer lists); recent ranges are intermittently refused as "archive" (the poller retries). Admin-surface filters are optional: a refusal is a warning, not a gap. Under a burst publicnode answers HTTP 429, and a local eRPC answers 200, both with a rate-limit error per batch item: `sources.Fetcher` waits and resends either (`_throttled`, up to 6 times) and never caches it. For long live runs, the optional local eRPC proxy (`erpc.yaml`, `docs/erpc.md`) spreads the calls over six free endpoints; it must never list dRPC, the cross-check's independent node.
 
 ## File tree
 
@@ -78,6 +78,8 @@ riskdep/
   admin.py            admin surface of the watched markets: upgrades, owners, feeds, pauses, mints, oracle divergence
   # graph
   graph.py            dependency graph as JSON + Cytoscape.js HTML
+  siblings.py         sibling markets: other Blue markets sharing a held market's collateral, underlying or price input
+  oracle_class.py     oracle class, price-tracking or constant-price, from structure and round history (pure + probe)
   # analyze
   discover.py         position → numbers plus a typed layer graph
   priors.py           per-layer incident priors
@@ -87,7 +89,7 @@ riskdep/
   report.py           HTML + JSON report
 tests/                pytest, all offline (snapshot + recorded replays)
   test_watch_rules.py, test_watch_replay.py, test_borrower.py, test_watch_user_replay.py,
-  test_graph.py, test_market_risk.py, test_exit_queue.py, test_drain.py, test_admin.py, test_decide.py, test_propagate.py, test_demo_snapshot.py, test_fixes.py, test_light_reads.py
+  test_graph.py, test_siblings.py, test_oracle_class.py, test_market_risk.py, test_exit_queue.py, test_drain.py, test_admin.py, test_decide.py, test_propagate.py, test_demo_snapshot.py, test_fixes.py, test_light_reads.py
 pyproject.toml        project metadata, dependencies, ruff and pytest configuration
 ```
 
@@ -98,9 +100,10 @@ pyproject.toml        project metadata, dependencies, ruff and pytest configurat
 - `NEXT_STEP.md` — the recommended next steps, with what each needs (decisions, sources, credentials, infrastructure).
 - `PROVIDERS.md` — every external provider (RPC, APIs, CDNs): endpoints, queries, limits, trust model. Keep it current.
 - `keys.example.ini` — template of the API keys and secrets (no values); the real `keys.ini` is git-ignored.
+- `erpc.yaml` — configuration of the optional local eRPC proxy (eRPC 0.3.0, six free upstreams, no key); `docs/erpc.md` is the setup guide. Its upstream list is mirrored in `PROVIDERS.md`.
 - `ANALYSIS_MONITORING.md` — design note: dependency graph, impact, monitoring, execution, and gaps of the current implementation (done / partial / missing).
-- `plan/` — the eight plans (`defi-risk-dependency`, `morpho-vault-v2-watcher`, `morpho-user-watcher`, `lenders-and-timelocks`, `market-borrowers`, `admin-surface`, `exit-queue`, `drain-threshold`).
-- `docs/` — `alert-runbook.md` (what each alert means and what to do), `glossary.md`, `registry-reference.md` (every `registry.json` key), `how-risk-is-computed.md`, `scenarios-and-breakeven.md`, `vault-depositor-scenarios.md`, `graph-propagation.md`, `how-a-block-is-analysed.md`, `websocket-vs-polling.md`, `user-watcher-options.md`, `exit-queue.md`, `drain-threshold.md`, `graph-example.html/.json`.
+- `plan/` — the nine plans (`defi-risk-dependency`, `morpho-vault-v2-watcher`, `morpho-user-watcher`, `lenders-and-timelocks`, `market-borrowers`, `admin-surface`, `exit-queue`, `drain-threshold`, `sibling-markets`).
+- `docs/` — `alert-runbook.md` (what each alert means and what to do), `glossary.md`, `registry-reference.md` (every `registry.json` key), `how-risk-is-computed.md`, `scenarios-and-breakeven.md`, `vault-depositor-scenarios.md`, `graph-propagation.md`, `how-a-block-is-analysed.md`, `websocket-vs-polling.md`, `user-watcher-options.md`, `exit-queue.md`, `erpc.md` (the optional local RPC proxy), `drain-threshold.md`, `graph-example.html/.json`.
 - `docs/external/` — third-party references, read-only; check behaviour against them before changing a rule:
   - `morpho/docs.morpho.org-developers-docs/` — Morpho developer docs (contracts, Bundles, addresses, Midnight, Vault V2 exit routes); `tests/test_watch_replay.py` checks the event selectors in `abi.py` against its `contracts/` pages, and skips that check when the folder is absent. **Git-ignored**: it exists only in the local checkout, so read it there; a fresh clone does not have it.
   - `morpho/lib/morpho-blue` (`8e26ca6a`) and `morpho/lib/vault-v2` (`d992cb84`) — Morpho Blue and Vault V2 sources: events, liquidation and shares maths, authorisation, adapters, timelocks, gates.
@@ -112,7 +115,7 @@ pyproject.toml        project metadata, dependencies, ruff and pytest configurat
   - `chainlink/docs.chain.link-data-feeds-docs/` — Chainlink Data Feeds documentation (price, rates, SmartData / Proof of Reserve, SVR feeds; `latestRoundData`, heartbeat and deviation, L2 sequencer uptime). **Git-ignored**: it exists only in the local checkout, so read it there; a fresh clone does not have it.
 
   The seven source repositories are git submodules (`.gitmodules`), pinned at the commits above: after a clone, run `git submodule update --init`. To move a pin, check out the new commit inside the submodule and stage the submodule path.
-- `fixtures/snapshot/` (analyze demo cache + `as_of.json`) and `fixtures/replay/` (recorded watch ranges) — test fixtures; do not delete or regenerate casually. **Tracked in git, not ignored, on purpose:** every test runs offline from these cached responses, so CI and any fresh clone need them; a cache file present on one machine only makes a test pass locally and fail in CI. They used to live under `data/`, which `.gitignore` ignores, and new cache files were silently left out of commits (the exit-queue test failed in CI for that reason). So a new cached response (`--record`, `--live`, or a live fetch into these folders) is committed with the change that needs it: check `git status fixtures/`. They hold public responses only: API keys go on the request, never into a cache file (`sources.Fetcher`, `secret`).
+- `fixtures/snapshot/` (analyze demo cache + `as_of.json`) and `fixtures/replay/` (recorded watch ranges and graphs) — test fixtures; do not delete or regenerate casually. **Tracked in git, not ignored, on purpose:** every test runs offline from these cached responses, so CI and any fresh clone need them; a cache file present on one machine only makes a test pass locally and fail in CI. They used to live under `data/`, which `.gitignore` ignores, and new cache files were silently left out of commits (the exit-queue test failed in CI for that reason). So a new cached response (`--record`, `--live`, or a live fetch into these folders) is committed with the change that needs it: check `git status fixtures/`. They hold public responses only: API keys go on the request, never into a cache file (`sources.Fetcher`, `secret`).
 - `out/` — run outputs (reports, alert `.jsonl`, cursors); git-ignored.
 - `conftest.py` — puts the repo root on `sys.path` for tests.
 - `pyproject.toml` — project metadata, the runtime dependencies, the `dev` dependency group, and the ruff and pytest configuration.
@@ -128,13 +131,16 @@ Python ≥ 3.10; CI runs the suite on 3.10, the floor `requires-python` in `pypr
 
 ```bash
 uv sync
-uv run pytest -q tests                                 # 133 tests, offline
+uv run pytest -q tests                                 # 161 tests, offline
 uv run python -m riskdep analyze --demo                # cached snapshot, no network → out/report.html/.json
 uv run python -m riskdep watch --replay                # re-run the recorded vault range offline
 uv run python -m riskdep watch --blocks 1000 --record  # live range, saved for --replay
 uv run python -m riskdep watch --user <address>        # every Morpho position of an address, live
 uv run python -m riskdep graph --example               # out/graph.html + out/graph.json
+uv run python -m riskdep graph --vault 0xE0181090c22579B6A217f1522cbf8c9f1F0C1965 --replay  # recorded RockawayX graph, siblings and oracle classes, offline
 uv run ruff format . && uv run ruff check .            # format and lint, 120 columns
+~/.local/bin/erpc erpc.yaml                            # optional local RPC proxy (docs/erpc.md), in its own terminal
+export RISKDEP_RPC_URL=http://127.0.0.1:4000/main/evm/1  # route live runs through it; unset to go direct
 ```
 
 ## Conventions

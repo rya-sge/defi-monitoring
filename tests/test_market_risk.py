@@ -29,6 +29,9 @@ def test_value_counts_liquidatable_and_unrealised_bad_debt():
     p20 = r.point(0.20)
     assert p20.positions == 3 and p20.liquidatable_debt == pytest.approx(275 * E6, rel=1e-6)
     assert r.point(0.02).positions == 2
+    # the collateral liquidators could sell (sibling-markets D81): b and c at −2 %, all three at −20 %
+    assert r.point(0.02).collateral == pos(100, 0)[0] + pos(90, 0)[0]
+    assert p20.collateral == pos(290, 0)[0]
 
 
 def test_unreadable_oracle_gives_no_numbers():

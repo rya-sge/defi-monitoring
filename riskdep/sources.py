@@ -29,6 +29,7 @@ RPC = "https://ethereum-rpc.publicnode.com"
 ETHERSCAN = "https://api.etherscan.io/v2/api"  # needs a key: keys.ini [etherscan] api_key
 
 KEYS_FILE = Path(__file__).resolve().parent.parent / "keys.ini"  # git-ignored; keys.example.ini is the template
+THROTTLE_RETRIES = 6  # HTTP 429 resent after 2, 4 … 12 s: at most ~42 s of waiting before the request fails
 
 # Where a request is sent can differ from the URL it is cached under: RISKDEP_RPC_URL sends the main RPC's requests
 # to another endpoint (a local node or proxy, a paid endpoint with its key) while cache keys, snapshots and replays
@@ -42,6 +43,20 @@ class CacheMiss(RuntimeError):
 
 class SourceError(RuntimeError):
     pass
+
+
+def _throttled(payload) -> bool:
+    """A JSON-RPC answer refused for rate, in any batch item: HTTP-style code 429, or a message saying rate limit or too
+    many requests (publicnode, eRPC, blockrazor, OnFinality on 2026-10-10). A bare -32005 is not enough: some nodes
+    use it for 'too many log results', which a resend does not cure."""
+    items = payload if isinstance(payload, list) else [payload] if isinstance(payload, dict) else []
+    for it in items:
+        err = it.get("error") if isinstance(it, dict) else None
+        if isinstance(err, dict):
+            msg = str(err.get("message", "")).lower()
+            if err.get("code") == 429 or "rate limit" in msg or "rate-limit" in msg or "too many requests" in msg:
+                return True
+    return False
 
 
 class Fetcher:
@@ -78,36 +93,53 @@ class Fetcher:
             from urllib.parse import urlencode
 
             target += ("&" if "?" in target else "?") + urlencode(secret)
-        last = None
-        for attempt in range(3):
+        last, done, failures, throttled = None, False, 0, 0
+        while failures < 3 and throttled < THROTTLE_RETRIES:
             try:
                 self.network_calls += 1
                 if method == "GET":
                     r = requests.get(target, timeout=60)
                 else:
                     r = requests.post(target, json=body, timeout=60)
-                if r.status_code >= 400:
+                try:
+                    payload = r.json()
+                except ValueError:
+                    payload = None
+                if r.status_code == 429 or _throttled(payload):
+                    # throttled: publicnode answers a burst with 429, a local eRPC with 200, both with a rate-limit
+                    # error on every batch item. Wait and resend; passing that body on would read as calls that
+                    # reverted, and a recording would keep it
+                    throttled += 1
+                    last = SourceError(f"rate limited {throttled} time(s), HTTP {r.status_code}")
+                    time.sleep(2.0 * throttled)
+                    continue
+                if r.status_code >= 400 and payload is not None and "error" in json.dumps(payload)[:2000]:
                     # the free node answers some refusals (archive reads) with 403 + a JSON-RPC error body;
                     # kept apart from `body`, which a retry must send again unchanged
-                    try:
-                        err = r.json()
-                    except ValueError:
-                        err = None
-                    if err is not None and "error" in json.dumps(err)[:2000]:
-                        data = err
-                        break
+                    data, done = payload, True
+                    break
                 r.raise_for_status()
-                data = r.json()
+                if payload is None:
+                    raise ValueError("the response is not JSON")
+                data, done = payload, True
                 break
             except Exception as e:  # network, HTTP or JSON error
                 last = e
-                time.sleep(1.5 * (attempt + 1))
-        else:
-            # a routed URL may carry a key: name the public one only
-            msg = str(last).replace(target, url)
+                failures += 1
+                time.sleep(1.5 * failures)
+        if not done:
+            # a routed URL may carry a key: name the public one only. requests' messages cut a URL into host, port
+            # and path, so replacing the whole URL is not enough: a routed failure keeps only its kind
+            msg = str(last) if target == url or isinstance(last, SourceError) else type(last).__name__
             for v in (secret or {}).values():
                 msg = msg.replace(str(v), "***")
-            raise SourceError(f"{method} {url} failed after 3 attempts: {msg}")
+            hint = (
+                " (sent through RISKDEP_RPC_URL: is the proxy running? Unset the variable to call the public RPC directly,"
+                " see docs/erpc.md)"
+                if target != url and url in ROUTES
+                else ""
+            )
+            raise SourceError(f"{method} {url} failed after {failures + throttled} attempts{hint}: {msg}")
         if transform:
             data = transform(data)
         if self.mode == "direct":

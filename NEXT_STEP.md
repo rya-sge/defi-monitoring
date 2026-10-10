@@ -192,6 +192,8 @@ Each step below gives its goal, what it delivers, its size (**S** about a day, *
 
 **Already available.** A local corpus of DeFi hacks (`search-crypto-hack`) to calibrate correlated scenarios; DefiLlama's hack record and price history, already used.
 
+**Started.** The dependency graph now carries sibling markets, oracle classes and every market's liquidation curve with the collateral it would sell (plan `2026-10-10-sibling-markets`): the inputs of the propagation engine of `docs/graph-propagation.md` §7, which is the way to joint, cross-market shocks.
+
 ## 9. Execution
 
 **Goal.** Let the tool act on an alert, not just report it (gap X1). Examples:

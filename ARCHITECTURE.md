@@ -30,7 +30,7 @@ One command, `python3 -m riskdep`, with four modes:
 
 ## 2. Components
 
-The package has 24 Python files (about 4,400 lines), in five layers. The diagram shows the main path of each mode; the table under it lists every import, taken from the code.
+The package has 28 Python files (about 7,300 lines), in five layers. The diagram shows the main path of each mode; the table under it lists every import, taken from the code.
 
 ```mermaid
 flowchart TB
@@ -48,6 +48,8 @@ flowchart TB
     exit_queue["exit_queue · run on a vault"]
     drain["drain · drain threshold"]
     admin["admin · admin surface"]
+    oracle_class["oracle_class · price-tracking or constant-price"]
+    siblings["siblings · sibling markets"]
     model["decide → simulate → propagate, priors"]
   end
   subgraph Readers["Readers"]
@@ -75,6 +77,9 @@ flowchart TB
   exit_queue --> market_risk
   watch --> admin
   watch_user --> admin
+  graphmod --> oracle_class
+  graphmod --> siblings
+  graphmod --> market_risk
   report --> model
   watch -->|"read"| readers
   watch_user -->|"read"| readers
@@ -92,12 +97,14 @@ flowchart TB
 | `watch` | `admin`, `crosscheck`, `discover`, `drain`, `exit_queue`, `market_risk`, `poller`, `rules`, `sources`, `vault` |
 | `watch_user` | `abi`, `admin`, `borrower`, `borrower_rules`, `crosscheck`, `discover`, `drain`, `exit_queue`, `market_risk`, `poller`, `positions`, `rules`, `sources`, `vault`, `watch` |
 | `report` | `clock`, `decide`, `discover`, `priors`, `simulate` |
-| `graph` | `abi`, `borrower`, `discover`, `positions`, `sources`, `vault` |
+| `graph` | `abi`, `borrower`, `discover`, `market_risk`, `oracle_class`, `positions`, `siblings`, `sources`, `vault` |
 | `rules` | `abi`, `discover`, `vault` |
 | `borrower_rules` | `abi`, `borrower`, `discover`, `rules` |
 | `market_risk` | `abi`, `discover`, `rules`, `sources`, `vault` |
 | `exit_queue` | `discover`, `market_risk`, `rules`, `sources` |
 | `drain` | `discover`, `rules`, `sources`, `vault` |
+| `oracle_class` | `discover`, `sources`, `vault` |
+| `siblings` | `discover`, `sources`, `vault` |
 | `admin` | `abi`, `borrower`, `discover`, `rules`, `sources`, `vault` |
 | `decide` | `discover`, `simulate` |
 | `simulate` | `discover`, `priors`, `propagate` |
@@ -141,11 +148,12 @@ Every source is public and needs no API key. The exact endpoints, queries and me
 | Source | Used for | Read by |
 |---|---|---|
 | Ethereum RPC `ethereum-rpc.publicnode.com` (HTTP, JSON-RPC batches) | all on-chain state (`eth_call` at a fixed block), new blocks and logs (`eth_blockNumber`, `eth_getLogs`), contract code | `sources` for every reader |
-| Second RPC `eth.drpc.org`, then `1rpc.io` | block hash comparison only | `crosscheck` |
-| Morpho API `blue-api.morpho.org/graphql` | finding things the chain cannot list cheaply: a user's positions, a market's borrowers and top suppliers, a vault's allocators, sentinels and holders, a default depositor | `positions`, `borrower`, `market_risk`, `exit_queue`, `graph`, `vault` |
-| Pendle API `api-v2.pendle.finance/core` | PT markets, implied yield, real swap quotes for exit costs | `discover`, `watch_user` |
+| Second RPC `eth.drpc.org`, then `1rpc.io` (discontinued, answers 410) | block hash comparison only | `crosscheck` |
+| eRPC, optional, run locally (`erpc.yaml`) | the main RPC's requests when `RISKDEP_RPC_URL` points at it: six free upstreams, failover, an in-memory cache | `sources` (routing only; cache keys keep the public URL) |
+| Morpho API `blue-api.morpho.org/graphql` | finding things the chain cannot list cheaply: a user's positions, a market's borrowers and top suppliers, a vault's allocators, sentinels and holders, a default depositor, every market above a TVL floor (sibling search) | `positions`, `borrower`, `market_risk`, `exit_queue`, `graph`, `siblings`, `vault` |
+| Pendle API `api-v2.pendle.finance/core` | PT markets, implied yield, real swap quotes for exit costs, a PT's underlying | `discover`, `watch_user`, `siblings` |
 | DefiLlama `api.llama.fi`, `coins.llama.fi` | protocol list and hack record (incident base rates), token prices and one-year price history, the independent price oracles are compared with | `priors`, `discover`, `admin` |
-| Etherscan `api.etherscan.io/v2/api`, key in `keys.ini` (optional) | whether the `analyze` oracle's source is verified; without the key, "not checked" | `discover` (via `sources.contract_source`) |
+| Etherscan `api.etherscan.io/v2/api`, key in `keys.ini` (optional) | whether the `analyze` oracle's source is verified; the contract name of an oracle input no other rule classifies; without the key, "not checked" / "not classified" | `discover`, `oracle_class` (via `sources.contract_source`) |
 
 **Trust model.**
 - **The chain is authoritative.** The APIs are used to *find* positions and addresses; every amount, health factor, cap and price used in a decision is then read on-chain.
@@ -201,6 +209,13 @@ Details, with a real transaction decoded step by step: `docs/how-a-block-is-anal
 
 `graph` calls the readers once (positions, vaults, markets, oracles and their feeds, main lenders, admins) and builds typed nodes (Actor, Pool, Asset, Oracle, Admin, External) and edges carrying amounts. It writes them as JSON and as an HTML page rendered with Cytoscape.js. The node model is explained in `ANALYSIS_MONITORING.md` §1.
 
+Then, by default (plan `2026-10-10-sibling-markets`):
+1. **Sibling markets.** `siblings.candidates` lists every Ethereum Blue market above the TVL floor, $1M supplied (Morpho API); `siblings.underlyings` reads each collateral's underlying (Pendle lists for PTs, `asset()` for ERC-4626 shares); the pure `siblings.match` keeps those linked to a held market by the same collateral, the same underlying, a shared base price input, or lending that collateral. Each is re-read on-chain and added like a held market, so it joins the graph through the shared asset, oracle or feed node.
+2. **Oracle classes.** `_oracle` probes each base-side input (`oracle_class.probe`: answer, description, round history, composite and structural getters) and `oracle_class.classify_oracle` labels the oracle `price-tracking`, `constant-price` or `not classified`, with its basis.
+3. **Wraps and market state.** An ERC-4626 asset gets a `wraps` edge to the token it redeems into; every Blue market, held or sibling, gets supply, borrow, the collateral of its borrowers and the liquidation curve from `market_risk`, the data the propagation engine of `docs/graph-propagation.md` needs.
+
+`--record` saves every response under `fixtures/replay/graph-<target>/` with a `meta.json` (block, targets); `--replay` rebuilds the graph offline from it.
+
 ## 5. State and files
 
 | State | Where | Written by | Notes |
@@ -208,6 +223,7 @@ Details, with a real transaction decoded step by step: `docs/how-a-block-is-anal
 | Request cache | `fixtures/snapshot/*.json` | `sources.Fetcher` in `live` and `refresh` modes | key = hash of (method, URL, body); doubles as the offline demo of `analyze` |
 | Date of the snapshot | `fixtures/snapshot/as_of.json` | `analyze --refresh` | offline runs use it as "now" through `clock.py` |
 | Recorded watch ranges | `fixtures/replay/<vault>/`, `fixtures/replay/user-<address>/` | `watch --blocks N --record` | re-run offline by `--replay` and by the tests |
+| Recorded graphs | `fixtures/replay/graph-<target>/` | `graph --record` | rebuilt offline by `graph --replay` and by `test_graph.py` |
 | Facts and thresholds | `riskdep/registry.json` | a person, by hand | every value has its basis; reference in `docs/registry-reference.md` |
 | Cursor | `out/watch-*.cursor` | the watch loops, last in each batch | a restart resumes after it |
 | Alerts | `out/watch-*.jsonl` | the watch loops | one JSON object per alert |
@@ -227,20 +243,21 @@ The `Fetcher` has four modes: `offline` (cache only; a miss is an error), `live`
 
 ## 7. Testing
 
-`uv run pytest -q tests` runs 113 tests, all offline:
+`uv run pytest -q tests` runs 161 tests, all offline:
 
 | Kind | Files | What it covers |
 |---|---|---|
 | Rule tests on synthetic events and states | `test_watch_rules.py`, `test_borrower.py`, `test_market_risk.py`, `test_exit_queue.py`, `test_drain.py`, `test_admin.py` | every alert fires at its threshold and stays silent below it |
+| Classifier and matcher tests | `test_oracle_class.py`, `test_siblings.py` | every oracle-class rule (D83) and every sibling relation, floor and cap (D77, D79) |
 | Model tests | `test_propagate.py`, `test_decide.py` | loss propagation and the verdict |
-| End to end on recorded real data | `test_demo_snapshot.py`, `test_watch_replay.py`, `test_watch_user_replay.py` | the `analyze` demo and three recorded watch ranges (a vault, a borrower with 6 borrows, a depositor) |
-| Fixes and tools | `test_fixes.py`, `test_graph.py`, `test_light_reads.py` | the snapshot clock, oracle ambiguity, cross-checks, the graph output, light reads on quiet batches (D61), RPC routing and retries |
+| End to end on recorded real data | `test_demo_snapshot.py`, `test_watch_replay.py`, `test_watch_user_replay.py`, `test_graph.py` | the `analyze` demo, three recorded watch ranges (a vault, a borrower with 6 borrows, a depositor) and the recorded RockawayX USDC Yield graph (10 siblings, 6 oracle classes) |
+| Fixes and tools | `test_fixes.py`, `test_graph.py`, `test_light_reads.py` | the snapshot clock, oracle ambiguity, cross-checks, the graph output, light reads on quiet batches (D61), RPC routing and retries, throttled batches (a 429, or rate-limit errors inside a reply) resent and never recorded |
 
-**Re-recording.** When a reader starts making new requests, the replays miss them. Re-record with `watch --blocks 1000 --record` (vault) or `watch --user <address> --blocks 300 --record`, then prune the responses the tests no longer read. The free RPC's short state window means a recording must be made in one go, close to the chain head.
+**Re-recording.** When a reader starts making new requests, the replays miss them. Re-record with `watch --blocks 1000 --record` (vault), `watch --user <address> --blocks 300 --record` or `graph --vault <vault> --record`, then prune the responses the tests no longer read. The free RPC's short state window means a recording must be made in one go, close to the chain head.
 
 ## 8. Decisions
 
-The design decisions are numbered across six plans, in the order the increments were built:
+The design decisions are numbered across nine plans, in the order the increments were built:
 
 | Plan | Increment | Decisions |
 |---|---|---|
@@ -252,12 +269,13 @@ The design decisions are numbered across six plans, in the order the increments 
 | `plan/2026-10-10-admin-surface.plan.md` | admins of oracles, Morpho Blue and collateral issuers; oracle divergence | D52–D60 |
 | `plan/2026-10-10-exit-queue.plan.md` | a depositor's place in a run on a vault | D62–D67 |
 | `plan/2026-10-10-drain-threshold.plan.md` | when a depeg empties a market: d\*, the Public Allocator, `DrainWindow` | D69–D74 |
+| `plan/2026-10-10-sibling-markets.plan.md` | sibling markets and oracle classes in the dependency graph | D75–D85 |
 
 A change that departs from a decision is recorded in that plan's table.
 
 ## 9. Limits
 
-- **Ethereum mainnet only,** and Morpho Blue and Vault V2 only: no direct Blue supply positions, Vault V1 deposits are not expanded, `analyze` supports only Pendle PT collateral.
+- **Ethereum mainnet only,** and Morpho Blue and Vault V2 only: no direct Blue supply positions, Vault V1 deposits are not expanded, `analyze` supports only Pendle PT collateral. `graph`'s sibling markets are Blue markets only: the same collateral on Euler, Aave, Silo or Fluid is not seen.
 - **Detection, not action.** The tool never signs or sends a transaction.
 - **Free infrastructure:** about 25 to 40 seconds of latency (2 confirmations, 12-second polling), no history beyond the RPC's window, no protection against reorgs deeper than 2 blocks, alerts in the terminal and a file only.
 - **Model assumptions** in `analyze`: base-rate probabilities, mostly independent failures, constant rates over the horizon.

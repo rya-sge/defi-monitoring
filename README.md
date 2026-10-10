@@ -14,12 +14,21 @@ All data comes from keyless public sources: the publicnode Ethereum RPC, the Mor
 
 ```bash
 uv sync                             # Python >= 3.10
-uv run pytest -q tests              # 113 tests, offline
+uv run pytest -q tests              # 161 tests, offline
 ```
 
 Outside an activated virtualenv, prefix the `python3 -m riskdep …` commands below with `uv run`.
 
 `RISKDEP_RPC_URL` (optional) sends the main RPC's requests to another endpoint, for example a local node, a proxy or a paid endpoint with its key. Cached requests, snapshots and replays keep the public URL, so the offline tests are unaffected and the key is never written to a file. See `PROVIDERS.md`.
+
+**Faster live runs: eRPC (optional).** The free RPC throttles long runs such as `graph`; riskdep then waits and resends, which is slow but loses nothing. A local eRPC proxy spreads the calls over six free endpoints instead (RockawayX graph: 43 s direct, 20 s through eRPC; the example graph: 8 to 12 min direct, 3 min through eRPC). It takes one binary, the committed `erpc.yaml`, and one variable:
+
+```bash
+~/.local/bin/erpc erpc.yaml                                  # in its own terminal; setup in docs/erpc.md
+export RISKDEP_RPC_URL=http://127.0.0.1:4000/main/evm/1      # unset it to go direct again
+```
+
+Tests and replays never need it. Setup, checks and troubleshooting: `docs/erpc.md`.
 
 ## watch: Morpho Vault V2 depositor
 
@@ -73,9 +82,27 @@ Alerts go to `out/watch-user-<address>.jsonl`, and a restart resumes from `out/w
 ```bash
 python3 -m riskdep graph --example                                   # writes out/graph.html and out/graph.json
 python3 -m riskdep graph --user <address> --vault <vault> --out out/graph.html
+python3 -m riskdep graph --vault <vault> --no-siblings               # only what the vault and address hold
+python3 -m riskdep graph --vault <vault> --record                    # save every response under fixtures/replay/graph-<vault>
+python3 -m riskdep graph --vault 0xE0181090c22579B6A217f1522cbf8c9f1F0C1965 --replay   # RockawayX USDC Yield, offline
 ```
 
-Builds the graph of `ANALYSIS_MONITORING.md` §1 from live data. Actors are addresses, vaults, and the main lenders of the borrowed markets. Pools are Blue markets and Pendle pools. It also draws assets, oracles with the feeds they read, and vault admins. The output is an interactive HTML page (Cytoscape.js from cdnjs) plus the same data as JSON. `docs/graph-example.html` is a rendered example.
+Builds the graph of `ANALYSIS_MONITORING.md` §1 from live data. Actors are addresses, vaults, and the main lenders of the borrowed markets. Pools are Blue markets and Pendle pools. It also draws assets, oracles with the feeds they read, and vault admins. The output is an interactive HTML page (Cytoscape.js from cdnjs) plus the same data as JSON. `docs/graph-example.html` is a rendered example, built before sibling markets existed.
+
+**Sibling markets** (plan `2026-10-10-sibling-markets`). For every Blue market an address or vault of the graph holds, `graph` also adds the other Blue markets that can move its collateral's price or share its price inputs, drawn dashed:
+
+| Relation | The sibling… | Example on RockawayX USDC Yield |
+|---|---|---|
+| same collateral | takes the same collateral token | PT-reUSD-10DEC2026/USDT next to PT-reUSD-10DEC2026/USDC |
+| same underlying | takes a token with the same underlying: a PT and its Pendle underlying, an ERC-4626 share and its `asset()` | reUSD/USDC, behind PT-reUSD-10DEC2026 |
+| shared price input | has an oracle reading, on its collateral side, a feed or vault the held market's oracle reads | PRIME/PYUSD ($189M) reads the PRIME / WYLDS feed under the vault's PRIME/USDC |
+| lends a linked asset | lends the held collateral or its underlying: an exploit of its own collateral would borrow it and dump it | — |
+
+Siblings come from the Morpho API (Ethereum markets with at least $1M supplied, their TVL, and at most 10 per held market, the largest borrow first) and are re-read on-chain. They connect to the held market through the asset, oracle or feed node they share, never through a direct edge. USDC and USDT never link markets. The thresholds are in `registry.json` (`graph`).
+
+**Oracle classes.** Every market oracle is labelled `price-tracking` (a fall of the collateral's market price lowers it: liquidations, possibly a cascade) or `constant-price` (it does not: fixed value, exchange rate, NAV, linear discount; a depeg liquidates nobody and lands on the lenders), or `not classified` when no rule decides. Rules, in order, for each collateral-side input: an ERC-4626 rate; a composite or wrapper takes its inputs' class; Pendle's TWAP (`twapDuration()`) or linear-discount (`baseDiscountPerYear()`) getters; the feed's round history (it falls in at least 20 % of its changes: a market price); an answer of exactly 1.0 with no history; description or verified contract name (Etherscan key optional). Each label carries its basis.
+
+**Market state.** Every Blue market node, held or sibling, carries its supply, borrow, the collateral of its borrowers and its liquidation curve at −2/−5/−10/−20 % (debt, positions, bad debt, collateral that would be sold); the `takes as collateral` edge carries the collateral amount, and an ERC-4626 asset has a `wraps` edge to the token it redeems into. That is the data the propagation engine of `docs/graph-propagation.md` needs.
 
 ## analyze: Pendle PT on Morpho Blue
 
