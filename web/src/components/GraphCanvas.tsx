@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { MarkerType, Panel, ReactFlow, useNodesState, useReactFlow } from '@xyflow/react';
+import type { XYPosition } from '@xyflow/react';
 import { Maximize, Minus, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import '@xyflow/react/dist/base.css';
@@ -38,7 +39,11 @@ export type GraphCanvasProps = {
   /** Lit when nothing is selected or searched: the impact page's reached nodes and steps. */
   focus?: Lit;
   /** Per node: a ring colour, and amount lines that replace the node's own. */
-  overlay?: Record<string, { ring: string; amount: string[] }>;
+  overlay?: Record<string, { ring?: string; amount: string[] }>;
+  /** Node positions to use instead of the dagre layout. */
+  positions?: Map<string, XYPosition>;
+  /** Draw edges without arrowheads (a symmetric relation). */
+  undirected?: boolean;
 };
 
 const nodeTypes = { risk: RiskNode };
@@ -91,8 +96,12 @@ function searchLit(search: string, nodes: GraphNode[], edges: GraphEdge[]): Lit 
   return lit;
 }
 
-function initialNodes(nodes: GraphNode[], edges: GraphEdge[]): RiskNodeType[] {
-  const positions = layoutGraph(nodes, edges);
+function initialNodes(
+  nodes: GraphNode[],
+  edges: GraphEdge[],
+  given?: Map<string, XYPosition>,
+): RiskNodeType[] {
+  const positions = given ?? layoutGraph(nodes, edges);
   return nodes.map((node) => ({
     id: node.id,
     type: 'risk',
@@ -142,8 +151,10 @@ export function GraphCanvas({
   onSelect,
   focus = null,
   overlay,
+  positions,
+  undirected = false,
 }: GraphCanvasProps) {
-  const [initial] = useState(() => initialNodes(nodes, edges));
+  const [initial] = useState(() => initialNodes(nodes, edges, positions));
   const [rfNodes, , onNodesChange] = useNodesState(initial);
 
   const rfEdges = useMemo<RiskEdgeType[]>(
@@ -159,13 +170,15 @@ export function GraphCanvas({
           source: edge.source,
           target: edge.target,
           // Sized in screen units, so a thick edge does not get a giant arrowhead.
-          markerEnd: {
-            type: MarkerType.ArrowClosed,
-            color: colour,
-            width: 14,
-            height: 14,
-            markerUnits: 'userSpaceOnUse',
-          },
+          markerEnd: undirected
+            ? undefined
+            : {
+                type: MarkerType.ArrowClosed,
+                color: colour,
+                width: 14,
+                height: 14,
+                markerUnits: 'userSpaceOnUse',
+              },
           data: {
             edge,
             width: edgeWidth(edge.amount),
@@ -176,7 +189,7 @@ export function GraphCanvas({
           },
         };
       }),
-    [edges],
+    [edges, undirected],
   );
 
   const lit = useMemo(

@@ -1,6 +1,6 @@
 # Next task: the two main tasks to implement
 
-This file picks the two tasks to build next from `NEXT_STEP_V2.md` and says how, file by file. Both come from phase A of that file: they make the tool answer the brief's question in the form it is asked (`docs/hackaton_instruction/GOAL.md`).
+This file picks the two tasks to build next from the next-step plan (`NEXT_STEP.md`, which now merges its versions 1 and 2 and holds the current order) and says how, file by file. Both come from phase A of that file: they make the tool answer the brief's question in the form it is asked (`docs/hackaton_instruction/GOAL.md`).
 
 | # | Task | Gaps (`GAP.md`) | Criteria moved | Size |
 |---|---|---|---|---|
@@ -124,7 +124,7 @@ BOOK  Book A · 3 pockets · equity $1.9M
     ]
   }
   ```
-  Vault pockets (`"kind": "vault"`) wait for `analyze --vault` (D1 of `NEXT_STEP_V2.md`); the loader rejects them with a clear message.
+  Vault pockets are covered by the book of vaults (`analyze --book`, plan `2026-10-11-vault-book`); a mixed book of vault, borrow and PT pockets is A2 of `NEXT_STEP.md`.
 - **Shared layers (M6).** Every pocket's graph has node ids (`chain:ethereum`, `issuer:0x…`, `oracle:0x…`, `lending:0x…`, `amm:0x…`). A layer shared by several pockets is the same node id. In the book's Monte Carlo, each **(event, node)** is drawn **once** per path and applied to every pocket that holds that node. Today each position draws its own, which treats one USDe depeg as two independent events. Two pockets can also share a layer without sharing an oracle: two oracles that read the same Chainlink feed. `graph` already decomposes oracles into one node per feed (via `oracle_class`), so `book.shared_layers` adds the feed addresses of each pocket's oracle to its node ids, and a shared feed (R3) is drawn once too.
 - **Breakeven probability** for each pocket and each layer, as in `docs/scenarios-and-breakeven.md`:
 
@@ -198,6 +198,6 @@ Steps 1–3 delivered task 1. Next: steps 4–8 (task 2), then step 10 (task 3).
 ## Decisions to confirm before starting
 
 - **The demo book.** Which positions: the current PT-sUSDe loop, plus real addresses close to your own pockets (a second PT, a stablecoin holding)? Each needs one `--live` recording.
-- **"Severe case"** at the 95th percentile of each layer's severity, or a fixed table of named scenarios (C1 of `NEXT_STEP_V2.md`) from the start?
+- **"Severe case"** at the 95th percentile of each layer's severity, or a fixed table of named scenarios (the scenario library of `NEXT_STEP.md` A3 and B) from the start?
 - **Weights from equity** (real positions as they are), or a target weight per pocket with the amounts scaled (simpler to read, but the exit quote is no longer a real quote at that size)?
 - **Verdict given an incident (implemented as D90):** REDUCE when a partial sale plus its remaining loss is cheapest, else EXIT when staying loses more than exiting, else STAY. The residual risk after the incident is task 3; confirm the rule before it is extended.

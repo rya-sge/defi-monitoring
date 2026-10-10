@@ -20,7 +20,7 @@ All data comes from keyless public sources: the publicnode Ethereum RPC, the Mor
 
 ```bash
 uv sync                             # Python >= 3.10
-uv run pytest -q tests              # 234 tests, offline
+uv run pytest -q tests              # 257 tests, offline
 ```
 
 Outside an activated virtualenv, prefix the `python3 -m riskdep …` commands below with `uv run`.
@@ -51,7 +51,7 @@ At start it reads the vault's structure on-chain (vault → adapters → Blue ma
 | Level | What triggers it |
 |---|---|
 | critical | an upgrade of a contract a held market depends on (oracle, feed, collateral or loan token, Pendle SY); a pause of a collateral token; one transaction minting ≥ 5 % of a collateral or yield token's supply; unrealised bad debt in a held market from 0.1 % of the vault (borrowers underwater, not yet liquidated; warn from 0.01 %); a pending change with no notice (`Submit` for a risk-increasing function whose timelock is 0); bad debt in a held market (`Liquidate.badDebtAssets`, your share computed), a loss recorded by an adapter but not yet accrued (`totalAssets()` below the stored `_totalAssets`), vault total assets falling (`AccrueInterest`), the adapter writing off shares (`BurnShares`); at least half of your position stuck behind the vault's contract holders in a run while the vault carries unrealised bad debt; a market's collateral at or past its drain threshold (`DrainWindow`) |
-| warn | an oracle ≥ 3 % away from DefiLlama's price; a change of proxy admin, owner or Chainlink aggregator of a dependency; a steep liquidation curve: a 5 % oracle fall would make ≥ 25 % of a held market's debt liquidatable (markets holding ≥ 10 % of the vault); risk-increasing functions that can change with no notice (timelock 0, not abdicated), listed at start; a timelocked change submitted (`Submit`, decoded, with its execution date and timelock) or made live (`Accept`), new adapter, cap raised, fee or gate change, shorter timelock, `ForceDeallocate`, new liquidity adapter, a market crossing 25 % of the vault, ≥ 99 % utilisation on a market holding ≥ 10 %, an oracle moving ≥ 5 %, you no longer able to exit in full with a plain withdrawal, a gate blocking your exit, a block range that could not be read; at least half of your position stuck if the vault's contract holders withdrew before you (`ExitQueue`); a market's collateral within 2 points of its drain threshold (`DrainWindow`) |
+| warn | an oracle ≥ 3 % away from DefiLlama's price; a change of proxy admin, owner or Chainlink aggregator of a dependency; a steep liquidation curve: a 5 % oracle fall would make ≥ 25 % of a held market's debt liquidatable (markets holding ≥ 10 % of the vault); risk-increasing functions that can change with no notice (timelock 0, not abdicated), listed at start; a timelocked change submitted (`Submit`, decoded, with its execution date and timelock) or made live (`Accept`), new adapter, cap raised, fee or gate change, shorter timelock, `ForceDeallocate`, new liquidity adapter, a market crossing 25 % of the vault, ≥ 99 % utilisation on a market holding ≥ 10 %, an oracle moving ≥ 5 %, you no longer able to exit in full with a plain withdrawal, a gate blocking your exit, a block range that could not be read; at least half of your position stuck if the vault's contract holders withdrew before you (`ExitQueue`); a market's collateral within 2 points of its drain threshold (`DrainWindow`); one borrower holding ≥ 50 % of a market's debt, or fewer than 5 borrowers, in a market holding ≥ 10 % of the vault (`BorrowerConcentration`) |
 | info | allocation moves, caps lowered, cancelled changes, liquidations without bad debt, your own and large (≥ 1 %) deposits and withdrawals |
 
 Thresholds live in `riskdep/registry.json` (`watch`), documented in `docs/registry-reference.md`. What to do about each alert: `docs/alert-runbook.md`. Terms: `docs/glossary.md`.
@@ -165,14 +165,42 @@ python3 -m riskdep analyze --vault 0xd6d4b804014ef27836dbe9f8f6bf6c71251548ec --
 python3 -m riskdep analyze --live --vault <vault> --shock token=<collateral address or symbol>:<fall> [--user <depositor>]
 ```
 
-The incident is a fall of a collateral's oracle price, such as an issuer marking its NAV down. For each market of the vault holding that collateral, the tool values every borrower at the shocked price: the debt liquidatable and the bad debt. It then gives the vault's loss, the depositor's loss if it stays and if it leaves first (with what can leave now), how fast the incident lands (at once on publication for an issuer NAV oracle), and a verdict. Offline it reads the vault's watch recording; the Belem RWA EURCV vault is recorded. Output: the terminal and `out/vault-incident-<vault>.json`. Plan: `plan/2026-10-11-vault-incident.plan.md`.
+The incident is a fall of a collateral's oracle price, such as an issuer marking its NAV down. For each market of the vault holding that collateral, the tool values every borrower at the shocked price, then reports:
+
+- the debt liquidatable and the bad debt, per market;
+- the vault's loss, and the depositor's loss if it stays and if it leaves first, with what can leave now;
+- how fast the incident lands: at once on publication for an issuer NAV oracle;
+- how concentrated each hit market is (the largest borrower's and the three largest's share of its debt);
+- the collateral's exit liquidity (from the registry's `exit_liquidity`) and, when it is thin or absent, the loss if nobody liquidates;
+- a verdict.
+
+**Pharos** (keyless, optional): each hit market shows its collateral's grade from Pharos, a token shock also follows Pharos's off-chain backing (fxSAVE backs 16.4 % of infiniFi's iUSD, so an fxSAVE cut reaches siUSD markets, at 16.4 % of the fall), and the notes name the collateral sharing a mint key, upgrade admin or reserve issuer with the shocked token. `graph` draws the same backing and groups. Offline it reads `fixtures/replay/pharos/`; `--record` re-reads it. See `docs/risk-assessment/outside-providers.md`.
+
+**A borrower's default** (`--shock borrower=<collateral symbol or address, market id, or all>:<recovery>[:<n>]`): in each matching market, the n largest borrowers (1 by default) stop repaying and their collateral is recovered at that fraction of its oracle value. It works on any vault or book, and combines with a markdown (`--shock token=mGLOeuro:0.30 --shock borrower=mGLOeuro:0.5`) without counting a position twice:
+
+```bash
+python3 -m riskdep analyze --vault 0xd6d4b804014ef27836dbe9f8f6bf6c71251548ec --shock borrower=mGLOeuro:0.5   # 1.05M EURCV, 22 % of the vault
+python3 -m riskdep analyze --book examples/rockawayx-ethereum.json --shock borrower=all:0.5                  # every market's largest borrower
+```
+
+Offline it reads the vault's recording; the RockawayX vaults, Belem RWA EURCV among them, are recorded. Output: the terminal and `out/vault-incident-<vault>.json`. Plan: `plan/2026-10-11-vault-incident.plan.md`.
+
+**A book of vaults** (`--book`, or several `--vault`): the same incident in every vault of a book you define, added up in USD.
+
+```bash
+python3 -m riskdep analyze --book examples/rockawayx-ethereum.json --shock token=PST:0.30
+python3 -m riskdep analyze --vault <A> --vault <B> --user <depositor> --shock token=<collateral>:0.30   # ad hoc book
+python3 -m riskdep analyze --book my-book.json --record --shock token=<collateral>:0.30                # record new vaults
+```
+
+A book file lists vault addresses, each with an optional `label` and `depositor`, and a `weighting`: `vault` (each vault at its total assets, a curator's view) or `depositor` (each vault at the depositor's position). `examples/rockawayx-ethereum.json` is the template. A token also reaches the markets whose collateral wraps it (a PT, an ERC-4626 share, chains of them), and the output shows the path; when such a market's oracle does not track a market, nothing is liquidated and the loss is shown as a hidden shortfall. `--record` reads each vault live and saves it under `fixtures/replay/incident-<vault>/`, with all its oracles and wrapping chains, so any later incident runs offline. Output: the headline, one line per vault, and `out/book-incident.json`. Plan: `plan/2026-10-11-vault-book.plan.md`.
 
 - **Data date.** An offline run uses the snapshot's date, `fixtures/snapshot/as_of.json`, as "now", so the demo gives the same result on any later day. `--refresh` refetches everything and rewrites that date; `--live` fetches only what is missing and uses today's date.
 - **Oracle.** Whether the lending market's oracle follows the PT market is read from the oracle's structure when it decides (its inputs' class; a meta-oracle through its live source and its switch within the horizon, D96). Otherwise it is inferred by comparing prices; when the PT trades within 1 % of par (near maturity), that test can't tell, so the report says *ambiguous*. The report always shows the verdict under the other oracle behaviour too.
 
 ## web: the browser UI
 
-A React single-page app in `web/`, one page per CLI mode: **Vault** (the vault picked in the top bar: total assets, liquidity, its Blue markets by allocation, and the liquidations of their borrowers by collateral price drop — debt per 0.5 % bucket and its running total, weighted by the vault's share of each market), **Market** (one of those markets, opened from the vault's table: supply, borrow, utilization, rate, and the same liquidation chart for its borrowers), **Dependency graph** (the `graph` output in React Flow: shape by role, icon and amount inside each node, arrows; filterable by node kind, searchable, and a selection lights the node's whole upstream and downstream flow and opens a risk panel), **Impact** (a `shock` trace in six tabs — summary tables, the graph with reached nodes ringed, the path behind a loss, the liquidation sales as a Sankey, the losses round by round, a node × round matrix; for now always the committed example, `docs/shock-trace-example.json`) and **Alerts** (the `watch` stream, newest first, with level counts and a minimum-level filter).
+A React single-page app in `web/`, one page per CLI mode: **Vault** (the vault picked in the top bar: total assets, liquidity, its Blue markets by allocation, and four candidate charts in tabs, every borrower weighted by the vault's share of its market: the liquidations by collateral price drop — debt per 0.5 % bucket and its running total; the vault's bad debt in % of its assets if every collateral fell together; per market, the fall to the first bad debt beside the collateral's worst 1-year drawdown (DefiLlama); and per market, what the vault can withdraw now against what stays lent), **Market** (one of those markets, opened from the vault's table: supply, borrow, utilization, rate, and the same liquidation chart for its borrowers), **Dependency graph** (the `graph` output in React Flow: shape by role, icon and amount inside each node, arrows; filterable by node kind, searchable, and a selection lights the node's whole upstream and downstream flow and opens a risk panel), **Impact** (a `shock` trace in six tabs — summary tables, the graph with reached nodes ringed, the path behind a loss, the liquidation sales as a Sankey, the losses round by round, a node × round matrix; for now always the committed example, `docs/shock-trace-example.json`) and **Alerts** (the `watch` stream, newest first, with level counts and a minimum-level filter).
 
 Tailwind CSS v4 with stock shadcn/ui primitives: a light radius on every control, faint table rules. Colour is reserved for severity — `info`, `warn`, `critical`, `ok` — and is carried by a word, never by a number, so an alert reads the same without it. The one other colour on screen is the dependency graph's six node kinds, which are data and are mirrored from `riskdep/graph.py`. Numbers are set in the UI face with tabular figures; only identifiers (addresses, hashes, market ids) are monospace.
 

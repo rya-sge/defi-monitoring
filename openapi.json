@@ -776,6 +776,10 @@
             "type": "number",
             "title": "Debt Usd"
           },
+          "collateral_usd": {
+            "type": "number",
+            "title": "Collateral Usd"
+          },
           "market": {
             "anyOf": [
               {
@@ -786,16 +790,17 @@
               }
             ],
             "title": "Market",
-            "description": "The borrower's market, in a vault's list."
+            "description": "The borrower's market id, in a vault's list."
           }
         },
         "type": "object",
         "required": [
           "drop",
-          "debt_usd"
+          "debt_usd",
+          "collateral_usd"
         ],
         "title": "Liquidation",
-        "description": "One borrower: the oracle fall that liquidates it, and its debt (the vault's part, in a vault)."
+        "description": "One borrower: the oracle fall that liquidates it, its debt and collateral (the vault's part, in a vault)."
       },
       "Market": {
         "properties": {
@@ -821,6 +826,22 @@
               }
             ],
             "title": "Collateral Price Usd"
+          },
+          "collateral_drawdown_1y": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Collateral Drawdown 1Y",
+            "description": "Worst 1-year drawdown of the collateral's USD price (DefiLlama); null without history."
+          },
+          "lif": {
+            "type": "number",
+            "title": "Lif"
           },
           "supply_usd": {
             "type": "number",
@@ -859,6 +880,7 @@
           "id",
           "label",
           "lltv",
+          "lif",
           "supply_usd",
           "borrow_usd",
           "liquidity_usd",
@@ -1801,6 +1823,22 @@
             ],
             "title": "Collateral Price Usd"
           },
+          "collateral_drawdown_1y": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Collateral Drawdown 1Y",
+            "description": "Worst 1-year drawdown of the collateral's USD price (DefiLlama); null without history."
+          },
+          "lif": {
+            "type": "number",
+            "title": "Lif"
+          },
           "supply_usd": {
             "type": "number",
             "title": "Supply Usd"
@@ -1828,6 +1866,10 @@
           "share_of_vault": {
             "type": "number",
             "title": "Share Of Vault"
+          },
+          "share_of_market": {
+            "type": "number",
+            "title": "Share Of Market"
           }
         },
         "type": "object",
@@ -1835,13 +1877,15 @@
           "id",
           "label",
           "lltv",
+          "lif",
           "supply_usd",
           "borrow_usd",
           "liquidity_usd",
           "utilization",
           "borrow_apy",
           "allocation_usd",
-          "share_of_vault"
+          "share_of_vault",
+          "share_of_market"
         ],
         "title": "VaultMarket"
       }

@@ -337,14 +337,24 @@ export type ShockTrace = {
 
 /* ----------------------------------------------------------------- dashboard */
 
-/** One borrower: the oracle fall that liquidates it, and its debt (the vault's part, in a vault). */
-export type Liquidation = { drop: number; debt_usd: number; market?: string | null };
+/** One borrower: the oracle fall that liquidates it, its debt and collateral (the vault's part, in a vault). */
+export type Liquidation = {
+  drop: number;
+  debt_usd: number;
+  collateral_usd: number;
+  /** The market id, in a vault's list. */
+  market?: string | null;
+};
 
 export type MarketSummary = {
   id: string;
   label: string;
   lltv: number;
   collateral_price_usd: number | null;
+  /** Worst 1-year drawdown of the collateral's USD price (DefiLlama); null without history. */
+  collateral_drawdown_1y: number | null;
+  /** Liquidation incentive factor: a liquidator repays at most collateral / LIF. */
+  lif: number;
   supply_usd: number;
   borrow_usd: number;
   liquidity_usd: number;
@@ -355,7 +365,11 @@ export type MarketSummary = {
 /** `GET /api/market/{id}`. */
 export type Market = MarketSummary & { borrowers: number; liquidations: Liquidation[] };
 
-export type VaultMarket = MarketSummary & { allocation_usd: number; share_of_vault: number };
+export type VaultMarket = MarketSummary & {
+  allocation_usd: number;
+  share_of_vault: number;
+  share_of_market: number;
+};
 
 /** `GET /api/vault/{address}`. Liquidations are weighted by the vault's share of each market. */
 export type Vault = {

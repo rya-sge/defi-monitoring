@@ -4,6 +4,8 @@ import { useSelectedTarget, useVault } from '../api/hooks';
 import type { Vault } from '../api/types';
 import { Empty, ErrorState, Loading } from '../components/States';
 import { LiquidationChart } from '../components/LiquidationChart';
+import { DistanceToLossChart, ExitLiquidityChart, VaultLossChart } from '../components/VaultCharts';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { StatRow } from '../components/Stat';
 import type { StatProps } from '../components/Stat';
 import { compactUsd, percent } from '../lib/format';
@@ -54,7 +56,27 @@ function VaultView({ vault }: { vault: Vault }) {
 
       <StatRow items={stats} />
 
-      <LiquidationChart liquidations={vault.liquidations} />
+      {/* Candidate views, side by side for now: keep the ones that earn their place. */}
+      <Tabs defaultValue="liquidations">
+        <TabsList>
+          <TabsTrigger value="liquidations">Liquidations</TabsTrigger>
+          <TabsTrigger value="loss">Vault loss</TabsTrigger>
+          <TabsTrigger value="distance">Distance to loss</TabsTrigger>
+          <TabsTrigger value="exit">Exit liquidity</TabsTrigger>
+        </TabsList>
+        <TabsContent value="liquidations">
+          <LiquidationChart liquidations={vault.liquidations} />
+        </TabsContent>
+        <TabsContent value="loss">
+          <VaultLossChart vault={vault} />
+        </TabsContent>
+        <TabsContent value="distance">
+          <DistanceToLossChart vault={vault} />
+        </TabsContent>
+        <TabsContent value="exit">
+          <ExitLiquidityChart vault={vault} />
+        </TabsContent>
+      </Tabs>
 
       <Table className="text-[0.86rem] tabular-nums">
         <TableHeader>

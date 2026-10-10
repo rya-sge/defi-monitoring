@@ -44,7 +44,7 @@
 
 **Read `docs/hackaton_instruction/GOAL.md` first:** it states the challenge this project answers (the DeFi Risk Dependency Challenge), what is expected, and how it is judged (dependency discovery 30 %, impact estimation 30 %, decision usefulness 25 %, working demo on real data 15 %). Weigh every change against it. The original brief is `docs/hackaton_instruction/Hackathon_DeFi-Risk-Dependency-Challenge_EN_v1.pdf` (one page, Belem Capital, EPFL Hackathon 2026): read it too, it holds what `GOAL.md` does not, such as the worked trade-off (a book in ten 10 % pockets, one affected, 11 % slippage to unwind: make stay-vs-exit explicit), the scope examples (oracle and feed-quality analysis, vaults deploying into an external venue such as a perp exchange, protocols concentrating a large share of on-chain TVL) and the exact criterion wording ("depth and correctness", "is the number defensible"). **Git-ignored**: the file is local only and its notice forbids copying it, so quote from it sparingly and never commit it.
 
-`riskdep` is a Python CLI (`python3 -m riskdep`) for the risk of DeFi positions on Ethereum, centred on Morpho. It has five subcommands: `analyze` (batch STAY / REDUCE / EXIT report for a Pendle PT used as Morpho Blue collateral), `watch` (follow a Morpho Vault V2 block by block and alert a depositor), `watch --user` (find every Blue borrow and Vault V2 deposit of an address and monitor them together) `graph` (interactive dependency graph, with the sibling markets of the held ones and each oracle's class) and `shock` (apply a failure to a node of that graph and propagate it to every market, vault and depositor, by rules kept in `registry.json`). All data comes from public sources: the publicnode Ethereum RPC, the Morpho and Pendle APIs, DefiLlama, all keyless; and Etherscan, whose key in `keys.ini` is optional (without it, an oracle's source verification reads "not checked", and an oracle input only its name would classify reads "not classified"). A React SPA in `web/` presents the same results in a browser.
+`riskdep` is a Python CLI (`python3 -m riskdep`) for the risk of DeFi positions on Ethereum, centred on Morpho. It has five subcommands: `analyze` (batch STAY / REDUCE / EXIT report for a Pendle PT used as Morpho Blue collateral), `watch` (follow a Morpho Vault V2 block by block and alert a depositor), `watch --user` (find every Blue borrow and Vault V2 deposit of an address and monitor them together), `graph` (interactive dependency graph, with the sibling markets of the held ones and each oracle's class) and `shock` (apply a failure to a node of that graph and propagate it to every market, vault and depositor, by rules kept in `registry.json`). All data comes from public sources: the publicnode Ethereum RPC, the Morpho and Pendle APIs, DefiLlama, all keyless; Pharos, keyless and optional (issuer grades, off-chain backing, common-mode groups; `docs/risk-assessment/outside-providers.md`); and Etherscan, whose key in `keys.ini` is optional (without it, an oracle's source verification reads "not checked", and an oracle input only its name would classify reads "not classified"). A React SPA in `web/` presents the same results in a browser.
 
 ## Key concepts
 
@@ -89,11 +89,13 @@ riskdep/
   market_risk.py      every borrower of the watched markets: unrealised bad debt, liquidation curves
   drain.py            drain threshold of each vault market: d*, the drainable amount, the Public Allocator
   scenario.py         incident mode: a known incident's impact, time to impact and verdict; alert impacts
-  vault_incident.py   incident mode for a vault depositor: a collateral's oracle price falls (NAV markdown)
+  vault_incident.py   incident mode for a vault depositor: a collateral markdown or a borrower default
+  pharos.py           Pharos, keyless: issuer grades, off-chain backing, common-mode groups (optional)
+  vault_book.py       a book of vaults (file or --vault flags) under one incident, added up in USD
   exit_queue.py       a depositor's place in a run on a vault: recovery and loss by queue position
   admin.py            admin surface of the watched markets: upgrades, owners, feeds, pauses, mints, oracle divergence
   # web dashboard
-  dashboard.py        a Vault V2's market allocation and a market's borrowers by liquidating fall (Morpho API)
+  dashboard.py        a Vault V2's market allocation and a market's borrowers: liquidating fall, debt, collateral (Morpho API); collateral drawdowns (DefiLlama)
   # graph
   graph.py            dependency graph as JSON + Cytoscape.js HTML
   siblings.py         sibling markets: other Blue markets sharing a held market's collateral, underlying or price input
@@ -110,7 +112,7 @@ riskdep/
   report.py           HTML + JSON report
 tests/                pytest, all offline (snapshot + recorded replays)
   test_watch_rules.py, test_watch_replay.py, test_borrower.py, test_watch_user_replay.py,
-  test_graph.py, test_siblings.py, test_oracle_class.py, test_engine.py, test_market_risk.py, test_exit_queue.py, test_drain.py, test_scenario.py, test_vault_incident.py, test_admin.py, test_decide.py, test_propagate.py, test_demo_snapshot.py, test_fixes.py, test_light_reads.py, test_api.py, test_dashboard.py
+  test_graph.py, test_siblings.py, test_oracle_class.py, test_engine.py, test_market_risk.py, test_exit_queue.py, test_drain.py, test_scenario.py, test_vault_incident.py, test_vault_book.py, test_pharos.py, test_admin.py, test_decide.py, test_propagate.py, test_demo_snapshot.py, test_fixes.py, test_light_reads.py, test_api.py, test_dashboard.py
 pyproject.toml        project metadata, dependencies, ruff and pytest configuration
 ```
 
@@ -121,14 +123,15 @@ pyproject.toml        project metadata, dependencies, ruff and pytest configurat
 - `docs/analysis/ARCHITECTURE.md` — how the system is built: modes, components and their imports, data sources and trust, data flow, state, testing, decision index.
 - `README.md` — usage of every mode, alert trigger tables, limits.
 - `docs/analysis/ANALYSIS_CURRENT.md` — the latest assessment (2026-10-10): the brief read as detect → impact → how fast → decide, where the tool stands on each step, why the Monte Carlo should become conditional on the observed incident, and the resulting order of work. Read it before `docs/analysis/NEXT_TASK.md`.
-- `docs/analysis/NEXT_TASK.md` — the two tasks to implement next (incident mode; the book with the breakeven p\* and a headline), file by file, with tests and the order of work.
-- `docs/analysis/NEXT_STEP_V2.md` — the current proposal for what to build next, ordered by the brief's judging weights, from `docs/analysis/GAP.md` (K1–K25) and the teammates' feedback; supersedes the order of `docs/analysis/NEXT_STEP.md`.
-- `docs/analysis/NEXT_STEP.md` — version 1 of the next steps; still the reference for what each of its steps needs (decisions, sources, credentials, infrastructure).
+- `docs/analysis/NEXT_TASK.md` — the task-level detail of incident mode (done) and of the book and the conditional Monte Carlo; `NEXT_STEP.md` holds the current order.
+- `docs/analysis/NEXT_STEP.md` — the next steps, in recommended order (phases A to D), with how each would be built and what it needs; it records what has been built and merges the earlier versions 1 and 2. Keep it current when a step is done.
+- `docs/risk-assessment/outside-providers.md` — the outside risk providers and how each is used: Pharos (in use, keyless), Nexus Mutual (next); the rules any outside provider follows. `docs/analysis/EXTERNAL_SOURCE.md` is the survey that chose them.
 - `docs/analysis/PROVIDERS.md` — every external provider (RPC, APIs, CDNs): endpoints, queries, limits, trust model. Keep it current.
 - `keys.example.ini` — template of the API keys and secrets (no values); the real `keys.ini` is git-ignored.
 - `erpc.yaml` — configuration of the optional local eRPC proxy (eRPC 0.3.0, six free upstreams, no key); `docs/erpc.md` is the setup guide. Its upstream list is mirrored in `docs/analysis/PROVIDERS.md`.
 - `docs/analysis/ANALYSIS_MONITORING.md` — design note: dependency graph, impact, monitoring, execution, and gaps of the current implementation (done / partial / missing).
-- `plan/` — the thirteen plans (`defi-risk-dependency`, `morpho-vault-v2-watcher`, `morpho-user-watcher`, `lenders-and-timelocks`, `market-borrowers`, `admin-surface`, `exit-queue`, `drain-threshold`, `sibling-markets`, `incident-mode`, `vault-incident`, `propagation-engine`, and `web-graph-react-flow` for the SPA's graph).
+- `plan/` — the seventeen plans (`defi-risk-dependency`, `morpho-vault-v2-watcher`, `morpho-user-watcher`, `lenders-and-timelocks`, `market-borrowers`, `admin-surface`, `exit-queue`, `drain-threshold`, `sibling-markets`, `incident-mode`, `propagation-engine`, `vault-incident`, `vault-book`, `wrapped-collateral`, `borrower-concentration`, `pharos`, and `web-graph-react-flow` for the SPA's graph).
+- `examples/` — `rockawayx-ethereum.json`, the demo book of vaults and the template for any other (`analyze --book`).
 - `docs/` — `alert-runbook.md` (what each alert means and what to do), `glossary.md`, `registry-reference.md` (every `registry.json` key), `how-risk-is-computed.md`, `monte-carlo.md` (how `analyze`'s simulation works; its mindmap in `docs/img/`), `scenarios-and-breakeven.md`, `vault-depositor-scenarios.md`, `graph-propagation.md`, `how-a-block-is-analysed.md`, `websocket-vs-polling.md`, `user-watcher-options.md`, `exit-queue.md`, `erpc.md` (the optional local RPC proxy), `shock-engine.md` (the shock engine and its rules), `shock-trace.md` (the propagation trace for a front end, example in `shock-trace-example.json`), `drain-threshold.md`, `graph-example.html/.json`.
 - `docs/external/` — third-party references, read-only; check behaviour against them before changing a rule:
   - `morpho/docs.morpho.org-developers-docs/` — Morpho developer docs (contracts, Bundles, addresses, Midnight, Vault V2 exit routes); `tests/test_watch_replay.py` checks the event selectors in `abi.py` against its `contracts/` pages, and skips that check when the folder is absent. **Git-ignored**: it exists only in the local checkout, so read it there; a fresh clone does not have it.
@@ -139,9 +142,19 @@ pyproject.toml        project metadata, dependencies, ruff and pytest configurat
   - `pendle/lib/pendle-core-v2-public` (`87685c89`), `pendle/lib/Pendle-SY-Public` (`73676d93`), `pendle/lib/external-integration` (`1694fea0`) — Pendle core (PT/YT, markets, router, oracles), SY wrappers, integration examples.
   - `docs.etherscan.io-api-reference-docs/` — Etherscan API V2 reference (`getsourcecode`, `getabi`, …); the key is in `keys.ini`.
   - `chainlink/docs.chain.link-data-feeds-docs/` — Chainlink Data Feeds documentation (price, rates, SmartData / Proof of Reserve, SVR feeds; `latestRoundData`, heartbeat and deviation, L2 sequencer uptime). **Git-ignored**: it exists only in the local checkout, so read it there; a fresh clone does not have it.
+  - `tori/docs.tori.finance-docs/` — Tori Finance documentation (trUSD and strUSD: backing, peg mechanism, reserve fund, strategy, contracts and roles, audits, risks); the issuer behind the strUSD, etrUSD and PT-trUSD collateral of the RockawayX vaults (`docs/analysis/ROCK-VAULT-DEP.md`). **Git-ignored**: it exists only in the local checkout, so read it there; a fresh clone does not have it.
+  - `infini-protocol/docs.infinifi.xyz-docs/` — infiniFi documentation (iUSD, siUSD and liUSD: whitepaper, vaults, oracles, slashing mechanics and the loss waterfall, Pendle liquidity, audits, risk disclosures); the issuer behind the siUSD collateral of the RockawayX USDC Yield vault (`docs/analysis/ROCK-VAULT-DEP.md`). **Git-ignored**: it exists only in the local checkout, so read it there; a fresh clone does not have it.
+  - `midas/docs.midas.app-docs/` — Midas documentation (mTokens: oracle architecture and mToken pricing, asset transparency, legal structure, smart-contract registry, security, risk management, per-product terms such as mROX); the issuer behind the mGLOeuro collateral of the Belem RWA EURCV vault and of RockawayX's mROX (`docs/analysis/ROCK-VAULT-DEP.md`). **Git-ignored**: it exists only in the local checkout, so read it there; a fresh clone does not have it.
+  - `fx-protocol/fxprotocol.gitbook.io-fx-docs-docs/` — f(x) Protocol documentation (fxUSD and fxSAVE: stability pool, rebalancing and liquidation brake, the f(x) invariant, fees, integrating fxSAVE, keeper bots, contracts, "what could go wrong"); the issuer behind the fxSAVE and PT-fxSAVE collateral of the RockawayX f(x) Protocol Ecosystem vault (`docs/analysis/ROCK-VAULT-DEP.md`). **Git-ignored**: it exists only in the local checkout, so read it there; a fresh clone does not have it.
+  - `ethena/docs.ethena.fi-docs/` — Ethena documentation (USDe and sUSDe: backing assets, custody and off-exchange settlement, hedging and funding risk, reserve fund, mint and redeem, staking cooldown, roles and blacklist, API); the issuer of the demo position's PT-sUSDE collateral and of the USDe/sUSDe entries in `registry.json`, and a dependency of Re's reUSD and of infiniFi. **Git-ignored**: it exists only in the local checkout, so read it there; a fresh clone does not have it.
+  - `risk-assessment/` — documentation of the external risk providers reviewed in `docs/analysis/EXTERNAL_SOURCE.md` (what each offers, access, and the proposed weighted blend with `riskdep`'s own estimates):
+    - `credora.network-docs-docs/` — Credora (PSL, probability of a loss of at least 1 % per year; rating methodologies, the Morpho implementation, the GraphQL API behind a whitelist).
+    - `docs.nexusmutual.io-docs/` — Nexus Mutual (cover products and pricing, capacity, claims, the keyless `/v2/products` and `/v2/capacity` API); its cover prices are converted to yearly probabilities.
+    - `pharos.watch-safety-scores-docs/` — Pharos (stablecoin safety grades and scores, the dependency graph and scenarios; keyless and supporter-key endpoints).
+    **Git-ignored**: the three folders exist only in the local checkout, so read them there; a fresh clone does not have them.
 
   The seven source repositories are git submodules (`.gitmodules`), pinned at the commits above: after a clone, run `git submodule update --init`. To move a pin, check out the new commit inside the submodule and stage the submodule path.
-- `fixtures/snapshot/` (analyze demo cache + `as_of.json`) and `fixtures/replay/` (recorded watch ranges and graphs) — test fixtures; do not delete or regenerate casually. **Tracked in git, not ignored, on purpose:** every test runs offline from these cached responses, so CI and any fresh clone need them; a cache file present on one machine only makes a test pass locally and fail in CI. They used to live under `data/`, which `.gitignore` ignores, and new cache files were silently left out of commits (the exit-queue test failed in CI for that reason). So a new cached response (`--record`, `--live`, or a live fetch into these folders) is committed with the change that needs it: check `git status fixtures/`. They hold public responses only: API keys go on the request, never into a cache file (`sources.Fetcher`, `secret`).
+- `fixtures/snapshot/` (analyze demo cache + `as_of.json`) and `fixtures/replay/` (recorded watch ranges, graphs, vault incidents, and the Pharos snapshot under `pharos/`) — test fixtures; do not delete or regenerate casually. **Tracked in git, not ignored, on purpose:** every test runs offline from these cached responses, so CI and any fresh clone need them; a cache file present on one machine only makes a test pass locally and fail in CI. They used to live under `data/`, which `.gitignore` ignores, and new cache files were silently left out of commits (the exit-queue test failed in CI for that reason). So a new cached response (`--record`, `--live`, or a live fetch into these folders) is committed with the change that needs it: check `git status fixtures/`. They hold public responses only: API keys go on the request, never into a cache file (`sources.Fetcher`, `secret`).
 - `out/` — run outputs (reports, alert `.jsonl`, cursors); git-ignored.
 - `conftest.py` — puts the repo root on `sys.path` for tests.
 - `openapi.json` — the committed front/back contract, generated from `riskdep/api/`; CI fails if it has drifted.
@@ -163,7 +176,7 @@ web/src/
   api/client.ts       fetch wrappers, the USE_MOCKS switch, one method per endpoint
   api/hooks.ts        useHealth / useReport / useGraph / useAnalyze, with the query keys
   api/stream.ts       subscribeWatch: polls /api/alerts with a block cursor, or replays the fixtures when mocking
-  components/         AppShell (shadcn `Sidebar`: nav with icons + provenance; top bar with the target selector) · GraphCanvas · GraphElements (the custom node and edge) · Stat · DetailsTable · States
+  components/         AppShell (shadcn `Sidebar`: nav with icons + provenance; top bar with the target selector) · GraphCanvas · GraphElements (the custom node and edge) · LiquidationChart · VaultCharts (the vault's candidate charts: loss, distance to loss, exit liquidity) · Stat · DetailsTable · States
   components/ui/      vendored shadcn primitives, stock (sidebar brings sheet, tooltip, skeleton and hooks/use-mobile.ts)
   lib/format.ts       usd / percent / num / shortHash / etherscanUrl…, all null-tolerant
   lib/utils.ts        re-exports `cn` from the `cn` package, where `components.json` tells `shadcn add` to import it
@@ -197,7 +210,7 @@ Python ≥ 3.10; CI runs the suite on 3.10, the floor `requires-python` in `pypr
 
 ```bash
 uv sync
-uv run pytest -q tests                                 # 234 tests, offline
+uv run pytest -q tests                                 # 257 tests, offline
 uv run python -m riskdep analyze --demo                # cached snapshot, no network → out/report.html/.json
 uv run python -m riskdep watch --replay                # re-run the recorded vault range offline
 uv run python -m riskdep watch --blocks 1000 --record  # live range, saved for --replay

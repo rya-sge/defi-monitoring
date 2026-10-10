@@ -225,11 +225,12 @@ class AnalyzeRequest(BaseModel):
 
 
 class Liquidation(BaseModel):
-    """One borrower: the oracle fall that liquidates it, and its debt (the vault's part, in a vault)."""
+    """One borrower: the oracle fall that liquidates it, its debt and collateral (the vault's part, in a vault)."""
 
     drop: float
     debt_usd: float
-    market: str | None = Field(default=None, description="The borrower's market, in a vault's list.")
+    collateral_usd: float
+    market: str | None = Field(default=None, description="The borrower's market id, in a vault's list.")
 
 
 class MarketSummary(BaseModel):
@@ -237,6 +238,11 @@ class MarketSummary(BaseModel):
     label: str
     lltv: float
     collateral_price_usd: float | None = None
+    collateral_drawdown_1y: float | None = Field(
+        default=None,
+        description="Worst 1-year drawdown of the collateral's USD price (DefiLlama); null without history.",
+    )
+    lif: float
     supply_usd: float
     borrow_usd: float
     liquidity_usd: float
@@ -252,6 +258,7 @@ class Market(MarketSummary):
 class VaultMarket(MarketSummary):
     allocation_usd: float
     share_of_vault: float
+    share_of_market: float
 
 
 class Vault(BaseModel):

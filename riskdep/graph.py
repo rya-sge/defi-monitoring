@@ -625,6 +625,45 @@ def load(
     return g, block, users, vaults, siblings
 
 
+def annotate_pharos(g: Graph, snap) -> int:
+    """D136, D137: Pharos on the graph, keyless. Each asset Pharos covers gets its grade; what backs it off-chain
+    becomes a `backed by (Pharos)` edge, to the asset already in the graph or to an External node; a narrow common-mode
+    group (one mint key, upgrade admin, reserve issuer or redemption rail) shared by two assets of the graph becomes an
+    External node they both `share`. Returns the number of assets graded."""
+    from . import pharos as PH
+
+    pids = {}
+    for nid, n in list(g.nodes.items()):
+        if n["kind"] != "Asset":
+            continue
+        pid = PH.resolve(snap, nid, n["label"])
+        if pid is None:
+            continue
+        pids[pid] = nid
+        g.node(nid, "Asset", n["label"], pharos_id=pid, pharos_grade=snap.grade(pid), pharos_as_of=snap.as_of)
+    for pid, nid in list(pids.items()):
+        for up, w, role in snap.backing.get(pid, []):
+            if w < PH.P["min_exposure"]:
+                continue
+            target = pids.get(up) or g.node(
+                f"pharos:{up}", "External", PH.name(up), pharos_id=up, pharos_grade=snap.grade(up), source="Pharos"
+            )
+            g.edge(nid, target, "backed by (Pharos)", share=round(w, 4), role=role, source=f"Pharos {snap.as_of}")
+    seen = set()
+    for pid, nid in pids.items():
+        for kind, key, members in snap.groups.get(pid, []):
+            inside = [pids[m] for m in members if m in pids]
+            if len(inside) < 2 or (kind, key) in seen:
+                continue
+            seen.add((kind, key))
+            gid = g.node(
+                f"pharos-group:{kind}:{key}", "External", f"{kind.replace('-', ' ')}: {key[:24]}", source="Pharos"
+            )
+            for a in inside:
+                g.edge(a, gid, "shares (Pharos)", kind=kind, members=len(members))
+    return len(pids)
+
+
 CSS = """
 :root{--bg:#ffffff;--fg:#1f2328;--muted:#59636e;--panel:#f6f8fa;--line:#d1d9e0;
 --Actor:#0072B2;--Pool:#009E73;--Asset:#E69F00;--Oracle:#CC79A7;--Admin:#D55E00;--External:#999999;--edge:#8c959f}
@@ -660,7 +699,7 @@ DESCR = {
     "Asset": "token: loan, collateral, yield source, reused vault share",
     "Oracle": "market oracle and the feeds it reads",
     "Admin": "decides for a vault: owner, curator, allocator, sentinel",
-    "External": "off-chain dependency (registry.json)",
+    "External": "off-chain dependency (registry.json; Pharos backing and common-mode groups)",
 }
 
 

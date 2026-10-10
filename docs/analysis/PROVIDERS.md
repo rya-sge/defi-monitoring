@@ -11,6 +11,7 @@ Every external service the project calls, what it is used for, and what is known
 - [Pendle API](#pendle-api)
 - [DefiLlama](#defillama)
 - [Etherscan](#etherscan)
+- [Pharos](#pharos)
 - [Scripts loaded by the HTML outputs](#scripts-loaded-by-the-html-outputs)
 - [Defined but unused](#defined-but-unused)
 - [Trust model](#trust-model)
@@ -28,6 +29,7 @@ Every external service the project calls, what it is used for, and what is known
 | Pendle | `https://api-v2.pendle.finance/core` | REST API | no | PT markets, implied yield, swap quotes | `riskdep/sources.py` (`PENDLE`) |
 | DefiLlama | `https://api.llama.fi` | REST API | no | protocol list, hack record | `riskdep/sources.py` (`LLAMA`) |
 | DefiLlama Coins | `https://coins.llama.fi` | REST API | no | token prices, price history | `riskdep/sources.py` (`LLAMA_COINS`) |
+| Pharos | `https://api.pharos.watch` | REST API | no | issuer grades, off-chain backing, common-mode groups of stablecoins (optional) | `riskdep/pharos.py` (`URL`) |
 | Etherscan | `https://api.etherscan.io/v2/api` | REST API | yes, `keys.ini` `[etherscan]` | whether an oracle's source is verified; an unclassified oracle input's contract name | `riskdep/sources.py` (`ETHERSCAN`) |
 | jsDelivr | `https://cdn.jsdelivr.net` | CDN (browser) | no | Mermaid in the `analyze` report | `riskdep/report.py` |
 | cdnjs | `https://cdnjs.cloudflare.com` | CDN (browser) | no | Cytoscape.js in the graph page | `riskdep/graph.py` |
@@ -88,10 +90,10 @@ Every request to the data providers goes through the cached fetcher of `riskdep/
 | Query (root field) | Used for | Code |
 |---|---|---|
 | `userByAddress` | an address's Blue positions and Vault V2 deposits | `positions.py` |
-| `marketPositions` | a market's borrowers (`borrowShares_gte`), its main suppliers (ordered by supply shares), the largest borrower of a market, every borrower's health factor and debt (the dashboard's liquidation chart, first 1000 per market) | `market_risk.py`, `borrower.py`, `discover.py`, `dashboard.py` |
+| `marketPositions` | a market's borrowers (`borrowShares_gte`), its main suppliers (ordered by supply shares), the largest borrower of a market, every borrower's health factor, debt and collateral in USD (the dashboard's liquidation and bad-debt charts, first 1000 per market) | `market_risk.py`, `borrower.py`, `discover.py`, `dashboard.py` |
 | `marketById`, `marketPosition` | the `analyze` position and its market | `discover.py` |
 | `vaultV2ByAddress` | the largest depositor of a vault; its holders, first 100 by size, for the exit queue; its allocators and sentinels (graph); its total assets (cross-check); its name, total assets, liquidity and each Blue market adapter's supply per market (dashboard) | `vault.py`, `exit_queue.py`, `graph.py`, `crosscheck.py`, `dashboard.py` |
-| `markets` | every Ethereum Blue market with at least `graph.sibling_min_tvl_usd` supplied (its TVL, `supplyAssetsUsd_gte`): collateral, loan token, oracle and its base feeds and vault, borrow in USD; pages of 500 (136 markets at $1M on 2026-10-10); by id (`uniqueKey_in`), a vault's markets: LLTV, collateral price, supply, borrow, liquidity, utilization, borrow rate (dashboard) | `siblings.py`, `dashboard.py` |
+| `markets` | every Ethereum Blue market with at least `graph.sibling_min_tvl_usd` supplied (its TVL, `supplyAssetsUsd_gte`): collateral, loan token, oracle and its base feeds and vault, borrow in USD; pages of 500 (136 markets at $1M on 2026-10-10); by id (`uniqueKey_in`), a vault's markets: LLTV, collateral address and price, supply, borrow, liquidity, utilization, borrow rate (dashboard) | `siblings.py`, `dashboard.py` |
 
 **Notes.** One page holds up to 1,000 items; `list_borrowers` pages with `skip`. Indexed data can lag the chain; the API-vs-chain cross-check warns beyond 0.5 %.
 
@@ -120,8 +122,8 @@ Every request to the data providers goes through the cached fetcher of `riskdep/
 
 | Path | Used for | Code |
 |---|---|---|
-| `/prices/current/{chain:address,…}` | current token prices: PT holdings, and the independent price oracles are compared with (oracle divergence and the drain threshold, re-read at most every 25 blocks) | `sources.coin_prices`, `discover.py`, `admin.py` |
-| `/chart/{chain:address}` | one year of daily prices: the worst drawdown of a yield token | `sources.coin_drawdown`, `discover.py` |
+| `/prices/current/{chain:address,…}` | current token prices: PT holdings, and the independent price oracles are compared with (oracle divergence and the drain threshold, re-read at most every 25 blocks; a vault asset's USD price in a book of vaults) | `sources.coin_prices`, `discover.py`, `admin.py` |
+| `/chart/{chain:address}` | one year of daily prices: the worst drawdown of a yield token, and of each vault market's collateral (dashboard) | `sources.coin_drawdown`, `discover.py`, `dashboard.py` |
 
 **Note.** Some tokens are not priced (no entry); the oracle comparison then reports "not checked" for that market.
 
@@ -140,6 +142,16 @@ Every request to the data providers goes through the cached fetcher of `riskdep/
 - **Without a key** and with no cached answer, verification is "not checked" and the ×2 applies, as before; an oracle input that only its name would classify stays "not classified" (on RockawayX USDC Yield: the `LossAdjustedPTFeed` of PT-siUSD-7JAN2027/USDC).
 - The free tier's rate limit is not measured and not documented in the local copy of the docs; `analyze` makes one or two calls per run.
 - Documentation: `docs/external/docs.etherscan.io-api-reference-docs`.
+
+## Pharos
+
+**`https://api.pharos.watch`**, REST, keyless (the other endpoints need a key in the `X-API-Key` header; not used). Optional: a failure prints "Pharos: not checked". How it is used: `docs/risk-assessment/outside-providers.md`.
+
+| Path | Used for | Code |
+|---|---|---|
+| `/api/dependency-graph/v1` | each coin's Safety Score and grade, what backs it (wrapper or reserve share, with weights), its common-mode groups; slimmed to about 170 KB before caching | `pharos.load`, `vault_incident.py`, `graph.annotate_pharos` |
+
+**Recording.** `fixtures/replay/pharos/`, one response, re-read by `--record` or `--refresh` and read without saving by `--live`. **Limits.** No published rate limit for the keyless endpoints; no SLA (run by one person, best effort). Methodology 10.16, model v9 when recorded.
 
 ## Scripts loaded by the HTML outputs
 

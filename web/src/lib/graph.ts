@@ -169,7 +169,7 @@ export function layoutGraph(nodes: GraphNode[], edges: GraphEdge[]): Map<string,
 }
 
 /** A watch target ("0x…" vault, "user-0x…") → the id of its node in the graph. */
-function targetNodeId(target: string): string {
+export function targetNodeId(target: string): string {
   return target.startsWith('user-') ? `user:${target.slice('user-'.length)}` : target;
 }
 
