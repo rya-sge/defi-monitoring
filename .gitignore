@@ -7,3 +7,5 @@ out/
 .venv
 data
 .ruff_cache/
+# secrets: keys.ini holds real API keys and is never committed; keys.example.ini (no values) stays tracked
+keys.ini

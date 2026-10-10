@@ -8,6 +8,10 @@
 >
 > So end a piece of work by leaving the tree ready and handing over the **one-line commit message** the note below asks for. If several commits are wanted — a style-only commit split from a behaviour commit, say — hand over the staging and commit commands for each, in order, and let the author run them.
 
+> **Note — merge conflicts are expected:** several developers work on this project in parallel, so a merge with `main` can conflict even when nothing is wrong: two people edited the same line for different reasons. Treat each side as an intentional change, not an error to discard.
+>
+> To resolve one: read both sides and the commits behind them (`git log --oneline <branch> -- <file>`), check which one matches the current code (the code wins over prose), and keep both intents when they are compatible rather than picking a side. If the two intents contradict and the code does not decide, ask the author. Remove every marker, `git add` the file, and hand over the merge commit as the note above says.
+
 > **Note — be concise:** keep every summary, report and explanation short and direct. Lead with the result, state what changed and what it costs, stop. No preamble, no restating the request, no recap of steps the reader just watched, no closing paragraph that says the same thing again. Prose only where a table or a one-line command would not do.
 
 > **Note — commit messages:** After each group of modifications or each feature added, always provide a **one-line GitHub commit message** (Conventional-Commits style, e.g. `feat: ...`, `fix: ...`, `docs: ...`).
@@ -91,9 +95,18 @@ pyproject.toml        project metadata, dependencies, ruff and pytest configurat
 - `README.md` — usage of every mode, alert trigger tables, limits.
 - `NEXT_STEP.md` — the recommended next steps, with what each needs (decisions, sources, credentials, infrastructure).
 - `PROVIDERS.md` — every external provider (RPC, APIs, CDNs): endpoints, queries, limits, trust model. Keep it current.
+- `keys.example.ini` — template of the API keys and secrets (no values); the real `keys.ini` is git-ignored.
 - `ANALYSIS_MONITORING.md` — design note: dependency graph, impact, monitoring, execution, and gaps of the current implementation (done / partial / missing).
 - `plan/` — the six plans (`defi-risk-dependency`, `morpho-vault-v2-watcher`, `morpho-user-watcher`, `lenders-and-timelocks`, `market-borrowers`, `admin-surface`).
 - `docs/` — `alert-runbook.md` (what each alert means and what to do), `glossary.md`, `registry-reference.md` (every `registry.json` key), `how-risk-is-computed.md`, `scenarios-and-breakeven.md`, `vault-depositor-scenarios.md`, `graph-propagation.md`, `how-a-block-is-analysed.md`, `websocket-vs-polling.md`, `user-watcher-options.md`, `graph-example.html/.json`.
+- `docs/external/` — third-party references, read-only; check behaviour against them before changing a rule:
+  - `docs.morpho.org-developers-docs/` — Morpho developer docs (contracts, Bundles, addresses, Midnight); `tests/test_watch_replay.py` checks the event selectors in `abi.py` against its `contracts/` pages.
+  - `morpho/lib/morpho-blue` (`8e26ca6a`) and `morpho/lib/vault-v2` (`d992cb84`) — Morpho Blue and Vault V2 sources: events, liquidation and shares maths, authorisation, adapters, timelocks, gates.
+  - `pendle/docs.pendle.finance-pendle-v2-dev-docs/` — Pendle V2 developer docs (contracts, oracles, integration, backend API).
+  - `pendle/lib/pendle-core-v2-public` (`87685c89`), `pendle/lib/Pendle-SY-Public` (`73676d93`), `pendle/lib/external-integration` (`1694fea0`) — Pendle core (PT/YT, markets, router, oracles), SY wrappers, integration examples.
+  - `docs.etherscan.io-api-reference-docs/` — Etherscan API V2 reference (`getsourcecode`, `getabi`, …); the key is in `keys.ini`.
+
+  The source repositories keep their own `.git`; commit them as submodules or as plain files, not as bare embedded repositories.
 - `data/snapshot/` (analyze demo cache + `as_of.json`) and `data/replay/` (recorded watch ranges) — test fixtures; do not delete or regenerate casually.
 - `out/` — run outputs (reports, alert `.jsonl`, cursors); git-ignored.
 - `conftest.py` — puts the repo root on `sys.path` for tests.
@@ -125,6 +138,7 @@ uv run ruff format . && uv run ruff check .            # format and lint, 120 co
 - New thresholds or assumptions go in `registry.json` with their basis, not as literals in code, and in `docs/registry-reference.md`.
 - A new or changed alert gets its row in `docs/alert-runbook.md`.
 - Any change that adds, removes or replaces a data provider, endpoint, query or browser script (RPC, API, CDN) updates `PROVIDERS.md` in the same commit.
+- Keys and secrets go only in `keys.ini` (git-ignored, `chmod 600`), never in code, docs or committed files; a new key gets its name, with no value, in `keys.example.ini`. Do not use `.env` files for this project.
 - Rule modules stay pure (no I/O); put fetching in the source/state modules.
 - A behaviour change that departs from a plan decision is recorded in that plan's decision table.
 - Leave format and lint to ruff, at 120 columns, in pre-commit and in CI; never mix a style-only commit with a behaviour change.

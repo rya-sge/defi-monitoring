@@ -1,0 +1,60 @@
+# Socket.IO Real-time Feeds
+
+> Source: https://docs.pendle.finance/pendle-v2-dev/Backend/SocketIO
+
+---
+
+On this page
+# Socket.IO Real-time Feeds
+
+Pendle V2 publishes real-time data over Socket.IO. Clients connect once and subscribe to per-feed rooms to receive pushed updates instead of polling REST endpoints.
+
+## Connection[​](#connection)
+
+- **URL**: `https://api-v2.pendle.finance`
+- **Namespace**: `/pendle-v2`
+- **Transport**: `websocket`
+
+```
+import { io } from 'socket.io-client';const socket = io('https://api-v2.pendle.finance/pendle-v2', {  transports: ['websocket'],});
+```
+
+## Subscribing[​](#subscribing)
+
+Emit `subscribe` with a room id. Room ids are per-feed — see the feed sections below. Unsubscribe with `unsubscribe` on the same id.
+
+```
+socket.emit('subscribe', roomId);socket.on('<event-name>', (payload) => { /* ... */ });socket.emit('unsubscribe', roomId);
+```
+
+## Feeds[​](#feeds)
+
+### Order Book[​](#order-book)
+
+Pushes an order-book snapshot every 5 seconds for every **whitelisted** market, at 4 precision levels. The payload matches the REST endpoint `GET /limit-order/v2/order-book/:chainId`.
+
+|  |  |
+| --- | --- |
+| **Event** | `order-book` |
+| **Room id** | `market:<chainId>-<marketAddress>:order-book:precision-<precisionDecimal>` |
+| **precisionDecimal** | `0`, `1`, `2`, `3` — number of decimal digits in percent (e.g. `2` → 0.01%) |
+| **marketAddress** | lowercased hex |
+
+**Payload**
+
+```
+{  longYieldEntries: OrderBookEntry[];  shortYieldEntries: OrderBookEntry[];}interface OrderBookEntry {  impliedApy: number;          // rounded to precision  pySize: string;              // bigint string, PT/YT amount  notionalSize: string;        // bigint string, notional in underlying  ammSize?: string;            // bigint string, AMM LP size (if applicable)  incentiveQualifiedPySize?: string; // bigint string, incentive-qualifying size}
+```
+
+**Example**
+
+```
+const room = `market:42161-0x14fbc760efaf36781cb0eb3cb255ad976117b9bd:order-book:precision-2`;socket.emit('subscribe', room);socket.on('order-book', (payload) => {  console.log(payload.longYieldEntries[0], payload.shortYieldEntries[0]);});
+```
+
+A runnable TypeScript example is available in [`pendle-examples-public/socket-io-demo`](https://github.com/pendle-finance/pendle-examples-public/tree/main/socket-io-demo).
+
+## Related[​](#related)
+
+- [Order Book REST endpoint](https://api-v2.pendle.finance/limit-order/docs) — same payload shape, on demand
+- [Limit Orders Overview](https://docs.pendle.finance/pendle-v2-dev/LimitOrder/Overview)

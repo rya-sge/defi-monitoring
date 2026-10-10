@@ -1,0 +1,379 @@
+# Pendle Hosted SDK
+
+> Source: https://docs.pendle.finance/pendle-v2-dev/Backend/HostedSdk
+
+---
+
+- [](https://docs.pendle.finance/)
+- Off-chain Helpers
+- Hosted SDK
+
+On this page
+# Pendle Hosted SDK
+
+Pendle accommodates a vast array of assets, each characterized by its unique nuances and complexities. While the Pendle protocol remains immutable, the underlying assets don't share this feature, requiring our app and SDK to be updated frequently to align with changes in these assets.
+
+To address this, Pendle has introduced a hosted version of our SDK. It ensures the output remains consistent with Pendle's UI and keeps up-to-date with the latest protocol changes. The API design prioritizes simplicity and stability, with a high rate limit to meet the needs of most users.
+
+## Getting Started[​](#getting-started)
+
+**Base URL:** `https://api-v2.pendle.finance/core`
+
+Most SDK operations go through a single universal endpoint — the [Convert API](https://api-v2.pendle.finance/core/docs#/SDK/SdkController_convert):
+
+```
+GET /v2/sdk/{chainId}/convert?tokensIn=...&tokensOut=...&amountsIn=...&receiver=...&slippage=...
+```
+
+The code examples on this page use a `callSDK` helper function that wraps HTTP requests to the base URL. A complete implementation can be found in the [Convert API demo repository](https://github.com/pendle-finance/pendle-examples-public/tree/main/hosted-sdk-demo/src).
+
+For API rate limits and computing unit costs, see [API Overview](https://docs.pendle.finance/pendle-v2-dev/Backend/ApiOverview#rate-limiting).
+
+## Supported functions[​](#supported-functions)
+
+- Swap
+- Add liquidity
+- Add liquidity ZPI
+- Remove liquidity
+- Mint PT & YT
+- Redeem PT & YT
+- Transfer liquidity
+- Transfer liquidity ZPI
+- Roll over PT
+- Add liquidity dual
+- Remove liquidity dual
+- Mint SY
+- Redeem SY
+
+All actions above can be accessed via one universal [Convert API](https://api-v2.pendle.finance/core/docs#/SDK/SdkController_convert).
+
+## Examples[​](#examples)
+
+### Swap[​](#swap)
+
+```
+GET https://api-v2.pendle.finance/core/v2/sdk/1/convert?receiver=<RECEIVER_ADDRESS>&slippage=0.01&tokensIn=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48&tokensOut=0xf99985822fb361117fcf3768d34a6353e6022f5f&amountsIn=1000000000&enableAggregator=true&aggregators=kyberswap&additionalData=impliedApy,effectiveApy
+```
+
+In code:
+
+```
+export async function swapTokenToPt() {  const res = await callSDK<ConvertResponse>(`/v2/sdk/${CHAIN_ID}/convert`, {    tokensIn: `${USDC_ADDRESS}`,    amountsIn: 1000000000,    tokensOut: `${PT_ADDRESS}`,    receiver: RECEIVER_ADDRESS,    slippage: 0.01,    enableAggregator: true,    aggregators: "kyberswap",    additionalData: "impliedApy,effectiveApy",  });}
+```
+
+### Add liquidity[​](#add-liquidity)
+
+```
+GET https://api-v2.pendle.finance/core/v2/sdk/1/convert?receiver=<RECEIVER_ADDRESS>&slippage=0.01&tokensIn=0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0&tokensOut=0xc374f7ec85f8c7de3207a10bb1978ba104bda3b2&amountsIn=1000000000000000000
+```
+
+In code:
+
+```
+export async function addLiquiditySingleToken() {  const res = await callSDK<ConvertResponse>(`/v2/sdk/${CHAIN_ID}/convert`, {    tokensIn: `${WSTETH_ADDRESS}`,    amountsIn: "1000000000000000000",    tokensOut: `${MARKET_ADDRESS}`,    receiver: RECEIVER_ADDRESS,    slippage: 0.01,  });}
+```
+
+### Add liquidity ZPI[​](#add-liquidity-zpi)
+
+```
+GET https://api-v2.pendle.finance/core/v2/sdk/1/convert?receiver=<RECEIVER_ADDRESS>&slippage=0.01&tokensIn=0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0&tokensOut=0xc374f7ec85f8c7de3207a10bb1978ba104bda3b2,0xf3abc972a0f537c1119c990d422463b93227cd83&amountsIn=1000000000000000000
+```
+
+In code:
+
+```
+export async function addLiquiditySingleTokenKeepYt() {  const res = await callSDK<ConvertResponse>(`/v2/sdk/${CHAIN_ID}/convert`, {    tokensIn: `${WSTETH_ADDRESS}`,    amountsIn: "1000000000000000000",    tokensOut: `${MARKET_ADDRESS},${YT_ADDRESS}`,    receiver: RECEIVER_ADDRESS,    slippage: 0.01,  });}
+```
+
+### Remove liquidity[​](#remove-liquidity)
+
+```
+GET https://api-v2.pendle.finance/core/v2/sdk/1/convert?receiver=<RECEIVER_ADDRESS>&slippage=0.01&tokensIn=0xc374f7ec85f8c7de3207a10bb1978ba104bda3b2&tokensOut=0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0&amountsIn=1000000000000000000&enableAggregator=true
+```
+
+In code:
+
+```
+export async function removeLiquiditySingleToken() {  const res = await callSDK<ConvertResponse>(`/v2/sdk/${CHAIN_ID}/convert`, {    tokensIn: `${MARKET_ADDRESS}`,    amountsIn: "1000000000000000000",    tokensOut: `${WSTETH_ADDRESS}`,    receiver: RECEIVER_ADDRESS,    slippage: 0.01,    enableAggregator: true,  });}
+```
+
+### Mint PT & YT[​](#mint-pt--yt)
+
+```
+GET https://api-v2.pendle.finance/core/v2/sdk/1/convert?receiver=<RECEIVER_ADDRESS>&slippage=0.01&tokensIn=0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0&tokensOut=0xf99985822fb361117fcf3768d34a6353e6022f5f,0xf3abc972a0f537c1119c990d422463b93227cd83&amountsIn=1000000000000000000
+```
+
+In code:
+
+```
+export async function mintPyFromToken() {  const res = await callSDK<ConvertResponse>(`/v2/sdk/${CHAIN_ID}/convert`, {    tokensIn: `${WSTETH_ADDRESS}`,    amountsIn: "1000000000000000000",    tokensOut: `${PT_ADDRESS},${YT_ADDRESS}`,    receiver: RECEIVER_ADDRESS,    slippage: 0.01,  });}
+```
+
+### Redeem PT & YT[​](#redeem-pt--yt)
+
+```
+GET https://api-v2.pendle.finance/core/v2/sdk/1/convert?receiver=<RECEIVER_ADDRESS>&slippage=0.01&tokensIn=0xf99985822fb361117fcf3768d34a6353e6022f5f,0xf3abc972a0f537c1119c990d422463b93227cd83&tokensOut=0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0&amountsIn=1000000000000000000,1000000000000000000
+```
+
+In code:
+
+```
+export async function redeemPyToToken() {  const res = await callSDK<ConvertResponse>(`/v2/sdk/${CHAIN_ID}/convert`, {    tokensIn: `${PT_ADDRESS},${YT_ADDRESS}`,    amountsIn: "1000000000000000000,1000000000000000000",    tokensOut: `${WSTETH_ADDRESS}`,    receiver: RECEIVER_ADDRESS,    slippage: 0.01,  });}
+```
+
+### Transfer liquidity[​](#transfer-liquidity)
+
+```
+GET https://api-v2.pendle.finance/core/v2/sdk/1/convert?receiver=<RECEIVER_ADDRESS>&slippage=0.01&tokensIn=0x9bc2fb257e00468fe921635fe5a73271f385d0eb,0x21aace56a8f21210b7e76d8ef1a77253db85bf0a,0x3787c19c32e727310708c0693aec00fb37a01e7b&tokensOut=0xc374f7ec85f8c7de3207a10bb1978ba104bda3b2&amountsIn=1000000000000000000,1000000000000000000,1000000000000000000&enableAggregator=true&aggregators=kyberswap
+```
+
+In code:
+
+```
+export async function transferLiquidity() {  const res = await callSDK<ConvertResponse>(`/v2/sdk/${CHAIN_ID}/convert`, {    tokensIn: `${FXSAVE_MARKET_ADDRESS},${FXSAVE_PT_ADDRESS},${FXSAVE_YT_ADDRESS}`,    amountsIn: "1000000000000000000,1000000000000000000,1000000000000000000",    tokensOut: `${MARKET_ADDRESS}`,    receiver: RECEIVER_ADDRESS,    slippage: 0.01,    enableAggregator: true,    aggregators: "kyberswap",  });}
+```
+
+### Transfer liquidity ZPI[​](#transfer-liquidity-zpi)
+
+```
+GET https://api-v2.pendle.finance/core/v2/sdk/1/convert?receiver=<RECEIVER_ADDRESS>&slippage=0.01&tokensIn=0x9bc2fb257e00468fe921635fe5a73271f385d0eb,0x21aace56a8f21210b7e76d8ef1a77253db85bf0a,0x3787c19c32e727310708c0693aec00fb37a01e7b&tokensOut=0xc374f7ec85f8c7de3207a10bb1978ba104bda3b2,0xf3abc972a0f537c1119c990d422463b93227cd83&amountsIn=1000000000000000000,1000000000000000000,1000000000000000000&enableAggregator=true&aggregators=kyberswap
+```
+
+In code:
+
+```
+export async function transferLiquidityKeepYt() {  const res = await callSDK<ConvertResponse>(`/v2/sdk/${CHAIN_ID}/convert`, {    tokensIn: `${FXSAVE_MARKET_ADDRESS},${FXSAVE_PT_ADDRESS},${FXSAVE_YT_ADDRESS}`,    amountsIn: "1000000000000000000,1000000000000000000,1000000000000000000",    tokensOut: `${MARKET_ADDRESS},${YT_ADDRESS}`,    receiver: RECEIVER_ADDRESS,    slippage: 0.01,    enableAggregator: true,    aggregators: "kyberswap",  });}
+```
+
+### Roll over PT[​](#roll-over-pt)
+
+```
+GET https://api-v2.pendle.finance/core/v2/sdk/1/convert?receiver=<RECEIVER_ADDRESS>&slippage=0.01&tokensIn=0x21aace56a8f21210b7e76d8ef1a77253db85bf0a&tokensOut=0xf99985822fb361117fcf3768d34a6353e6022f5f&amountsIn=1000000000000000000&enableAggregator=true
+```
+
+In code:
+
+```
+export async function rollOverPt() {  const res = await callSDK<ConvertResponse>(`/v2/sdk/${CHAIN_ID}/convert`, {    tokensIn: `${FXSAVE_PT_ADDRESS}`,    amountsIn: "1000000000000000000",    tokensOut: `${PT_ADDRESS}`,    receiver: RECEIVER_ADDRESS,    slippage: 0.01,    enableAggregator: true,  });}
+```
+
+### Add liquidity dual[​](#add-liquidity-dual)
+
+```
+GET https://api-v2.pendle.finance/core/v2/sdk/1/convert?receiver=<RECEIVER_ADDRESS>&slippage=0.01&tokensIn=0xcbc72d92b2dc8187414f6734718563898740c0bc,0xf99985822fb361117fcf3768d34a6353e6022f5f&tokensOut=0xc374f7ec85f8c7de3207a10bb1978ba104bda3b2&amountsIn=1000000000000000000,1000000000000000000
+```
+
+In code:
+
+```
+export async function addLiquidityDualSyAndPt() {  const res = await callSDK<ConvertResponse>(`/v2/sdk/${CHAIN_ID}/convert`, {    tokensIn: `${SY_ADDRESS},${PT_ADDRESS}`,    amountsIn: "1000000000000000000,1000000000000000000",    tokensOut: `${MARKET_ADDRESS}`,    receiver: RECEIVER_ADDRESS,    slippage: 0.01,  });}
+```
+
+### Remove liquidity dual[​](#remove-liquidity-dual)
+
+```
+GET https://api-v2.pendle.finance/core/v2/sdk/1/convert?receiver=<RECEIVER_ADDRESS>&slippage=0.01&tokensIn=0xc374f7ec85f8c7de3207a10bb1978ba104bda3b2&tokensOut=0xf99985822fb361117fcf3768d34a6353e6022f5f,0xcbc72d92b2dc8187414f6734718563898740c0bc&amountsIn=1000000000000000000
+```
+
+In code:
+
+```
+export async function removeLiquidityDualSyAndPt() {  const res = await callSDK<ConvertResponse>(`/v2/sdk/${CHAIN_ID}/convert`, {    tokensIn: `${MARKET_ADDRESS}`,    amountsIn: "1000000000000000000",    tokensOut: `${PT_ADDRESS},${SY_ADDRESS}`,    receiver: RECEIVER_ADDRESS,    slippage: 0.01,  });}
+```
+
+### Mint SY[​](#mint-sy)
+
+```
+GET https://api-v2.pendle.finance/core/v2/sdk/1/convert?receiver=<RECEIVER_ADDRESS>&slippage=0.01&tokensIn=0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0&tokensOut=0xcbc72d92b2dc8187414f6734718563898740c0bc&amountsIn=1000000000000000000
+```
+
+In code:
+
+```
+export async function mintSyFromToken() {  const res = await callSDK<ConvertResponse>(`/v2/sdk/${CHAIN_ID}/convert`, {    tokensIn: `${WSTETH_ADDRESS}`,    amountsIn: "1000000000000000000",    tokensOut: `${SY_ADDRESS}`,    receiver: RECEIVER_ADDRESS,    slippage: 0.01,  });}
+```
+
+### Redeem SY[​](#redeem-sy)
+
+```
+GET https://api-v2.pendle.finance/core/v2/sdk/1/convert?receiver=<RECEIVER_ADDRESS>&slippage=0.01&tokensIn=0xcbc72d92b2dc8187414f6734718563898740c0bc&tokensOut=0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0&amountsIn=1000000000000000000
+```
+
+In code:
+
+```
+export async function redeemSyToToken() {  const res = await callSDK<ConvertResponse>(`/v2/sdk/${CHAIN_ID}/convert`, {    tokensIn: `${SY_ADDRESS}`,    amountsIn: "1000000000000000000",    tokensOut: `${WSTETH_ADDRESS}`,    receiver: RECEIVER_ADDRESS,    slippage: 0.01,  });}
+```
+
+## Send Transaction[​](#send-transaction)
+
+After calling any of the Convert API functions above, you can inspect the response and send the transaction:
+
+```
+const res: ConvertResponse;// Log the action and outputsconsole.log("Action: ", res.action);console.log("Outputs: ", res.routes[0].outputs);// Send the transactiongetSigner().sendTransaction(res.routes[0].tx);
+```
+
+Please visit our [Convert API demo](https://github.com/pendle-finance/pendle-examples-public/tree/main/hosted-sdk-demo/src) to see more detailed examples.
+
+### Inputs[​](#inputs)
+
+The Convert API accepts the following input parameters:
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `tokensIn` | string | Yes | - | Array of input token addresses (comma-separated) |
+| `amountsIn` | string | Yes | - | Array of input token amounts in wei (comma-separated) |
+| `tokensOut` | string | Yes | - | Array of expected output token addresses (comma-separated) |
+| `receiver` | string | Yes | - | Address to receive the output tokens |
+| `slippage` | number | Yes | - | Maximum slippage tolerance (0-1, where 0.01 = 1%) |
+| `enableAggregator` | boolean | No | `false` | Enable swap aggregators for token conversions |
+| `aggregators` | string | No | - | Specific aggregators to use (comma-separated), see [Routing](#routing) |
+| `redeemRewards` | boolean | No | `false` | Whether to redeem rewards during the action, applicable to actions: `transfer-liquidity` |
+| `needScale` | boolean | No | `false` | Aggregator needScale parameter, only set to true when amounts are updated on-chain. When enabled, please make sure to buffer the input amount by about 2%, applicable to actions: `swap` |
+| `additionalData` | string | No | - | Additional data to include in response (comma-separated), see [Additional data](#additional-data) |
+
+### Outputs[​](#outputs)
+
+The Convert API returns the following response structure:
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `action` | string | Yes | The classified and executed action (e.g., `mint-py`, `swap`, `add-liquidity`) |
+| `inputs` | [TokenAmountResponse[]](#tokenamountresponse) | Yes | Input tokens and amounts used in the action |
+| `requiredApprovals` | [TokenAmountResponse[]](#tokenamountresponse) | No | Tokens requiring approval before execution |
+| `routes` | [ConvertResponse[]](#convertresponse) | Yes | Array of route execution details, sorted by decreasing output amount |
+
+#### TokenAmountResponse[​](#tokenamountresponse)
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `token` | string | Yes | Token contract address (lowercase) |
+| `amount` | string | Yes | Token amount in wei (BigInt string) |
+
+#### ConvertResponse[​](#convertresponse)
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `contractParamInfo` | [ContractParamInfo](#contractparaminfo) | Yes | Param info for the contract method called |
+| `tx` | [TransactionDto](#transactiondto-tx) | Yes | Complete transaction data for execution |
+| `outputs` | [TokenAmountResponse[]](#tokenamountresponse) | Yes | Expected output tokens and amounts |
+| `data` | [ConvertData](#convertdata) | Yes | Action-specific data |
+
+#### ContractParamInfo[​](#contractparaminfo)
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `method` | string | Yes | Contract method name (e.g., `mintPyFromToken`) |
+| `contractCallParamsName` | string[] | Yes | Parameter names array |
+| `contractCallParams` | any[] | Yes | Parameter values array |
+
+#### TransactionDto[​](#transactiondto-tx)
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `data` | string | Yes | Encoded transaction data (hex) |
+| `to` | string | Yes | Contract address to call |
+| `from` | string | Yes | Sender address |
+| `value` | string | Yes | Native token amount to send |
+
+#### ConvertData[​](#convertdata)
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `aggregatorType` | string | Yes | The aggregator used, or `VOID` if none was used |
+| `priceImpact` | number | Yes | Price impact |
+| `impliedApy` | [ImpliedApy](#impliedapy) | No | Market APY information for yield actions. (for `swap` actions) |
+| `effectiveApy` | number | No | User's effective APY after fees/slippage. (for `swap` actions) |
+| `paramsBreakdown` | [ParamsBreakdown](#paramsbreakdown) | No | Multi-step action breakdown (for `transfer-liquidity`) |
+
+#### ImpliedApy[​](#impliedapy)
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `before` | number | Yes | Implied APY before transaction |
+| `after` | number | Yes | Implied APY after transaction |
+
+#### ParamsBreakdown[​](#paramsbreakdown)
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `selfCall1` | [ContractParamInfo](#contractparaminfo) | Yes | Params info for selfCall1 |
+| `selfCall2` | [ContractParamInfo](#contractparaminfo) | No | Params info for selfCall2 |
+| `reflectCall` | [ContractParamInfo](#contractparaminfo) | Yes | Params info for reflectCall |
+
+## Features[​](#features)
+
+### Routing[​](#routing)
+
+Routing is a feature of the Pendle SDK that helps users find the most optimal route to interact with the Pendle system. This feature ensures that users can efficiently execute their transactions by identifying the best paths for their specific needs, whether it's swapping assets, adding or removing liquidity, or any other supported function.
+
+To take advantage of the routing feature, users need to set the `enableAggregator` option to `true`. When this option is enabled, the system will automatically perform routing to find the most optimal route for the user's transaction. This ensures that users always get the best possible outcome when interacting with the Pendle system.
+
+#### Select aggregators[​](#select-aggregators)
+
+When `enableAggregator` is set to `true`, you can control which aggregators are used by specifying the `aggregators` parameter. This parameter accepts a comma-separated list of aggregator names (e.g. "kyberswap,okx"). If not specified, the system will use all available aggregators to find the optimal route.
+
+Using more aggregators generally results in better optimized routes since there are more options to choose from. However, each aggregator adds to the computing unit cost of the request (see [rate limiting](https://docs.pendle.finance/pendle-v2-dev/Backend/ApiOverview#rate-limiting)). You can balance between optimization and cost by selectively enabling only the aggregators you want to use.
+
+Currently supported aggregators (can be fetched from [fetch supported aggregators](https://api-v2.pendle.finance/core/docs#/SDK/SdkController_getSupportedAggregators) endpoint), this list is subject to change:
+
+| Aggregator | Cost (Computing Units) |
+| --- | --- |
+| `kyberswap` | 1 |
+| `okx` | 1 |
+| `paraswap` | 15 |
+
+For example, this request will use KyberSwap and OKX aggregators to find the optimal route, and it costs 7 computing units (1 from kyberswap, 1 from okx, and 5 from the base computing cost):
+
+```
+export async function addLiquiditySingleToken() {  // Use 1 ETH to add liquidity to stETH pool with 1% slippage  const res = await callSDK<ConvertResponse>(`/v2/sdk/${CHAIN_ID}/convert`, {    tokensIn: `${ETH_ADDRESS}`,    amountsIn: '1000000000000000000',    tokensOut: `${STETH_LP_ADDRESS}`,    receiver: RECEIVER_ADDRESS,    slippage: 0.01,    enableAggregator: true,    aggregators: "kyberswap,okx",  });  console.log("Action: ", res.action);  console.log("Outputs: ", res.routes[0].outputs);  console.log("Price impact: ", res.routes[0].data.priceImpact);  // Send tx  getSigner().sendTransaction(res.routes[0].tx);}
+```
+
+### Reduce aggregator computing units[​](#reduce-aggregator-computing-units)
+
+By default, when using aggregators, the system will use public API keys for each aggregator. This means that the computing unit cost for each aggregator will be added to the total cost of the request. To reduce the computing unit cost, you can use your own API key for each aggregator. This way, the computing unit cost for that aggregator will be reduced to 0. For example, if you use your own API key for ParaSwap, the total computing unit cost will be 5 (base cost) + 1 (kyberswap cost) + 0 (paraswap cost with custom API key) = 6 computing units.
+
+Currently, you can use an aggregator with your own API key by specifying the corresponding field in the request headers.
+
+| Aggregator | Header Key | Note |
+| --- | --- | --- |
+| `kyberswap` | `KYBERSWAP-API-KEY` |  |
+| `okx` | `OKX-ACCESS-KEY`, `OKX-ACCESS-SECRET`, `OKX-PASSPHRASE` | Need all three to return a valid response |
+| `paraswap` | `PARASWAP-API-KEY` |  |
+
+When using custom aggregator keys, make sure to include the required headers in your request. If the headers are not provided, the system will use the public API key for that aggregator.
+
+### Additional data[​](#additional-data)
+
+When an endpoint has an `additionalData` field, users can pass in some fields to receive more data, but it will cost more computing units.
+
+For example, the **swap** action has `additionalData` with two available fields: `impliedApy` and `effectiveApy`. If the query parameters have `additionalData=impliedApy`, the response will have the implied APY before and after the swap action.
+
+For additional usage, please refer to the [API documentation](https://api-v2.pendle.finance/core/docs) to explore more.
+
+## Migrating from individual endpoints to Convert[​](#migrating-from-individual-endpoints-to-convert)
+
+The Convert API replaces all of the individual SDK endpoints (`/swap`, `/add-liquidity`, `/mint`, `/redeem`, etc.). The table below maps each old endpoint to the equivalent Convert call.
+
+| Old endpoint | Convert equivalent |
+| --- | --- |
+| `GET /v2/sdk/{chainId}/markets/{market}/swap` | `tokensIn=[token/PT/YT]`, `tokensOut=[token/PT/YT]` |
+| `GET /v2/sdk/{chainId}/markets/{market}/add-liquidity` | `tokensIn=[token]`, `tokensOut=[LP]` (standard) or `tokensOut=[LP,YT]` (ZPI) |
+| `GET /v2/sdk/{chainId}/markets/{market}/add-liquidity-dual` | `tokensIn=[token,PT]`, `tokensOut=[LP]` |
+| `GET /v2/sdk/{chainId}/markets/{market}/remove-liquidity` | `tokensIn=[LP]`, `tokensOut=[token]` |
+| `GET /v2/sdk/{chainId}/markets/{market}/remove-liquidity-dual` | `tokensIn=[LP]`, `tokensOut=[token,PT]` |
+| `GET /v2/sdk/{chainId}/mint` | `tokensIn=[token]`, `tokensOut=[PT,YT]` |
+| `GET /v2/sdk/{chainId}/redeem` | `tokensIn=[PT,YT]` (or just `[PT]` after expiry), `tokensOut=[token]` |
+| `GET /v2/sdk/{chainId}/mint-sy` | `tokensIn=[token]`, `tokensOut=[SY]` |
+| `GET /v2/sdk/{chainId}/redeem-sy` | `tokensIn=[SY]`, `tokensOut=[token]` |
+| `GET /v2/sdk/{chainId}/markets/{market}/transfer-liquidity` | `tokensIn=[LP,PT,YT]` (any subset), `tokensOut=[destination LP]` |
+| `GET /v2/sdk/{chainId}/markets/{market}/roll-over-pt` | `tokensIn=[source PT]`, `tokensOut=[destination PT]` |
+| `GET /v2/sdk/{chainId}/markets/{market}/exit-positions` | `tokensIn=[LP,PT,YT]` (any subset), `tokensOut=[token]` |
+
+### Which version should I use?[​](#which-version-should-i-use)
+
+Use **v3 (POST `/v3/sdk/{chainId}/convert`)** for new integrations. It accepts a JSON body with a typed `inputs` array instead of comma-separated query strings, which is easier to construct programmatically.
+
+Use **v2 (GET `/v2/sdk/{chainId}/convert`)** if you need a fully query-parameter-based URL (e.g. for simple curl testing or when an HTTP client doesn't support request bodies on GET).
+
+Both variants execute the same logic and return the same response.

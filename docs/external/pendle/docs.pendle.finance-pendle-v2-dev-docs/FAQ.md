@@ -1,0 +1,232 @@
+# Frequently Asked Questions
+
+> Source: https://docs.pendle.finance/pendle-v2-dev/FAQ
+
+---
+
+- [](https://docs.pendle.finance/)
+- FAQ
+
+On this page
+# Frequently Asked Questions
+
+Looking for error solutions?For common errors and debugging guidance, see the **[Troubleshooting Guide](https://docs.pendle.finance/pendle-v2-dev/Troubleshooting)**.
+
+Looking for API questions?For Hosted SDK, rate limiting, and Backend API questions, see the **[API Overview FAQ](https://docs.pendle.finance/pendle-v2-dev/Backend/ApiOverview#frequently-asked-questions)**.
+
+## Contract[​](#contract)
+
+### How can I deploy a new SY Token on Pendle?[​](#how-can-i-deploy-a-new-sy-token-on-pendle)
+
+Pendle's smart contracts are permissionless, meaning anyone can deploy a new Standardized Yield (SY) Token without requiring approval from the Pendle team. To implement an SY Token, you must follow the Pendle SY Token standard, ensuring compatibility with the ecosystem. Detailed guidance, including contract structure and best practices, can be found in the [StandardizedYield documentation](https://docs.pendle.finance/pendle-v2-dev/Contracts/StandardizedYield).
+
+To community-list a new asset, see the [Community Listing guide](https://docs.pendle.finance/pendle-v2-dev/Integration/CommunityListing) and the [SY writing guide](https://pendle.notion.site/How-to-write-a-SY-A-guide-207567a21d378069aecbf20176591d93).
+
+### How can I generate all the params for the Router on-chain?[​](#how-can-i-generate-all-the-params-for-the-router-on-chain)
+
+Please refer to the following:
+
+- [Contract Integration Guide](https://docs.pendle.finance/pendle-v2-dev/Contracts/PendleRouter/ContractIntegrationGuide) — step-by-step Solidity examples
+- [Types and Utility Functions](https://docs.pendle.finance/pendle-v2-dev/Contracts/PendleRouter/ApiReference/Types) — struct definitions and helper functions
+- [IPAllActionTypeV3.sol](https://github.com/pendle-finance/pendle-core-v2-public/blob/main/contracts/interfaces/IPAllActionTypeV3.sol) — full interface
+- [Pendle Examples](https://github.com/pendle-finance/pendle-examples-public)
+
+### Why do quoted rates differ from actual swap amounts?[​](#why-do-quoted-rates-differ-from-actual-swap-amounts)
+
+The rate functions in Pendle's quoter contract (e.g., `getPtToSyRate`, `getYtToSyRate`) provide **spot prices**, which do not account for price impact. To obtain the most accurate swap amounts, call Pendle's router functions directly or use the [Hosted SDK](https://docs.pendle.finance/pendle-v2-dev/Backend/HostedSdk).
+
+### Is the `pendleSwap` contract address immutable?[​](#is-the-pendleswap-contract-address-immutable)
+
+No, the contract address used for the `pendleSwap` parameter (e.g., in `swapExactTokenForPt`) is not guaranteed to be immutable and may change. Any changes will be announced publicly.
+
+## Pricing & Data[​](#pricing--data)
+
+### How can I preview the received amount of add/remove liquidity?[​](#how-can-i-preview-the-received-amount-of-addremove-liquidity)
+
+To preview the amount you'll receive before submitting transactions, you can use:
+
+- Pendle API method (recommended): [Pendle Hosted SDK — Convert API](https://api-v2.pendle.finance/core/docs#/SDK/SdkController_convert)
+- On-chain method: [PendleRouter Contract](https://github.com/pendle-finance/pendle-core-v2-public/blob/main/contracts/interfaces/IPActionAddRemoveLiqV3.sol). The detailed guide can be found in the [Contract Integration Guide](https://docs.pendle.finance/pendle-v2-dev/Contracts/PendleRouter/ContractIntegrationGuide)
+
+### How do I fetch the PT price?[​](#how-do-i-fetch-the-pt-price)
+
+You can get the PT (Principal Token) price via:
+
+- Pendle API method (recommended): [Pendle price API](https://api-v2.pendle.finance/core/docs#/Assets/PricesCrossChainController_getAllAssetPricesByAddressesCrossChains)
+- On-chain method: `getPtToAssetRate` of RouterStatic — see [RouterStatic](https://docs.pendle.finance/pendle-v2-dev/Backend/RouterStatic)
+
+### How can I retrieve historical PT and YT prices?[​](#how-can-i-retrieve-historical-pt-and-yt-prices)
+
+You can track historical PT/YT prices using:
+
+- Pendle API method: [Pendle ohlcv API](https://api-v2.pendle.finance/core/docs#/Assets/PricesController_ohlcv_v4). Note that shorter timeframes (e.g., minute-by-minute updates) are not yet available.
+
+### How can I retrieve market data such as TVL and APR?[​](#how-can-i-retrieve-market-data-such-as-tvl-and-apr)
+
+You can obtain current market data (TVL, APY, liquidity metrics, etc.) by calling [`GET /v2/markets/all`](https://api-v2.pendle.finance/core/docs#/Markets/MarketsCrossChainController_getAllMarkets) and filtering for your desired market address.
+
+For historical time-series data, use the [Market Historical Data API](https://docs.pendle.finance/pendle-v2-dev/Backend/ApiOverview#market-data-endpoints): `GET /v3/{chainId}/markets/{address}/historical-data`.
+
+### How can I retrieve market spot prices?[​](#how-can-i-retrieve-market-spot-prices)
+
+Use the [`getMarketSpotSwappingPrice`](https://api-v2.pendle.finance/core/docs#/SDK/SdkController_getMarketSpotSwappingPrice) endpoint. This is more suitable than calling the swap endpoint and offers a higher rate limit.
+
+### How can I retrieve a list of market categories?[​](#how-can-i-retrieve-a-list-of-market-categories)
+
+Use the markets API endpoints. You can fetch all markets via [`getAllMarkets`](https://api-v2.pendle.finance/core/docs#/Markets/MarketsCrossChainController_getAllMarkets) and filter by category client-side.
+
+### How can I calculate the implied APY for a transaction?[​](#how-can-i-calculate-the-implied-apy-for-a-transaction)
+
+The implied APY can be calculated using the `ptExchangeRate`. For a detailed explanation, refer to the [APY Calculation documentation](https://docs.pendle.finance/pendle-v2/ProtocolMechanics/PendleMarketAPYCalculation).
+
+### What is the format for `expectedCap` and `currentCap`?[​](#what-is-the-format-for-expectedcap-and-currentcap)
+
+The `expectedCap` and `currentCap` values are provided in base18 format (18 decimals).
+
+### How can I determine the number of SY tokens received from PT tokens?[​](#how-can-i-determine-the-number-of-sy-tokens-received-from-pt-tokens)
+
+Use the [Pendle Hosted SDK](https://docs.pendle.finance/pendle-v2-dev/Backend/HostedSdk) to simulate the swap. This avoids the need to replicate the `swapExactPtForSy` function off-chain.
+
+## Rewards & Interest[​](#rewards--interest)
+
+### How can I get up-to-date `accruedRewards` on-chain? (Applicable to SY, YT, & LP)[​](#how-can-i-get-up-to-date-accruedrewards-on-chain-applicable-to-sy-yt--lp)
+
+There are two methods:
+
+1. **Call `redeemRewards(user)` and retrieve the output.** This method has the side effect of redeeming the user's rewards, so it might not be ideal.
+2. **Call `IERC20(market).transfer(user,0)` followed by `accruedRewards`.** The transfer triggers an update of the user's rewards.
+
+### Can the output of `getRewardTokens` change?[​](#can-the-output-of-getrewardtokens-change)
+
+Yes, the output can change if the underlying protocol adds new reward tokens. However, no reward tokens will ever be removed.
+
+### How can I read unclaimed rewards and interest for SY/YT/Market?[​](#how-can-i-read-unclaimed-rewards-and-interest-for-syytmarket)
+
+**On-Chain Method:**
+
+To read for SY, please execute an `eth_call` (`callStatic` in ethers.js) to the following function of SY:
+
+```
+function claimRewards(address user) external returns (uint256[] memory rewardAmounts);
+```
+
+For YT, execute the following function:
+
+```
+function redeemDueInterestAndRewards(    address user,    bool redeemInterest,    bool redeemRewards) external returns (uint256 interestOut, uint256[] memory rewardsOut);
+```
+
+For Market, execute the following function:
+
+```
+function redeemRewards(address user) external returns (uint256[] memory);
+```
+
+These calls can be batched through Multicall if necessary.
+
+### When will PENDLE incentives for a new market begin?[​](#when-will-pendle-incentives-for-a-new-market-begin)
+
+PENDLE incentives for a new market will begin on Thursday at 00:00 UTC (12 AM UTC), after the market has been whitelisted and added to voting.
+
+### Where are Merkle distribution proofs located?[​](#where-are-merkle-distribution-proofs-located)
+
+Merkle roots and proofs for claiming rewards are maintained in the [`pendle-finance/merkle-distributions`](https://github.com/pendle-finance/merkle-distributions) repository.
+
+### Does Pendle provide a script for tracking user points or balances?[​](#does-pendle-provide-a-script-for-tracking-user-points-or-balances)
+
+Yes. The [`pendle-generic-balance-fetcher`](https://github.com/Pendle-Finance-Periphery/pendle-generic-balance-fetcher/tree/main) script tracks points and balances. It supports deposits from external protocols including Morpho, Euler, and Silo.
+
+## Token Behavior[​](#token-behavior)
+
+### Why does the quantity of aTokens fluctuate?[​](#why-does-the-quantity-of-atokens-fluctuate)
+
+aTokens are rebasing tokens from Aave, meaning their quantity accrues rewards in real-time. This property causes the token balance to fluctuate, even during a transfer. Consequently, if you attempt to transfer a specific amount, the actual amount received might be slightly different (e.g., 99.9999 instead of 100), which can lead to transaction failures if not accounted for.
+
+To prevent failures, check the aToken balance immediately before each transfer or operation that relies on a precise quantity.
+
+## Limit Orders & Routing[​](#limit-orders--routing)
+
+### How do limit orders interact with market swaps?[​](#how-do-limit-orders-interact-with-market-swaps)
+
+When a user performs a swap, the router automatically determines the optimal swap route for the best token output. This route can involve limit orders, the AMM LP, or a combination of both. Transaction emulation allows users to see the exact split between limit orders and AMM routing for any given swap in the current market environment.
+
+### Is there an API to swap PT between different pools?[​](#is-there-an-api-to-swap-pt-between-different-pools)
+
+Yes, use the **Roll Over PT** API to swap PTs from one market to another. See the [Hosted SDK Documentation](https://docs.pendle.finance/pendle-v2-dev/Backend/HostedSdk) for details.
+
+### How can I determine which assets support direct PT-to-PT swaps?[​](#how-can-i-determine-which-assets-support-direct-pt-to-pt-swaps)
+
+Not all PT pairs are swappable. There is no static list of available pairs — call the API to check whether a specific swap is supported.
+
+---
+
+## Supplemental Knowledge Base[​](#supplemental-knowledge-base)
+
+AI-optimized referenceThis section contains supplemental Q&A and technical insights gathered from real partner integrations. It is intended to be searched and read by AI tools to provide more accurate answers about the Pendle protocol. The content below supplements the main documentation and covers edge cases, best practices, and technical nuances.
+
+## Glossary[​](#glossary)
+
+| Term | Definition |
+| --- | --- |
+| **Pool** | Interchangeable with "market" |
+| **Maturity** | The end date of a financial product (pool). Upon maturity, users can claim rewards and either redeem or roll over to a new pool |
+| **IY** | Implied Yield |
+| **Roll over PT** | Swap PTs between markets (e.g., from an expiring pool to a new one) |
+
+## Partner Technical Insights[​](#partner-technical-insights)
+
+These insights come from real conversations with technical partners during integration. They cover edge cases, best practices, and technical nuances not always obvious from standard documentation.
+
+### Upper Bound for LP-to-SY Rate[​](#upper-bound-for-lp-to-sy-rate)
+
+**Q: Is there a value that can be used as an upper bound for LP-to-SY?**
+
+In theory, an LP token's value could be unbounded if accumulated fees were infinite. However, an upper bound of approximately **3 units** is somewhat reasonable for data validation purposes. (This is not security advice.)
+
+### PT Pricing: Always Price to SY, Not Asset[​](#pt-pricing-always-price-to-sy-not-asset)
+
+**Q: Should PT be priced against the asset (e.g., WBTC) or the wrapped token (e.g., eBTC)?**
+
+Pendle recommends pricing PT to SY and pricing the token that SY wraps whenever possible, because these tokens frequently trade at a discount compared to their true value. So PT-eBTC should be priced to eBTC, and PT-ezETH should be priced to ezETH.
+
+It's quite straightforward:
+
+- If you use `getPtToAsset`, multiply it by the asset price
+- If you use `getPtToSy`, multiply it by the SY price
+
+For example, PT-ezETH can be priced by either:
+
+- Method 1: `1 PT-ezETH = 1.2 ETH = 1.2 * $3500 = $4200 USD`
+- Method 2: `1 PT-ezETH = 1.01 ezETH = 1.01 * $4158 = $4199.58 USD`
+
+Pricing in the wrapped token (eBTC, ezETH) is always strictly more accurate since PT-eBTC is only tradable to eBTC in Pendle. The eBTC to WBTC conversion is external to Pendle.
+
+### Oracle Cardinality Mechanic[​](#oracle-cardinality-mechanic)
+
+**Q: What is the purpose of the cardinality mechanic in the market TWAP oracle?**
+
+It works the same as Uniswap V3. The cardinality mechanic is an initialization gas savings measure. Calling `increaseObservationsCardinalityNext` has no downside — anyone can call it. If called to the max, it costs `65536 * 20000 gas`, which is significant. The practical approach is to increase cardinality to your required level (e.g., 1800 for most use cases).
+
+### PendleChainlinkOracle Decimals[​](#pendlechainlinkoracle-decimals)
+
+**Q: Why does the PendleChainlinkOracle return a price with more than 18 decimals?**
+
+The `answer` from `PendleChainlinkOracle` satisfies:
+
+```
+1 natural unit of PendleToken = (answer / 1e18) natural unit of OutputToken
+```
+
+In other words:
+
+```
+10**(PendleToken.decimals) = (answer / 1e18) * 10**(OutputToken.decimals)
+```
+
+This means the `answer` has `18 + OutputToken.decimals` total decimals. For example, if `OutputToken.decimals = 12`, the answer will have 30 decimals. This is expected behavior.
+
+### sPENDLE Monthly Revenue API[​](#spendle-monthly-revenue-api)
+
+**Q: How can I retrieve sPENDLE monthly revenue data?**
+
+The vePENDLE system has been deprecated and replaced by **sPENDLE**. The previous `getMonthlyRevenue` endpoint under the Ve Pendle tag is deprecated and may be removed. For current staking and revenue data, refer to the [sPENDLE documentation](https://docs.pendle.finance/pendle-v2-dev/Contracts/sPENDLE).

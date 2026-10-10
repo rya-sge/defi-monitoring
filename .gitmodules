@@ -1,0 +1,9 @@
+[submodule "docs/external/pendle/lib/pendle-core-v2-public"]
+	path = docs/external/pendle/lib/pendle-core-v2-public
+	url = https://github.com/pendle-finance/pendle-core-v2-public
+[submodule "docs/external/pendle/lib/Pendle-SY-Public"]
+	path = docs/external/pendle/lib/Pendle-SY-Public
+	url = https://github.com/pendle-finance/Pendle-SY-Public
+[submodule "docs/external/pendle/lib/external-integration"]
+	path = docs/external/pendle/lib/external-integration
+	url = https://github.com/pendle-finance/external-integration
