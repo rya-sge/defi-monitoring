@@ -54,8 +54,8 @@ The brief's question is conditional and set on a book: *a component is hit, what
 
 | # | Step | Gaps | Criteria moved | Size | Builds on |
 |---|---|---|---|---|---|
-| A1 | Incident mode: `--shock layer=size`, the impact and the verdict with that incident certain | K20 | impact, decision | S | `propagate.loss`, `decide` |
-| A2 | Time to impact and time to exit, per scenario | K22 | decision | S | oracle type, Pendle quote |
+| A1 | Incident mode: `--shock layer=size`, the impact and the verdict with that incident certain **done** (plan `2026-10-10-incident-mode`) | K20 | impact, decision | S | `propagate.loss`, `decide` |
+| A2 | Time to impact and time to exit, per scenario **done**, time to exit still "one block" | K22 | decision | S | oracle type, Pendle quote |
 | A3 | A book: pockets with weights, the breakeven probability p\*, one headline number | K21, M6 | decision, demo | S–M | `analyze` per position |
 | B1 | Borrow-rate channel from the AdaptiveCurveIRM | K10 | impact | S | IRM docs, utilisation already read |
 | B2 | PT implied-yield channel | K11 | impact | S | Pendle market data |
@@ -79,6 +79,8 @@ If time allows only one phase, do **A**. If two, **A then B1–B3**. Those five 
 Each step below has a **why** (what the brief or the review asks), a **how** (modules, functions, formulas, data), the **output** a user sees, and the **tests**. Names in `code` that do not exist yet are proposals.
 
 ### A1. Incident mode (K20)
+
+**Status: done on 2026-10-10** (plan `2026-10-10-incident-mode`, D89–D95), with a link from `OracleDivergence` alerts in `watch --user`. The design below is kept as written; `NEXT_TASK.md` task 1 records what was built.
 
 **Why.** The brief's worked example marks layer 3, the oracle, as "incident", and its task is the impact "when one of them is affected". Today every input is a yearly probability.
 
@@ -110,6 +112,8 @@ Incident: oracle −10.0 %
 **Size.** S. Everything it needs exists; the work is the CLI, the result type and the report block.
 
 ### A2. How fast (K22)
+
+**Status: done on 2026-10-10** for the time to impact, from `oracle_class` and the meta-oracle's getters; the time to exit remains "one block at today's quote".
 
 **Why.** The brief asks what an incident does to the book "and how fast". USR fell 97 % in 17 minutes; PT-reUSD's oracle moved in 9.
 

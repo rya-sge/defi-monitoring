@@ -13,7 +13,7 @@ from pathlib import Path
 from . import admin as AD
 from . import borrower as B
 from . import borrower_rules as BR
-from . import crosscheck, discover
+from . import crosscheck, discover, scenario
 from . import drain as DR
 from . import exit_queue as EQ
 from . import market_risk as MR
@@ -220,7 +220,11 @@ def run_user(opts: UserOptions) -> int:
             p.alert(al)
 
     aw.table(p.line)
-    for al in aw.startup(state0):
+    # D93: an alert that measures an incident on a borrowed market carries its impact; timing from the oracle's type
+    profiles = {mid: scenario.oracle_profile(f, m.oracle, state0) for mid, m in markets.items()}
+    admin_alerts = aw.startup(state0)
+    scenario.enrich_divergence(admin_alerts, markets, before_b, profiles)
+    for al in admin_alerts:
         p.alert(al)
     c = crosscheck.second_rpc(f, state0)
     if c.ok is False:
@@ -357,7 +361,9 @@ def run_user(opts: UserOptions) -> int:
                 drained=vt.drain.drained(after_v),
             )
             vt.state = after_v
-        alerts += aw.step(f, batch.events, state_block, refresh)
+        admin_alerts = aw.step(f, batch.events, state_block, refresh)
+        scenario.enrich_divergence(admin_alerts, markets, after_b, profiles)
+        alerts += admin_alerts
         if not light:
             last_full = batch.to_block
         for al in alerts:

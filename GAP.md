@@ -55,7 +55,7 @@ Of the scope items the brief names, feed quality, vaults in external venues, TVL
 | K4 | Morpho Blue exploit prior (5.0 %/yr) far above other anchors | over-states frequency | Credora 0.13 %/yr; never exploited | low | S |
 | K5 | Depeg severity tail too thin for a synthetic dollar | under-states tail | P(depeg > 50 %) = 0.002 % in the model; USR −97 %, xUSD −77 %, deUSD −98 % | high | S |
 | K6 | Layers independent; only issuer hack → depeg is linked *(graph now shows shared feeds and assets across sibling markets; the simulation still draws independently)* | under-states tail | Nov 2025 cluster; Resolv chain; PT-reUSD | high | M |
-| K7 | Oracle is "market-tracking" or "fundamental"; real oracles are composites *(partial: `oracle_class.py` reads the structure in `graph`; two classes; not used by `analyze`)* | wrong mechanism | demo oracle is a `MetaOracleDeviationTimelock`; min(TWAP, linear) oracles | high | M |
+| K7 | Oracle is "market-tracking" or "fundamental"; real oracles are composites *(partial: `oracle_class.py` reads the structure in `graph` and in incident mode; two classes; the ex-ante simulation still uses the price inference, which reads the demo's linear-discount oracle as market-tracking)* | wrong mechanism | demo oracle is a `MetaOracleDeviationTimelock`; min(TWAP, linear) oracles | high | M |
 | K8 | Oracle manipulation of a thin Pendle pool is not a loss channel | under-states | PT-reUSD, 33 liquidations, LLTV 91.5 % | high | S–M |
 | K9 | Liquidation at the oracle price with LIF; no slippage, no cascade, no partial liquidation *(inputs ready: every held and sibling market in `graph` carries its curve and the collateral seized; no loop yet)* | under-states | LlamaRisk PT supply ≫ AMM depth; Gauntlet, Credora simulate it | medium | M |
 | K10 | Borrow-rate risk of the AdaptiveCurveIRM | under-states | rate ×4 at 100 % utilisation, curve doubles in 5 days | high | S |
@@ -68,9 +68,9 @@ Of the scope items the brief names, feed quality, vaults in external venues, TVL
 | K17 | Exploit prior rests only on a 5-year hack history; attack mix shifts yearly | stale, noisy | top classes change every year; a 2-year window raises Morpho Blue to 8.6 % | high | S |
 | K18 | No protocol-specific signal (admin powers, audit scope, insurance price, reputation) | blind to the protocol | 67.6 % of audited incidents outside audit scope (H1 2026); Nexus prices 1.05–1.44 %/yr | medium | S–M |
 | K19 | Discovery stops at the issuer; admin surface not in `analyze` *(partial in `graph`: sibling markets and `wraps` edges; `analyze` unchanged)* | shallow | brief scores depth at 30 %; issuer deps typed by hand | high | M |
-| K20 | No "this component is affected now" input; impact is always probability-weighted | missing | brief's worked example marks the oracle "incident" | high | S |
+| K20 | No "this component is affected now" input; impact is always probability-weighted *(done 2026-10-10: `analyze --shock`, plan `2026-10-10-incident-mode`; `OracleDivergence` alerts in `watch --user` carry the impact)* | missing | brief's worked example marks the oracle "incident" | high | S |
 | K21 | No book (pocket weights), no breakeven p\*, no single headline number | missing | brief's 10 × 10 % book, 11 % unwind example | high | S–M |
-| K22 | No time to impact or time to exit in `analyze` | missing | brief asks "and how fast"; USR −97 % in 17 min | medium | S |
+| K22 | No time to impact or time to exit in `analyze` *(partial 2026-10-10: time to impact per oracle type in incident mode; no time to exit beyond "one block")* | missing | brief asks "and how fast"; USR −97 % in 17 min | medium | S |
 | K23 | Feed quality (heartbeat, staleness, sources, shared feed) not measured *(the feeds' round history is now read, for classification only)* | missing | named in the brief's scope | medium | S–M |
 | K24 | Vaults or hedges in an external venue (perp, CEX) not covered | missing | named in the brief's scope; Belem runs market-neutral | medium | M–L |
 | K25 | Concentration of TVL (protocol share of chain, position share of pool and supply) not measured *(input available: collateral held per Blue market, held and sibling)* | missing | named in the brief's scope | medium | S |
@@ -417,6 +417,8 @@ Their failures are exactly the ones that broke issuers in 2025–2026 (K2). The 
 
 ### K20. No "this component is affected now" mode
 
+*(update 2026-10-10, done)* `analyze --shock EVENT=SEVERITY` gives the impact of a known incident, the time to impact and a verdict with the incident certain (plan `2026-10-10-incident-mode`, D89–D95). In `watch --user`, an `OracleDivergence` alert on a borrowed market carries the impact on that borrow (D93). Other alert types do not carry one yet.
+
 The brief's worked example marks layer 3, the oracle, with "incident". Its question is conditional: a component **is** hit, what does it do to the position? `analyze` answers an unconditional question: what loss to expect over 30 days, given yearly probabilities. The per-layer "loss if it happens" comes close, but at a drawn severity and with no input from the user.
 
 - **Fix:** the scenario table already proposed in `comparison_team.md` §4.2. One call to `propagate.loss()` per named shock, plus a CLI input for an observed incident:
@@ -434,6 +436,8 @@ The brief's example is about a book: ten pockets of 10 %, one affected, an 11 % 
 3. **One headline number.** For example "expected loss X % of the book; exit pays above p\* = Y %", above the verdict.
 
 ### K22. "How fast" is not an output of `analyze`
+
+*(update 2026-10-10, partial)* Incident mode reports the time to impact from the oracle's type: a feed's next update, a Pendle TWAP window, a meta-oracle's challenge timelock through its live source, or never for a constant-price oracle. On the demo it found that the oracle's live source is a Pendle linear discount, so a depeg liquidates nothing for 16 hours and everything after the switch to the `USDe / USD` backup. The time to exit is still "one block at today's quote".
 
 The brief asks what an incident does "and how fast". For a PT loop, speed decides everything:
 - USR fell 97 % in 17 minutes;

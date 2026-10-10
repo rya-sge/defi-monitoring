@@ -103,10 +103,10 @@ On the demo position (PT-sUSDE-26NOV2026 against USDC on Morpho Blue, 30 days):
 `simulate.run` draws everything up front, as NumPy arrays of length $N$, from one seeded generator:
 
 ```python
-rng = np.random.default_rng(seed)                                   # seed = 7
+rng = np.random.default_rng(seed)  # seed = 7
 ph = {p.event: _p_horizon(p.p_year, horizon_days) for p in priors}
-hits = {p.event: rng.random(n) < ph[p.event] for p in priors}       # did the layer fail in this path?
-sev  = {p.event: rng.beta(p.a, p.b, n) for p in priors}             # how badly, if it did
+hits = {p.event: rng.random(n) < ph[p.event] for p in priors}  # did the layer fail in this path?
+sev = {p.event: rng.beta(p.a, p.b, n) for p in priors}  # how badly, if it did
 ```
 
 - **Occurrence:** one Bernoulli draw per layer and per path. A uniform number below $p_h$ means the layer fails in that path. At most one incident per layer per horizon.
@@ -189,9 +189,9 @@ The decision-maker needs to know which layer drives the expected loss. `simulate
 ```python
 m = 4000
 for p in priors:
-    s = rng.beta(p.a, p.b, m)                                  # 4,000 severities of this layer alone
+    s = rng.beta(p.a, p.b, m)  # 4,000 severities of this layer alone
     rs = [_loss(pos, {p.event: float(x)}, recovery) for x in s]
-    standalone = float(np.mean([r.loss_usd for r in rs]))       # E[loss | only this layer hits]
+    standalone = float(np.mean([r.loss_usd for r in rs]))  # E[loss | only this layer hits]
 ```
 
 | Field of `LayerResult` | Meaning |
@@ -270,7 +270,8 @@ From `NEXT_STEP_V2.md` and `NEXT_TASK.md`:
 
 | Change | What it does to the simulation | Step |
 |---|---|---|
-| Incident mode | runs `propagate.loss` once with a given shock, next to the simulation, to answer "this component is hit" without probabilities | A1, `NEXT_TASK.md` task 1 |
+| Incident mode, **done** | `analyze --shock` runs `propagate.loss` once with a given shock, before the simulation, to answer "this component is hit" without probabilities | A1, `NEXT_TASK.md` task 1 |
+| Conditional simulation | the observed incident forced in every path; its evolution and spread drawn (`ANALYSIS_CURRENT.md` §6) | `NEXT_TASK.md` task 3 |
 | The book | `simulate.run_book`: several positions in one simulation, each shared (event, node) drawn **once** per path for every position that holds it | A3, task 2 |
 | Breakeven probability | $p^\star = (E + K)/L_s$ per scenario, the probability at which the decision flips, reported next to the simulated verdict | A3, task 2 |
 | Borrow rate and implied yield | new random paths per simulated month: utilisation through the AdaptiveCurveIRM, and an implied-yield move priced into the PT | B1, B2 |

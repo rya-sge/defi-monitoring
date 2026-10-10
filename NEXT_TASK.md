@@ -4,14 +4,16 @@ This file picks the two tasks to build next from `NEXT_STEP_V2.md` and says how,
 
 | # | Task | Gaps (`GAP.md`) | Criteria moved | Size |
 |---|---|---|---|---|
-| 1 | **Incident mode**: a component is hit, what does it do to the position, and how fast | K20, K22 | impact (30 %), decision (25 %) | S–M |
+| 1 | ~~**Incident mode**: a component is hit, what does it do to the position, and how fast~~ **done** (plan `2026-10-10-incident-mode`) | K20, K22 | impact (30 %), decision (25 %) | S–M |
 | 2 | **The book**: several positions as pockets, shared layers, the breakeven probability p\*, one headline | K21, M6 | decision (25 %), demo (15 %) | M |
+| 3 | **Conditional Monte Carlo**: the observed incident forced in every path, its evolution and spread drawn | K6, K14 | impact (30 %), decision (25 %) | M |
 
 ## Contents
 
 - [Why these two](#why-these-two)
-- [Task 1: incident mode](#task-1-incident-mode)
+- [Task 1: incident mode — done](#task-1-incident-mode--done)
 - [Task 2: the book, the breakeven and the headline](#task-2-the-book-the-breakeven-and-the-headline)
+- [Task 3: conditional Monte Carlo](#task-3-conditional-monte-carlo)
 - [Order of work](#order-of-work)
 - [Decisions to confirm before starting](#decisions-to-confirm-before-starting)
 
@@ -22,86 +24,58 @@ This file picks the two tasks to build next from `NEXT_STEP_V2.md` and says how,
 - **Both reuse what exists.** `propagate.loss` already computes the loss of a given set of shocks, and `simulate`, `decide` and `report` need extensions, not rewrites. No new data provider is needed.
 - **The teammates asked for them.** Team 1 wants scenarios before any Monte Carlo; Team 2 wants the breakeven probability, which needs no base rate.
 
-## Task 1: incident mode
+## Task 1: incident mode — done
 
-### Today, and what is missing
+**Status: implemented on 2026-10-10** (plan `2026-10-10-incident-mode`, decisions D89–D95), with the detection link of `ANALYSIS_CURRENT.md` §7 step 3 added to it. It covers the brief's chain on one position: detect → impact → how fast → decide.
 
-What `analyze` does today (checked 2026-10-10, `analyze --demo`):
-- It answers an **unconditional** question: the expected loss over 30 days, drawn from yearly probabilities for six layers, then a STAY / REDUCE / EXIT verdict.
-- The report's layer table has a column **"Loss if it happens"**: for each layer, the mean loss when that layer alone fails, at a severity drawn from its prior. That is the closest thing to an impact number.
-- It does **not** accept an incident: `analyze --demo --shock oracle=0.10` fails with `unrecognized arguments: --shock`.
-
-What is missing, and why it matters for the brief:
-- **The user cannot say what happened.** The brief's task is the impact "when one of them is affected", and its worked example marks the oracle "incident". Today the only input is a probability; nobody can enter "the oracle reads 10 % low" or "USDe is at 0.92".
-- **No verdict given the incident.** "Loss if it happens" is a number in a table, not a decision. When the incident is certain, the probabilities no longer matter, and the question becomes "loss of staying against cost of leaving now". Today's verdict always mixes in the 30-day probabilities.
-- **No "how fast".** The brief asks what an incident does "and how fast". The report has no time to impact: it does not say whether the oracle will liquidate in one block, after a timelock, or never.
-- **The watches cannot price an alert.** A critical alert says what happened, not what it costs the position.
-
-### What the user would get (target output, not available today)
+### What the user gets now
 
 ```bash
 python -m riskdep analyze --demo --shock oracle=0.10
-python -m riskdep analyze --demo --shock issuer_depeg=0.08 --shock amm=0.03
+python -m riskdep analyze --demo --shock issuer_depeg=0.08
 ```
 
-The output adds a block before the Monte Carlo result (figures illustrative):
-
 ```
-INCIDENT  oracle −10.0 %
-  liquidated: yes (liquidation from a 5.16 % oracle fall)
-  loss: $27,400 (5.3 % of equity)
-  how fast: the oracle switches after its challenge timelock (24 h); the exit takes one block
-  exit now: $78,946; de-lever $1.29M (33 %) for $1,023 avoids the liquidation
-  verdict given the incident: REDUCE
+INCIDENT  issuer_depeg 8.0%
+  not liquidated; loss $78,684 (15.1% of equity)
+  after the oracle switches (16 h): liquidated; loss $520,236 (100.0% of equity)
+  how fast: not before 16 h: the primary source does not follow the market; if the two sources diverge by more
+            than 0.75%, a challenge can switch it to the other one after 16 h (the other source is price-tracking)
+  exit now: $78,946 (Pendle swap quote)
+  verdict given the incident: REDUCE: selling part of the collateral costs $1,313 and leaves a loss of $51,016,
+            less than staying ($520,236) or exiting ($78,946), counted after the oracle switch, which leaves 16 h to act
+EX ANTE (Monte Carlo, before any incident):
+REDUCE: ...
 ```
 
-### Design
+With `--shock oracle=0.10` the oracle already reports the shocked price: the demo is liquidated now, with a loss of $478,591 or 92 % of equity, and a sale of about a third of the collateral avoids it.
 
-- **Events.** The six events `propagate.loss` already handles: `chain`, `issuer_hack`, `issuer_depeg`, `amm`, `oracle`, `lending`. Each severity is a fraction in [0, 1]. Nothing new in the propagation itself.
-- **Verdict given an incident.** The probability is 1, so the rule compares amounts only:
-  - **EXIT** if staying loses more than exiting costs: loss(shock) > exit cost;
-  - **REDUCE** if a partial sale, sized with the existing `decide.sale_to_reach` to put liquidation beyond the shock, costs less than the loss it avoids;
-  - **STAY** otherwise: the shock is absorbed, and leaving costs more.
-- **How fast (K22).** A time to impact per oracle type. Since the merge of plan `2026-10-10-sibling-markets`, `oracle_class.py` classifies an oracle from its structure and already reads Pendle's `twapDuration`, so this step calls `oracle_class.probe` and `classify_oracle` on the position's oracle rather than relying on `analyze`'s price inference:
+### What was built
 
-  | What is known about the oracle | Time to impact reported |
-  |---|---|
-  | Etherscan name `MetaOracleDeviationTimelock` (the demo; `oracle_class` leaves it `not classified`, R7) | `challengeTimelockDuration()`, read on-chain: the backup takes over only after it |
-  | `price-tracking` through a Pendle TWAP input | about `twapDuration()`, kept by `oracle_class` in `Probe.getters` (900 s on PT-reUSD) |
-  | `price-tracking`, Chainlink-style feed | "at the feed's next update" |
-  | `constant-price` | "never: no liquidation; the loss stays with lenders" |
-  | `not classified`, and no inference | "unknown" |
+| Part | What | Where |
+|---|---|---|
+| Impact | `propagate.loss` with the given shocks; loss, liquidation, the oracle's drop, the propagation path | `riskdep/scenario.py` (`assess`) |
+| Decision | with the incident certain, no probability: REDUCE if a partial sale plus what it still loses is cheapest, else EXIT if staying loses more than exiting, else STAY | `decide.verdict_given` |
+| How fast | the oracle's profile: a meta-oracle's timelock, threshold, live and other source, each classified; otherwise the class of its inputs and a Pendle TWAP window (`oracle_class`) | `scenario.oracle_profile`, `scenario.time_to_impact` |
+| Meta-oracle | the impact now, through the live source, and after the switch to the other source; the verdict counts the latter, with the timelock as the time left | `scenario.assess` (D94) |
+| Detection → impact | an `OracleDivergence` alert on a borrowed market carries the loss on that borrow, the liquidation, and the time to impact; `depositor_impact` is set | `scenario.enrich_divergence`, `watch_user.py` (D93) |
+| Report | an "Incident" section above the ex-ante one; `incident` in `report.json` | `report.py` |
+| Shared code | the market-oracle classification moved from `graph._oracle` to `oracle_class.classify_market_oracle`, reused by both | `oracle_class.py`, `graph.py` |
+| Tests | 9 tests, including the demo's meta-oracle read offline and a synthetic divergence alert | `tests/test_scenario.py` |
 
-  The time to exit is "one block through the Pendle pool, at today's quote".
+### What it found
 
-### File by file
+**The demo oracle does not follow the market today.**
 
-| File | Change |
-|---|---|
-| `riskdep/scenario.py` (new) | `@dataclass ScenarioResult` (shocks, `loss_usd`, `loss_share_of_equity`, `liquidated`, `path`, `time_to_impact`, `exit_cost_usd`, `reduction`, `verdict`). Pure `impact(pos, shocks, recovery, pt_stress_extra) -> LossBreakdown` that calls `propagate.loss`. `parse_shocks(["oracle=0.10", …]) -> dict` that rejects unknown events and severities outside [0, 1] |
-| `riskdep/decide.py` | Pure `verdict_given(pos, breakdown, quote, quote_for) -> (verdict, reduction)`, reusing `exit_cost_usd` and `sale_to_reach` |
-| `riskdep/oracle_class.py` | nothing to change; `scenario.py` calls `probe` and `classify_oracle` for the position's oracle, and reads the Pendle input's `twapDuration` from the probe |
-| `riskdep/discover.py` | `oracle_timelock(f, oracle) -> int \| None`: reads `challengeTimelockDuration()` when the verified name is `MetaOracleDeviationTimelock` (already known from `oracle_verified`); keep the Etherscan name on the oracle node (`name=` attribute) |
-| `riskdep/cli.py` | `--shock EVENT=SEVERITY`, repeatable, on `analyze`. When present, run the incident block in addition to the normal analysis (the Monte Carlo still runs: the two answers are shown side by side) |
-| `riskdep/report.py` | `write(..., incident=None)`: an "Incident" section at the top of `report.html`, an `incident` key in `report.json`; `print` of the block in the terminal |
-| `riskdep/registry.json` | nothing required; optional `incident_presets` (named shocks such as `oracle_10`) for the demo |
-| `fixtures/snapshot/` | one new cached `eth_call` (`challengeTimelockDuration()` on the demo oracle), recorded with `--live` and committed (see `CLAUDE.md`, fixtures) |
+- **Its live source** is a Pendle linear-discount oracle (`baseDiscountPerYear`); its backup reads `USDe / USD`.
+- **A USDe depeg** therefore liquidates nothing for 16 hours. If the gap stays above 0.75 % and the challenge is accepted, the switch to the backup then liquidates the position.
+- **`analyze`'s price inference** classes the same oracle as market-tracking (ambiguous, near par), so the ex-ante Monte Carlo treats every depeg as an immediate liquidation: conservative for the borrower, but wrong on the timing (`GAP.md` K7).
 
-### Tests (`tests/test_scenario.py`)
+### Left for later
 
-- An oracle shock just below the demo's liquidation distance (5.16 %) gives `liquidated == False`; just above gives `True`.
-- A zero shock gives no loss and STAY.
-- `parse_shocks` rejects `foo=0.1`, `oracle=1.5`, and `oracle` without a value.
-- `verdict_given` on synthetic positions: EXIT when the loss exceeds the exit cost; REDUCE when the de-lever is cheaper than the loss; STAY otherwise.
-- The demo's time to impact comes from the cached `challengeTimelockDuration()`.
-- `analyze --demo --shock oracle=0.10` runs offline and writes the `incident` key.
-
-### Done when
-
-- the three example commands run offline on the demo;
-- the report shows the incident block above the Monte Carlo;
-- `README.md` (the `analyze` section), `docs/how-risk-is-computed.md` (a short section "When a component is hit") and the `CLAUDE.md` / `AGENTS.md` file tree are updated;
-- the decisions go in a new plan, `plan/<date>-incident-and-book.plan.md`, from D89 (D75–D88 are taken by plan `2026-10-10-sibling-markets`).
+- **Other alert types** carry no impact yet: an upgrade of the oracle or the collateral token, an oracle move, `DrainWindow` for a vault depositor (which has its own impact already).
+- **Detection is as slow as before**: the oracle-versus-market check still runs every 300 blocks (`ANALYSIS_CURRENT.md` §7 step 6).
+- **The exit cost is today's quote**: in an incident the pool may be thinner (`GAP.md` K12).
 
 ## Task 2: the book, the breakeven and the headline
 
@@ -188,27 +162,42 @@ BOOK  Book A · 3 pockets · equity $1.9M
 - `analyze --book examples/book-demo.json` runs offline, prints the headline and writes `report.html` / `report.json`;
 - the brief's example passes as a test;
 - `README.md`, `docs/scenarios-and-breakeven.md` (a note that the breakeven is now computed), `ANALYSIS_MONITORING.md` (M6 marked partial or done), `GAP.md` (K21) and the guide's file tree are updated;
-- decisions are recorded in the same plan as task 1.
+- decisions go in a new plan, from D96 (D89–D95 are taken by plan `2026-10-10-incident-mode`).
+
+## Task 3: conditional Monte Carlo
+
+**Why.** Incident mode gives one deterministic answer. Once an incident is known, its evolution is still uncertain: how deep a depeg goes, whether it recovers, whether it spreads to the Pendle pool, other issuers or sibling markets, how the borrow rate reacts. The brief's "staying is cheap and uncertain" is that distribution (`ANALYSIS_CURRENT.md` §6).
+
+**How.**
+- In `simulate.run`, an `observed` argument: the observed layers have `hits = True` in every path, and their severity is drawn from "the observed size or worse", with a probability of recovering (registry, with a basis from past incidents of the same kind).
+- The other layers' probabilities depend on the incident: a depeg raises the Pendle pool's and the oracle's (the K6 links, now with a purpose).
+- The meta-oracle's switch (D94) becomes a draw: the depeg lasts past the timelock or not.
+- Output: the loss distribution of staying against the certain exit cost, the breakeven p\* for the bad branch, shown under the deterministic incident block.
+
+**Builds on.** `scenario.assess` (the deterministic case is the special case of a severity that does not move), `simulate.run`.
+
+**Size.** M.
 
 ## Order of work
 
 | Step | Content | Depends on |
 |---|---|---|
-| 1 | `scenario.py`, `parse_shocks`, `verdict_given`, their tests | — |
-| 2 | `--shock` in the CLI, the incident block in the report | 1 |
-| 3 | `oracle_timelock` and the time to impact; record the new `eth_call` in `fixtures/` | 1 |
+| 1 | ~~`scenario.py`, `parse_shocks`, `verdict_given`, their tests~~ done | — |
+| 2 | ~~`--shock` in the CLI, the incident block in the report~~ done | 1 |
+| 3 | ~~the oracle profile and the time to impact, recorded in `fixtures/`; the alert link in `watch --user`~~ done | 1 |
 | 4 | `breakeven`, `severe_loss`, the brief's example as a test | — |
 | 5 | `book.py` loader and discovery | — |
 | 6 | `simulate.run_book` with shared draws, its tests | 5 |
 | 7 | `report.write_book`, `--book` in the CLI, the demo book recorded and committed | 4, 6 |
 | 8 | `--book` with `--shock` | 2, 7 |
 | 9 | docs, plan, guide | all |
+| 10 | conditional Monte Carlo (task 3) | 1–3 done; 6 for the shared draws |
 
-Steps 1–3 deliver task 1 on their own; steps 4–8 task 2. Task 1 can ship first.
+Steps 1–3 delivered task 1. Next: steps 4–8 (task 2), then step 10 (task 3).
 
 ## Decisions to confirm before starting
 
 - **The demo book.** Which positions: the current PT-sUSDe loop, plus real addresses close to your own pockets (a second PT, a stablecoin holding)? Each needs one `--live` recording.
 - **"Severe case"** at the 95th percentile of each layer's severity, or a fixed table of named scenarios (C1 of `NEXT_STEP_V2.md`) from the start?
 - **Weights from equity** (real positions as they are), or a target weight per pocket with the amounts scaled (simpler to read, but the exit quote is no longer a real quote at that size)?
-- **Verdict given an incident:** is "loss > exit cost → EXIT" the rule you want, or should the residual risk after the incident (the Monte Carlo on the shocked position) also count?
+- **Verdict given an incident (implemented as D90):** REDUCE when a partial sale plus its remaining loss is cheapest, else EXIT when staying loses more than exiting, else STAY. The residual risk after the incident is task 3; confirm the rule before it is extended.

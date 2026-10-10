@@ -158,16 +158,16 @@ The conditional run still needs judgement, for example how often a −8 % depeg 
 
 | Order | Step | What it delivers | Gaps |
 |---|---|---|---|
-| 1 | **Incident mode** (`--shock`) | the deterministic impact of a given incident: loss, liquidation, verdict with the incident certain | K20 |
-| 2 | **Time to impact** | per incident, the time to liquidation from the oracle class (`oracle_class.py`, TWAP window, meta-oracle timelock) against the time to exit | K22 |
-| 3 | **Detection → impact** | a critical alert that maps to a layer (depeg, oracle divergence, upgrade of the oracle or collateral, `DrainWindow`) calls incident mode with the observed size; the alert carries the loss, the time to impact and the decision | K20 |
+| 1 | **Incident mode** (`--shock`) — **done** | the deterministic impact of a given incident: loss, liquidation, verdict with the incident certain | K20 |
+| 2 | **Time to impact** — **done** | per incident, the time to liquidation from the oracle class (`oracle_class.py`, TWAP window, meta-oracle timelock) against the time to exit | K22 |
+| 3 | **Detection → impact** — **done** | a critical alert that maps to a layer (depeg, oracle divergence, upgrade of the oracle or collateral, `DrainWindow`) calls incident mode with the observed size; the alert carries the loss, the time to impact and the decision | K20 |
 | 4 | **Conditional Monte Carlo** | the observed incident forced in every path; its evolution and the other layers' reactions drawn given it; loss distribution of staying, p\* | K6, K21 |
 | 5 | **The book** | pockets, shared layers drawn once, the brief's 10 × 10 % / 11 % example | K21, M6 |
 | 6 | **Faster and broader detection** | collateral prices every few blocks; the Pendle pool's implied yield and depth; feed staleness; sibling markets' liquidations and oracle moves; an external early-warning feed for off-chain events (Pharos, with a key; `EXTERNAL_SOURCE.md`) | K23, R6 |
 | 7 | **Report the sampling error** | the expected loss with its standard error; a verdict reason that rests on a difference inside the interval is marked as such | K14 |
 | — | The unconditional Monte Carlo | kept, presented as the ex-ante view, after the incident analysis | — |
 
-Steps 1 to 3 together are the brief's chain end to end on one position: detect, impact, how fast, decide. Steps 4 and 5 add the uncertainty and the book.
+Steps 1 to 3 together are the brief's chain end to end on one position: detect, impact, how fast, decide. **They were implemented on 2026-10-10** (plan `2026-10-10-incident-mode`); the detection link covers `OracleDivergence` in `watch --user` only. Steps 4 and 5 add the uncertainty and the book (`NEXT_TASK.md` tasks 3 and 2).
 
 ## 8. Summary
 

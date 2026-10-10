@@ -181,3 +181,28 @@ def _history(f: S.Fetcher, address: str, latest: tuple, block) -> list[int]:
             break  # a feed without real rounds returns its latest answer for any id
         points.append((r[3], r[1]))
     return [a for _, a in reversed(points)]
+
+
+MORPHO_ORACLE_GETTERS = [
+    "BASE_VAULT()",
+    "BASE_FEED_1()",
+    "BASE_FEED_2()",
+    "QUOTE_VAULT()",
+    "QUOTE_FEED_1()",
+    "QUOTE_FEED_2()",
+]
+
+
+def classify_market_oracle(
+    f: S.Fetcher, oracle: str, block
+) -> tuple[str, str, list[Probe], list[tuple[str, str]], bool]:
+    """(class, basis, base-side probes, (role, address) of each non-zero getter, is a Morpho ChainlinkOracleV2) of a
+    market oracle. A custom oracle (no ChainlinkOracleV2 getters) is read as one input (D83)."""
+    res = S.rpc_batch(f, [_call(oracle, s) for s in MORPHO_ORACLE_GETTERS], block)
+    feeds = [(name[:-2], "0x" + r[-40:]) for name, r in zip(MORPHO_ORACLE_GETTERS, res) if r and int(r, 16)]
+    standard = any(r is not None for r in res)
+    base = [probe(f, a, block, vault="VAULT" in n) for n, a in feeds if n in BASE_ROLES]
+    if not standard:
+        base = [probe(f, oracle, block)]
+    cls, basis = classify_oracle(base, standard)
+    return cls, basis, base, feeds, standard

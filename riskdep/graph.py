@@ -36,8 +36,6 @@ from .discover import REGISTRY
 from .positions import discover_user
 from .vault import _call, _symbol, _uint, discover_vault, read_state
 
-ORACLE_GETTERS = ["BASE_VAULT()", "BASE_FEED_1()", "BASE_FEED_2()", "QUOTE_VAULT()", "QUOTE_FEED_1()", "QUOTE_FEED_2()"]
-
 
 class Graph:
     def __init__(self):
@@ -104,15 +102,9 @@ def _oracle(g: Graph, f, oracle: str, block) -> str:
         return oracle
     code = S.rpc(f, "eth_getCode", [oracle, hex(block)]) or ""
     impl = "0x" + code[22:62] if code.startswith("0x363d3d373d3d3d363d73") else None
-    res = S.rpc_batch(f, [_call(oracle, s) for s in ORACLE_GETTERS], block)
-    feeds = [(name[:-2], "0x" + r[-40:]) for name, r in zip(ORACLE_GETTERS, res) if r and int(r, 16)]
-    shape = "Morpho ChainlinkOracleV2" if any(r is not None for r in res) else "custom (no ChainlinkOracleV2 getters)"
+    cls, basis, base, feeds, standard = OC.classify_market_oracle(f, oracle, block)
+    shape = "Morpho ChainlinkOracleV2" if standard else "custom (no ChainlinkOracleV2 getters)"
     price = _uint(S.rpc_batch(f, [_call(oracle, "price()")], block)[0])
-    standard = shape.startswith("Morpho")
-    base = [OC.probe(f, a, block, vault="VAULT" in n) for n, a in feeds if n in OC.BASE_ROLES]
-    if not standard:
-        base = [OC.probe(f, oracle, block)]  # a custom oracle is read as one input (D83)
-    cls, basis = OC.classify_oracle(base, standard)
     g.node(
         oracle,
         "Oracle",

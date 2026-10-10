@@ -9,7 +9,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import clock, crosscheck, decide, discover, priors, report, simulate
+from . import clock, crosscheck, decide, discover, priors, report, scenario, simulate
 from . import sources as S
 
 # D14: largest borrower of Morpho market PT-sUSDE-26NOV2026 / USDC, cached in fixtures/snapshot.
@@ -35,6 +35,13 @@ def main(argv: list[str] | None = None) -> int:
     a.add_argument("--paths", type=int, default=20000, help="Monte Carlo paths")
     a.add_argument("--live", action="store_true", help="fetch on cache miss")
     a.add_argument("--refresh", action="store_true", help="always fetch and rewrite the cache")
+    a.add_argument(
+        "--shock",
+        action="append",
+        metavar="EVENT=SEVERITY",
+        help="incident mode: a known incident, e.g. oracle=0.10 or issuer_depeg=0.08 (repeatable); events: "
+        + ", ".join(scenario.EVENTS),
+    )
     a.add_argument("--out", default=str(Path(__file__).resolve().parent.parent / "out"))
 
     w = sub.add_parser("watch", help="follow a Morpho Vault V2 block by block and alert on what affects a depositor")
@@ -197,6 +204,10 @@ def main(argv: list[str] | None = None) -> int:
             print("stopped; the cursor points at the last fully processed block", file=sys.stderr)
             return 0
 
+    try:
+        shocks = scenario.parse_shocks(args.shock)
+    except ValueError as e:
+        ap.error(str(e))
     mode = "refresh" if args.refresh else "live" if args.live else "offline"
     f = S.Fetcher(mode)
     as_of_path = S.SNAPSHOT_DIR / "as_of.json"
@@ -262,6 +273,16 @@ def main(argv: list[str] | None = None) -> int:
                 f"P(liquidation) {s2.p_liquidation:.2%} (vs {sim.p_liquidation:.2%}), verdict {d2.verdict}"
                 + (" — the same." if same else " — the verdict depends on the oracle; check its source before acting.")
             )
+        incident = None
+        if shocks:
+            oracle = next(
+                (n.split(":", 1)[1] for n, a in pos.graph.nodes(data=True) if a.get("kind") == "oracle"), None
+            )
+            profile = scenario.oracle_profile(f, oracle) if oracle else None
+            recovery = next((p.recovery for p in prs if p.event == "issuer_depeg"), 0.0)
+            incident = scenario.assess(
+                pos, shocks, recovery, quote, profile, quote_for=lambda q, fr: discover.partial_exit_quote(f, q, fr)
+            )
     except S.CacheMiss as e:
         print(f"offline snapshot incomplete: {e}", file=sys.stderr)
         return 2
@@ -284,7 +305,11 @@ def main(argv: list[str] | None = None) -> int:
     bad = [c for c in checks if c.ok is False]
     if bad:
         dec.reasons.insert(0, "DATA CHECK FAILED — " + "; ".join(c.detail for c in bad))
-    hp, jp = report.write(pos, prs, sim, dec, quote, Path(args.out), mode, alt)
+    hp, jp = report.write(pos, prs, sim, dec, quote, Path(args.out), mode, alt, incident)
+    if incident:
+        for line in incident.lines():
+            print(line)
+        print("EX ANTE (Monte Carlo, before any incident):")
     print(dec.headline)
     for r in dec.reasons:
         print(f"  - {r}")

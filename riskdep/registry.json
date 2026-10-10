@@ -216,6 +216,10 @@
   "gas_exit_usd": 25,
   "tail_budget": 0.5,
   "tail_budget_basis": "Recommend reducing when CVaR99, the average loss of the worst 1 % of simulated months, exceeds 50 % of equity.",
+  "incident": {
+    "reduce_margin": 0.01,
+    "basis": "D90. Incident mode sizes a partial sale so that liquidation sits this far beyond the oracle drop the incident causes: one point of margin, so a small further move does not liquidate the reduced position."
+  },
   "watch": {
     "market_share_warn": 0.25,
     "utilization_warn": 0.99,
