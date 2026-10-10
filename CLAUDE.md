@@ -99,7 +99,8 @@ pyproject.toml        project metadata, dependencies, ruff and pytest configurat
 - `docs/hackaton_instruction/GOAL.md` — the challenge brief: what to build, what is expected, the judging criteria and their weights, and where the repository answers each.
 - `ARCHITECTURE.md` — how the system is built: modes, components and their imports, data sources and trust, data flow, state, testing, decision index.
 - `README.md` — usage of every mode, alert trigger tables, limits.
-- `NEXT_STEP.md` — the recommended next steps, with what each needs (decisions, sources, credentials, infrastructure).
+- `NEXT_STEP_V2.md` — the current proposal for what to build next, ordered by the brief's judging weights, from `GAP.md` (K1–K25) and the teammates' feedback; supersedes the order of `NEXT_STEP.md`.
+- `NEXT_STEP.md` — version 1 of the next steps; still the reference for what each of its steps needs (decisions, sources, credentials, infrastructure).
 - `PROVIDERS.md` — every external provider (RPC, APIs, CDNs): endpoints, queries, limits, trust model. Keep it current.
 - `keys.example.ini` — template of the API keys and secrets (no values); the real `keys.ini` is git-ignored.
 - `ANALYSIS_MONITORING.md` — design note: dependency graph, impact, monitoring, execution, and gaps of the current implementation (done / partial / missing).
