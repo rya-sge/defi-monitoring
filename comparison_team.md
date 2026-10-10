@@ -171,6 +171,8 @@ Detailed, with a worked example on the demo position and a learn section: `docs/
 
 ### 4.3 Scope of `analyze`: one borrower, not a vault depositor
 
+Detailed, with a worked example on real data and a learn section: `docs/vault-depositor-scenarios.md`.
+
 **What was proposed.** Team 2 frames the use case as the track's: a fund *depositing* in vaults, with the loss aggregated over every market the vault allocates to (Σ over markets of the vault's share of supply × bad debt), and an exit cost that comes from withdrawal liquidity, not from a swap.
 
 **What the implementation does.** `analyze` evaluates one Pendle PT position used as Morpho Blue collateral, from the borrower's side. The depositor's side is covered by `watch`: exposure, exit capacity, unrealised bad debt now, and each market's liquidation curve. No mode answers "how much do I lose if X happens?" for a depositor.
@@ -185,6 +187,8 @@ Detailed, with a worked example on the demo position and a learn section: `docs/
 - **Limits to state in its output:** liquidations are assumed to clear at the oracle price with the liquidation bonus, so there is no slippage and no cascade (see 4.5 and the cascade loop in §5); the vault's version decides who bears the loss (a Vault V2 realises it for every holder at the next accrual).
 
 ### 4.4 The graph: a rendering, not the engine
+
+Detailed, with a worked example on real data and a learn section: `docs/graph-propagation.md`.
 
 **What was proposed.** Team 2 makes the graph the engine. Each edge type carries a **transmission function** (how a shock on the child becomes a loss on the parent): `allocates_to` passes the vault's share of a market's bad debt; `collateral` is zero until the LLTV buffer is used up, then non-linear; `priced_by` depends on the failure mode (overpricing, underpricing, freeze). Shocks spread with **DebtRank** (Battiston et al., 2012): each node passes a shock once (which handles cycles), paths below ε of the position are pruned, and terminal nodes stop the spread. Adding a protocol then means producing edges of existing types. Team 1 asks for the same in other words: look-through exposure and blast radius.
 
