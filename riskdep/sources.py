@@ -138,6 +138,24 @@ def rpc_batch(f: Fetcher, calls: list[tuple[str, str]], block: int | str = "late
     return out
 
 
+def rpc_batch_methods(f: Fetcher, calls: list[tuple[str, list]], chunk: int = 200) -> list:
+    """Any JSON-RPC methods in batches, e.g. [("eth_getStorageAt", [addr, slot, tag])]; None on error."""
+    out = []
+    for i in range(0, len(calls), chunk):
+        part = calls[i:i + chunk]
+        body = [{"jsonrpc": "2.0", "id": j, "method": m, "params": p} for j, (m, p) in enumerate(part)]
+        resp = f.post_json(RPC, body)
+        if not isinstance(resp, list):
+            raise SourceError(f"RPC batch refused: {str(resp)[:200]}")
+        by_id = {r.get("id"): r for r in resp}
+        for j in range(len(part)):
+            r = by_id.get(j, {})
+            if "error" in r and "archive" in str(r["error"]).lower():
+                raise SourceError(f"state too old for the free RPC: {r['error'].get('message')}")
+            out.append(r.get("result"))
+    return out
+
+
 def rpc(f: Fetcher, method: str, params: list):
     resp = f.post_json(RPC, {"jsonrpc": "2.0", "id": 1, "method": method, "params": params})
     return resp.get("result")

@@ -30,7 +30,7 @@ Each step below gives its goal, what it delivers, its size (**S** about a day, *
 | 0 | Validate the current tool on your own positions | — | high | — | your addresses and feedback |
 | 1 | Push alerts, no repeats after a restart | D5, D4 | high | S | a channel and its credentials |
 | 2 | `analyze` for any collateral, with a generic exit quote | C2, M3, M7 | high | M | which collateral to support; a quote source |
-| 3 | Watch oracle, Blue owner and issuer admins | G3, G4 | medium | M | oracle and issuer contract sources |
+| 3 | ~~Watch oracle, Blue owner and issuer admins~~ **done** without sources or key; refining it needs the sources | G3, G4 | — | — | for the refinement: oracle and issuer contract sources |
 | 4 | Direct Blue supply, Vault V1, other adapters | C3, C4 | medium | M | nothing blocking |
 | 5 | Tests on a forked chain with a forced liquidation | T1 | medium | M | an archive RPC |
 | 6 | Archive RPC, backfill, WebSocket trigger, deeper reorgs | D1, D3 | medium | S–M | an RPC provider key |
@@ -90,6 +90,8 @@ Each step below gives its goal, what it delivers, its size (**S** about a day, *
 **Already available.** The PT path, the propagation model and the verdict logic are generic; only discovery and the exit quote are PT-specific.
 
 ## 3. Watch the admins of oracles, Morpho Blue and collateral issuers
+
+> **Done** (plan `plan/2026-10-10-admin-surface.plan.md`), without any API key or contract source. Both watches discover the admin surface of their markets and read standard storage slots, owners and Chainlink aggregators. They alert on upgrades, admin and owner changes, feed changes, pauses, admin roles, outsized mints of collateral and yield tokens, Morpho Blue owner actions, and oracle divergence from DefiLlama's price. **What remains**, and still needs the sources and the Etherscan key below: decoding *custom* admin functions that emit no standard event (today seen only when they change a slot, an owner or an aggregator, at the next 300-block refresh), and checking that new implementations are verified.
 
 **Goal.** A position can be broken by someone other than the vault curator: an oracle's owner changing a feed, an upgradeable collateral token being upgraded, an issuer minting without backing (the USR incident of March 2026). Today none of these is watched (gaps G3, and G4 for the oracle against an independent price).
 

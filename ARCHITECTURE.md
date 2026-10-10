@@ -30,7 +30,7 @@ One command, `python3 -m riskdep`, with four modes:
 
 ## 2. Components
 
-The package has 23 Python files (about 4,000 lines), in five layers. The diagram shows the main path of each mode; the table under it lists every import, taken from the code.
+The package has 24 Python files (about 4,400 lines), in five layers. The diagram shows the main path of each mode; the table under it lists every import, taken from the code.
 
 ```mermaid
 flowchart TB
@@ -45,6 +45,7 @@ flowchart TB
     rules["rules · vault alerts"]
     borrower_rules["borrower_rules · borrow alerts"]
     market_risk["market_risk · bad debt, curves"]
+    admin["admin · admin surface"]
     model["decide → simulate → propagate, priors"]
   end
   subgraph Readers["Readers"]
@@ -65,6 +66,8 @@ flowchart TB
   watch --> market_risk
   watch_user --> borrower_rules
   watch_user --> market_risk
+  watch --> admin
+  watch_user --> admin
   report --> model
   watch -->|"read"| readers
   watch_user -->|"read"| readers
@@ -79,13 +82,14 @@ flowchart TB
 | Module | Imports |
 |---|---|
 | `cli` | `clock`, `crosscheck`, `decide`, `discover`, `graph`, `priors`, `report`, `simulate`, `sources`, `watch`, `watch_user` |
-| `watch` | `crosscheck`, `discover`, `market_risk`, `poller`, `rules`, `sources`, `vault` |
-| `watch_user` | `abi`, `borrower`, `borrower_rules`, `crosscheck`, `discover`, `market_risk`, `poller`, `positions`, `rules`, `sources`, `vault`, `watch` |
+| `watch` | `admin`, `crosscheck`, `discover`, `market_risk`, `poller`, `rules`, `sources`, `vault` |
+| `watch_user` | `abi`, `admin`, `borrower`, `borrower_rules`, `crosscheck`, `discover`, `market_risk`, `poller`, `positions`, `rules`, `sources`, `vault`, `watch` |
 | `report` | `clock`, `decide`, `discover`, `priors`, `simulate` |
 | `graph` | `abi`, `borrower`, `discover`, `positions`, `sources`, `vault` |
 | `rules` | `abi`, `discover`, `vault` |
 | `borrower_rules` | `abi`, `borrower`, `discover`, `rules` |
 | `market_risk` | `abi`, `discover`, `rules`, `sources`, `vault` |
+| `admin` | `abi`, `borrower`, `discover`, `rules`, `sources`, `vault` |
 | `decide` | `discover`, `simulate` |
 | `simulate` | `discover`, `priors`, `propagate` |
 | `propagate` | — |
@@ -115,7 +119,7 @@ The layers, from the bottom:
   - `market_risk.py` values every borrower of a market;
   - `priors.py`, `propagate.py`, `simulate.py` and `decide.py` form the `analyze` model.
 
-  `market_risk.py` is the one module that mixes both kinds: its `Tracker` reads positions, and its `value` and `assess_*` functions are pure.
+  `market_risk.py` and `admin.py` mix both kinds: `market_risk`'s `Tracker` and `admin`'s `AdminWatch` read state, and their `value` and `assess_*` functions are pure. `admin.py` covers the contracts a market depends on beyond Morpho (oracles, feeds, tokens, Pendle SY): upgradeability, admins, owners, feeds, pauses, mints, and the oracle's gap to DefiLlama's price.
 - **Mode loops and outputs.** `watch.py` and `watch_user.py` run the polling loops; `report.py` and `graph.py` write the HTML and JSON outputs.
 - **Entry.** `cli.py` parses the command line and dispatches.
 
@@ -129,12 +133,12 @@ Every source is public and needs no API key.
 | Second RPC `eth.drpc.org`, then `1rpc.io` | block hash comparison only | `crosscheck` |
 | Morpho API `blue-api.morpho.org/graphql` | finding things the chain cannot list cheaply: a user's positions, a market's borrowers and top suppliers, a vault's allocators and sentinels, a default depositor | `positions`, `borrower`, `market_risk`, `graph`, `vault` |
 | Pendle API `api-v2.pendle.finance/core` | PT markets, implied yield, real swap quotes for exit costs | `discover`, `watch_user` |
-| DefiLlama `api.llama.fi`, `coins.llama.fi` | protocol list and hack record (incident base rates), token prices and one-year price history | `priors`, `discover` |
+| DefiLlama `api.llama.fi`, `coins.llama.fi` | protocol list and hack record (incident base rates), token prices and one-year price history, the independent price oracles are compared with | `priors`, `discover`, `admin` |
 
 **Trust model.**
 - **The chain is authoritative.** The APIs are used to *find* positions and addresses; every amount, health factor, cap and price used in a decision is then read on-chain.
 - **Cross-checks.** At start and every 300 blocks, the main RPC's block hash is compared with an independent node (a mismatch is a critical alert), and the Morpho API's numbers with the chain (a mismatch beyond 0.5 % is a warn). A check that cannot run says "not checked" and never stops the run.
-- **Limits of the free RPC.** It serves state only about 90 to 126 blocks back (the tool reads at most 64 back) and refuses old log ranges, so the watch reports a gap rather than backfilling.
+- **Limits of the free RPC.** It serves state only about 90 to 126 blocks back (the tool reads at most 64 back) and refuses old log ranges, so the watch reports a gap rather than backfilling. It accepts at most 9 addresses per log filter, so the poller splits longer lists, and it intermittently refuses a recent range as "archive", so the poller retries before declaring a gap.
 
 ## 4. How each mode runs
 
@@ -176,7 +180,7 @@ sequenceDiagram
   S->>R: events + state before and after
   R-->>O: alerts: terminal line + JSONL
   O->>O: save the cursor last
-  Note over P,O: every 300 blocks: cross-checks, lender refresh, borrowers refresh, position rediscovery
+  Note over P,O: every 300 blocks: cross-checks, lender refresh, borrowers refresh, admin-surface state and oracle divergence, position rediscovery
 ```
 
 Details, with a real transaction decoded step by step: `docs/how-a-block-is-analysed.md`. Why polling rather than a WebSocket: `docs/websocket-vs-polling.md`.
@@ -211,11 +215,11 @@ The `Fetcher` has four modes: `offline` (cache only; a miss is an error), `live`
 
 ## 7. Testing
 
-`python3 -m pytest -q tests` runs 83 tests, all offline:
+`python3 -m pytest -q tests` runs 99 tests, all offline:
 
 | Kind | Files | What it covers |
 |---|---|---|
-| Rule tests on synthetic events and states | `test_watch_rules.py`, `test_borrower.py`, `test_market_risk.py` | every alert fires at its threshold and stays silent below it |
+| Rule tests on synthetic events and states | `test_watch_rules.py`, `test_borrower.py`, `test_market_risk.py`, `test_admin.py` | every alert fires at its threshold and stays silent below it |
 | Model tests | `test_propagate.py`, `test_decide.py` | loss propagation and the verdict |
 | End to end on recorded real data | `test_demo_snapshot.py`, `test_watch_replay.py`, `test_watch_user_replay.py` | the `analyze` demo and three recorded watch ranges (a vault, a borrower with 6 borrows, a depositor) |
 | Fixes and tools | `test_fixes.py`, `test_graph.py` | the snapshot clock, oracle ambiguity, cross-checks, the graph output |
@@ -224,7 +228,7 @@ The `Fetcher` has four modes: `offline` (cache only; a miss is an error), `live`
 
 ## 8. Decisions
 
-The design decisions are numbered across five plans, in the order the increments were built:
+The design decisions are numbered across six plans, in the order the increments were built:
 
 | Plan | Increment | Decisions |
 |---|---|---|
@@ -233,6 +237,7 @@ The design decisions are numbered across five plans, in the order the increments
 | `plan/2026-10-10-morpho-user-watcher.plan.md` | `watch --user` | D31–D40 |
 | `plan/2026-10-10-lenders-and-timelocks.plan.md` | main lenders, timelock lengths | D41–D44 |
 | `plan/2026-10-10-market-borrowers.plan.md` | every borrower: unrealised bad debt, liquidation curves | D45–D51 |
+| `plan/2026-10-10-admin-surface.plan.md` | admins of oracles, Morpho Blue and collateral issuers; oracle divergence | D52–D60 |
 
 A change that departs from a decision is recorded in that plan's table.
 

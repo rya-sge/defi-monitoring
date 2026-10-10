@@ -13,6 +13,7 @@ from pathlib import Path
 from . import borrower as B
 from . import borrower_rules as BR
 from . import crosscheck, discover
+from . import admin as AD
 from . import market_risk as MR
 from . import sources as S
 from .abi import MORPHO_BLUE, topic
@@ -168,6 +169,13 @@ def run_user(opts: UserOptions) -> int:
         MR.curve_table(p.line, vt.risk.risks, vt.risk.markets)
         for al in startup_findings(vt.view, vt.state) + vt.risk.startup(vt.state, state0):
             p.alert(al)
+    def admin_markets():
+        return sorted(set(markets) | {mid for vt in vaults for mid in vt.risk.markets})
+
+    aw = AD.AdminWatch(f, admin_markets(), state0)
+    aw.table(p.line)
+    for al in aw.startup(state0):
+        p.alert(al)
     c = crosscheck.second_rpc(f, state0)
     if c.ok is False:
         p.alert(Alert("critical", state0, None, "CrossCheck", "Data sources disagree: second RPC", c.detail))
@@ -178,7 +186,7 @@ def run_user(opts: UserOptions) -> int:
 
     # --- the poller: vaults and adapters, Blue on every watched market, and the user's authorisations
     def kinds_and_ids():
-        kinds = {MORPHO_BLUE: "blue"}
+        kinds = {**aw.kinds(), MORPHO_BLUE: "blue"}
         ids = set(markets)
         for vt in vaults:
             kinds.update(vt.view.kinds)
@@ -190,8 +198,10 @@ def run_user(opts: UserOptions) -> int:
     if opts.mode in ("record", "replay") or opts.blocks:
         cursor_path.unlink(missing_ok=True)
     kinds, ids = kinds_and_ids()
-    poller = Poller(f, kinds, ids, cursor_path, W["confirmations"], W["max_range"],
-                    extra_filters=[{"address": MORPHO_BLUE, "topics": [SET_AUTH, None, user_topic]}])
+    def extra_filters():
+        return [{"address": MORPHO_BLUE, "topics": [SET_AUTH, None, user_topic]}] + aw.filters()
+
+    poller = Poller(f, kinds, ids, cursor_path, W["confirmations"], W["max_range"], extra_filters=extra_filters())
     if start_cursor is not None:
         poller.cursor = start_cursor
     elif poller.cursor is None:
@@ -221,6 +231,8 @@ def run_user(opts: UserOptions) -> int:
                 break
             time.sleep(opts.poll_seconds)
             continue
+        for w_ in poller.warnings:
+            p.line(f"WARN     {w_}")
         if batch.gap:
             p.alert(Alert("warn", batch.from_block, None, "Gap", f"Blocks {batch.gap[0]}–{batch.gap[1]} could not be read",
                           "too old for the free RPC; events in them were not checked"))
@@ -259,6 +271,7 @@ def run_user(opts: UserOptions) -> int:
             alerts += assess_batch(evs, Ctx(vt.view, vt.state, after_v), user, batch.to_block)
             alerts += vt.risk.step(f, batch.events, after_v, state_block, batch.to_block, refresh)
             vt.state = after_v
+        alerts += aw.step(f, batch.events, state_block, refresh)
         for al in alerts:
             p.alert(al)
         poller.save(batch.to_block)
@@ -293,7 +306,10 @@ def run_user(opts: UserOptions) -> int:
                             p.line(f"new Vault V2 deposit found: {view.name}")
                 except (S.SourceError, S.CacheMiss) as e:
                     p.line(f"WARN     position rediscovery failed ({str(e)[:80]}); watching the positions already found")
+            if set(admin_markets()) != set(aw.markets):
+                aw = AD.AdminWatch(f, admin_markets(), state_block)
             poller.kinds, poller.market_ids = kinds_and_ids()
+            poller.extra_filters = extra_filters()
 
     p.line(f"done: {p.count['critical']} critical, {p.count['warn']} warn, {p.count['info']} info · alerts in {p.path}")
     return 0

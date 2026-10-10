@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from . import crosscheck
+from . import admin as AD
 from . import market_risk as MR
 from . import sources as S
 from .discover import REGISTRY
@@ -137,14 +138,17 @@ def run(opts: Options) -> int:
                "is not served by the free RPC, so state-based rules start there")
     vrisk = MR.VaultRisk(f, view, before, state0)
     MR.curve_table(p.line, vrisk.risks, vrisk.markets)
-    for al in startup_findings(view, before) + vrisk.startup(before, state0):
+    aw = AD.AdminWatch(f, list(vrisk.markets), state0)
+    aw.table(p.line)
+    for al in startup_findings(view, before) + vrisk.startup(before, state0) + aw.startup(state0):
         p.alert(al)
     _cross_check(f, p, view, before, state0)
 
     cursor_path = (state_dir / "replay.cursor") if opts.mode in ("record", "replay") else opts.out_dir / f"watch-{view.address}.cursor"
     if opts.mode in ("record", "replay") or opts.blocks:
         cursor_path.unlink(missing_ok=True)
-    poller = Poller(f, view.kinds, view.market_ids, cursor_path, W["confirmations"], W["max_range"])
+    poller = Poller(f, {**aw.kinds(), **view.kinds}, view.market_ids, cursor_path, W["confirmations"], W["max_range"],
+                    extra_filters=aw.filters())
     if start_cursor is not None:
         poller.cursor = start_cursor
     elif poller.cursor is None:
@@ -177,6 +181,8 @@ def run(opts: Options) -> int:
             time.sleep(opts.poll_seconds)
             continue
 
+        for w_ in poller.warnings:
+            p.line(f"WARN     {w_}")
         if batch.gap:
             p.alert(Alert("warn", batch.from_block, None, "Gap", f"Blocks {batch.gap[0]}–{batch.gap[1]} could not be read",
                           "too old for the free RPC; events in them were not checked"))
@@ -190,9 +196,12 @@ def run(opts: Options) -> int:
         after = read_state(f, view, state_block, dep)
         if set(MR.vault_markets(view, after)) != set(vrisk.markets):
             vrisk = MR.VaultRisk(f, view, after, state_block)
+            aw = AD.AdminWatch(f, list(vrisk.markets), state_block)
+            poller.kinds, poller.extra_filters = {**aw.kinds(), **view.kinds}, aw.filters()
         refresh = batch.to_block - last_check >= W["crosscheck_every_blocks"]
         for al in assess_batch(batch.events, Ctx(view, before, after), dep, batch.to_block) + \
-                vrisk.step(f, batch.events, after, state_block, batch.to_block, refresh):
+                vrisk.step(f, batch.events, after, state_block, batch.to_block, refresh) + \
+                aw.step(f, batch.events, state_block, refresh):
             p.alert(al)
         poller.save(batch.to_block)
         unit = 10 ** view.decimals

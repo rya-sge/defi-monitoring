@@ -13,7 +13,11 @@ from pathlib import Path
 from . import sources as S
 from .abi import EVENTS, MORPHO_BLUE, Event, decode_log
 
-BLUE_TOPICS = sorted({e.topic0 for e in EVENTS if e.contract == "blue" and e.name != "SetAuthorization"})
+MAX_ADDRESSES = 9            # per eth_getLogs filter on the free RPC
+BLUE_OWNER_EVENTS = ("SetOwner", "EnableIrm", "EnableLltv", "SetFeeRecipient")
+# Blue events about a market: topic1 is the market id
+BLUE_TOPICS = sorted({e.topic0 for e in EVENTS if e.contract == "blue"
+                      and e.name not in ("SetAuthorization",) + BLUE_OWNER_EVENTS})
 
 
 @dataclass
@@ -44,6 +48,7 @@ class Poller:
     start_back: int = 50               # first run: start this many blocks behind the safe head
     extra_filters: list[dict] = field(default_factory=list)   # more eth_getLogs filters (address, topics)
     cursor: int | None = field(default=None, init=False)
+    warnings: list[str] = field(default_factory=list, init=False)
 
     def __post_init__(self):
         if self.cursor_path.exists():
@@ -60,17 +65,38 @@ class Poller:
         return int(S.rpc(self.f, "eth_blockNumber", []), 16)
 
     def _logs(self, a: int, b: int) -> list[dict]:
-        watched = [x for x, k in self.kinds.items() if k != "blue"]
+        # all events of the vaults and adapters; admin-surface contracts only through their own topic filters
+        watched = [x for x, k in self.kinds.items() if k in ("vault", "adapter")]
         flt = [{"address": watched, "fromBlock": hex(a), "toBlock": hex(b)}] if watched else []
         if self.market_ids:
             flt.append({"address": MORPHO_BLUE, "fromBlock": hex(a), "toBlock": hex(b),
                         "topics": [BLUE_TOPICS, self.market_ids]})
         flt += [{**x, "fromBlock": hex(a), "toBlock": hex(b)} for x in self.extra_filters]
-        out = []
+        self.warnings = []
+        # the free RPC answers "Request blocked" above 9 addresses in one filter (measured 2026-10-10):
+        # split longer address lists into chunks
+        split = []
         for q in flt:
-            r = self.f.post_json(S.RPC, {"jsonrpc": "2.0", "id": 1, "method": "eth_getLogs", "params": [q]})
+            addrs = q.get("address")
+            if isinstance(addrs, list) and len(addrs) > MAX_ADDRESSES:
+                split += [{**q, "address": addrs[i:i + MAX_ADDRESSES]} for i in range(0, len(addrs), MAX_ADDRESSES)]
+            else:
+                split.append(q)
+        out = []
+        for q in split:
+            optional = q.pop("_optional", False)
+            for attempt in range(3):
+                r = self.f.post_json(S.RPC, {"jsonrpc": "2.0", "id": 1, "method": "eth_getLogs", "params": [q]})
+                # the free RPC's backends differ: an "archive" refusal near the head often passes on a retry
+                if "error" in r and "archive" in str(r["error"]).lower() and attempt < 2 and self.f.mode != "offline":
+                    continue
+                break
             if "error" in r:
                 msg = str(r["error"].get("message", r["error"]))
+                if optional:
+                    # admin-surface filters: a missed event is caught by the state refresh (D56)
+                    self.warnings.append(f"optional log filter skipped for blocks {a}-{b}: {msg[:80]}")
+                    continue
                 if "archive" in msg.lower():
                     raise ArchiveRange(msg)
                 if "range" in msg.lower() or "limit" in msg.lower() or "too many" in msg.lower():

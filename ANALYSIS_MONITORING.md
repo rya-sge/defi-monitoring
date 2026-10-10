@@ -127,7 +127,7 @@ A market liquidates on its oracle's price, not on the market price. A gap betwee
 | Oracle vs PT market price at analysis time, to infer whether the oracle follows the market | done (`analyze`), flagged ambiguous near par |
 | Oracle moves between two reads (≥ 5 %) | done (`watch`) |
 | Oracle that stops answering (`price()` reverts) | done (`watch --user`) |
-| **Oracle vs an independent market price, continuously** | missing |
+| Oracle vs an independent market price (DefiLlama), at start and every 300 blocks | done (`riskdep/admin.py`), warn from a 3 % gap |
 
 ### Positions and holders
 
@@ -146,9 +146,9 @@ A market liquidates on its oracle's price, not on the market price. A gap betwee
 | Vault V2 immediate changes: liquidity adapter, `maxRate`, caps lowered, allocators, fees, gates | done, as events |
 | Market adapter timelocked calls (`burnShares`, skim recipient) | done |
 | Timelock length and abdication of each function, which give the real warning time | done: read at start for every vault and market adapter; risk-increasing functions with no notice are flagged, and a `Submit` for one is critical |
-| **Morpho Blue owner actions** (`EnableIrm`, `EnableLltv`, `SetFeeRecipient`) | missing; only `SetFee` on a held market |
-| **Oracle admin**: upgradeable oracles, changed feeds | missing |
-| **Collateral and issuer admin**: mint, pause or upgrade of the collateral token, Pendle SY changes | missing |
+| Morpho Blue owner actions (`SetOwner`, `EnableIrm`, `EnableLltv`, `SetFeeRecipient`) | done |
+| Oracle admin: upgradeable oracles and feeds, Chainlink aggregator changes, ownership | done, from standard events and storage slots; a custom setter that emits no standard event is caught only if it changes a slot, owner or aggregator |
+| Collateral and issuer admin: upgrade, pause, admin roles, outsized mints of the collateral and yield tokens, Pendle SY upgrades | done (`riskdep/admin.py`) |
 
 ## 4. Execution
 
@@ -181,8 +181,8 @@ Gaps found while building and testing the tool, ranked by how much they limit th
 |---|---|---|---|
 | G1 | ~~Timelock lengths and abdications are not read.~~ Done (plan `2026-10-10-lenders-and-timelocks`): read at start, zero timelocks flagged, `Submit` with no notice critical. | — | done |
 | G2 | ~~No liquidation curve.~~ Done (plan `2026-10-10-market-borrowers`): curve at −2/−5/−10/−20 % for every watched market, warn when a 5 % fall liquidates ≥ 25 % of the debt. | — | done |
-| G3 | Oracle admin, Blue owner and collateral-issuer admin actions are not watched. | medium | M |
-| G4 | No continuous comparison of the oracle with an independent market price. | medium | S |
+| G3 | ~~Admin actions are not watched.~~ Done (plan `2026-10-10-admin-surface`): upgrades, admin and owner changes, feed changes, pauses, roles, outsized mints, Blue owner actions. Custom admin functions without standard events are seen only through slot changes. | — | done |
+| G4 | ~~No oracle vs independent price.~~ Done: DefiLlama price, every 300 blocks, warn from 3 %. | — | done |
 | G5 | Pending transactions are not watched. The free node streams them and `eth_simulateV1` can simulate them, but liquidations and large exits often use private relays. | low | M |
 | G6 | Morpho's opt-in pre-liquidation contracts are not read; only the authorisation they require is alerted. | low | S |
 
@@ -211,7 +211,7 @@ Gaps found while building and testing the tool, ranked by how much they limit th
 
 | # | Gap | Impact | Effort |
 |---|---|---|---|
-| D1 | The free RPC serves state only about 90 to 126 blocks back and refuses old log ranges: no backfill after a long stop, only a reported gap. | medium | S with a paid RPC |
+| D1 | The free RPC serves state only about 90 to 126 blocks back and refuses old log ranges: no backfill after a long stop, only a reported gap. It also accepts at most 9 addresses per log filter (worked around by splitting) and intermittently refuses recent ranges as "archive" (worked around by retrying). | medium | S with a paid RPC |
 | D2 | Position discovery depends on the Morpho API; `--market` is the fallback for borrows, but vault deposits have none. | low | S |
 | D3 | Reorgs deeper than 2 blocks are not handled. | low | S |
 | D4 | Alert memory is in-process: after a restart, standing conditions such as an HF below a level are alerted again. | low | S |
@@ -236,4 +236,3 @@ Gaps found while building and testing the tool, ranked by how much they limit th
 
 1. **C2 and M3:** extend `analyze` beyond PT collateral, with a generic exit quote.
 2. **D5, then X1:** push alerts first, then execution with its own security design.
-3. **G3:** watch oracle admins, the Blue owner and collateral issuers.

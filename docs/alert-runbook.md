@@ -116,6 +116,28 @@ Alerts printed at **start-up** describe a standing condition, not a new event: t
 | `Lender` · Main lender *vault* withdrew from *market* | warn | A main lender took out at least 5 % of the market's supply. | The new utilisation and rate. | As for a rate rise. |
 | `LiquidationCurve` · A 5 % fall would liquidate X % of *market* | warn | Other borrowers of your market (your own position is excluded) hold at least 25 % of its debt within a 5 % fall of liquidation. Their liquidations would sell collateral into the market at once, which pushes the price, and your health factor, further down. | The start-up curve table, and your own liquidation distance. | Keep a larger margin than the curve's steep zone: if your liquidation sits just beyond theirs, their cascade can reach you. |
 
+## Admin-surface alerts (vault depositors and borrowers)
+
+These concern the contracts your markets depend on beyond Morpho: each market's oracle and the feeds or vault shares it reads, the collateral and loan tokens, and for a Pendle PT its SY and yield token. The start-up output lists them in an **admin surface** table: which are upgradeable, who their admin or owner is, which aggregator a Chainlink feed points to, and each oracle's gap to DefiLlama's price.
+
+| Event · title | Level | What it means | Check | What you can do |
+|---|---|---|---|---|
+| `Admin.Upgraded` / `Admin.BeaconUpgraded` · *contract* was upgraded | critical | The code behind a token, an oracle or a feed changed. Its behaviour can now be anything the new code says. | The new implementation on a block explorer: is it verified, does the project announce it? | If the change is unannounced or the code unverified, treat the market as compromised: de-lever or exit until it is explained. |
+| `AdminState` · Implementation / beacon of *contract* changed | critical | The same, found at a state refresh because no standard event was emitted. | As above. | As above. |
+| `Admin.Paused` · *collateral* was paused | critical | A paused collateral token cannot be transferred, so liquidators cannot take it: liquidations can fail and leave bad debt. | The issuer's announcement; the market's liquidation curve. | Borrower: positions near liquidation cannot be saved by liquidators either; keep a wide margin. Depositor: exposure to that market is at risk. |
+| `Admin.Paused` · *other contract* was paused | warn | A feed, SY or other dependency suspended its operations. | Which one, and why. | Watch the oracle: a paused feed can stop answering. |
+| `Admin.Mint` · Large mint of *token* | critical | One transaction minted at least 5 % of a collateral or yield token's supply. Unbacked minting is how Resolv's USR depegged in March 2026. | The recipient and the issuer's backing. | If the mint is not explained, assume the token will depeg: de-lever, or exit the vault's exposure. |
+| `Admin.AdminChanged` · Proxy admin changed | warn | Someone else can now upgrade the contract. | Who the new admin is (a timelock, a multisig, an EOA). | An EOA admin is the weakest; reconsider the dependency. |
+| `Admin.OwnershipTransferred` / `AdminState` owner · Owner changed | warn | Control of the contract's owner functions moved. | The new owner. | As above. |
+| `Admin.AggregatorProposed` / `AggregatorConfirmed` · Price feed change | warn | A Chainlink feed will use, or now uses, a different aggregator. Usually maintenance. | Chainlink's announcements; the oracle's next prices. | Watch for `OracleDivergence`. |
+| `Admin.RoleGranted` · Admin role granted | warn | The default admin role of an access-controlled contract was granted to a new account. | The account. | As for an owner change. |
+| `Admin.RoleGranted` / `RoleRevoked` · Role granted or revoked | info | A non-admin role changed (minter, pauser, …). | — | Nothing, unless it is a minter on a collateral token you depend on. |
+| `Admin.Unpaused` | info | A pause ended. | — | Nothing. |
+| `OracleDivergence` · Oracle of *market* is ±X % from the market price | warn | The oracle's price differs by at least 3 % from DefiLlama's collateral ÷ loan price. A fixed-rate or linear PT oracle differs by design; otherwise the oracle is lagging or misconfigured, or the market is dislocated. Liquidations follow the oracle. | Which side is right: the oracle, or the market price. | A borrower whose oracle reads high is safer on paper than in reality: add margin. |
+| `Blue.SetOwner` · Morpho Blue owner action | warn | Morpho Blue's owner changed. Blue is immutable: existing markets are not affected. | — | Nothing. |
+| `Blue.EnableIrm` / `EnableLltv` / `SetFeeRecipient` | info | Morpho governance enabled a new rate model or LLTV, or changed the fee recipient. | — | Nothing. |
+| `AdminSurface` · N of M contracts your markets depend on are upgradeable | info (start-up) | The list of upgradeable dependencies and who can upgrade them; "UUPS" means the upgrade right is in the contract's own code. | Whether those admins are timelocks or multisigs. | Context for the alerts above. |
+
 ## Data and infrastructure alerts
 
 | Event · title | Level | What it means | What you can do |
@@ -124,6 +146,7 @@ Alerts printed at **start-up** describe a standing condition, not a new event: t
 | `CrossCheck` · Data sources disagree (Morpho API vs chain) | warn | The API's numbers differ from the chain's by more than 0.5 %. | The chain is authoritative; the API may be lagging. Positions found through the API may be stale. |
 | `Gap` · Blocks X–Y could not be read | warn | The free RPC refused those blocks (too old); events in them were not checked. | Check the vault and your positions on a block explorer for that range. |
 | `WARN RPC: …; retrying` (terminal line, not in the JSONL) | — | The RPC failed; the tool retries with backoff and does not move its cursor. | Nothing unless it persists; then check your network. |
+| `WARN optional log filter skipped …` (terminal line) | — | The free RPC refused one of the admin-surface log queries for a range. Admin events of that range may be missed; upgrades, owner and feed changes are still caught at the next state refresh (at most 300 blocks later). | Nothing unless it repeats on every batch. |
 
 ## Exit routes, from cheapest to most expensive
 

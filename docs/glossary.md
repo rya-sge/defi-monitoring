@@ -6,6 +6,7 @@ Plain-language definitions of the terms used in this repository's reports, alert
 
 - [Morpho Blue: markets and borrowing](#morpho-blue-markets-and-borrowing)
 - [Morpho Vault V2: vaults and their governance](#morpho-vault-v2-vaults-and-their-governance)
+- [Contract admin and upgrades](#contract-admin-and-upgrades)
 - [Pendle and yield sources](#pendle-and-yield-sources)
 - [Risk measures](#risk-measures)
 - [The dependency graph](#the-dependency-graph)
@@ -63,6 +64,20 @@ Plain-language definitions of the terms used in this repository's reports, alert
 | **Performance fee / management fee** | Fees the vault takes on interest (at most 50 %) and on assets (at most 5 % a year). |
 | **maxRate** | The fastest the vault's total assets may grow (at most 200 % a year). It caps gains, not losses. |
 | **Main lender** | In this tool, a supplier holding at least 5 % of a market's supply. A dominant main lender's departure raises the market's rate. |
+
+## Contract admin and upgrades
+
+| Term | Definition |
+|------|------------|
+| **Admin surface** | The contracts a market depends on beyond Morpho (oracle, feeds, tokens, Pendle SY) and the people who can change them. |
+| **Proxy / upgradeable contract** | A contract that forwards every call to an implementation contract whose address can be changed, so its code can be replaced without changing its address. |
+| **EIP-1967** | The standard that fixes where a proxy stores its implementation, admin and beacon addresses, so they can be read from outside. USDC's older proxy uses the equivalent ZeppelinOS slots. |
+| **UUPS proxy** | A proxy whose upgrade function lives in the implementation code; it has no separate admin slot. |
+| **Beacon** | A contract that holds the implementation address for many proxies at once; upgrading the beacon upgrades all of them. |
+| **Minimal proxy (EIP-1167 clone)** | A tiny contract that forwards to a fixed implementation; it cannot be upgraded. |
+| **Owner / roles** | The account allowed to call a contract's restricted functions (`Ownable`), or the accounts holding named permissions such as minter or pauser (`AccessControl`). |
+| **Chainlink aggregator** | The contract a Chainlink price-feed proxy reads from; its owner can switch the proxy to a new aggregator. |
+| **Pause** | A switch that suspends a token's transfers or a contract's operations. |
 
 ## Pendle and yield sources
 

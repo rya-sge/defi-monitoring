@@ -58,6 +58,11 @@ EVENTS: list[EventSpec] = [
         "uint256 repaidShares", "uint256 seizedAssets", "uint256 badDebtAssets", "uint256 badDebtShares"),
     _ev("blue", "AccrueInterest", "bytes32 indexed id", "uint256 prevBorrowRate", "uint256 interest", "uint256 feeShares"),
     _ev("blue", "SetFee", "bytes32 indexed id", "uint256 newFee"),
+    # Morpho Blue owner actions (D57): no market id in topic1, fetched with their own filter
+    _ev("blue", "SetOwner", "address indexed newOwner"),
+    _ev("blue", "EnableIrm", "address indexed irm"),
+    _ev("blue", "EnableLltv", "uint256 lltv"),
+    _ev("blue", "SetFeeRecipient", "address indexed newFeeRecipient"),
     # not about a market: topic1 is the caller, so the poller fetches it with its own filter
     _ev("blue", "SetAuthorization", "address indexed caller", "address indexed authorizer", "address indexed authorized",
         "bool newIsAuthorized"),
@@ -103,6 +108,18 @@ EVENTS: list[EventSpec] = [
     _ev("vault", "IncreaseRelativeCap", "bytes32 indexed id", "bytes idData", "uint256 newRelativeCap"),
     _ev("vault", "SetMaxRate", "uint256 newMaxRate"),
     _ev("vault", "SetForceDeallocatePenalty", "address indexed adapter", "uint256 forceDeallocatePenalty"),
+    # standard admin events of the contracts a market depends on (D54): oracles, feeds, tokens
+    _ev("admin", "Upgraded", "address indexed implementation"),
+    _ev("admin", "AdminChanged", "address previousAdmin", "address newAdmin"),
+    _ev("admin", "BeaconUpgraded", "address indexed beacon"),
+    _ev("admin", "OwnershipTransferred", "address indexed previousOwner", "address indexed newOwner"),
+    _ev("admin", "AggregatorProposed", "address indexed current", "address indexed proposed"),
+    _ev("admin", "AggregatorConfirmed", "address indexed previous", "address indexed latest"),
+    _ev("admin", "Paused", "address account"),
+    _ev("admin", "Unpaused", "address account"),
+    _ev("admin", "RoleGranted", "bytes32 indexed role", "address indexed account", "address indexed sender"),
+    _ev("admin", "RoleRevoked", "bytes32 indexed role", "address indexed account", "address indexed sender"),
+    _ev("admin", "Transfer", "address indexed from", "address indexed to", "uint256 value"),
     # MorphoMarketV1AdapterV2 (Submit / Revoke / Accept / Abdicate / timelock events share
     # their signatures with the vault's and are told apart by the emitting address)
     _ev("adapter", "Allocate", "bytes32 indexed marketId", "uint256 newAllocation", "uint256 mintedShares"),
