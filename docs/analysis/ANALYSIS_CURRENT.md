@@ -1,6 +1,6 @@
 # Current analysis: the brief's question against what the tool does
 
-This note records an assessment made on 2026-10-10, after the merge of the sibling-markets work. It re-reads the challenge brief (`docs/hackaton_instruction/GOAL.md` and the PDF next to it) as a chain of four steps, checks each step against the code, and draws the consequences for the Monte Carlo simulation and for the next tasks. It complements `GAP.md` (the model's gaps K1–K25), `NEXT_STEP_V2.md` (the plan) and `NEXT_TASK.md` (the two next tasks), and it changes the order they propose.
+This note records an assessment made on 2026-10-10, after the merge of the sibling-markets work. It re-reads the challenge brief (`docs/hackaton_instruction/GOAL.md` and the PDF next to it) as a chain of four steps, checks each step against the code, and draws the consequences for the Monte Carlo simulation and for the next tasks. It complements `GAP.md` (the model's gaps K1–K25), `NEXT_STEP.md` (the plan) and `NEXT_TASK.md` (the two next tasks), and it changes the order they propose.
 
 ## Contents
 
@@ -64,7 +64,7 @@ The incident is **known** when the question is asked. The brief does not ask how
 - **The Pendle pool**: implied-yield spikes, a pool draining, a TWAP oracle pushed by a trade (PT-reUSD, 2026-08-25). Only the oracle's reaction is seen.
 - **Indirect depegs**: the issuer's own backing, or tokens of sibling markets. Prices are checked only for the watched markets' collateral and loan tokens.
 - **Exploits outside the admin surface**: a hack of another protocol that holds the same collateral.
-- **Feed staleness**: a feed that stops updating, unless the price moves (`NEXT_STEP_V2.md` E2).
+- **Feed staleness**: a feed that stops updating, unless the price moves (`NEXT_STEP.md` C2).
 - **`analyze`**: a one-shot report; it detects nothing.
 
 ### Two weaknesses of what is detected
@@ -154,7 +154,7 @@ The conditional run still needs judgement, for example how often a −8 % depeg 
 
 ## 7. What changes in the plan
 
-`NEXT_STEP_V2.md` phase A and `NEXT_TASK.md` task 1 already propose incident mode. This assessment adds three things to them and changes the order:
+The next-step plan's phase A (then `NEXT_STEP_V2.md`, now merged into `NEXT_STEP.md`) and `NEXT_TASK.md` task 1 already proposed incident mode. This assessment adds three things to them and changes the order:
 
 | Order | Step | What it delivers | Gaps |
 |---|---|---|---|

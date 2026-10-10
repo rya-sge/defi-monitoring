@@ -105,9 +105,8 @@ pyproject.toml        project metadata, dependencies, ruff and pytest configurat
 - `docs/analysis/ARCHITECTURE.md` — how the system is built: modes, components and their imports, data sources and trust, data flow, state, testing, decision index.
 - `README.md` — usage of every mode, alert trigger tables, limits.
 - `docs/analysis/ANALYSIS_CURRENT.md` — the latest assessment (2026-10-10): the brief read as detect → impact → how fast → decide, where the tool stands on each step, why the Monte Carlo should become conditional on the observed incident, and the resulting order of work. Read it before `docs/analysis/NEXT_TASK.md`.
-- `docs/analysis/NEXT_TASK.md` — the two tasks to implement next (incident mode; the book with the breakeven p\* and a headline), file by file, with tests and the order of work.
-- `docs/analysis/NEXT_STEP_V2.md` — the current proposal for what to build next, ordered by the brief's judging weights, from `docs/analysis/GAP.md` (K1–K25) and the teammates' feedback; supersedes the order of `docs/analysis/NEXT_STEP.md`.
-- `docs/analysis/NEXT_STEP.md` — version 1 of the next steps; still the reference for what each of its steps needs (decisions, sources, credentials, infrastructure).
+- `docs/analysis/NEXT_TASK.md` — the task-level detail of incident mode (done) and of the book and the conditional Monte Carlo; `NEXT_STEP.md` holds the current order.
+- `docs/analysis/NEXT_STEP.md` — the next steps, in recommended order (phases A to D), with how each would be built and what it needs; it records what has been built and merges the earlier versions 1 and 2. Keep it current when a step is done.
 - `docs/analysis/PROVIDERS.md` — every external provider (RPC, APIs, CDNs): endpoints, queries, limits, trust model. Keep it current.
 - `keys.example.ini` — template of the API keys and secrets (no values); the real `keys.ini` is git-ignored.
 - `erpc.yaml` — configuration of the optional local eRPC proxy (eRPC 0.3.0, six free upstreams, no key); `docs/erpc.md` is the setup guide. Its upstream list is mirrored in `docs/analysis/PROVIDERS.md`.
