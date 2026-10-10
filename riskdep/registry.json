@@ -241,6 +241,10 @@
     "oracle_divergence_warn": 0.03,
     "exit_queue_phi": 0.5,
     "exit_queue_stuck_warn": 0.5,
+    "drain_buy_cost": 0.005,
+    "drain_margin": 0.02,
+    "drain_check_every_blocks": 25,
+    "drain_basis": "D70, D72. drain_buy_cost: the cost c of buying the collateral at the drain's size, in d* = 1 - LLTV / (1 + c); 0.5 % is low on purpose (a lower cost gives an earlier, more conservative threshold) and is not measured per token. drain_margin: warn when the collateral's discount to the oracle is within 2 points of d*. drain_check_every_blocks: DefiLlama's prices are re-read every 25 blocks (~5 min); oracle prices come with every state read.",
     "exit_queue_basis": "D64, D66. exit_queue_phi: the share of the other depositors' assets assumed to leave before you in a run, Team 2's single parameter phi; 0.5 is a middle case with no data behind it. exit_queue_stuck_warn: warn when at least half of the position would be stuck if every contract holder (vault, fund, multisig) withdrew first; critical when, in addition, the vault already carries unrealised bad debt."
   }
 }

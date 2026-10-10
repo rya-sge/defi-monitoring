@@ -250,10 +250,13 @@ def _is_contract(code: str | None) -> bool | None:
     return code not in ("0x", "") and not code.startswith("0xef0100")
 
 
-def liquidity(st) -> Liquidity:
-    """From a `vault.VaultState`; the penalty is the highest of the adapters' (conservative)."""
+def liquidity(st, drained: int = 0) -> Liquidity:
+    """From a `vault.VaultState`; the penalty is the highest of the adapters' (conservative). `drained` is what a drain
+    of the markets past their threshold would take first (drain.py, D73): out of the forced part, then the plain."""
     pen = max(st.penalties.values(), default=0) / 10**18
-    return Liquidity(st.total_assets, st.depositor_assets, st.withdrawable, st.force_withdrawable, pen)
+    forced = max(0, st.force_withdrawable - drained)
+    plain = max(0, st.withdrawable - max(0, drained - st.force_withdrawable))
+    return Liquidity(st.total_assets, st.depositor_assets, plain, forced, pen)
 
 
 class VaultExit:
@@ -277,17 +280,21 @@ class VaultExit:
             else "empty vault"
         )
 
-    def measure(self, st, cases: list[LossCase]) -> tuple[str, tuple[float, int]]:
+    def measure(self, st, cases: list[LossCase], drained: int = 0) -> tuple[str, tuple[float, int]]:
         """(the alert's queue position, (stuck share there, the vault's loss not written off yet))."""
-        liq = liquidity(st)
+        liq = liquidity(st, drained)
         name, q = alert_point(liq, self.holders, st.depositor)
         stuck = exit_at(liq, q).stuck / liq.position if liq.position else 0.0
         return name, (stuck, next((c.loss for c in cases if c.name == "now"), 0))
 
-    def startup(self, lines, st, cases: list[LossCase], block: int) -> list[Alert]:
+    def startup(self, lines, st, cases: list[LossCase], block: int, drained: int = 0) -> list[Alert]:
         if not st.depositor or not st.depositor_assets:
             return []
-        liq, unit = liquidity(st), 10**self.view.decimals
+        liq, unit = liquidity(st, drained), 10**self.view.decimals
+        if drained:
+            lines(
+                f"  exit queue: {drained / unit:,.0f} {self.view.asset_symbol} left out, drainable now (drain threshold)"
+            )
         table(
             lines,
             liq,
@@ -298,14 +305,14 @@ class VaultExit:
             self.view.asset_symbol,
             self.coverage(liq, st.depositor),
         )
-        return self.step(st, cases, block)
+        return self.step(st, cases, block, drained=drained)
 
-    def step(self, st, cases: list[LossCase], block: int, f=None) -> list[Alert]:
+    def step(self, st, cases: list[LossCase], block: int, f=None, drained: int = 0) -> list[Alert]:
         if not st.depositor or not st.depositor_assets:
             return []
         if f is not None:
             self.holders, self.count = holders(f, self.view.address, st.total_assets, st.total_supply)
-        point, after = self.measure(st, cases)
+        point, after = self.measure(st, cases, drained)
         alerts = assess(self.state, after, point, self.view.name, 10**self.view.decimals, self.view.asset_symbol, block)
         self.state = after
         return alerts

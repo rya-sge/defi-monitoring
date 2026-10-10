@@ -14,6 +14,7 @@ from . import admin as AD
 from . import borrower as B
 from . import borrower_rules as BR
 from . import crosscheck, discover
+from . import drain as DR
 from . import exit_queue as EQ
 from . import market_risk as MR
 from . import sources as S
@@ -51,6 +52,7 @@ class VaultTarget:
     state: object
     risk: object = None  # market_risk.VaultRisk: unrealised bad debt and curves of the vault's markets
     exit: object = None  # exit_queue.VaultExit: the user's place in a run on the vault
+    drain: object = None  # drain.VaultDrain: drain thresholds of the vault's markets
 
     @property
     def addresses(self) -> set[str]:
@@ -201,17 +203,22 @@ def run_user(opts: UserOptions) -> int:
                             c.detail,
                         )
                     )
-    for vt in vaults:
-        exposure_table(vt.view, vt.state, p)
-        MR.curve_table(p.line, vt.risk.risks, vt.risk.markets)
-        exit_alerts = vt.exit.startup(p.line, vt.state, EQ.vault_cases(vt.risk, vt.state), state0)
-        for al in startup_findings(vt.view, vt.state) + vt.risk.startup(vt.state, state0) + exit_alerts:
-            p.alert(al)
 
     def admin_markets():
         return sorted(set(markets) | {mid for vt in vaults for mid in vt.risk.markets})
 
     aw = AD.AdminWatch(f, admin_markets(), state0)
+    for vt in vaults:
+        exposure_table(vt.view, vt.state, p)
+        MR.curve_table(p.line, vt.risk.risks, vt.risk.markets)
+        vt.drain = DR.VaultDrain(f, vt.view, state0)
+        drain_alerts = vt.drain.startup(p.line, f, vt.state, vt.risk.markets, aw, state0)
+        exit_alerts = vt.exit.startup(
+            p.line, vt.state, EQ.vault_cases(vt.risk, vt.state), state0, drained=vt.drain.drained(vt.state)
+        )
+        for al in startup_findings(vt.view, vt.state) + vt.risk.startup(vt.state, state0) + drain_alerts + exit_alerts:
+            p.alert(al)
+
     aw.table(p.line)
     for al in aw.startup(state0):
         p.alert(al)
@@ -341,7 +348,14 @@ def run_user(opts: UserOptions) -> int:
                 after_v = read_state(f, vt.view, state_block, user)
             alerts += assess_batch(evs, Ctx(vt.view, vt.state, after_v), user, batch.to_block)
             alerts += vt.risk.step(f, batch.events, after_v, state_block, batch.to_block, refresh)
-            alerts += vt.exit.step(after_v, EQ.vault_cases(vt.risk, after_v), batch.to_block, f if refresh else None)
+            alerts += vt.drain.step(f, after_v, vt.risk.markets, aw, batch.to_block, refresh)
+            alerts += vt.exit.step(
+                after_v,
+                EQ.vault_cases(vt.risk, after_v),
+                batch.to_block,
+                f if refresh else None,
+                drained=vt.drain.drained(after_v),
+            )
             vt.state = after_v
         alerts += aw.step(f, batch.events, state_block, refresh)
         if not light:
@@ -382,6 +396,8 @@ def run_user(opts: UserOptions) -> int:
                             view = discover_vault(f, va, state_block)
                             vt_new = VaultTarget(view, read_state(f, view, state_block, user))
                             vt_new.risk = MR.VaultRisk(f, view, vt_new.state, state_block)
+                            vt_new.exit = EQ.VaultExit(f, view, vt_new.state)
+                            vt_new.drain = DR.VaultDrain(f, view, state_block)
                             vaults.append(vt_new)
                             p.line(f"new Vault V2 deposit found: {view.name}")
                 except (S.SourceError, S.CacheMiss) as e:

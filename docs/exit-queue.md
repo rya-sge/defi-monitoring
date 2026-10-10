@@ -169,7 +169,7 @@ On the replay the warn fires at start-up: 100 % of the position would be stuck b
 - **Reaction speed is a binary proxy.** "Has code" is not "reacts fast": a dormant multisig is slow and a bot-run wallet is fast. φ is a single number with no data behind it.
 - **Holders are read now, not at the replay's block.** The list and the code checks are cached in the replays from a request made the same day as the recording.
 - **The "all collateral" cases are crude.** Every collateral falls by the same amount at once, as a gap, with no liquidation on the way and no slippage.
-- **Not modelled:** the Public Allocator moving liquidity between markets, the drain arbitrage of a fixed-oracle market (Team 2's d\*, item 2 of `comparison_team.md` §5), and MEV ordering within a block.
+- **Not modelled here:** MEV ordering within a block. The drain of a market whose oracle does not follow the market, with the Public Allocator's inflow, is now modelled separately and taken out of the exit queue's liquidity (`docs/drain-threshold.md`).
 - **Vault V2 only.** Vault V1 deposits are not watched yet (step 4 of `NEXT_STEP.md`).
 
 ## 9. Code and tests

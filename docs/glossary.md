@@ -103,6 +103,8 @@ Plain-language definitions of the terms used in this repository's reports, alert
 | **Carry** | What the position earns over the horizon: the collateral's yield minus the interest on the debt. |
 | **Exit cost** | What leaving would cost now: price impact and fees of selling the collateral, plus gas. |
 | **Price impact** | How much worse a large sale's price is than the current price, because it consumes the pool's liquidity. |
+| **Drain threshold (d\*)** | The discount of a collateral below its oracle price from which borrowing against it, with no intent to repay, pays: d\* = 1 − LLTV / (1 + buying cost). Past it, a market's free liquidity can be borrowed in one block (`docs/drain-threshold.md`). |
+| **Public Allocator** | A Morpho contract that lets anyone move a vault's assets between its markets, within caps its allocators set. Useful for borrowers in normal times; in a drain, it can bring the vault's healthy liquidity within reach. |
 | **Run** | Depositors withdrawing all at once because they expect others to, while the vault can pay only what it has not lent. The first out are paid at par; the rest wait, and carry any loss not yet written off. |
 | **Queue position** | In a run, the other depositors' assets that leave before you. What you recover at par and what you lose depend on it (`docs/exit-queue.md`). |
 | **Stuck** | The part of a vault position that cannot leave now, because the vault's liquidity is exhausted or lent out; it comes back only as borrowers repay or are liquidated. |
