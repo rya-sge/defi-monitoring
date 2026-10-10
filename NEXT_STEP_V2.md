@@ -7,6 +7,15 @@ It draws on three sources:
 - **The gap review**, `GAP.md`: gaps K1–K25 and its recommended order (§11).
 - **The teammates' feedback**: `teammate/team1.md`, `teammate/team2.md`, compared in `comparison_team.md`.
 
+**Update 2026-10-10, after the merge of plan `2026-10-10-sibling-markets`.** A colleague extended the `graph` command, which changes several steps below:
+- **Sibling markets** (`siblings.py`): the Blue markets that share a held market's collateral, underlying or collateral-side price input, or lend that collateral, above $1M of supply, joined through the shared asset, oracle or feed node.
+- **Oracle classes** (`oracle_class.py`): every oracle input is `price-tracking`, `constant-price` or `not classified`, decided from its structure (base vault, composites, wrappers, Pendle getters), its feeds' round history, then its name.
+- **Market state on every market node**, held or sibling: supply, borrow, the collateral of its borrowers, and its liquidation curve with the collateral seized.
+- **`wraps` edges**: an ERC-4626 share to its `asset()`.
+- **An optional eRPC proxy** (`erpc.yaml`, `docs/erpc.md`) behind `RISKDEP_RPC_URL`, and retries on rate-limited replies.
+
+All of it lives in `graph`; `analyze` and the watches are unchanged. Steps B4, C2, E1, E2 and E3 now build on these modules instead of starting from nothing, and three new gaps from that work (R5–R7 in `ANALYSIS_MONITORING.md`) are placed in E1, E2 and F2.
+
 ## Contents
 
 - [1. Where the project stands against the brief](#1-where-the-project-stands-against-the-brief)
@@ -26,7 +35,7 @@ It draws on three sources:
 
 | Criterion (weight) | Strong today | Weak today | Main gaps |
 |---|---|---|---|
-| Dependency discovery: depth and correctness (30 %) | The brief's own five layers for a Pendle PT; vault → adapters → markets → borrowers and lenders; the admin surface (oracles, feeds, tokens, Pendle SY, Blue owner); oracle source verified on Etherscan | `analyze` stops at the issuer and does not use the admin surface; feed quality, TVL concentration, external venues and other chains are not covered | K19, K23, K25, K24, C5 |
+| Dependency discovery: depth and correctness (30 %) | The brief's own five layers for a Pendle PT; vault → adapters → markets → borrowers and lenders; the admin surface (oracles, feeds, tokens, Pendle SY, Blue owner); oracle source verified on Etherscan; in `graph`, sibling Blue markets, `wraps` edges and an oracle class per input | `analyze` stops at the issuer and uses neither the admin surface nor the siblings; siblings are Blue only (R5); feed quality, TVL concentration, external venues and other chains are not covered | K19, K23, K25, K24, C5 |
 | Impact estimation: is the number defensible (30 %) | Every number has a basis; unrealised bad debt, liquidation curves, the exit queue and the drain threshold for depositors | The `analyze` model prices incidents only: the rate and implied-yield channels that actually cost PT loops in 2025–2026 are missing; layers are independent; oracles are binary; the exploit priors are biased (survivorship, stale window) | K10, K11, K7, K8, K6, K1, K17, K5 |
 | Decision usefulness: stay or exit, and why (25 %) | STAY / REDUCE / EXIT with carry, a real exit quote and a de-lever size; block-by-block alerts with a runbook | No "this component is hit now" mode; no book; no breakeven probability; no single headline number; no time to impact; the verdict compares a one-off exit cost with a 30-day loss | K20, K21, K22, K12, K13 |
 | Working demo on real data (15 %) | Live and offline runs on mainnet positions, recorded replays, 133 offline tests, CI | The demo shows one PT borrower and one vault; it does not reproduce the brief's book example | K21 |
@@ -51,15 +60,15 @@ The brief's question is conditional and set on a book: *a component is hit, what
 | B1 | Borrow-rate channel from the AdaptiveCurveIRM | K10 | impact | S | IRM docs, utilisation already read |
 | B2 | PT implied-yield channel | K11 | impact | S | Pendle market data |
 | B3 | Horizon to maturity, exit cost under stress | K12 | decision | S | Pendle quote at several sizes |
-| B4 | Oracle structure instead of a binary, and liquidation by a pool move | K7, K8 | impact | M | `morpho-blue-oracles`, Etherscan source |
+| B4 | Oracle structure instead of a binary, and liquidation by a pool move | K7, K8, R7 | impact | S–M | `oracle_class.py`, Etherscan source |
 | B5 | Prior recalibration: decayed window, survivorship, double count, two-part depeg, off-chain prior, protocol multiplier | K17, K1, K3, K5, K2, K18 | impact | S–M | `priors.py`, `admin.py`, one keyless Nexus call |
 | C1 | Named scenarios and a common-shock factor | K6 | impact, decision | M | A1 |
-| C2 | Liquidation cascade with slippage (M3 part 2) | K9 | impact | M | `market_risk` curves, Pendle quotes |
+| C2 | Liquidation cascade with slippage (M3 part 2) | K9 | impact | M | the curves and seized collateral of every held and sibling market (`graph`), Pendle quotes |
 | C3 | Tail-aware verdict and uncertainty ranges | K13, K14 | decision | S–M | `simulate`, `decide` |
 | D1 | `analyze --vault`: a depositor's loss under a scenario, existing loans revalued at the market price, d\* as a loss channel | K16 | impact, decision | M | `market_risk`, `exit_queue`, `drain` |
-| E1 | Discovery depth in `analyze`: admin surface as layers, one look-through level | K19 | discovery | M | `admin.py`, `graph.py` |
-| E2 | Feed quality: heartbeat, staleness, shared feeds, meta-oracle state | K23 | discovery | S–M | `admin.py`, local Chainlink docs |
-| E3 | TVL concentration per layer | K25 | discovery | S | DefiLlama `/protocols` (cached) |
+| E1 | Discovery depth in `analyze`: admin surface, siblings and one look-through level; siblings on other venues | K19, R5, R6 | discovery | M | `admin.py`, `siblings.py`, `graph.py` |
+| E2 | Feed quality: heartbeat, staleness, shared feeds, meta-oracle state | K23, R3 | discovery | S–M | `oracle_class.py` (round history), `graph` feed nodes, local Chainlink docs |
+| E3 | TVL concentration per layer | K25 | discovery | S | DefiLlama `/protocols` (cached), collateral held per market (`graph`) |
 | F1 | External venue node (perp, CEX) and a funding-rate scenario | K24 | discovery, impact | M–L | registry |
 | F2 | Other chains, Vault V1 | C5, C4 | discovery | M–L | `metamorpho-v1.1` submodule |
 
@@ -216,10 +225,11 @@ Book A ($40M, 3 pockets)
 **Why.** The oracle decides which channel a shock takes, and "conservative" depends on the side: market-tracking is worst for a borrower, linear discount for a lender. The demo oracle is a `MetaOracleDeviationTimelock`, which is neither. On 2026-08-25 a $320k trade moved a TWAP oracle and liquidated 33 PT-reUSD positions at the demo's LLTV.
 
 **How.**
-- **Identify the type** with a new `oracles.py`:
-  1. Etherscan's verified contract name (`sources.contract_source`, already used): `MorphoChainlinkOracleV2`, `MetaOracleDeviationTimelock`, Pendle's oracles.
-  2. Otherwise, the getters: `BASE_FEED_1()` etc. (Chainlink-style), `primaryOracle()` / `backupOracle()` (meta-oracle).
-  3. Otherwise, today's price inference.
+- **Start from `oracle_class.py`** (plan `2026-10-10-sibling-markets`, D82–D84), which already classifies an oracle in `graph`: base vault, composites (`FEED_1`/`FEED_2`), wrappers (`innerOracle`), Pendle's `twapDuration` and `baseDiscountPerYear`, the feeds' round history, then registry name patterns. What B4 adds to it:
+  1. **Use it in `analyze`**, in place of the price inference of `discover.infer_oracle`, which stays as the fallback for `not classified`. Then `price-tracking` maps to today's `market-tracking`, `constant-price` to `fundamental`.
+  2. **Use it in `drain.py`**, which measures the gap without classifying (D70): a `constant-price` oracle is the case where the gap can grow, which can raise the `DrainWindow` alert's priority.
+  3. **A third class for switching oracles (R7):** `MetaOracleDeviationTimelock` stays `not classified` today. Read `primaryOracle()`, `backupOracle()` and `currentOracle()`, classify each with the same code, and report the live one with the timelock before a switch.
+  4. **Split `constant-price`** where the rule differs: exchange rate (follows the issuer's redemption rate) against fixed or linear discount (follows nothing), as Credora's Dynamic / Exchange / Fixed classes do (`EXTERNAL_SOURCE.md` §3).
 - **Resolve its inputs:**
   - `MorphoChainlinkOracleV2`: price = SCALE × (base vault rate × base feeds) ÷ (quote vault rate × quote feeds), from `docs/external/morpho/lib/morpho-blue-oracles`. Each feed is classified as a market feed or an exchange rate (from its `description()`, already read by `admin.py`).
   - Meta-oracle: the primary and backup oracles (each resolved recursively), the deviation threshold, the challenge and healing timelocks, and which one is live (`currentOracle()`).
@@ -228,7 +238,7 @@ Book A ($40M, 3 pockets)
 
 **Output.** The oracle node in the report says what it is, for example "meta-oracle: primary X, backup Y; switches after its challenge timelock once they deviate by more than its threshold" with the values read on-chain, and which shocks it passes.
 
-**Tests.** The type detection on the cached demo oracle; the meta-oracle's switch rule; a TWAP pool move that liquidates at the demo LLTV.
+**Tests.** `analyze --demo` takes its oracle mode from `oracle_class` with the inference as fallback; the meta-oracle's switch rule; a TWAP pool move that liquidates at the demo LLTV.
 
 **Size.** M.
 
@@ -277,7 +287,7 @@ All in `priors.py` and `registry.json`, each change with a stated basis:
 
 **How.**
 - **The loop,** in a new pure `cascade.run(drop, curve, impact)`:
-  1. at a drop d, the market's curve (`market_risk.value`, already computed per market) gives the collateral liquidatable;
+  1. at a drop d, the curves give the collateral liquidatable, summed over **every market that holds the collateral**: the held markets and their siblings, which `graph` now builds with the collateral seized at each step (D81);
   2. liquidators sell it: the price impact for that size gives an extra drop Δd;
   3. d ← d + Δd; stop when Δd is below a tolerance or after N rounds.
 - **The impact curve:** for a PT, Pendle quotes at several sizes, fitted as impact(Q) = k·√Q; for other collateral, Team 1's parametric k·√Q with k in the registry (calibrated from KyberSwap quotes on on-chain venues only, when one is wanted).
@@ -338,6 +348,9 @@ Discovery is 30 % of the score, judged on "depth and correctness".
   - sUSDS → USDS → the PSM → USDC (addresses and the PSM's balance read on-chain);
   - a Pendle SY → its yield token (already discovered by `admin.py`).
 - **Off-chain look-through as typed nodes.** From `registry.json` (custodians, CEX hedges, signing keys for each issuer), drawn as nodes with their source, so the depth shows even where it is not computed.
+- **Siblings in `analyze`.** `graph` already finds them (`siblings.match`) and joins them through the shared node. In `analyze`, a sibling with a steep liquidation curve on the same collateral is a channel by which another market's liquidations push the position's collateral down; it enters C2's cascade.
+- **Watch the siblings (R6).** `watch` follows only the held markets. Adding the siblings' `Liquidate` events and oracle moves to the poller's filters (the 9-address chunking already handles longer lists) turns them from a drawing into a signal.
+- **Siblings on other venues (R5).** Euler, Aave, Silo or Fluid markets on the same collateral; one adapter per venue, M each.
 
 **Tests.** The demo graph gains the admin and look-through nodes; each has a source.
 
@@ -345,7 +358,7 @@ Discovery is 30 % of the score, judged on "depth and correctness".
 
 ### E2. Feed quality (K23)
 
-**How.** For every Chainlink-style feed `admin.py` discovers:
+**How.** `oracle_class.py` already reads each feed's latest round and recent history (`getRoundData`), and `graph` draws one node per feed, shared by the markets that read it. For every Chainlink-style feed:
 - `latestRoundData()`: the age of the last update (`now − updatedAt`);
 - heartbeat and deviation threshold: from Chainlink's published feed data (to probe; the local docs are `docs/external/chainlink/docs.chain.link-data-feeds-docs/`), otherwise a registry entry;
 - `aggregator()` and the number of oracles, where the aggregator exposes it;
@@ -363,7 +376,8 @@ A new alert `FeedStale` when the age exceeds the heartbeat × a registry margin,
 **How.** From DefiLlama `/protocols` (already cached) and on-chain supplies:
 - the protocol's share of its category's TVL on the chain (Morpho in Ethereum lending);
 - the market's PT collateral as a share of the PT's supply, and against the Pendle pool's depth (the LlamaRisk measure);
-- the vault's share of each market (already computed).
+- the vault's share of each market (already computed);
+- the collateral held across Blue markets, from `graph`'s market nodes (held and sibling), against the token's supply.
 
 One concentration line per layer in the report; a registry threshold marks a "systemic node" and feeds B3's stressed exit cost.
 
@@ -411,7 +425,7 @@ What a judge should see in five minutes, once phase A is done:
 | 3. Admin surface | done (refinement open) | E1 brings it into `analyze`; B5 uses it for the protocol multiplier |
 | 4. Vault V1, other adapters | open | F2 |
 | 5. Fork tests | open | still useful to test B4 and C2 against a forced liquidation |
-| 6. Archive RPC, WebSocket | open | unchanged, needed for history-based priors (B2, C1 replays) |
+| 6. Archive RPC, WebSocket | open; rate limits eased | an optional eRPC proxy over six free upstreams now absorbs rate limits and fails over (`docs/erpc.md`); its upstreams were chosen for recent blocks (tested 60 blocks behind the head), not for archive reads, so history-based priors (B2, C1 replays) still need an archive RPC |
 | 7. Other chains | open | F2 |
 | 8. Better risk model | split | B1–B5, C1–C3 |
 | 9. Execution through Bundles | open | after A and B: a verdict must be right before it is executed |

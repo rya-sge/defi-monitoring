@@ -1,6 +1,6 @@
 # GAP: a challenge of the risk computation
 
-This document challenges how `riskdep analyze` computes risk: the priors, the propagation, the simulation and the verdict. It is checked against the code, the project docs, the teammates' notes and outside evidence (incidents from 2022 to 2026, and the methods of risk firms and academic work). It sits next to `ANALYSIS_MONITORING.md`, which lists the known gaps (M1–M7). This file questions the model's assumptions themselves. Each gap gets an id `K<n>`, and a gap that extends an existing one names it.
+This document challenges how `riskdep analyze` computes risk: the priors, the propagation, the simulation and the verdict. It is checked against the code, the project docs, the teammates' notes and outside evidence (incidents from 2022 to 2026, and the methods of risk firms and academic work). It sits next to `ANALYSIS_MONITORING.md`, which lists the known gaps (M1–M7, R1–R7). Status notes marked *(update 2026-10-10)* record what the `graph` work of plan `2026-10-10-sibling-markets` (sibling markets, oracle classes, liquidation curves per market, an optional eRPC proxy) changed for each gap. This file questions the model's assumptions themselves. Each gap gets an id `K<n>`, and a gap that extends an existing one names it.
 
 Numbers for the demo position come from `docs/how-risk-is-computed.md` and the offline snapshot (`fixtures/snapshot/`, as of 2026-10-10). The position holds PT-sUSDE-26NOV2026 against USDC on Morpho Blue: collateral $3.93M, debt $3.41M, equity $0.52M, leverage 7.6×, LLTV 91.5 %, liquidation distance 5.16 %, verdict REDUCE.
 
@@ -54,10 +54,10 @@ Of the scope items the brief names, feed quality, vaults in external venues, TVL
 | K3 | Lending exploit and oracle layers double-count oracle exploits | over-states | Lending category includes oracle hacks | low | S |
 | K4 | Morpho Blue exploit prior (5.0 %/yr) far above other anchors | over-states frequency | Credora 0.13 %/yr; never exploited | low | S |
 | K5 | Depeg severity tail too thin for a synthetic dollar | under-states tail | P(depeg > 50 %) = 0.002 % in the model; USR −97 %, xUSD −77 %, deUSD −98 % | high | S |
-| K6 | Layers independent; only issuer hack → depeg is linked | under-states tail | Nov 2025 cluster; Resolv chain; PT-reUSD | high | M |
-| K7 | Oracle is "market-tracking" or "fundamental"; real oracles are composites | wrong mechanism | demo oracle is a `MetaOracleDeviationTimelock`; min(TWAP, linear) oracles | high | M |
+| K6 | Layers independent; only issuer hack → depeg is linked *(graph now shows shared feeds and assets across sibling markets; the simulation still draws independently)* | under-states tail | Nov 2025 cluster; Resolv chain; PT-reUSD | high | M |
+| K7 | Oracle is "market-tracking" or "fundamental"; real oracles are composites *(partial: `oracle_class.py` reads the structure in `graph`; two classes; not used by `analyze`)* | wrong mechanism | demo oracle is a `MetaOracleDeviationTimelock`; min(TWAP, linear) oracles | high | M |
 | K8 | Oracle manipulation of a thin Pendle pool is not a loss channel | under-states | PT-reUSD, 33 liquidations, LLTV 91.5 % | high | S–M |
-| K9 | Liquidation at the oracle price with LIF; no slippage, no cascade, no partial liquidation | under-states | LlamaRisk PT supply ≫ AMM depth; Gauntlet, Credora simulate it | medium | M |
+| K9 | Liquidation at the oracle price with LIF; no slippage, no cascade, no partial liquidation *(inputs ready: every held and sibling market in `graph` carries its curve and the collateral seized; no loop yet)* | under-states | LlamaRisk PT supply ≫ AMM depth; Gauntlet, Credora simulate it | medium | M |
 | K10 | Borrow-rate risk of the AdaptiveCurveIRM | under-states | rate ×4 at 100 % utilisation, curve doubles in 5 days | high | S |
 | K11 | PT implied-yield (duration) risk | under-states | +20 pp implied yield = −2.2 % PT price on the demo | medium | S |
 | K12 | Exit cost (one-off) compared with a 30-day loss, while holding to maturity is free | biases to STAY | maturity in 46.6 days | medium | S |
@@ -67,13 +67,13 @@ Of the scope items the brief names, feed quality, vaults in external venues, TVL
 | K16 | Depositor loss under a scenario still missing for vaults (drain d\* done in the watches) | missing | Team 2; deUSD, wstUSR | high | M |
 | K17 | Exploit prior rests only on a 5-year hack history; attack mix shifts yearly | stale, noisy | top classes change every year; a 2-year window raises Morpho Blue to 8.6 % | high | S |
 | K18 | No protocol-specific signal (admin powers, audit scope, insurance price, reputation) | blind to the protocol | 67.6 % of audited incidents outside audit scope (H1 2026); Nexus prices 1.05–1.44 %/yr | medium | S–M |
-| K19 | Discovery stops at the issuer; admin surface not in `analyze` | shallow | brief scores depth at 30 %; issuer deps typed by hand | high | M |
+| K19 | Discovery stops at the issuer; admin surface not in `analyze` *(partial in `graph`: sibling markets and `wraps` edges; `analyze` unchanged)* | shallow | brief scores depth at 30 %; issuer deps typed by hand | high | M |
 | K20 | No "this component is affected now" input; impact is always probability-weighted | missing | brief's worked example marks the oracle "incident" | high | S |
 | K21 | No book (pocket weights), no breakeven p\*, no single headline number | missing | brief's 10 × 10 % book, 11 % unwind example | high | S–M |
 | K22 | No time to impact or time to exit in `analyze` | missing | brief asks "and how fast"; USR −97 % in 17 min | medium | S |
-| K23 | Feed quality (heartbeat, staleness, sources, shared feed) not measured | missing | named in the brief's scope | medium | S–M |
+| K23 | Feed quality (heartbeat, staleness, sources, shared feed) not measured *(the feeds' round history is now read, for classification only)* | missing | named in the brief's scope | medium | S–M |
 | K24 | Vaults or hedges in an external venue (perp, CEX) not covered | missing | named in the brief's scope; Belem runs market-neutral | medium | M–L |
-| K25 | Concentration of TVL (protocol share of chain, position share of pool and supply) not measured | missing | named in the brief's scope | medium | S |
+| K25 | Concentration of TVL (protocol share of chain, position share of pool and supply) not measured *(input available: collateral held per Blue market, held and sibling)* | missing | named in the brief's scope | medium | S |
 
 ## 3. Probabilities
 
@@ -242,6 +242,7 @@ The model reaches a deep loss only through the issuer **hack** branch: Beta(1.2,
 
 - **Assessment:** the evidence argues for **high**. Every large loss in the incident list was a chain of layers, never a single one.
 - **Fix:** run named scenarios alongside the Monte Carlo, as both teams asked (`comparison_team.md` §4.2): replay of the Nov-2025 contagion, replay of Resolv, PT yield spike + pool drain, CEX-only wick. Add a common-shock factor that raises every layer's probability in the same draw.
+- *(update 2026-10-10)* The `graph` command now joins sibling markets to held ones through the asset, oracle or feed they share, so the common-mode links are visible as shared nodes. They are not yet used as correlation: `simulate.run` still draws each layer of one position independently, and no book combines positions (K21).
 
 ## 5. Oracle and liquidation mechanics
 
@@ -284,6 +285,7 @@ The demo sits at the same LLTV with a 5.16 % buffer. In the model, the only path
   - Its modelled bad debt rose from $7M to $70M as the PT drop went from $0.12 to $0.21: strongly non-linear.
   - Gauntlet and Credora both simulate liquidator behaviour and depth.
 - **Evidence against it:** on 2025-10-10 lending liquidations cleared with almost no bad debt, but that was blue-chip collateral.
+- *(update 2026-10-10)* The `graph` command now computes, for every held **and sibling** Blue market, the liquidation curve with the collateral it would seize (D81 of plan `2026-10-10-sibling-markets`). That is the sale pressure the loop needs, across every market that holds the same collateral, not only the watched ones.
 - **Fix:** the loop already proposed (collateral seized at a drop → Pendle price impact for that size → new drop, until stable), with the per-market curve that `market_risk.py` already computes.
 
 ## 6. Loss channels the model does not have
@@ -378,7 +380,7 @@ The brief is `docs/hackaton_instruction/Hackathon_DeFi-Risk-Dependency-Challenge
 | The brief asks | What the tool does | Status | Gap |
 |---|---|---|---|
 | The worked example: a Pendle PT, 5 layers (chain, yield issuer, oracle, PT AMM, lending market) | `analyze` builds exactly these layers for a PT on Morpho Blue | met | — |
-| Discover dependencies **automatically** | Chain, Pendle market, oracle and Morpho market are found on-chain and through the APIs. The issuer's own dependencies (custodians, CEX, keys) are typed by hand for 4 issuers. The admin surface is found automatically, but only by `graph` and the watches, not by `analyze` | partial | K19 |
+| Discover dependencies **automatically** | Chain, Pendle market, oracle and Morpho market are found on-chain and through the APIs. The issuer's own dependencies (custodians, CEX, keys) are typed by hand for 4 issuers. The admin surface is found automatically, but only by `graph` and the watches, not by `analyze`. *(update 2026-10-10)* `graph` also finds sibling Blue markets and `wraps` edges | partial | K19 |
 | Discovery **depth** (30 %) | 5 layers for a PT. Stops at the issuer: no look-through into what backs it (USDe's hedges and custodians, sUSDS's PSM and USDC) | partial | K19, M7 |
 | Impact "when **one of them is affected**" | The report gives, per layer, the loss if it happens ("Loss if it happens", the mean over a severity draw). There is no way to say "**this** oracle is affected now, at this size" and get the impact; the input is always a probability, never an observed incident | partial | K20 |
 | "Is the number defensible" (30 %) | Every number has a basis, but K1–K18 show the exploit, depeg and rate parts are biased or missing | partial | K1–K18 |
@@ -388,7 +390,7 @@ The brief is `docs/hackaton_instruction/Hackathon_DeFi-Risk-Dependency-Challenge
 | "What it does to your book, **and how fast**" | Watches alert block by block; the exit queue and the drain window give time for vault depositors. `analyze` has one 30-day horizon and no time to impact or time to exit | partial | K22 |
 | "Turn ... into **one number**" | A verdict label plus several dollar amounts; no single headline number a manager reads first | partial | K21 |
 | Any ecosystem: Solana, EVM chains, Canton, Tempo | Ethereum mainnet only (C5). Belem's mandates include SOL | missing | C5 |
-| Oracle dependency and **feed-quality** analysis | Oracle mode inferred, verified on Etherscan, admins and aggregator changes watched, oracle vs DefiLlama price. Feed quality itself (heartbeat, deviation threshold, staleness, number of sources, single feed under several markets) is not measured | partial | K23, K7, R3 |
+| Oracle dependency and **feed-quality** analysis | Oracle mode inferred, verified on Etherscan, admins and aggregator changes watched, oracle vs DefiLlama price. Feed quality itself (heartbeat, deviation threshold, staleness, number of sources, single feed under several markets) is not measured. *(update 2026-10-10)* `graph` classifies every oracle input as price-tracking or constant-price from its structure and round history | partial | K23, K7, R3 |
 | **Vaults that deploy into an external venue**, e.g. a perp exchange | Not covered. Morpho Vault V2 adapters other than Morpho markets are opaque (C4); no perp venue, no off-chain venue | missing | K24 |
 | **Protocols concentrating a large share of on-chain TVL** | Not measured. Lender concentration inside a market is (R4); the share of a chain's TVL that one protocol holds is not | missing | K25 |
 | Working prototype on real data (15 %) | Live and offline runs on real positions, recorded replays, tests | met | — |
@@ -406,6 +408,12 @@ Their failures are exactly the ones that broke issuers in 2025–2026 (K2). The 
   - add the admin surface to `analyze`'s graph as layers with their own priors (K18);
   - look through one level where it is on-chain: sUSDS → USDS → PSM → USDC, or the ERC-4626 vault behind an exchange-rate oracle;
   - keep the off-chain part as typed registry nodes, drawn in the graph, so the depth is visible even where it is not computed.
+- *(update 2026-10-10, partial)* The `graph` command now goes one hop sideways and one level down:
+  - **sibling markets**: the Blue markets that share a held market's collateral, underlying or collateral-side price input, or lend that collateral, above $1M of supply (`siblings.py`);
+  - **`wraps` edges**: an ERC-4626 share to its `asset()`, which is the on-chain look-through for vault-share collateral;
+  - **oracle inputs** decomposed, each with its class.
+
+  `analyze` still stops at the issuer, and siblings are found on Morpho Blue only (R5 in `ANALYSIS_MONITORING.md`: Euler, Aave, Silo or Fluid markets on the same collateral are not in the graph).
 
 ### K20. No "this component is affected now" mode
 
@@ -453,6 +461,8 @@ What a feed-quality analysis would add:
 
 Chainlink publishes most of these for each feed (`REPOSITORY_ADD.md`, priority 2).
 
+*(update 2026-10-10)* `oracle_class.py` now reads each feed's recent round history (`getRoundData`) to decide its class, and the graph draws one feed node per feed, shared by every market that reads it. Both are the raw material of a staleness check and of R3 (one feed under several markets), but neither is measured or alerted yet.
+
 ### K24. Vaults that deploy into an external venue
 
 The brief names "vaults routing capital into a perp venue". Belem runs market-neutral strategies, so its positions have a hedge leg on a perp exchange. The tool covers Morpho and Pendle only; any Vault V2 adapter other than a Morpho market adapter is opaque (C4).
@@ -477,6 +487,7 @@ The brief names "protocols concentrating a large share of on-chain TVL". The too
 DefiLlama's `/protocols` (already fetched) gives TVL by protocol and chain.
 
 - **Fix:** a concentration line per layer: protocol share of the chain's category TVL, and position or market share of the PT supply and of the pool depth. A high share means both a systemic node and a slow exit.
+- *(update 2026-10-10)* The `graph` command now records the collateral held by every held and sibling Blue market (`takes as collateral`, with the amount). Summed per collateral and compared with its supply, that gives the share of a token sitting in Morpho markets; the line is not computed yet.
 
 ## 10. What holds up
 
@@ -498,10 +509,10 @@ The challenge also found choices that the evidence supports.
 | 1 | K10, K11, K12 | The largest effect on a PT loop; IRM rules and PT pricing are deterministic, no new data source | S each |
 | 2 | K17, K1, K3, K5 | Decayed hack window as a category base rate only; fix known biases in the existing priors; one data call (TVL history) | S |
 | 2b | K18 (admin powers, upgrades since audit, insurance price) | Protocol multiplier from what `admin.py` already reads and one keyless Nexus Mutual call; audits and reputation by hand later | S–M |
-| 3 | K7, K8 | Oracle structure: decides which channel a shock takes; sources now available | M |
+| 3 | K7, K8 | Oracle structure: decides which channel a shock takes; `oracle_class.py` already classifies the structure in `graph`, so what remains is using it in `analyze` and `drain.py`, a third class for meta-oracles, and the pool-move event | S–M |
 | 4 | K6 + named scenarios, K13 | Correlated stress and a tail-aware verdict; answers both teams | M |
 | 5 | K16 | Depositor loss under a scenario, and d\* fed into `analyze`; the track's use case | M |
-| 6 | K9, K14, K2, K4, K15 | Cascade loop, parameter uncertainty, off-chain priors, recalibration | M |
+| 6 | K9, K14, K2, K4, K15 | Cascade loop (its inputs, curves and seized collateral per market, are now in `graph`), parameter uncertainty, off-chain priors, recalibration | M |
 | 7 | K19, K23, K25, K22 | The brief's scope items on discovery depth (30 %): admin surface and one look-through level in `analyze`, feed quality, TVL concentration, time to impact | S–M each |
 | 8 | K24, C5 | External venues and other chains: named in the brief, large, and closest to Belem's own book (market-neutral, SOL mandate) | M–L |
 

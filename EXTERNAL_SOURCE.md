@@ -95,8 +95,8 @@ Every response carries its freshness (`asOfSec`, `publicationStatus`).
 | Use | How | Gaps |
 |---|---|---|
 | **Issuer depeg prior from a grade** | Map the Safety Score to the depeg prior's frequency or severity as a bounded multiplier on a base rate (the K17 design): sUSDe at C should not get the same prior as an A+ coin. Today the 4 registry issuers are set by hand | K5, K17, K18, M7 |
-| **Look-through discovery** | Follow collateral and wrapper edges from the position's underlying (sUSDe → USDe, sUSDS → USDS → USDC 40.6 %) and draw them as layers in `analyze` and `graph` | K19 |
-| **Correlation from common-mode groups** | Two layers in the same mint-control, upgrade-control, bridge or reserve-issuer group fail together: draw them from one common shock in `simulate` | K6, R3 |
+| **Look-through discovery** | Follow collateral and wrapper edges from the position's underlying (sUSDe → USDe, sUSDS → USDS → USDC 40.6 %) and draw them as layers in `analyze` and `graph`. `graph` already draws the on-chain part of a wrapper, an ERC-4626 share's `wraps` edge to its `asset()` (plan `2026-10-10-sibling-markets`); Pharos adds the off-chain backing (USDS → USDC through the PSM, reserves) that `asset()` cannot show | K19 |
+| **Correlation from common-mode groups** | Two layers in the same mint-control, upgrade-control, bridge or reserve-issuer group fail together: draw them from one common shock in `simulate`. `graph` now shows the on-chain common modes (one node per shared asset, oracle and feed, across held and sibling markets); Pharos's groups add the off-chain ones (mint keys, bridges, reserve issuers) | K6, R3 |
 | **Contagion paths** | Pharos's scenarios name which coins a root failure reaches, and in how many hops. Use them as named scenarios (K20) and as a check on our propagation | K6, K20 |
 | **Live warning** *(key)* | DEWS and depeg events as watch alerts, before the price moves; the depeg resolver's expected duration as the `recovery` input of a depeg | K22, K5 |
 | **Exit liquidity** *(key)* | DEX liquidity and its history for the underlying, for exit cost under stress and for concentration | K9, K12, K25 |
@@ -158,7 +158,7 @@ A worked example in the docs: PT-sUSDe markets at LLTV 91.5 % with a **Fixed** o
 | Use | How | Gaps |
 |---|---|---|
 | **Copy the structure** (no API needed) | Base rate × notches from a stated curve; maturity tiers with reset on upgrade; audit tiers; oracle classes. This is K17 + K18 written out by a rating agency, citable as a basis | K17, K18, K15 |
-| **Oracle classes** | Dynamic / Exchange / Fixed is a step past our market-tracking / fundamental binary, and Credora rates Fixed markets differently (LGD curves, not price paths) | K7, K8 |
+| **Oracle classes** | Dynamic / Exchange / Fixed is a step past our two classes, and Credora rates Fixed markets differently (LGD curves, not price paths). Since plan `2026-10-10-sibling-markets`, `graph` classifies oracle inputs from their structure as `price-tracking` or `constant-price` (`oracle_class.py`); Credora's split maps onto it as Dynamic = price-tracking, and Exchange and Fixed = the two kinds of constant-price that the code does not yet tell apart | K7, K8 |
 | **Check our numbers** *(key)* | Fetch the PSL of the demo's market and of the watched vaults. Report it next to ours: "Credora PSL x %, ours y %". A large gap is a finding, in either direction | K4, "is the number defensible" |
 | **Vault depositor view** *(key)* | Vault PSL is exactly the depositor number `analyze` lacks (K16); use it as an outside reference until ours exists | K16 |
 | **Tail-aware decision** | PSL is a probability of a loss above a threshold, the kind of tail metric K13 asks the verdict to use | K13 |
@@ -251,7 +251,7 @@ The 0.13 % is a parameter of the method, applied to every Morpho market Credora 
 |---|---|---|
 | `sources.py` | `pharos_grades()`, `pharos_graph()`, `pharos_scenarios()` (keyless); `nexus_products()`, `nexus_capacity()` (keyless); optional `pharos(endpoint)` with key, `credora_ratings(address)` with key. All through the cached `Fetcher`, so offline runs and tests keep working | all |
 | `priors.py` | Issuer depeg prior: base rate × multiplier from the Pharos grade; exploit prior: K17 base rate × K18 multiplier, with Credora's tiers as the written basis | Pharos, Credora |
-| `discover.py` / `graph.py` | Look-through layers from Pharos collateral and wrapper edges; common-mode groups as shared nodes | Pharos |
+| `discover.py` / `graph.py` | Look-through layers from Pharos collateral and wrapper edges, next to the on-chain `wraps` edges `graph` already draws; common-mode groups as shared nodes, alongside the shared asset, oracle and feed nodes of the sibling markets | Pharos |
 | `simulate.py` | One common shock per Pharos common-mode group (K6) | Pharos |
 | `decide.py` | "Stay and insure" option with the Nexus price and capacity; Credora PSL shown as a reference | Nexus, Credora |
 | `report.py` | An "Outside view" table (§5) per layer, with the date and source of each number | all |

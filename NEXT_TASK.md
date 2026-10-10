@@ -62,14 +62,15 @@ INCIDENT  oracle −10.0 %
   - **EXIT** if staying loses more than exiting costs: loss(shock) > exit cost;
   - **REDUCE** if a partial sale, sized with the existing `decide.sale_to_reach` to put liquidation beyond the shock, costs less than the loss it avoids;
   - **STAY** otherwise: the shock is absorbed, and leaving costs more.
-- **How fast (K22).** A time to impact per oracle type, without waiting for task B4 of `NEXT_STEP_V2.md`:
+- **How fast (K22).** A time to impact per oracle type. Since the merge of plan `2026-10-10-sibling-markets`, `oracle_class.py` classifies an oracle from its structure and already reads Pendle's `twapDuration`, so this step calls `oracle_class.probe` and `classify_oracle` on the position's oracle rather than relying on `analyze`'s price inference:
 
   | What is known about the oracle | Time to impact reported |
   |---|---|
-  | Etherscan name `MetaOracleDeviationTimelock` (the demo) | `challengeTimelockDuration()`, read on-chain: the backup takes over only after it |
-  | `oracle_mode == "market-tracking"`, Chainlink-style | "at the feed's next update" |
-  | `oracle_mode == "fundamental"` | "never: no liquidation; the loss stays with lenders" |
-  | otherwise | "unknown" |
+  | Etherscan name `MetaOracleDeviationTimelock` (the demo; `oracle_class` leaves it `not classified`, R7) | `challengeTimelockDuration()`, read on-chain: the backup takes over only after it |
+  | `price-tracking` through a Pendle TWAP input | about `twapDuration()`, kept by `oracle_class` in `Probe.getters` (900 s on PT-reUSD) |
+  | `price-tracking`, Chainlink-style feed | "at the feed's next update" |
+  | `constant-price` | "never: no liquidation; the loss stays with lenders" |
+  | `not classified`, and no inference | "unknown" |
 
   The time to exit is "one block through the Pendle pool, at today's quote".
 
@@ -79,6 +80,7 @@ INCIDENT  oracle −10.0 %
 |---|---|
 | `riskdep/scenario.py` (new) | `@dataclass ScenarioResult` (shocks, `loss_usd`, `loss_share_of_equity`, `liquidated`, `path`, `time_to_impact`, `exit_cost_usd`, `reduction`, `verdict`). Pure `impact(pos, shocks, recovery, pt_stress_extra) -> LossBreakdown` that calls `propagate.loss`. `parse_shocks(["oracle=0.10", …]) -> dict` that rejects unknown events and severities outside [0, 1] |
 | `riskdep/decide.py` | Pure `verdict_given(pos, breakdown, quote, quote_for) -> (verdict, reduction)`, reusing `exit_cost_usd` and `sale_to_reach` |
+| `riskdep/oracle_class.py` | nothing to change; `scenario.py` calls `probe` and `classify_oracle` for the position's oracle, and reads the Pendle input's `twapDuration` from the probe |
 | `riskdep/discover.py` | `oracle_timelock(f, oracle) -> int \| None`: reads `challengeTimelockDuration()` when the verified name is `MetaOracleDeviationTimelock` (already known from `oracle_verified`); keep the Etherscan name on the oracle node (`name=` attribute) |
 | `riskdep/cli.py` | `--shock EVENT=SEVERITY`, repeatable, on `analyze`. When present, run the incident block in addition to the normal analysis (the Monte Carlo still runs: the two answers are shown side by side) |
 | `riskdep/report.py` | `write(..., incident=None)`: an "Incident" section at the top of `report.html`, an `incident` key in `report.json`; `print` of the block in the terminal |
@@ -99,7 +101,7 @@ INCIDENT  oracle −10.0 %
 - the three example commands run offline on the demo;
 - the report shows the incident block above the Monte Carlo;
 - `README.md` (the `analyze` section), `docs/how-risk-is-computed.md` (a short section "When a component is hit") and the `CLAUDE.md` / `AGENTS.md` file tree are updated;
-- the decisions go in a new plan, `plan/<date>-incident-and-book.plan.md`, from D75.
+- the decisions go in a new plan, `plan/<date>-incident-and-book.plan.md`, from D89 (D75–D88 are taken by plan `2026-10-10-sibling-markets`).
 
 ## Task 2: the book, the breakeven and the headline
 
@@ -110,6 +112,7 @@ What exists today:
 - Its headline is a sentence per position, for example "REDUCE: … the carry ($5,697) does not cover the expected loss ($6,265) …", followed by several dollar amounts.
 - It ends with one global line, "A full exit would only pay if incident probabilities were 13.5× the estimates" (`risk_multiple_to_exit`). That is a partial answer to Team 2's breakeven argument, but it scales **all** probabilities at once.
 - The watches follow several positions of one address, but each one separately; nothing adds them up.
+- `graph` can draw several users and vaults together (`graph.build_all`), with their shared assets, oracles and feeds, and since the sibling-markets work, the other Blue markets on the same collateral. It draws the book's structure but computes no loss, no weight and no verdict for it.
 
 What is missing, and why it matters for the brief:
 - **No book.** The brief's example is a book of ten 10 % pockets, one affected. Its answer depends on the pocket's weight: the same loss is 10 % of the book or 1 %. Today no number is expressed as a share of a book, and the example cannot be entered.
@@ -148,7 +151,7 @@ BOOK  Book A · 3 pockets · equity $1.9M
   }
   ```
   Vault pockets (`"kind": "vault"`) wait for `analyze --vault` (D1 of `NEXT_STEP_V2.md`); the loader rejects them with a clear message.
-- **Shared layers (M6).** Every pocket's graph has node ids (`chain:ethereum`, `issuer:0x…`, `oracle:0x…`, `lending:0x…`, `amm:0x…`). A layer shared by several pockets is the same node id. In the book's Monte Carlo, each **(event, node)** is drawn **once** per path and applied to every pocket that holds that node. Today each position draws its own, which treats one USDe depeg as two independent events.
+- **Shared layers (M6).** Every pocket's graph has node ids (`chain:ethereum`, `issuer:0x…`, `oracle:0x…`, `lending:0x…`, `amm:0x…`). A layer shared by several pockets is the same node id. In the book's Monte Carlo, each **(event, node)** is drawn **once** per path and applied to every pocket that holds that node. Today each position draws its own, which treats one USDe depeg as two independent events. Two pockets can also share a layer without sharing an oracle: two oracles that read the same Chainlink feed. `graph` already decomposes oracles into one node per feed (via `oracle_class`), so `book.shared_layers` adds the feed addresses of each pocket's oracle to its node ids, and a shared feed (R3) is drawn once too.
 - **Breakeven probability** for each pocket and each layer, as in `docs/scenarios-and-breakeven.md`:
 
   $$p^\star = \frac{\text{exit cost} + \text{carry}}{L_{\text{severe}}}$$
