@@ -111,6 +111,8 @@ The vault's assets in a market = adapter supply shares × market total supply as
 
 **Which block is read.** Normally the batch's last block. The free RPC serves state only ~64–90 blocks back, though, so for an older batch the watcher reads the oldest block it can (D28). Events carry their own numbers, so the rules that use them stay exact; the state-based rules start at that block.
 
+**A batch with no event reads less (D61).** Most batches of a live watch hold one block and no event. Without an event of the watched filters, Blue's stored market totals, the adapters' supply shares, caps, fees, penalties and the depositor's shares cannot change, so a live batch with no event (and no undecoded log, no gap, no refresh) reads only what can: `totalAssets()`, the asset's `balanceOf(vault)`, each adapter's `realAssets()`, each market's oracle `price()`, and the depositor's two gates. For Sentora RLUSD Main that is 15 calls instead of 104; for borrows, the oracle prices only. Everything else is carried from the last full read, which runs on any event and at least every `full_state_every_blocks` (25 blocks, ~5 min), so the borrow rate and anything changed without a fetched event are at most that stale. Replays and `--blocks` runs always read in full.
+
 The state after the *previous* batch is kept in memory as **before**. The rules see both.
 
 ### 6. Apply the rules

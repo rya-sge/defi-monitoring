@@ -15,7 +15,7 @@ from . import sources as S
 from .discover import REGISTRY
 from .poller import Poller
 from .rules import LEVELS, Alert, Ctx, assess_batch, startup_findings
-from .vault import VaultView, discover_vault, largest_depositor, read_state
+from .vault import VaultView, discover_vault, largest_depositor, read_light, read_state
 
 W = REGISTRY["watch"]
 COLOR = {"info": "\033[36m", "warn": "\033[33m", "critical": "\033[1;31m"}
@@ -58,6 +58,20 @@ class Printer:
         tx = f" tx {al.tx[:12]}…" if al.tx else ""
         impact = f" [you: {al.depositor_impact:+,.2f}]" if al.depositor_impact else ""
         self.line(f"{tag} #{al.block}{tx} {al.title}{impact}" + (f" — {al.detail}" if al.detail else ""))
+
+
+def light_read(batch, live: bool, refresh: bool, last_full: int) -> bool:
+    """D61: a live batch with no event reads only the values that move without one, until the last full read is
+    `full_state_every_blocks` old. Anything on the watched filters, undecoded logs included, a gap, a refresh or a
+    recorded or one-shot run (whose replays hold full reads) gets a full read."""
+    return (
+        live
+        and not refresh
+        and not batch.events
+        and not batch.unknown
+        and batch.gap is None
+        and batch.to_block - last_full < W["full_state_every_blocks"]
+    )
 
 
 def _fetcher(opts: Options) -> S.Fetcher:
@@ -194,7 +208,8 @@ def run(opts: Options) -> int:
         poller.head = lambda: pinned
 
     polls = 0
-    last_check = state0
+    last_check = last_full = state0
+    live = opts.mode == "direct" and pinned is None
     backoff = opts.poll_seconds
     while True:
         try:
@@ -238,12 +253,16 @@ def run(opts: Options) -> int:
             view = discover_vault(f, opts.vault, state_block)
             poller.kinds, poller.market_ids = view.kinds, view.market_ids
             p.line(f"structure changed: rediscovered at block {state_block}")
-        after = read_state(f, view, state_block, dep)
+        refresh = batch.to_block - last_check >= W["crosscheck_every_blocks"]
+        if light_read(batch, live, refresh, last_full):
+            after = read_light(f, view, state_block, before)
+        else:
+            after = read_state(f, view, state_block, dep)
+            last_full = batch.to_block
         if set(MR.vault_markets(view, after)) != set(vrisk.markets):
             vrisk = MR.VaultRisk(f, view, after, state_block)
             aw = AD.AdminWatch(f, list(vrisk.markets), state_block)
             poller.kinds, poller.extra_filters = {**aw.kinds(), **view.kinds}, aw.filters()
-        refresh = batch.to_block - last_check >= W["crosscheck_every_blocks"]
         for al in (
             assess_batch(batch.events, Ctx(view, before, after), dep, batch.to_block)
             + vrisk.step(f, batch.events, after, state_block, batch.to_block, refresh)

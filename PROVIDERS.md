@@ -53,6 +53,10 @@ Every request to the data providers goes through the cached fetcher of `riskdep/
 
 **Available but not used yet:** the WebSocket endpoint `wss://ethereum-rpc.publicnode.com` (`newHeads`, `logs`, `newPendingTransactions`, all verified) and `eth_simulateV1` (verified). See `docs/websocket-vs-polling.md`.
 
+**Routing (`RISKDEP_RPC_URL`).** When this environment variable is set, `sources.Fetcher` sends the main RPC's requests to its value instead of publicnode, for example a local node, a proxy or a paid endpoint with its key. Requests stay cached under the publicnode URL, so snapshots and replays keep working and the key never reaches a file; an error names the public URL only. The cross-checks keep calling dRPC and 1RPC directly: routing the main RPC to one of them would make the block-hash check compare that node with itself.
+
+**Load (measured 2026-10-10, live, 12 s polls).** `watch --vault` on Sentora RLUSD Main: 13 calls/s before D61, about 2 calls/s on batches with no event (15 `eth_call`s instead of 104, plus the log filters). `watch --user` on the demo borrower: 4.2 calls/s before, 1.7 after. `eth_getLogs` (one request per filter, address lists split by 9) is now the largest share of the polling load. A startup or 300-block refresh is a burst of 670 to 890 calls. publicnode does not document a rate limit.
+
 **dRPC `https://eth.drpc.org`, then 1RPC `https://1rpc.io/eth`**: called only by `crosscheck.second_rpc`, which compares one block hash with the main RPC at start and every 300 blocks. Other keyless endpoints tried on 2026-10-10 did not answer: LlamaRPC, Cloudflare's Ethereum gateway, and Ankr (which requires a key).
 
 ## Morpho API
@@ -132,7 +136,7 @@ These are not data sources: the browser loads them when a report is opened, at a
 - **Keys and secrets** live in `keys.ini` at the repository root, which is git-ignored and readable only by its owner (`chmod 600`). `keys.example.ini` is the committed template: same sections and names, no values. Copy it with `cp keys.example.ini keys.ini`. No provider called by the code today needs a key; the Etherscan key is filled in for step 3, the other sections are ready for next steps 1 to 6.
 
 - **Endpoints** are constants: `RPC`, `MORPHO`, `PENDLE`, `LLAMA`, `LLAMA_COINS` in `riskdep/sources.py`, `SECOND_RPCS` in `riskdep/crosscheck.py`, and the script URLs in `riskdep/report.py` and `riskdep/graph.py`.
-- **A paid RPC** (archive and WebSocket access, needed by next steps 5 and 6) replaces `RPC`; its URL and key go in `keys.ini` (section `[rpc]`), which is git-ignored, never in a committed file.
+- **A paid RPC** (archive and WebSocket access, needed by next steps 5 and 6) is set with `RISKDEP_RPC_URL`, its key included; keep the URL in `keys.ini` (section `[rpc]`, git-ignored) and export it from there. It is never committed, and the cache keys keep the publicnode URL.
 - **After any change:**
   - re-record the replays (`watch --blocks 1000 --record`, `watch --user <address> --blocks 300 --record`), because cached requests are keyed by their URL and body;
   - run the tests;
