@@ -22,6 +22,8 @@ Rules for editing:
 - [`watch`](#watch)
 - [`graph`](#graph)
 - [`engine`](#engine)
+- [`exit_liquidity`](#exit_liquidity)
+- [`pharos`](#pharos)
 - [How to add a yield issuer](#how-to-add-a-yield-issuer)
 
 ## `chain`
@@ -147,6 +149,9 @@ The thresholds of `watch --vault` and `watch --user`. Changing them changes when
 | `drain_margin` | fraction (points of discount) | 0.02 | `DrainWindow` warn: the collateral's discount to its oracle within this distance of d\*; critical at d\* |
 | `drain_check_every_blocks` | blocks | 25 | how often DefiLlama's prices are re-read for the drain threshold; oracle prices come with every state read |
 | `exit_queue_phi` | fraction of the other depositors' assets | 0.5 | the "behind φ of others" queue position of the exit-queue table; it also stands in for the contract holders in `ExitQueue` when the holder list is unavailable |
+| `concentration_top1_warn` | fraction of the market's debt | 0.5 | `BorrowerConcentration` warn: the largest borrower of a vault market holds at least this share (D129) |
+| `concentration_min_borrowers` | count | 5 | `BorrowerConcentration` warn: a vault market with fewer borrowers |
+| `concentration_basis` | text | — | why |
 | `exit_queue_stuck_warn` | fraction of the position | 0.5 | `ExitQueue` warn: the share of the position stuck if every contract holder withdrew first; critical when the vault also carries unrealised bad debt |
 
 The health-factor levels of `watch --user` are not here: they are a command-line option, `--hf` (default `1.10,1.05,1.02`).
@@ -187,6 +192,32 @@ The shock engine's propagation rules and settings (plan `2026-10-10-propagation-
 | `basis` | text | — | why |
 
 **Changing a rule.** Prefer a `--rules` file for a study: the registry's rules are the defaults everyone gets. A change here keeps its `basis` honest and is followed by `python3 -m pytest -q tests/test_engine.py`. The drain threshold uses `watch.drain_buy_cost`.
+
+## `exit_liquidity`
+
+How easily a collateral token can be sold on DEXs, per token address (plan `2026-10-11-borrower-concentration`, D131). Read by `vault_incident.py`: a markdown hit on a market whose collateral has `route` `none` or `thin` reports the loss if nobody liquidates, and the liquidity left locked; a hit token without an entry is named in a note. Measured once, by hand, so it ages: re-measure before relying on it.
+
+| Key | Unit | Default | What it controls |
+|---|---|---|---|
+| `basis` | text | — | the source (KyberSwap quotes into USDC on Ethereum, 2026-10-11, `docs/analysis/ROCK-VAULT-DEP.md` §7) and the route rule |
+| `thin_impact` | fraction | 0.05 | above this price impact at 1M USD, the route is `thin` |
+| `tokens.<address>` | object | PST, AUTO, mGLOeuro, fxSAVE, etrUSD, strUSD, PRIME | `symbol`; `route` (`none`: no route at 0.1M USD; `thin`; `deep`); `impact` by sale size in USD (negative = loss; `null`: no route); optional `note` |
+
+**Adding a token.** Quote a sale of the token into the vault's asset at 0.1M, 1M and 5M USD on an aggregator, and add `"<address in lower case>": {"symbol": …, "route": …, "impact": {…}, "note": "<date, source>"}`.
+
+## `pharos`
+
+How Pharos's keyless dependency graph is read (plan `2026-10-11-pharos`, D133–D138; `docs/risk-assessment/outside-providers.md`). Read by `pharos.py`, `vault_incident.py` and `graph.py`. No alert depends on it.
+
+| Key | Unit | Default | What it controls |
+|---|---|---|---|
+| `basis` | text | — | the source, its methodology version, and that grades are shown, never used as numbers |
+| `ids` | address → `{id, symbol}` | 12 tokens: USDC, USDT, EURCV, steakEURCV, trUSD, strUSD, fxUSD, fxSAVE, iUSD, reUSD, USDe, sUSDe | maps a token address to its Pharos id; needed when the symbol is ambiguous (three iUSD, two reUSD); the symbol names the token in the output |
+| `ids_basis` | text | — | how each entry was checked (on-chain `symbol()`, 2026-10-11) |
+| `min_exposure` | fraction | 0.01 | a market reached through Pharos's off-chain backing is ignored below this share; also the smallest backing edge drawn in `graph` |
+| `common_mode_kinds` | list | `mint-control`, `upgrade-control`, `reserve-issuer`, `redemption-rail` | the group kinds that mean "fails together" |
+| `max_group_members` | count | 12 | wider groups (a chain, a DEX, LayerZero) are dropped |
+| `groups_basis` | text | — | why |
 
 ## How to add a yield issuer
 
