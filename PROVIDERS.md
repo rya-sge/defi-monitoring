@@ -10,6 +10,7 @@ Every external service the project calls, what it is used for, and what is known
 - [Pendle API](#pendle-api)
 - [DefiLlama](#defillama)
 - [Scripts loaded by the HTML outputs](#scripts-loaded-by-the-html-outputs)
+- [Configured but not used yet](#configured-but-not-used-yet)
 - [Defined but unused](#defined-but-unused)
 - [Trust model](#trust-model)
 - [Changing a provider](#changing-a-provider)
@@ -106,6 +107,10 @@ These are not data sources: the browser loads them when a report is opened, at a
 | Mermaid 11.4.1 | `https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js` | `out/report.html` (`analyze`) |
 | Cytoscape.js 3.30.2 | `https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.2/cytoscape.min.js` | `out/graph.html`, `docs/graph-example.html` |
 
+## Configured but not used yet
+
+**Etherscan API V2, `https://api.etherscan.io/v2/api`** (`chainid=1`), key in `keys.ini` section `[etherscan]`. No code calls it yet; it is meant for step 3 of `NEXT_STEP.md` (verified sources and ABIs of the admin surface). Tested by hand on 2026-10-10: `module=contract&action=getsourcecode` returned the verified source of the demo oracle `0xF8b2…1b08` (an EIP-1167 clone, which Etherscan resolves to its implementation `0x9b46…de5b`, `MetaOracleDeviationTimelock` by Steakhouse Financial, solc 0.8.28). Documentation: `docs/external/docs.etherscan.io-api-reference-docs`. Free-tier limits are not measured yet.
+
 ## Defined but unused
 
 | Constant | Endpoint | Status |
@@ -124,7 +129,7 @@ These are not data sources: the browser loads them when a report is opened, at a
 
 ## Changing a provider
 
-- **Keys and secrets** live in `keys.ini` at the repository root, which is git-ignored and readable only by its owner (`chmod 600`). `keys.example.ini` is the committed template: same sections and names, no values. Copy it with `cp keys.example.ini keys.ini`. No provider used today needs a key; the sections are ready for next steps 1 to 6.
+- **Keys and secrets** live in `keys.ini` at the repository root, which is git-ignored and readable only by its owner (`chmod 600`). `keys.example.ini` is the committed template: same sections and names, no values. Copy it with `cp keys.example.ini keys.ini`. No provider called by the code today needs a key; the Etherscan key is filled in for step 3, the other sections are ready for next steps 1 to 6.
 
 - **Endpoints** are constants: `RPC`, `MORPHO`, `PENDLE`, `LLAMA`, `LLAMA_COINS` in `riskdep/sources.py`, `SECOND_RPCS` in `riskdep/crosscheck.py`, and the script URLs in `riskdep/report.py` and `riskdep/graph.py`.
 - **A paid RPC** (archive and WebSocket access, needed by next steps 5 and 6) replaces `RPC`; its URL and key go in `keys.ini` (section `[rpc]`), which is git-ignored, never in a committed file.
