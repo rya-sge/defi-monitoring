@@ -125,7 +125,7 @@ The layers, from the bottom:
 
 ## 3. Data sources and trust
 
-Every source is public and needs no API key.
+Every source is public and needs no API key. The exact endpoints, queries and measured limits are listed in `PROVIDERS.md`.
 
 | Source | Used for | Read by |
 |---|---|---|
@@ -257,6 +257,9 @@ The full list, with impact and effort, is §5 of `ANALYSIS_MONITORING.md`.
 | `README.md` | how to run each mode, the alert trigger tables |
 | `ANALYSIS_MONITORING.md` | the risk model (graph, impact, monitoring, execution) and the gaps |
 | `docs/how-risk-is-computed.md` | the `analyze` model, step by step |
+| `docs/scenarios-and-breakeven.md` | scenarios and breakeven probabilities as a complement to the Monte Carlo, with a learn section |
+| `docs/vault-depositor-scenarios.md` | a vault depositor's loss under a scenario, on Sentora RLUSD Main, with a learn section |
+| `docs/graph-propagation.md` | the dependency graph as a propagation engine (transmission functions, DebtRank), with a learn section |
 | `docs/how-a-block-is-analysed.md` | one watch batch, with a real transaction |
 | `docs/alert-runbook.md` | what each alert means and what to do |
 | `docs/glossary.md` | the terms |
@@ -264,5 +267,6 @@ The full list, with impact and effort, is §5 of `ANALYSIS_MONITORING.md`.
 | `docs/websocket-vs-polling.md` | the choice of polling |
 | `docs/user-watcher-options.md` | the options behind `watch --user` |
 | `docs/graph-example.html` | a rendered dependency graph |
+| `PROVIDERS.md` | every external provider: endpoints, queries, measured limits, trust model |
 | `NEXT_STEP.md` | what comes next, and what each step needs |
 | `CLAUDE.md` / `AGENTS.md` | conventions for editing the code |
