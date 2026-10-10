@@ -16,7 +16,7 @@ All data comes from keyless public sources: the publicnode Ethereum RPC, the Mor
 
 ```bash
 uv sync                             # Python >= 3.10
-uv run pytest -q tests              # 99 tests, offline
+uv run pytest -q tests              # 112 tests, offline
 ```
 
 Outside an activated virtualenv, prefix the `python3 -m riskdep …` commands below with `uv run`.
@@ -106,17 +106,30 @@ pnpm format       # prettier --write
 
 **It runs with no backend.** `VITE_USE_MOCKS` in `web/.env` defaults to true, and the hooks then resolve fixtures copied from real CLI output (`out/report.json`, `out/graph.json`, `out/watch-*.jsonl`) into `web/src/mocks/`. The alert stream is replayed one entry every 1.5 s, then ends. Two `critical` alerts in that fixture are **fabricated** — no recorded run has one, so their wording is modelled on `docs/alert-runbook.md`; everything else is verbatim recorded output.
 
-**The `/api` backend does not exist yet.** With `VITE_USE_MOCKS=false` the hooks hit the paths below, which Vite proxies to `http://127.0.0.1:8000`; until something serves them the UI shows "backend unreachable".
+**The backend.** `riskdep/api.py` is a FastAPI app serving the routes below; Vite proxies `/api` to it. With `VITE_USE_MOCKS=false` the hooks hit it for real.
+
+```bash
+uv run uvicorn riskdep.api:app --reload      # http://127.0.0.1:8000, docs at /docs
+```
+
+It owns no risk logic: `pipeline.analyze` computes, `report.to_dict` and `graph.to_dict` shape, the API routes. The watcher is **not** hosted — `python -m riskdep watch` stays its own process and appends to `out/watch-*.jsonl`, which `GET /api/alerts` reads with a block cursor. One poll loop per target however many browsers are open, and either side can restart without the other.
+
+`openapi.json` is committed and is the contract: regenerate it with the command below, and CI fails if it has drifted from the code.
+
+```bash
+uv run python -c "import json,riskdep.api as a; print(json.dumps(a.app.openapi(), indent=2))" > openapi.json
+```
 
 | Endpoint | Serves |
 |---|---|
 | `GET /api/health` | `{status, mode, data_as_of}` — the mode chip in the header |
-| `GET /api/report` | the `analyze` report JSON |
-| `POST /api/analyze` | run `analyze` for a market or user and return the report |
-| `GET /api/graph?user=&vault=&block=` | the `graph` JSON |
-| `GET /api/watch/stream?vault=&user=&min_level=` | Server-Sent Events, named `alert` and `tick` (no buffering) |
+| `GET /api/report` | the last `analyze` report written to `out/` |
+| `POST /api/analyze` | run `analyze` (market, user, horizon, paths, live) and return the report; writes nothing |
+| `GET /api/graph?user=&vault=&block=` | the dependency graph; with no user and no vault, the last one written to `out/` |
+| `GET /api/targets` | one entry per `out/watch-*.jsonl`: the watch targets with alerts |
+| `GET /api/alerts?target=&since=&level=&limit=` | alerts after a block cursor; pass the returned `cursor` back as `since` |
 
-**Limits.** Read-only: no wallet, no transaction, no form to launch a run — the Position and Graph pages read whatever the backend serves for the default position, and the alert stream passes only `min_level` (the `vault` and `user` filters and `POST /api/analyze` are typed and wired in the client, but no page offers them). Dark mode follows the system; the `data-theme` override the stylesheet supports has no toggle. The browser reconnects a dropped stream by itself, and the gap is shown meanwhile. No frontend tests, and CI does not build `web/`.
+**Limits.** Read-only: no wallet, no transaction, no form to launch a run — the Position and Graph pages read whatever the backend serves for the default position, and the Alerts page passes only `min_level` (the `target` filter and `POST /api/analyze` are typed and wired in the client, but no page offers them). Dark mode follows the system; the `data-theme` override the stylesheet supports has no toggle. Alerts arrive by polling `/api/alerts` every 3 s with a block cursor, not over a socket; a failed poll is surfaced and retried on the next tick. No frontend tests, and CI does not build `web/`.
 
 ## Layout
 

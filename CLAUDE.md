@@ -52,6 +52,12 @@
 riskdep/
   __main__.py         entry point → cli.main
   cli.py              argparse: analyze, watch, graph
+  pipeline.py         one analyse end to end, shared by the CLI and the API (no I/O of its own)
+  api/
+    main.py           FastAPI assembly, CORS, lifespan, /api/health
+    schemas.py        the published contract, mirrored by openapi.json
+    artifacts.py      the only reader of out/, and the fetch lock
+    routes/           one module per resource: graph, report, alerts
   sources.py          keyless HTTP/RPC sources behind one cached fetcher (data/snapshot/)
   clock.py            single clock; snapshot date when offline
   abi.py              Morpho Blue / Vault V2 / adapter event and function signatures
@@ -96,6 +102,7 @@ pyproject.toml        project metadata, dependencies, ruff and pytest configurat
 - `data/snapshot/` (analyze demo cache + `as_of.json`) and `data/replay/` (recorded watch ranges) — test fixtures; do not delete or regenerate casually.
 - `out/` — run outputs (reports, alert `.jsonl`, cursors); git-ignored.
 - `conftest.py` — puts the repo root on `sys.path` for tests.
+- `openapi.json` — the committed front/back contract, generated from `riskdep/api.py`; CI fails if it has drifted.
 - `pyproject.toml` — project metadata, the runtime dependencies, the `dev` dependency group, and the ruff and pytest configuration.
 - `uv.lock` — the exact resolved version of every dependency; committed, because this is an application and not a library.
 - `.pre-commit-config.yaml` — the pre-commit hooks: `ruff check --fix`, then `ruff format`.
@@ -143,13 +150,14 @@ Python ≥ 3.10; CI runs the suite on 3.10, the floor `requires-python` in `pypr
 
 ```bash
 uv sync
-uv run pytest -q tests                                 # 99 tests, offline
+uv run pytest -q tests                                 # 112 tests, offline
 uv run python -m riskdep analyze --demo                # cached snapshot, no network → out/report.html/.json
 uv run python -m riskdep watch --replay                # re-run the recorded vault range offline
 uv run python -m riskdep watch --blocks 1000 --record  # live range, saved for --replay
 uv run python -m riskdep watch --user <address>        # every Morpho position of an address, live
 uv run python -m riskdep graph --example               # out/graph.html + out/graph.json
 uv run ruff format . && uv run ruff check .            # format and lint, 120 columns
+uv run uvicorn riskdep.api:app --reload                # the HTTP API for web/, docs at /docs
 ```
 
 ```bash
@@ -164,6 +172,8 @@ pnpm lint && pnpm build                                # eslint + prettier, then
 - New thresholds or assumptions go in `registry.json` with their basis, not as literals in code, and in `docs/registry-reference.md`.
 - A new or changed alert gets its row in `docs/alert-runbook.md`.
 - Rule modules stay pure (no I/O); put fetching in the source/state modules.
+- `api/` routes and validates, nothing else: a new rule or threshold goes in the rule modules and `registry.json`, never in a route. Change a payload and you must regenerate `openapi.json` in the same commit.
+- The API never hosts the watcher. `watch` is its own process writing `out/watch-*.jsonl`; the API reads it with a block cursor.
 - A behaviour change that departs from a plan decision is recorded in that plan's decision table.
 - Leave format and lint to ruff, at 120 columns, in pre-commit and in CI; never mix a style-only commit with a behaviour change.
 - `uv.lock` is committed: change a dependency with `uv add` / `uv lock`, never by editing the lock by hand — CI runs `uv sync --locked` and fails if the lock has drifted from `pyproject.toml`.

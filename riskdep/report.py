@@ -215,33 +215,50 @@ theme:(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'default')}});}
     hp = out_dir / "report.html"
     hp.write_text(doc)
 
-    def clean(o):
-        if isinstance(o, float) and (math.isinf(o) or math.isnan(o)):
-            return None
-        if isinstance(o, dict):
-            return {k: clean(v) for k, v in o.items()}
-        if isinstance(o, list):
-            return [clean(v) for v in o]
-        return o
+    jp = out_dir / "report.json"
+    payload = to_dict(pos, priors, sim, dec, quote, mode, oracle_alt)
+    jp.write_text(json.dumps(payload, indent=2, default=str))
+    return hp, jp
 
+
+def _clean(o):
+    """inf/nan have no JSON spelling: a ratio with a zero denominator becomes null."""
+    if isinstance(o, float) and (math.isinf(o) or math.isnan(o)):
+        return None
+    if isinstance(o, dict):
+        return {k: _clean(v) for k, v in o.items()}
+    if isinstance(o, list):
+        return [_clean(v) for v in o]
+    return o
+
+
+def to_dict(
+    pos: Position,
+    priors: list[Prior],
+    sim: SimResult,
+    dec: Decision,
+    quote: dict,
+    mode: str,
+    oracle_alt: dict | None = None,
+) -> dict:
+    """The report as plain JSON-ready data. `write` persists this; the API serves it."""
     pos_d = {k: v for k, v in pos.__dict__.items() if k != "graph"}
     pos_d.update(collateral_usd=pos.collateral_usd, equity_usd=pos.equity_usd, liquidation_drop=pos.liquidation_drop)
     sim_d = {k: v for k, v in asdict(sim).items() if k != "loss_samples"}
-    payload = {
-        "generated": now,
-        "data_as_of": data_as_of,
-        "mode": mode,
-        "position": pos_d,
-        "graph": {
-            "nodes": [{"id": n, **a} for n, a in pos.graph.nodes(data=True)],
-            "edges": [{"from": u, "to": v, **a} for u, v, a in pos.graph.edges(data=True)],
-        },
-        "priors": [asdict(p) for p in priors],
-        "simulation": sim_d,
-        "decision": asdict(dec),
-        "exit_quote": quote,
-        "oracle_sensitivity": oracle_alt,
-    }
-    jp = out_dir / "report.json"
-    jp.write_text(json.dumps(clean(payload), indent=2, default=str))
-    return hp, jp
+    return _clean(
+        {
+            "generated": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+            "data_as_of": clock.now_dt().strftime("%Y-%m-%d %H:%M UTC"),
+            "mode": mode,
+            "position": pos_d,
+            "graph": {
+                "nodes": [{"id": n, **a} for n, a in pos.graph.nodes(data=True)],
+                "edges": [{"from": u, "to": v, **a} for u, v, a in pos.graph.edges(data=True)],
+            },
+            "priors": [asdict(p) for p in priors],
+            "simulation": sim_d,
+            "decision": asdict(dec),
+            "exit_quote": quote,
+            "oracle_sensitivity": oracle_alt,
+        }
+    )

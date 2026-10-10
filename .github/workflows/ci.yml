@@ -9,6 +9,8 @@ jobs:
       - uses: astral-sh/setup-uv@v10.3.0
       - run: uv sync --locked --python 3.10
       - run: uv run ruff check .
+      - run: uv run python -c "import json,riskdep.api as a; print(json.dumps(a.app.openapi(), indent=2))" > openapi.json
+      - run: git diff --exit-code openapi.json
 
   tests:
     runs-on: ubuntu-latest

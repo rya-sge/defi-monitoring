@@ -88,6 +88,14 @@ export type WatchTick = {
   message: string;
 };
 
+/** One poll of `/api/alerts`. `cursor` is the highest block seen; send it back as `since`. */
+export type AlertPage = {
+  target: string;
+  cursor: number;
+  counts: Record<AlertLevel, number>;
+  alerts: Alert[];
+};
+
 /* ------------------------------------------------------------------ report */
 
 export type OracleMode = 'market-tracking' | 'fundamental' | (string & {});
@@ -286,7 +294,7 @@ export type GraphQuery = {
 };
 
 export type WatchQuery = {
-  vault?: string;
-  user?: string;
+  /** A watch target from `GET /api/targets`: a vault address, or "user-<address>". */
+  target?: string;
   min_level?: AlertLevel;
 };

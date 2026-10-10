@@ -1,0 +1,1542 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "riskdep",
+    "summary": "Risk of DeFi positions on Ethereum, centred on Morpho.",
+    "description": "HTTP API over `riskdep`, for the browser UI in `web/`.\n\nResponsibilities, and only these: address the artifacts, validate the inputs, serve JSON.\nNo risk logic lives here \u2014 `pipeline.analyze` computes, `report.to_dict` and `graph.to_dict`\nshape, this module routes. Adding a rule or a threshold here would be a mistake.\n\nThe watcher is deliberately **not** hosted: `python -m riskdep watch` runs as its own process\nand appends to `out/watch-*.jsonl`; `GET /api/alerts` reads those files with a block cursor.\nThat keeps one poll loop per target however many browsers are open, and lets either side\nrestart without the other.\n\nRun it with:  uv run uvicorn riskdep.api:app --reload\n",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "Health",
+        "operationId": "health_api_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/graph": {
+      "get": {
+        "tags": [
+          "graph"
+        ],
+        "summary": "Get Graph",
+        "description": "The dependency graph. With no user and no vault, the last graph written to `out/`.\n\nThe whole graph is returned in one payload: selecting a node and walking its dependencies\nis the client's job, not an endpoint \u2014 100 nodes fit in the browser and Cytoscape traverses\nthem better than a round trip would.",
+        "operationId": "get_graph_api_graph_get",
+        "parameters": [
+          {
+            "name": "user",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Address whose positions to include; repeatable.",
+              "default": [],
+              "title": "User"
+            },
+            "description": "Address whose positions to include; repeatable."
+          },
+          {
+            "name": "vault",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Vault V2 address to include; repeatable.",
+              "default": [],
+              "title": "Vault"
+            },
+            "description": "Vault V2 address to include; repeatable."
+          },
+          {
+            "name": "block",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Block to read at. Omitted: 2 behind the head.",
+              "title": "Block"
+            },
+            "description": "Block to read at. Omitted: 2 behind the head."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/report": {
+      "get": {
+        "tags": [
+          "report"
+        ],
+        "summary": "Get Report",
+        "description": "The last `analyze` report written to `out/`. Use POST /api/analyze to compute a new one.",
+        "operationId": "get_report_api_report_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Report"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/analyze": {
+      "post": {
+        "tags": [
+          "report"
+        ],
+        "summary": "Post Analyze",
+        "description": "Run one analysis and return its report. Nothing is written to `out/`.",
+        "operationId": "post_analyze_api_analyze_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalyzeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Report"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/targets": {
+      "get": {
+        "tags": [
+          "alerts"
+        ],
+        "summary": "Get Targets",
+        "description": "What the watcher has written so far: one entry per `out/watch-*.jsonl`.",
+        "operationId": "get_targets_api_targets_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Target"
+                  },
+                  "type": "array",
+                  "title": "Response Get Targets Api Targets Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/alerts": {
+      "get": {
+        "tags": [
+          "alerts"
+        ],
+        "summary": "Get Alerts",
+        "description": "Alerts the watcher has recorded, after a block cursor.\n\nPoll this: pass the previous `cursor` back as `since`. The cursor is a block number, the\nsame unit the watcher resumes from, so moving to a push transport later changes the\ndelivery and not the contract.",
+        "operationId": "get_alerts_api_alerts_get",
+        "parameters": [
+          {
+            "name": "target",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "From /api/targets. Omitted: the first one.",
+              "title": "Target"
+            },
+            "description": "From /api/targets. Omitted: the first one."
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Only alerts strictly after this block.",
+              "default": 0,
+              "title": "Since"
+            },
+            "description": "Only alerts strictly after this block."
+          },
+          {
+            "name": "level",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "info",
+                    "warn",
+                    "critical"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Minimum level to return.",
+              "title": "Level"
+            },
+            "description": "Minimum level to return."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 2000,
+              "minimum": 1,
+              "default": 200,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Alert": {
+        "properties": {
+          "level": {
+            "type": "string",
+            "enum": [
+              "info",
+              "warn",
+              "critical"
+            ],
+            "title": "Level"
+          },
+          "block": {
+            "type": "integer",
+            "title": "Block"
+          },
+          "tx": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tx"
+          },
+          "event": {
+            "type": "string",
+            "title": "Event"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail",
+            "default": ""
+          },
+          "depositor_impact": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Depositor Impact"
+          },
+          "data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "level",
+          "block",
+          "event",
+          "title"
+        ],
+        "title": "Alert"
+      },
+      "AlertPage": {
+        "properties": {
+          "target": {
+            "type": "string",
+            "title": "Target"
+          },
+          "cursor": {
+            "type": "integer",
+            "title": "Cursor",
+            "description": "Highest block in this page; pass it back as `since`."
+          },
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Counts",
+            "description": "Alerts per level in this page."
+          },
+          "alerts": {
+            "items": {
+              "$ref": "#/components/schemas/Alert"
+            },
+            "type": "array",
+            "title": "Alerts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "target",
+          "cursor",
+          "counts",
+          "alerts"
+        ],
+        "title": "AlertPage"
+      },
+      "AnalyzeRequest": {
+        "properties": {
+          "market": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Market",
+            "description": "Morpho Blue market id. Omitted: the demo position."
+          },
+          "user": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User",
+            "description": "Borrower address; defaults to the market's largest."
+          },
+          "pendle_market": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pendle Market",
+            "description": "Analyse a bare PT holding instead of a borrow."
+          },
+          "pt_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pt Amount",
+            "description": "PT units; required with pendle_market."
+          },
+          "horizon": {
+            "type": "number",
+            "maximum": 365.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Horizon",
+            "description": "Horizon in days, capped at maturity.",
+            "default": 30.0
+          },
+          "paths": {
+            "type": "integer",
+            "maximum": 200000.0,
+            "minimum": 1000.0,
+            "title": "Paths",
+            "description": "Monte Carlo paths.",
+            "default": 20000
+          },
+          "live": {
+            "type": "boolean",
+            "title": "Live",
+            "description": "Fetch from the network instead of the cached snapshot.",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "AnalyzeRequest"
+      },
+      "ExitQuote": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "price_impact": {
+            "type": "number",
+            "title": "Price Impact"
+          },
+          "fee_usd": {
+            "type": "number",
+            "title": "Fee Usd"
+          },
+          "estimated": {
+            "type": "boolean",
+            "title": "Estimated",
+            "default": false
+          },
+          "amount_out_raw": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Out Raw"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "price_impact",
+          "fee_usd"
+        ],
+        "title": "ExitQuote"
+      },
+      "GraphEdge": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "target": {
+            "type": "string",
+            "title": "Target"
+          },
+          "rel": {
+            "type": "string",
+            "title": "Rel"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "target",
+          "rel"
+        ],
+        "title": "GraphEdge"
+      },
+      "GraphNode": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "Actor",
+              "Pool",
+              "Asset",
+              "Oracle",
+              "External",
+              "Admin"
+            ],
+            "title": "Kind"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "label"
+        ],
+        "title": "GraphNode"
+      },
+      "GraphResponse": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "subtitle": {
+            "type": "string",
+            "title": "Subtitle"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/GraphNode"
+            },
+            "type": "array",
+            "title": "Nodes"
+          },
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/GraphEdge"
+            },
+            "type": "array",
+            "title": "Edges"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "subtitle",
+          "nodes",
+          "edges"
+        ],
+        "title": "GraphResponse"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Health": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "ok",
+            "title": "Status",
+            "default": "ok"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "offline",
+              "live",
+              "refresh"
+            ],
+            "title": "Mode"
+          },
+          "data_as_of": {
+            "type": "string",
+            "title": "Data As Of"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mode",
+          "data_as_of"
+        ],
+        "title": "Health"
+      },
+      "OracleSensitivity": {
+        "properties": {
+          "oracle_mode": {
+            "type": "string",
+            "title": "Oracle Mode"
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "STAY",
+              "REDUCE",
+              "EXIT"
+            ],
+            "title": "Verdict"
+          },
+          "expected_loss_usd": {
+            "type": "number",
+            "title": "Expected Loss Usd"
+          },
+          "cvar99_usd": {
+            "type": "number",
+            "title": "Cvar99 Usd"
+          },
+          "p_liquidation": {
+            "type": "number",
+            "title": "P Liquidation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "oracle_mode",
+          "verdict",
+          "expected_loss_usd",
+          "cvar99_usd",
+          "p_liquidation"
+        ],
+        "title": "OracleSensitivity"
+      },
+      "Report": {
+        "properties": {
+          "generated": {
+            "type": "string",
+            "title": "Generated"
+          },
+          "data_as_of": {
+            "type": "string",
+            "title": "Data As Of"
+          },
+          "mode": {
+            "type": "string",
+            "title": "Mode"
+          },
+          "position": {
+            "$ref": "#/components/schemas/ReportPosition"
+          },
+          "graph": {
+            "$ref": "#/components/schemas/ReportGraph"
+          },
+          "priors": {
+            "items": {
+              "$ref": "#/components/schemas/ReportPrior"
+            },
+            "type": "array",
+            "title": "Priors"
+          },
+          "simulation": {
+            "$ref": "#/components/schemas/ReportSimulation"
+          },
+          "decision": {
+            "$ref": "#/components/schemas/ReportDecision"
+          },
+          "exit_quote": {
+            "$ref": "#/components/schemas/ExitQuote"
+          },
+          "oracle_sensitivity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OracleSensitivity"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "generated",
+          "data_as_of",
+          "mode",
+          "position",
+          "graph",
+          "priors",
+          "simulation",
+          "decision",
+          "exit_quote"
+        ],
+        "title": "Report"
+      },
+      "ReportDecision": {
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "STAY",
+              "REDUCE",
+              "EXIT"
+            ],
+            "title": "Verdict"
+          },
+          "headline": {
+            "type": "string",
+            "title": "Headline"
+          },
+          "carry_usd": {
+            "type": "number",
+            "title": "Carry Usd"
+          },
+          "exit_cost_usd": {
+            "type": "number",
+            "title": "Exit Cost Usd"
+          },
+          "expected_loss_usd": {
+            "type": "number",
+            "title": "Expected Loss Usd"
+          },
+          "net_stay_usd": {
+            "type": "number",
+            "title": "Net Stay Usd"
+          },
+          "risk_multiple_to_exit": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Multiple To Exit"
+          },
+          "liquidation_drop": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Liquidation Drop"
+          },
+          "stress_drop": {
+            "type": "number",
+            "title": "Stress Drop"
+          },
+          "reduction": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Reduction"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Reasons"
+          }
+        },
+        "type": "object",
+        "required": [
+          "verdict",
+          "headline",
+          "carry_usd",
+          "exit_cost_usd",
+          "expected_loss_usd",
+          "net_stay_usd",
+          "stress_drop"
+        ],
+        "title": "ReportDecision"
+      },
+      "ReportGraph": {
+        "properties": {
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/ReportGraphNode"
+            },
+            "type": "array",
+            "title": "Nodes"
+          },
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/ReportGraphEdge"
+            },
+            "type": "array",
+            "title": "Edges"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nodes",
+          "edges"
+        ],
+        "title": "ReportGraph"
+      },
+      "ReportGraphEdge": {
+        "properties": {
+          "from": {
+            "type": "string",
+            "title": "From"
+          },
+          "to": {
+            "type": "string",
+            "title": "To"
+          },
+          "rel": {
+            "type": "string",
+            "title": "Rel"
+          }
+        },
+        "type": "object",
+        "required": [
+          "from",
+          "to",
+          "rel"
+        ],
+        "title": "ReportGraphEdge"
+      },
+      "ReportGraphNode": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind",
+            "description": "Lowercase layer kind: chain, asset, amm, issuer, lending, oracle\u2026"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence"
+          },
+          "mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mode"
+          },
+          "protocol": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protocol"
+          },
+          "registered": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Registered"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "label"
+        ],
+        "title": "ReportGraphNode"
+      },
+      "ReportPosition": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "collateral_units": {
+            "type": "number",
+            "title": "Collateral Units"
+          },
+          "collateral_symbol": {
+            "type": "string",
+            "title": "Collateral Symbol"
+          },
+          "collateral_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Collateral Address"
+          },
+          "pt_price_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pt Price Usd"
+          },
+          "collateral_decimals": {
+            "type": "integer",
+            "title": "Collateral Decimals"
+          },
+          "debt_usd": {
+            "type": "number",
+            "title": "Debt Usd"
+          },
+          "loan_symbol": {
+            "type": "string",
+            "title": "Loan Symbol"
+          },
+          "loan_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loan Address"
+          },
+          "lltv": {
+            "type": "number",
+            "title": "Lltv"
+          },
+          "lif": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lif"
+          },
+          "borrow_apy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Borrow Apy"
+          },
+          "implied_apy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Implied Apy"
+          },
+          "maturity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maturity"
+          },
+          "days_to_maturity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days To Maturity"
+          },
+          "oracle_mode": {
+            "type": "string",
+            "title": "Oracle Mode"
+          },
+          "oracle_ambiguous": {
+            "type": "boolean",
+            "title": "Oracle Ambiguous"
+          },
+          "pt_discount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pt Discount"
+          },
+          "morpho_market": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Morpho Market"
+          },
+          "borrower": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Borrower"
+          },
+          "debt_raw": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Debt Raw"
+          },
+          "loan_decimals": {
+            "type": "integer",
+            "title": "Loan Decimals"
+          },
+          "oracle_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oracle Price"
+          },
+          "health_factor": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Health Factor"
+          },
+          "pendle_market": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pendle Market"
+          },
+          "underlying_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Underlying Address"
+          },
+          "underlying_symbol": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Underlying Symbol"
+          },
+          "underlying_drawdown_1y": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Underlying Drawdown 1Y"
+          },
+          "amm_liquidity_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amm Liquidity Usd"
+          },
+          "lending_liquidity_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lending Liquidity Usd"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Notes"
+          },
+          "collateral_usd": {
+            "type": "number",
+            "title": "Collateral Usd"
+          },
+          "equity_usd": {
+            "type": "number",
+            "title": "Equity Usd"
+          },
+          "liquidation_drop": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Liquidation Drop"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "collateral_units",
+          "collateral_symbol",
+          "collateral_decimals",
+          "debt_usd",
+          "loan_symbol",
+          "lltv",
+          "oracle_mode",
+          "oracle_ambiguous",
+          "loan_decimals",
+          "collateral_usd",
+          "equity_usd"
+        ],
+        "title": "ReportPosition"
+      },
+      "ReportPrior": {
+        "properties": {
+          "event": {
+            "type": "string",
+            "title": "Event"
+          },
+          "node": {
+            "type": "string",
+            "title": "Node"
+          },
+          "layer": {
+            "type": "string",
+            "title": "Layer"
+          },
+          "p_year": {
+            "type": "number",
+            "title": "P Year"
+          },
+          "a": {
+            "type": "number",
+            "title": "A"
+          },
+          "b": {
+            "type": "number",
+            "title": "B"
+          },
+          "basis": {
+            "type": "string",
+            "title": "Basis"
+          },
+          "recovery": {
+            "type": "number",
+            "title": "Recovery"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event",
+          "node",
+          "layer",
+          "p_year",
+          "a",
+          "b",
+          "basis",
+          "recovery"
+        ],
+        "title": "ReportPrior"
+      },
+      "ReportSimulation": {
+        "properties": {
+          "horizon_days": {
+            "type": "number",
+            "title": "Horizon Days"
+          },
+          "n": {
+            "type": "integer",
+            "title": "N"
+          },
+          "expected_loss_usd": {
+            "type": "number",
+            "title": "Expected Loss Usd"
+          },
+          "var95_usd": {
+            "type": "number",
+            "title": "Var95 Usd"
+          },
+          "cvar95_usd": {
+            "type": "number",
+            "title": "Cvar95 Usd"
+          },
+          "var99_usd": {
+            "type": "number",
+            "title": "Var99 Usd"
+          },
+          "cvar99_usd": {
+            "type": "number",
+            "title": "Cvar99 Usd"
+          },
+          "p_any_loss": {
+            "type": "number",
+            "title": "P Any Loss"
+          },
+          "p_liquidation": {
+            "type": "number",
+            "title": "P Liquidation"
+          },
+          "layers": {
+            "items": {
+              "$ref": "#/components/schemas/SimulationLayer"
+            },
+            "type": "array",
+            "title": "Layers"
+          },
+          "interaction_usd": {
+            "type": "number",
+            "title": "Interaction Usd"
+          }
+        },
+        "type": "object",
+        "required": [
+          "horizon_days",
+          "n",
+          "expected_loss_usd",
+          "var95_usd",
+          "cvar95_usd",
+          "var99_usd",
+          "cvar99_usd",
+          "p_any_loss",
+          "p_liquidation",
+          "layers",
+          "interaction_usd"
+        ],
+        "title": "ReportSimulation"
+      },
+      "SimulationLayer": {
+        "properties": {
+          "event": {
+            "type": "string",
+            "title": "Event"
+          },
+          "layer": {
+            "type": "string",
+            "title": "Layer"
+          },
+          "node": {
+            "type": "string",
+            "title": "Node"
+          },
+          "p_horizon": {
+            "type": "number",
+            "title": "P Horizon"
+          },
+          "mean_severity": {
+            "type": "number",
+            "title": "Mean Severity"
+          },
+          "standalone_loss_usd": {
+            "type": "number",
+            "title": "Standalone Loss Usd"
+          },
+          "contribution_usd": {
+            "type": "number",
+            "title": "Contribution Usd"
+          },
+          "liquidation_rate": {
+            "type": "number",
+            "title": "Liquidation Rate"
+          },
+          "example_path": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Example Path"
+          },
+          "basis": {
+            "type": "string",
+            "title": "Basis",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "event",
+          "layer",
+          "node",
+          "p_horizon",
+          "mean_severity",
+          "standalone_loss_usd",
+          "contribution_usd",
+          "liquidation_rate"
+        ],
+        "title": "SimulationLayer"
+      },
+      "Target": {
+        "properties": {
+          "target": {
+            "type": "string",
+            "title": "Target",
+            "description": "Watch target: a vault address, or \"user-<address>\"."
+          },
+          "alerts": {
+            "type": "integer",
+            "title": "Alerts"
+          },
+          "last_block": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Block"
+          }
+        },
+        "type": "object",
+        "required": [
+          "target",
+          "alerts"
+        ],
+        "title": "Target"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

@@ -215,7 +215,7 @@ The `Fetcher` has four modes: `offline` (cache only; a miss is an error), `live`
 
 ## 7. Testing
 
-`uv run pytest -q tests` runs 99 tests, all offline:
+`uv run pytest -q tests` runs 112 tests, all offline:
 
 | Kind | Files | What it covers |
 |---|---|---|

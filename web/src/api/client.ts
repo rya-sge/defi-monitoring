@@ -1,4 +1,12 @@
-import type { AnalyzeRequest, GraphQuery, GraphResponse, Health, Report } from './types';
+import type {
+  AlertPage,
+  AnalyzeRequest,
+  GraphQuery,
+  GraphResponse,
+  Health,
+  Report,
+  WatchQuery,
+} from './types';
 import graphFixture from '../mocks/graph.json';
 import reportFixture from '../mocks/report.json';
 
@@ -78,7 +86,16 @@ export const api = {
     if (USE_MOCKS) return delay(MOCK_REPORT, 900);
     return post<Report>('/api/analyze', body, signal);
   },
-};
 
-export const watchStreamUrl = (query: Record<string, string | undefined>): string =>
-  `/api/watch/stream${queryString(query)}`;
+  /** One page of alerts after a block cursor. Pass the returned `cursor` back as `since`. */
+  alerts(query: WatchQuery & { since?: number } = {}, signal?: AbortSignal): Promise<AlertPage> {
+    return get<AlertPage>(
+      `/api/alerts${queryString({
+        target: query.target,
+        since: query.since,
+        level: query.min_level,
+      })}`,
+      signal,
+    );
+  },
+};

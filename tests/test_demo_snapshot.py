@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from riskdep import cli, discover, priors, simulate
+from riskdep import cli, discover, pipeline, priors, simulate
 from riskdep import sources as S
 
 SNAP = Path(__file__).resolve().parent.parent / "data" / "snapshot"
@@ -13,7 +13,7 @@ SNAP = Path(__file__).resolve().parent.parent / "data" / "snapshot"
 @pytest.fixture(scope="module")
 def demo():
     f = S.Fetcher("offline", SNAP)
-    return f, discover.discover_morpho_position(f, cli.DEMO_MARKET, cli.DEMO_USER)
+    return f, discover.discover_morpho_position(f, pipeline.DEMO_MARKET, pipeline.DEMO_USER)
 
 
 def test_discovery_finds_every_layer(demo):
@@ -42,4 +42,4 @@ def test_cli_offline_writes_report(tmp_path):
 def test_offline_miss_is_reported(tmp_path):
     f = S.Fetcher("offline", tmp_path)
     with pytest.raises(S.CacheMiss):
-        discover.discover_morpho_position(f, cli.DEMO_MARKET, cli.DEMO_USER)
+        discover.discover_morpho_position(f, pipeline.DEMO_MARKET, pipeline.DEMO_USER)
