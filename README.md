@@ -12,7 +12,7 @@ All data comes from keyless public sources: the publicnode Ethereum RPC, the Mor
 
 ```bash
 pip install -r requirements.txt     # Python >= 3.10
-python3 -m pytest -q tests          # 73 tests, offline
+python3 -m pytest -q tests          # 77 tests, offline
 ```
 
 ## watch: Morpho Vault V2 depositor
@@ -29,8 +29,8 @@ At start it reads the vault's structure on-chain (vault → adapters → Blue ma
 
 | Level | What triggers it |
 |---|---|
-| critical | bad debt in a held market (`Liquidate.badDebtAssets`, your share computed), a loss recorded by an adapter but not yet accrued (`totalAssets()` below the stored `_totalAssets`), vault total assets falling (`AccrueInterest`), the adapter writing off shares (`BurnShares`) |
-| warn | a timelocked change submitted (`Submit`, decoded, with its execution date) or made live (`Accept`), new adapter, cap raised, fee or gate change, shorter timelock, `ForceDeallocate`, new liquidity adapter, a market crossing 25 % of the vault, ≥ 99 % utilisation on a market holding ≥ 10 %, an oracle moving ≥ 5 %, you no longer able to exit in full with a plain withdrawal, a gate blocking your exit, a block range that could not be read |
+| critical | a pending change with no notice (`Submit` for a risk-increasing function whose timelock is 0); bad debt in a held market (`Liquidate.badDebtAssets`, your share computed), a loss recorded by an adapter but not yet accrued (`totalAssets()` below the stored `_totalAssets`), vault total assets falling (`AccrueInterest`), the adapter writing off shares (`BurnShares`) |
+| warn | risk-increasing functions that can change with no notice (timelock 0, not abdicated), listed at start; a timelocked change submitted (`Submit`, decoded, with its execution date and timelock) or made live (`Accept`), new adapter, cap raised, fee or gate change, shorter timelock, `ForceDeallocate`, new liquidity adapter, a market crossing 25 % of the vault, ≥ 99 % utilisation on a market holding ≥ 10 %, an oracle moving ≥ 5 %, you no longer able to exit in full with a plain withdrawal, a gate blocking your exit, a block range that could not be read |
 | info | allocation moves, caps lowered, cancelled changes, liquidations without bad debt, your own and large (≥ 1 %) deposits and withdrawals |
 
 Thresholds live in `riskdep/registry.json` (`watch`).
@@ -52,12 +52,12 @@ python3 -m riskdep watch --user <address> --market <id> --market <id>   # borrow
 python3 -m riskdep watch --user <address> --blocks 300 --record          # check the last 300 blocks, saving them for --replay
 ```
 
-The Morpho API (`userByAddress`) finds the positions: Blue markets where the address has debt, and Vault V2 deposits with shares. Everything monitored is then read on-chain. Each borrow's health factor is computed as Blue does: collateral × oracle `price()` × LLTV ÷ debt. Its borrow APY comes from the market's rate model (`borrowRateView`). A real Pendle exit quote is shown when the collateral is a PT. Each Vault V2 deposit is watched with the vault rules above, on its own events only.
+The Morpho API (`userByAddress`) finds the positions: Blue markets where the address has debt, and Vault V2 deposits with shares. Everything monitored is then read on-chain. Each borrow's health factor is computed as Blue does: collateral × oracle `price()` × LLTV ÷ debt. Its borrow APY comes from the market's rate model (`borrowRateView`). A real Pendle exit quote is shown when the collateral is a PT. The startup table also lists the main lenders of each borrowed market (≥ 5 % of supply); a Vault V2 is found through its adapter. The lenders are refreshed every 300 blocks. Each Vault V2 deposit is watched with the vault rules above, on its own events only.
 
 | Level | What triggers it, for a borrow |
 |---|---|
 | critical | HF below the third level (default 1.02); HF ≤ 1, liquidatable; a `Liquidate` naming the address as borrower |
-| warn | HF below the second level (default 1.05); a borrow, repay or collateral withdrawal made on your behalf by another address; a `SetAuthorization` by the address; the borrow APY 50 % above its value at start; utilisation ≥ 99 %; an oracle move ≥ 5 % or an oracle that stops answering |
+| warn | HF below the second level (default 1.05); one lender funding ≥ 50 % of a borrowed market, at start; a main lender withdrawing ≥ 5 % of a borrowed market's supply; a borrow, repay or collateral withdrawal made on your behalf by another address; a `SetAuthorization` by the address; the borrow APY 50 % above its value at start; utilisation ≥ 99 %; an oracle move ≥ 5 % or an oracle that stops answering |
 | info | HF below the first level (default 1.10), and once when it recovers above it; your own borrows, repays and collateral moves |
 
 Alerts go to `out/watch-user-<address>.jsonl`, and a restart resumes from `out/watch-user-<address>.cursor`. Every 300 blocks the tool looks for new positions and refreshes the exit quotes. A Blue `Borrow` on your behalf in a market not yet watched is picked up at once. Not covered: direct Blue supply, Vault V1 deposits, exit quotes for collateral other than a PT, and Morpho's opt-in pre-liquidation contracts. Authorising one of them still raises the `SetAuthorization` alert. The options behind these choices are in `docs/user-watcher-options.md`.

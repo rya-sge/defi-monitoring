@@ -131,58 +131,15 @@ def _market(g: Graph, f, m: B.BorrowMarket, block, quotes_pt: bool = True) -> st
     return mid
 
 
-SUPPLIER_MIN_SHARE = 0.05     # draw suppliers holding at least 5 % of a market's supply
-SUPPLIER_MAX = 5
-
-
-def _name(f: S.Fetcher, addr: str, block) -> str | None:
-    raw = S.rpc_batch(f, [_call(addr, "name()")], block)[0]
-    try:
-        return decode(["string"], bytes.fromhex(raw[2:]))[0] if raw else None
-    except Exception:
-        return None
-
-
 def _suppliers(g: Graph, f: S.Fetcher, m: B.BorrowMarket, block) -> None:
-    """The main lenders of a market, as actors: a Vault V2 supplies through its adapter (resolved with
-    parentVault()), anything else is drawn as the address itself, named when it answers name()."""
-    try:
-        items = S.morpho(f, """query($id:String!){ marketPositions(first:%d, where:{marketUniqueKey_in:[$id], chainId_in:[1]},
-              orderBy: SupplyShares, orderDirection: Desc){ items{ user{ address } } } }""" % SUPPLIER_MAX,
-                         {"id": m.id})["marketPositions"]["items"]
-    except (S.SourceError, S.CacheMiss, KeyError, TypeError):
-        return
-    addrs = [i["user"]["address"].lower() for i in items]
-    if not addrs:
-        return
-    mid = bytes.fromhex(m.id[2:])
-    res = S.rpc_batch(f, [_call(MORPHO_BLUE, "market(bytes32)", ["bytes32"], [mid])]
-                      + [_call(MORPHO_BLUE, "position(bytes32,address)", ["bytes32", "address"], [mid, a]) for a in addrs]
-                      + [_call(a, "parentVault()") for a in addrs], block)
-    mk = decode(["uint128"] * 6, bytes.fromhex(res[0][2:]))
-    tsa, tss = mk[0], mk[1]
-    for i, a in enumerate(addrs):
-        pos, parent = res[1 + i], res[1 + len(addrs) + i]
-        shares = decode(["uint256", "uint128", "uint128"], bytes.fromhex(pos[2:]))[0] if pos else 0
-        assets = shares * (tsa + 1) // (tss + 10 ** 6)
-        share = assets / tsa if tsa else 0
-        if share < SUPPLIER_MIN_SHARE:
-            continue
-        if parent and int(parent, 16):
-            vault = ("0x" + parent[-40:]).lower()
-            aid = g.node(vault, "Actor", f"Vault {_name(f, vault, block) or _short(vault)}", address=vault,
-                         actor_type="Vault V2 (capital provider)", adapter=a,
-                         source="market's top suppliers from the Morpho API; amounts and parentVault() on-chain")
-        else:
-            nm = _name(f, a, block)
-            morpho, wq = S.rpc_batch(f, [_call(a, "MORPHO()"), _call(a, "withdrawQueueLength()")], block)
-            is_v1 = bool(morpho and ("0x" + morpho[-40:]).lower() == MORPHO_BLUE and wq)
-            aid = g.node(a, "Actor", f"Vault {nm}" if is_v1 and nm else (nm or f"Lender {_short(a)}"), address=a,
-                         actor_type="Vault V1 / MetaMorpho (capital provider)" if is_v1 else "lender",
-                         source="market's top suppliers from the Morpho API; amounts on-chain"
-                                + ("; MORPHO() and withdrawQueueLength() identify a Vault V1" if is_v1 else ""))
-        g.edge(aid, m.id, "supplies", assets / 10 ** m.loan_decimals, m.loan_symbol, share_of_market=f"{share:.1%}",
-               through_adapter=a if parent and int(parent, 16) else None,
+    """The main lenders of a market as actors (borrower.top_suppliers, D41)."""
+    for sp in B.top_suppliers(f, m, block):
+        kind = {"Vault V2": "Vault V2 (capital provider)", "Vault V1": "Vault V1 / MetaMorpho (capital provider)"}.get(sp.kind, "lender")
+        aid = g.node(sp.actor, "Actor", sp.label, address=sp.actor, actor_type=kind,
+                     adapter=sp.address if sp.address != sp.actor else None,
+                     source="market's top suppliers from the Morpho API; amounts on-chain")
+        g.edge(aid, m.id, "supplies", sp.assets / 10 ** m.loan_decimals, m.loan_symbol, share_of_market=f"{sp.share:.1%}",
+               through_adapter=sp.address if sp.address != sp.actor else None,
                note="its withdrawal raises utilisation and the borrow rate of the market")
 
 

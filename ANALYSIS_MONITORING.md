@@ -145,7 +145,7 @@ A market liquidates on its oracle's price, not on the market price. A gap betwee
 | Vault V2 timelocked changes: `Submit` decoded (function, target, value) with `executableAt`; `Accept`, `Revoke` | done |
 | Vault V2 immediate changes: liquidity adapter, `maxRate`, caps lowered, allocators, fees, gates | done, as events |
 | Market adapter timelocked calls (`burnShares`, skim recipient) | done |
-| **Timelock length and abdication of each function**, which give the real warning time | missing; read once by hand for the article, not by the tool |
+| Timelock length and abdication of each function, which give the real warning time | done: read at start for every vault and market adapter; risk-increasing functions with no notice are flagged, and a `Submit` for one is critical |
 | **Morpho Blue owner actions** (`EnableIrm`, `EnableLltv`, `SetFeeRecipient`) | missing; only `SetFee` on a held market |
 | **Oracle admin**: upgradeable oracles, changed feeds | missing |
 | **Collateral and issuer admin**: mint, pause or upgrade of the collateral token, Pendle SY changes | missing |
@@ -179,7 +179,7 @@ Gaps found while building and testing the tool, ranked by how much they limit th
 
 | # | Gap | Impact | Effort |
 |---|---|---|---|
-| G1 | Timelock lengths and abdications are not read by the tool, so a `Submit` with a zero timelock is not flagged as "no warning". | high | S |
+| G1 | ~~Timelock lengths and abdications are not read.~~ Done (plan `2026-10-10-lenders-and-timelocks`): read at start, zero timelocks flagged, `Submit` with no notice critical. | — | done |
 | G2 | No market-wide liquidation curve, so a vault depositor cannot see how much collateral a 10 % fall would liquidate in each held market. | high | M |
 | G3 | Oracle admin, Blue owner and collateral-issuer admin actions are not watched. | medium | M |
 | G4 | No continuous comparison of the oracle with an independent market price. | medium | S |
@@ -204,7 +204,7 @@ Gaps found while building and testing the tool, ranked by how much they limit th
 |---|---|---|---|
 | R1 | The `graph` command builds and draws the graph (with admins and oracle feeds), but `analyze` and `watch` do not use it: their rules work on their own structures, and exposure is computed per position. | medium | L |
 | R3 | Shared nodes are drawn but not measured: no alert says that one feed (for example `RLUSD / USD` under all 10 Sentora markets) carries several positions at once. | medium | S after R1 |
-| R4 | Lender concentration is drawn but not watched: `watch --user` does not alert when a market's dominant supplier (for example the vault funding 100 % of a borrowed market) deallocates. | high for a borrower | S |
+| R4 | ~~Lender concentration is not watched.~~ Done (plan `2026-10-10-lenders-and-timelocks`): `watch --user` lists each borrowed market's main lenders, warns when one funds ≥ 50 %, and when a main lender withdraws ≥ 5 % of the supply. | — | done |
 | R2 | No general propagation limits (exposure floor, depth, severity floor). | low until R1 exists | S after R1 |
 
 ### Data and infrastructure
@@ -234,7 +234,7 @@ Gaps found while building and testing the tool, ranked by how much they limit th
 
 ### Suggested order
 
-1. **G1 and T3:** small, and they make the existing alerts more actionable.
+1. **T3:** the alert runbook and glossary, now that G1 and R4 are done.
 2. **C1 with G2:** both need every borrower of the held markets; together they give a vault depositor the early signal and the size of the risk.
 3. **C2 and M3:** extend `analyze` beyond PT collateral, with a generic exit quote.
 4. **D5, then X1:** push alerts first, then execution with its own security design.

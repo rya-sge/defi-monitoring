@@ -227,6 +227,10 @@
     "max_range": 500,
     "state_window_blocks": 64,
     "basis": "D26. Shares are of the vault's total assets; the oracle move is between two consecutive state reads; large_flow_info: a deposit or withdrawal by someone else above 1% of total assets.",
-    "crosscheck_every_blocks": 300
+    "crosscheck_every_blocks": 300,
+    "lender_min_share": 0.05,
+    "lender_max": 5,
+    "lender_concentration_warn": 0.5,
+    "lender_withdraw_min_share": 0.05
   }
 }

@@ -81,6 +81,18 @@ def borrow_table(p: Printer, f: S.Fetcher, markets: dict, states: dict, levels, 
                f" {(format(st.apy, '.2%') if st.apy is not None else 'n/a'):>7} {st.utilization:>6.1%}  {quotes.get(mid, '')}")
 
 
+def lender_table(p: Printer, markets: dict, lenders: dict) -> None:
+    p.line("  main lenders of each borrowed market (≥ 5 % of supply):")
+    for mid, sps in lenders.items():
+        m = markets[mid]
+        names = ", ".join(f"{sp.label} {sp.share:.0%}" for sp in sorted(sps, key=lambda x: -x.share)) or "none above 5 %"
+        p.line(f"    {m.label:<42} {names}")
+
+
+def _by_address(lenders: dict) -> dict:
+    return {mid: {sp.address: sp for sp in sps} for mid, sps in lenders.items()}
+
+
 def run_user(opts: UserOptions) -> int:
     f = _fetcher(opts)
     user = opts.user.lower()
@@ -125,9 +137,11 @@ def run_user(opts: UserOptions) -> int:
         view = discover_vault(f, va, state0)
         vaults.append(VaultTarget(view, read_state(f, view, state0, user)))
 
+    lenders = {mid: B.top_suppliers(f, markets[mid], state0) for mid in markets}
     if markets:
         borrow_table(p, f, markets, before_b, opts.levels, state0, quotes)
-        for al in BR.startup(before_b, markets, opts.levels, state0):
+        lender_table(p, markets, lenders)
+        for al in BR.startup(before_b, markets, opts.levels, state0) + BR.lenders_startup(lenders, markets, state0):
             p.alert(al)
         for mid in markets:
             if mid in api_state:
@@ -204,12 +218,15 @@ def run_user(opts: UserOptions) -> int:
                and e.args.get("onBehalf") == user and e.args.get("id") not in markets}
         if new:
             markets.update(B.discover_markets(f, sorted(new), state_block))
+            for mid in new:
+                if mid in markets:
+                    lenders[mid] = B.top_suppliers(f, markets[mid], state_block)
             p.line(f"new borrow market(s) found: {', '.join(markets[i].label for i in new if i in markets)}")
 
         after_b = B.read_borrows(f, markets, user, state_block) if markets else {}
         for mid in after_b:
             start_apy.setdefault(mid, after_b[mid].apy)
-        alerts = BR.assess_events(batch.events, user, markets)
+        alerts = BR.assess_events(batch.events, user, markets, _by_address(lenders), before_b)
         alerts += BR.assess_states(before_b, after_b, markets, opts.levels, start_apy, batch.to_block)
         for vt in vaults:
             own = vt.addresses
@@ -234,6 +251,7 @@ def run_user(opts: UserOptions) -> int:
             if c.ok is False:
                 p.alert(Alert("critical", batch.to_block, None, "CrossCheck", "Data sources disagree: second RPC", c.detail))
             quotes = {mid: _pt_quote(f, markets[mid], after_b[mid]) for mid in markets}
+            lenders = {mid: B.top_suppliers(f, markets[mid], batch.to_block) for mid in markets}
             if not opts.markets and opts.mode == "direct":
                 try:
                     up = discover_user(f, user)

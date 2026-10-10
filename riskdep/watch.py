@@ -76,6 +76,11 @@ def exposure_table(view: VaultView, st, p: Printer) -> None:
     if st.depositor:
         p.line(f"  depositor {st.depositor}: {st.depositor_assets / unit:,.0f} {view.asset_symbol} "
                f"({st.depositor_shares / st.total_supply:.2%} of the vault)" if st.total_supply else "")
+    if view.timelocks:
+        def fmt(t, ab):
+            return "abdicated" if ab else ("0" if t == 0 else f"{t / 86400:g}d")
+        p.line("  timelocks: " + ", ".join(f"{sig.split('(')[0]}{'' if c == view.address else ' (adapter)'} {fmt(t, ab)}"
+                                          for (c, sig), (t, ab) in view.timelocks.items()))
     for a in view.adapters:
         p.line(f"  adapter {a.address} [{a.kind}] real assets {st.real_assets.get(a.address, 0) / unit:,.0f}")
         rows = sorted(a.markets.values(), key=lambda m: -st.markets[m.id].vault_assets)

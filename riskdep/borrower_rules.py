@@ -10,7 +10,7 @@ from __future__ import annotations
 import math
 
 from .abi import Event
-from .borrower import BorrowMarket, BorrowState
+from .borrower import BorrowMarket, BorrowState, Supplier
 from .discover import REGISTRY
 from .rules import Alert
 
@@ -33,8 +33,11 @@ def _hf_text(hf: float | None) -> str:
     return "unknown" if hf is None else ("∞" if math.isinf(hf) else f"{hf:.4f}")
 
 
-def assess_events(events: list[Event], user: str, markets: dict[str, BorrowMarket]) -> list[Alert]:
+def assess_events(events: list[Event], user: str, markets: dict[str, BorrowMarket],
+                  lenders: dict[str, dict[str, Supplier]] | None = None,
+                  before: dict[str, BorrowState] | None = None) -> list[Alert]:
     out = []
+    lenders, before = lenders or {}, before or {}
     for e in events:
         if e.contract != "blue" or e.removed:
             continue
@@ -57,6 +60,17 @@ def assess_events(events: list[Event], user: str, markets: dict[str, BorrowMarke
                              f"{_units(a['seizedAssets'], m.collateral_decimals)} {m.collateral_symbol} seized"
                              + (f", {_units(bad, m.loan_decimals)} {m.loan_symbol} of bad debt" if bad else ""),
                              None, {"market": m.id, "repaid": a["repaidAssets"], "seized": a["seizedAssets"], "bad_debt": bad}))
+        elif e.name == "Withdraw" and a.get("onBehalf") in lenders.get(m.id, {}):
+            # D43: a main lender of a borrowed market withdraws a significant part of the supply
+            sp = lenders[m.id][a["onBehalf"]]
+            supply = before[m.id].total_supply_assets if m.id in before else 0
+            part = a["assets"] / supply if supply else 0.0
+            if part >= W["lender_withdraw_min_share"]:
+                out.append(Alert("warn", e.block, e.tx, "Lender", f"Main lender {sp.label} withdrew from {m.label}",
+                                 f"{_units(a['assets'], m.loan_decimals)} {m.loan_symbol}, {part:.1%} of the market's supply; "
+                                 f"it held {sp.share:.1%}. Utilisation and your borrow rate rise as liquidity leaves",
+                                 None, {"market": m.id, "lender": sp.actor, "assets": a["assets"], "share_of_supply": part}))
+            sp.assets = max(0, sp.assets - a["assets"])
         elif e.name in ("Borrow", "Repay", "SupplyCollateral", "WithdrawCollateral") and a.get("onBehalf") == user:
             token, dec = ((m.collateral_symbol, m.collateral_decimals) if "Collateral" in e.name
                           else (m.loan_symbol, m.loan_decimals))
@@ -115,3 +129,18 @@ def startup(states: dict[str, BorrowState], markets: dict[str, BorrowMarket], le
             block: int) -> list[Alert]:
     """Conditions already true when the watch starts: compare with an empty 'before'."""
     return assess_states({}, states, markets, levels, {}, block)
+
+
+def lenders_startup(lenders: dict[str, list[Supplier]], markets: dict[str, BorrowMarket], block: int) -> list[Alert]:
+    """D42: one lender funding most of a borrowed market."""
+    out = []
+    for mid, sps in lenders.items():
+        top = max(sps, key=lambda sp: sp.share, default=None)
+        if top and top.share >= W["lender_concentration_warn"]:
+            m = markets[mid]
+            out.append(Alert("warn", block, None, "Lender", f"{top.share:.0%} of {m.label} is funded by {top.label}",
+                             f"{_units(top.assets, m.loan_decimals)} {m.loan_symbol}"
+                             + (f", through adapter {top.address}" if top.address != top.actor else "")
+                             + "; if it leaves, utilisation and the borrow rate jump and liquidity disappears",
+                             None, {"market": mid, "lender": top.actor, "share": top.share}))
+    return out

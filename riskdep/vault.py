@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from eth_abi import decode, encode
 
 from . import sources as S
-from .abi import MORPHO_BLUE, selector
+from .abi import MORPHO_BLUE, OTHER_VAULT_TIMELOCKED, RISK_INCREASING_ADAPTER, RISK_INCREASING_VAULT, selector
 
 WAD = 10 ** 18
 
@@ -57,6 +57,15 @@ class VaultView:
     adapters: list[AdapterView]
     liquidity_adapter: str | None
     liquidity_market: str | None = None   # the market a plain withdrawal can draw on (liquidityData)
+    # (contract, function signature) -> (timelock in seconds, abdicated), read at discovery (D44)
+    timelocks: dict[tuple[str, str], tuple[int, bool]] = field(default_factory=dict)
+
+    def timelock_of(self, contract: str, sel_hex: str) -> tuple[str, int, bool] | None:
+        """(signature, seconds, abdicated) for a selector submitted on `contract`, if read."""
+        for (c, sig), (t, ab) in self.timelocks.items():
+            if c == contract and selector(sig) == sel_hex.removeprefix("0x"):
+                return sig, t, ab
+        return None
 
     @property
     def kinds(self) -> dict[str, str]:
@@ -211,7 +220,25 @@ def discover_vault(f: S.Fetcher, address: str, block: int | str = "latest") -> V
                 liq_market = "0x" + keccak(data).hex()   # Blue's market id = keccak256(abi.encode(marketParams))
         except Exception:
             liq_market = None
-    return VaultView(v, asset, _symbol(f, asset, block), dec, name, views, liq_adapter, liq_market)
+    view = VaultView(v, asset, _symbol(f, asset, block), dec, name, views, liq_adapter, liq_market)
+    view.timelocks = read_timelocks(f, view, block)
+    return view
+
+
+def read_timelocks(f: S.Fetcher, view: "VaultView", block) -> dict:
+    targets = [(view.address, sig) for sig in RISK_INCREASING_VAULT + OTHER_VAULT_TIMELOCKED]
+    targets += [(a.address, sig) for a in view.adapters if a.kind == "market" for sig in RISK_INCREASING_ADAPTER]
+    calls = []
+    for c, sig in targets:
+        b4 = bytes.fromhex(selector(sig))
+        calls += [_call(c, "timelock(bytes4)", ["bytes4"], [b4]), _call(c, "abdicated(bytes4)", ["bytes4"], [b4])]
+    res = S.rpc_batch(f, calls, block)
+    out = {}
+    for i, key in enumerate(targets):
+        t, ab = res[2 * i], res[2 * i + 1]
+        if t is not None:
+            out[key] = (_uint(t), bool(_uint(ab)))
+    return out
 
 
 def read_state(f: S.Fetcher, view: VaultView, block: int, depositor: str | None = None) -> VaultState:

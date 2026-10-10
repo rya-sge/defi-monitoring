@@ -15,6 +15,7 @@ from eth_abi import decode
 
 from . import sources as S
 from .abi import MORPHO_BLUE
+from .discover import REGISTRY
 from .vault import _call, _symbol, _uint
 
 WAD = 10 ** 18
@@ -127,4 +128,65 @@ def read_borrows(f: S.Fetcher, markets: dict[str, BorrowMarket], user: str, bloc
                                   [markets[mid].params, raw_markets[mid]]) for mid in ids], block)
     for mid, r in zip(ids, rates):
         out[mid].rate_per_second = _uint(r)
+    return out
+
+
+@dataclass
+class Supplier:
+    address: str            # the supplier of the market: an EOA, a Vault V1, or a Vault V2's adapter
+    actor: str              # who owns the capital: the address itself, or the adapter's parent vault
+    label: str
+    kind: str               # "Vault V2" | "Vault V1" | "lender"
+    assets: int             # loan-token units (raw)
+    share: float            # of the market's supply
+
+
+def _name(f: S.Fetcher, addr: str, block) -> str | None:
+    raw = S.rpc_batch(f, [_call(addr, "name()")], block)[0]
+    try:
+        return decode(["string"], bytes.fromhex(raw[2:]))[0] if raw else None
+    except Exception:
+        return None
+
+
+def top_suppliers(f: S.Fetcher, m: BorrowMarket, block, min_share: float | None = None,
+                  limit: int | None = None) -> list[Supplier]:
+    """A market's main lenders (D41): the top suppliers by shares from the Morpho API, amounts on-chain;
+    a Vault V2 supplies through its adapter (resolved with parentVault()), a Vault V1 is identified by
+    MORPHO() and withdrawQueueLength()."""
+    w = REGISTRY["watch"]
+    min_share = w["lender_min_share"] if min_share is None else min_share
+    limit = w["lender_max"] if limit is None else limit
+    try:
+        items = S.morpho(f, """query($id:String!){ marketPositions(first:%d, where:{marketUniqueKey_in:[$id], chainId_in:[1]},
+              orderBy: SupplyShares, orderDirection: Desc){ items{ user{ address } } } }""" % limit,
+                         {"id": m.id})["marketPositions"]["items"]
+    except (S.SourceError, S.CacheMiss, KeyError, TypeError):
+        return []
+    addrs = [i["user"]["address"].lower() for i in items]
+    if not addrs:
+        return []
+    mid = bytes.fromhex(m.id[2:])
+    res = S.rpc_batch(f, [_call(MORPHO_BLUE, "market(bytes32)", ["bytes32"], [mid])]
+                      + [_call(MORPHO_BLUE, "position(bytes32,address)", ["bytes32", "address"], [mid, a]) for a in addrs]
+                      + [_call(a, "parentVault()") for a in addrs], block)
+    tsa, tss = decode(["uint128"] * 6, bytes.fromhex(res[0][2:]))[:2]
+    out = []
+    for i, a in enumerate(addrs):
+        pos, parent = res[1 + i], res[1 + len(addrs) + i]
+        shares = decode(["uint256", "uint128", "uint128"], bytes.fromhex(pos[2:]))[0] if pos else 0
+        assets = shares * (tsa + 1) // (tss + 10 ** 6)
+        share = assets / tsa if tsa else 0.0
+        if share < min_share:
+            continue
+        if parent and int(parent, 16):
+            vault = ("0x" + parent[-40:]).lower()
+            nm = _name(f, vault, block)
+            out.append(Supplier(a, vault, f"Vault {nm}" if nm else f"Vault {vault[:10]}…", "Vault V2", assets, share))
+            continue
+        nm = _name(f, a, block)
+        morpho, wq = S.rpc_batch(f, [_call(a, "MORPHO()"), _call(a, "withdrawQueueLength()")], block)
+        is_v1 = bool(morpho and ("0x" + morpho[-40:]).lower() == MORPHO_BLUE and wq)
+        label = (f"Vault {nm}" if is_v1 and nm else nm) or f"Lender {a[:6]}…{a[-4:]}"
+        out.append(Supplier(a, a, label, "Vault V1" if is_v1 else "lender", assets, share))
     return out

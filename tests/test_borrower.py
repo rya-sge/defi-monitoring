@@ -137,3 +137,33 @@ def test_discovery_keeps_debt_and_non_empty_vaults():
         "vaultV2Positions": [{"vault": {"address": "0xAA"}, "shares": "10"}, {"vault": {"address": "0xBB"}, "shares": 0}]}}
     up = positions.discover_user(FakeF(data), USER)
     assert up.borrows == [M] and up.vaults == ["0xaa"] and up.collateral_only == 1
+
+
+# --- main lenders (plan 2026-10-10-lenders-and-timelocks, US10)
+
+from riskdep.borrower import Supplier
+from riskdep.borrower_rules import lenders_startup
+
+LENDER = "0x" + "aa" * 20
+VAULT = "0x" + "bb" * 20
+
+
+def test_one_dominant_lender_warns_at_start():
+    sp = Supplier(LENDER, VAULT, "Vault X", "Vault V2", 900 * 10 ** 6, 0.9)
+    al = lenders_startup({M: [sp]}, {M: market()}, 10)
+    assert al[0].level == "warn" and "90%" in al[0].title and LENDER in al[0].detail
+    small = Supplier(LENDER, LENDER, "Lender", "lender", 100, 0.3)
+    assert lenders_startup({M: [small]}, {M: market()}, 10) == []
+
+
+def test_main_lender_withdrawal_warns_small_one_is_silent():
+    sp = Supplier(LENDER, VAULT, "Vault X", "Vault V2", 900 * E18, 0.9)
+    before = {M: state(util=(1000 * E18, 800 * E18))}
+    big = ev("Withdraw", id=M, caller=LENDER, onBehalf=LENDER, receiver=LENDER, assets=100 * E18, shares=0)
+    al = assess_events([big], USER, {M: market()}, {M: {LENDER: sp}}, before)
+    assert al[0].event == "Lender" and "10.0%" in al[0].detail
+    sp2 = Supplier(LENDER, VAULT, "Vault X", "Vault V2", 900 * E18, 0.9)
+    tiny = ev("Withdraw", id=M, caller=LENDER, onBehalf=LENDER, receiver=LENDER, assets=10 * E18, shares=0)
+    assert assess_events([tiny], USER, {M: market()}, {M: {LENDER: sp2}}, before) == []
+    other = ev("Withdraw", id=M, caller=OTHER, onBehalf=OTHER, receiver=OTHER, assets=500 * E18, shares=0)
+    assert assess_events([other], USER, {M: market()}, {M: {LENDER: sp2}}, before) == []

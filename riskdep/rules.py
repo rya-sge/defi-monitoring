@@ -8,7 +8,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 
-from .abi import Event, describe_call
+from .abi import RISK_INCREASING_ADAPTER, RISK_INCREASING_VAULT, Event, describe_call
 from .discover import REGISTRY
 from .vault import VaultState, VaultView, cap_ids
 
@@ -149,9 +149,14 @@ def assess_event(e: Event, ctx: Ctx, held: set[str], dep: str | None) -> Alert |
         return None
     if e.name == "Submit":
         what, why = _timelocked_text(ctx, a["data"])
-        return Alert("warn", e.block, tx, f"{who}.Submit", f"Pending change: {what}",
-                     f"{why}; executable from {_when(a['executableAt'])}", None,
-                     {"data": a["data"], "executableAt": a["executableAt"]})
+        tl = ctx.view.timelock_of(e.address, a["data"][2:10])
+        no_notice = bool(tl and tl[1] == 0 and tl[0] in RISK_INCREASING_VAULT + RISK_INCREASING_ADAPTER)
+        return Alert("critical" if no_notice else "warn", e.block, tx, f"{who}.Submit",
+                     ("Pending change with no notice: " if no_notice else "Pending change: ") + what,
+                     f"{why}; executable from {_when(a['executableAt'])}"
+                     + (" (timelock 0: it can be executed in the same block)" if no_notice else
+                        f" (timelock {tl[1] / 86400:g} days)" if tl else ""), None,
+                     {"data": a["data"], "executableAt": a["executableAt"], "timelock": tl[1] if tl else None})
     if e.name == "Accept":
         what, why = _timelocked_text(ctx, a["data"])
         return Alert("warn", e.block, tx, f"{who}.Accept", f"Change now live: {what}", why, None, {"data": a["data"]})
@@ -278,6 +283,13 @@ def startup_findings(view: VaultView, st: VaultState) -> list[Alert]:
     if st.pending_loss:
         out.append(Alert("critical", st.block, None, "PendingLoss", "Loss recorded by an adapter, not yet accrued",
                          f"totalAssets() is {ctx.amt(st.pending_loss)} below the stored total", None, {}))
+    no_notice = [sig.split("(")[0] + ("" if c == view.address else " (adapter)")
+                 for (c, sig), (t, ab) in view.timelocks.items()
+                 if t == 0 and not ab and sig in RISK_INCREASING_VAULT + RISK_INCREASING_ADAPTER]
+    if no_notice:
+        out.append(Alert("warn", st.block, None, "Timelock", f"{len(no_notice)} risk-increasing change(s) can be made with no notice",
+                         "timelock 0, not abdicated: " + ", ".join(no_notice)
+                         + ". A Submit for one of them gives no warning period", None, {"functions": no_notice}))
     zero_pen = [a for a, p in st.penalties.items() if p == 0]
     if zero_pen:
         out.append(Alert("info", st.block, None, "Structure", "forceDeallocate is free on some adapters",

@@ -199,3 +199,32 @@ def test_every_timelocked_selector_decodes():
         vals = [{"address": "0x" + "ab" * 20, "uint256": 1, "bool": True, "bytes4": b"\x00" * 4,
                  "bytes32": b"\x00" * 32, "bytes": b"\x01"}[t] for t in types]
         assert describe_call("0x" + sel + encode(types, vals).hex())[0] == sig
+
+
+# --- timelock lengths (plan 2026-10-10-lenders-and-timelocks, US11)
+
+def view_with_timelocks(t_fee=0, t_cap=3 * 86400, abdicated_fee=False):
+    v = view()
+    v.timelocks = {(VAULT, "setPerformanceFee(uint256)"): (t_fee, abdicated_fee),
+                   (VAULT, "increaseAbsoluteCap(bytes,uint256)"): (t_cap, False),
+                   (VAULT, "removeAdapter(address)"): (0, False)}
+    return v
+
+
+def run_view(v, events):
+    return assess_batch(events, Ctx(v, state(), state(block=101)), DEP, 101)
+
+
+def test_zero_timelock_on_a_risk_increasing_function_warns_at_start():
+    al = startup_findings(view_with_timelocks(), state())
+    t = [a for a in al if a.event == "Timelock"]
+    assert t and "setPerformanceFee" in t[0].detail and "removeAdapter" not in t[0].detail
+    assert not [a for a in startup_findings(view_with_timelocks(abdicated_fee=True), state()) if a.event == "Timelock"]
+
+
+def test_submit_with_no_notice_is_critical_with_notice_is_warn():
+    fee = "0x" + selector("setPerformanceFee(uint256)") + encode(["uint256"], [10 ** 17]).hex()
+    al = run_view(view_with_timelocks(), [ev("Submit", "vault", selector="0x", data=fee, executableAt=1_800_000_000)])
+    assert al[0].level == "critical" and "no notice" in al[0].title
+    al = run_view(view_with_timelocks(t_fee=86400), [ev("Submit", "vault", selector="0x", data=fee, executableAt=1_800_000_000)])
+    assert al[0].level == "warn" and "timelock 1 days" in al[0].detail

@@ -212,3 +212,17 @@ def describe_call(data_hex: str) -> tuple[str, list, str]:
 
 def encode_args(types: list[str], values: list) -> str:
     return encode(types, values).hex()
+
+
+# D44: the timelocked functions whose zero timelock removes a depositor's warning
+RISK_INCREASING_VAULT = [
+    "addAdapter(address)", "increaseAbsoluteCap(bytes,uint256)", "increaseRelativeCap(bytes,uint256)",
+    "setReceiveSharesGate(address)", "setSendSharesGate(address)", "setReceiveAssetsGate(address)",
+    "setSendAssetsGate(address)", "setAdapterRegistry(address)", "setPerformanceFee(uint256)",
+    "setManagementFee(uint256)", "setPerformanceFeeRecipient(address)", "setManagementFeeRecipient(address)",
+    "setIsAllocator(address,bool)", "setForceDeallocatePenalty(address,uint256)",
+]
+RISK_INCREASING_ADAPTER = ["burnShares(bytes32)", "setSkimRecipient(address)"]
+# read for display only: their delay is not a warning period (removeAdapter reduces risk; decreaseTimelock
+# uses the timelock of the function it decreases)
+OTHER_VAULT_TIMELOCKED = ["removeAdapter(address)", "abdicate(bytes4)", "increaseTimelock(bytes4,uint256)"]

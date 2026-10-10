@@ -54,8 +54,8 @@ riskdep/
   watch.py            the watch loop
   # watch --user
   positions.py        what an address holds on Morpho (API lookup)
-  borrower.py         Blue borrow positions and health factor, read on-chain
-  borrower_rules.py   pure borrower rules (HF levels, on-behalf actions, rate, oracle)
+  borrower.py         Blue borrow positions, health factor and a market's main lenders, read on-chain
+  borrower_rules.py   pure borrower rules (HF levels, on-behalf actions, rate, oracle, main lenders)
   watch_user.py       the watch --user loop
   # graph
   graph.py            dependency graph as JSON + Cytoscape.js HTML
@@ -75,7 +75,7 @@ tests/                pytest, all offline (snapshot + recorded replays)
 
 - `README.md` — usage of every mode, alert trigger tables, limits.
 - `ANALYSIS_MONITORING.md` — design note: dependency graph, impact, monitoring, execution, and gaps of the current implementation (done / partial / missing).
-- `plan/` — the three plans (`defi-risk-dependency`, `morpho-vault-v2-watcher`, `morpho-user-watcher`).
+- `plan/` — the four plans (`defi-risk-dependency`, `morpho-vault-v2-watcher`, `morpho-user-watcher`, `lenders-and-timelocks`).
 - `docs/` — `how-risk-is-computed.md`, `how-a-block-is-analysed.md`, `websocket-vs-polling.md`, `user-watcher-options.md`, `graph-example.html/.json`.
 - `data/snapshot/` (analyze demo cache + `as_of.json`) and `data/replay/` (recorded watch ranges) — test fixtures; do not delete or regenerate casually.
 - `out/` — run outputs (reports, alert `.jsonl`, cursors); git-ignored.
@@ -89,7 +89,7 @@ Python 3.10.12 (requires ≥ 3.10). From `requirements.txt`, tested with: reques
 
 ```bash
 pip install -r requirements.txt
-python3 -m pytest -q tests                         # 73 tests, offline
+python3 -m pytest -q tests                         # 77 tests, offline
 python3 -m riskdep analyze --demo                  # cached snapshot, no network → out/report.html/.json
 python3 -m riskdep watch --replay                  # re-run the recorded vault range offline
 python3 -m riskdep watch --blocks 1000 --record    # live range, saved for --replay
