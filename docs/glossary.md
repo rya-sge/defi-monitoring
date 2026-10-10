@@ -103,6 +103,9 @@ Plain-language definitions of the terms used in this repository's reports, alert
 | **Carry** | What the position earns over the horizon: the collateral's yield minus the interest on the debt. |
 | **Exit cost** | What leaving would cost now: price impact and fees of selling the collateral, plus gas. |
 | **Price impact** | How much worse a large sale's price is than the current price, because it consumes the pool's liquidity. |
+| **Run** | Depositors withdrawing all at once because they expect others to, while the vault can pay only what it has not lent. The first out are paid at par; the rest wait, and carry any loss not yet written off. |
+| **Queue position** | In a run, the other depositors' assets that leave before you. What you recover at par and what you lose depend on it (`docs/exit-queue.md`). |
+| **Stuck** | The part of a vault position that cannot leave now, because the vault's liquidity is exhausted or lent out; it comes back only as borrowers repay or are liquidated. |
 | **STAY / REDUCE / EXIT** | The verdict of `analyze`: exit when the expected loss exceeds carry plus exit cost; reduce when the carry does not cover the expected loss, the tail is too heavy, or liquidation is closer than a stress drop; stay otherwise. |
 
 ## The dependency graph

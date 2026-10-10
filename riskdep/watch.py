@@ -10,6 +10,7 @@ from pathlib import Path
 
 from . import admin as AD
 from . import crosscheck
+from . import exit_queue as EQ
 from . import market_risk as MR
 from . import sources as S
 from .discover import REGISTRY
@@ -176,9 +177,11 @@ def run(opts: Options) -> int:
         )
     vrisk = MR.VaultRisk(f, view, before, state0)
     MR.curve_table(p.line, vrisk.risks, vrisk.markets)
+    vx = EQ.VaultExit(f, view, before)
+    exit_alerts = vx.startup(p.line, before, EQ.vault_cases(vrisk, before), state0)
     aw = AD.AdminWatch(f, list(vrisk.markets), state0)
     aw.table(p.line)
-    for al in startup_findings(view, before) + vrisk.startup(before, state0) + aw.startup(state0):
+    for al in startup_findings(view, before) + vrisk.startup(before, state0) + exit_alerts + aw.startup(state0):
         p.alert(al)
     _cross_check(f, p, view, before, state0)
 
@@ -266,6 +269,7 @@ def run(opts: Options) -> int:
         for al in (
             assess_batch(batch.events, Ctx(view, before, after), dep, batch.to_block)
             + vrisk.step(f, batch.events, after, state_block, batch.to_block, refresh)
+            + vx.step(after, EQ.vault_cases(vrisk, after), batch.to_block, f if refresh else None)
             + aw.step(f, batch.events, state_block, refresh)
         ):
             p.alert(al)

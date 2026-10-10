@@ -14,6 +14,7 @@ from . import admin as AD
 from . import borrower as B
 from . import borrower_rules as BR
 from . import crosscheck, discover
+from . import exit_queue as EQ
 from . import market_risk as MR
 from . import sources as S
 from .abi import MORPHO_BLUE, topic
@@ -49,6 +50,7 @@ class VaultTarget:
     view: object
     state: object
     risk: object = None  # market_risk.VaultRisk: unrealised bad debt and curves of the vault's markets
+    exit: object = None  # exit_queue.VaultExit: the user's place in a run on the vault
 
     @property
     def addresses(self) -> set[str]:
@@ -157,6 +159,7 @@ def run_user(opts: UserOptions) -> int:
         vaults.append(VaultTarget(view, read_state(f, view, state0, user)))
     for vt in vaults:
         vt.risk = MR.VaultRisk(f, vt.view, vt.state, state0)
+        vt.exit = EQ.VaultExit(f, vt.view, vt.state)
     # the curves of the borrowed markets, without the user's own position (D47)
     binfo = {mid: MR.MarketInfo(mid, m.lltv, m.loan_decimals, m.loan_symbol, m.label) for mid, m in markets.items()}
     btrack = MR.Tracker(binfo, exclude={user})
@@ -201,7 +204,8 @@ def run_user(opts: UserOptions) -> int:
     for vt in vaults:
         exposure_table(vt.view, vt.state, p)
         MR.curve_table(p.line, vt.risk.risks, vt.risk.markets)
-        for al in startup_findings(vt.view, vt.state) + vt.risk.startup(vt.state, state0):
+        exit_alerts = vt.exit.startup(p.line, vt.state, EQ.vault_cases(vt.risk, vt.state), state0)
+        for al in startup_findings(vt.view, vt.state) + vt.risk.startup(vt.state, state0) + exit_alerts:
             p.alert(al)
 
     def admin_markets():
@@ -337,6 +341,7 @@ def run_user(opts: UserOptions) -> int:
                 after_v = read_state(f, vt.view, state_block, user)
             alerts += assess_batch(evs, Ctx(vt.view, vt.state, after_v), user, batch.to_block)
             alerts += vt.risk.step(f, batch.events, after_v, state_block, batch.to_block, refresh)
+            alerts += vt.exit.step(after_v, EQ.vault_cases(vt.risk, after_v), batch.to_block, f if refresh else None)
             vt.state = after_v
         alerts += aw.step(f, batch.events, state_block, refresh)
         if not light:

@@ -41,7 +41,7 @@ Every request to the data providers goes through the cached fetcher of `riskdep/
 | `eth_call` (single and JSON-RPC batches) | contract reads at a fixed block: Morpho Blue markets and positions, Vault V2 state, adapters, oracles and feeds, token metadata, rate models | `sources.rpc_call`, `sources.rpc_batch` and every reader |
 | `eth_getLogs` | the events of new blocks: vaults and adapters, Morpho Blue on the watched market ids, authorisations, admin events, mints | `poller.py` |
 | `eth_getStorageAt` | proxy slots (EIP-1967, ZeppelinOS) of the admin surface | `admin.py` (via `sources.rpc_batch_methods`) |
-| `eth_getCode` | minimal-proxy (EIP-1167) detection | `admin.py`, `discover.py`, `graph.py` |
+| `eth_getCode` | minimal-proxy (EIP-1167) detection; whether a vault holder is a contract or a wallet (EIP-7702 delegations count as wallets) | `admin.py`, `discover.py`, `graph.py`, `exit_queue.py` |
 | `eth_getBlockByNumber` | block hash for the cross-check | `crosscheck.py` |
 
 **Limits measured on 2026-10-10:**
@@ -68,7 +68,7 @@ Every request to the data providers goes through the cached fetcher of `riskdep/
 | `userByAddress` | an address's Blue positions and Vault V2 deposits | `positions.py` |
 | `marketPositions` | a market's borrowers (`borrowShares_gte`), its main suppliers (ordered by supply shares), the largest borrower of a market | `market_risk.py`, `borrower.py`, `discover.py` |
 | `marketById`, `marketPosition` | the `analyze` position and its market | `discover.py` |
-| `vaultV2ByAddress` | the largest depositor of a vault; its allocators and sentinels (graph); its total assets (cross-check) | `vault.py`, `graph.py`, `crosscheck.py` |
+| `vaultV2ByAddress` | the largest depositor of a vault; its holders, first 100 by size, for the exit queue; its allocators and sentinels (graph); its total assets (cross-check) | `vault.py`, `exit_queue.py`, `graph.py`, `crosscheck.py` |
 
 **Notes.** One page holds up to 1,000 items; `list_borrowers` pages with `skip`. Indexed data can lag the chain; the API-vs-chain cross-check warns beyond 0.5 %.
 
