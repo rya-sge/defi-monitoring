@@ -125,7 +125,7 @@ The layers, from the bottom:
 
 ## 3. Data sources and trust
 
-Every source is public and needs no API key.
+Every source is public and needs no API key. The exact endpoints, queries and measured limits are listed in `PROVIDERS.md`.
 
 | Source | Used for | Read by |
 |---|---|---|
@@ -208,21 +208,22 @@ The `Fetcher` has four modes: `offline` (cache only; a miss is an error), `live`
 - **Design first.** Each mode was built from a plan in `plan/`, with numbered decisions; code comments cite them (for example `D21`, `D45`).
 - **Pure rules, I/O at the edges.** Rules take decoded events and state and return alerts; they never fetch. This is what lets every rule be tested with synthetic events.
 - **The chain decides, the APIs find.** See section 3.
-- **One state read per batch, at one block.** All values in a batch come from one block, so they are consistent with each other; JSON-RPC batches keep it to a few requests.
+- **One state read per batch, at one block.** All values in a batch come from one block, so they are consistent with each other; JSON-RPC batches keep it to a few requests. A live batch with no event reads only the values that move without one, the rest carried from the last full read (D61).
 - **Alerts first, cursor last.** A crash replays a batch rather than skipping one; an alert can repeat, a block is never missed.
 - **One clock, one cache.** Offline runs are reproducible on any later day, and any live run can become a test fixture.
 - **No literal thresholds.** Every threshold and assumption lives in `registry.json` with its basis.
 
 ## 7. Testing
 
-`uv run pytest -q tests` runs 112 tests, all offline:
+`uv run pytest -q tests` runs 126 tests, all offline:
 
 | Kind | Files | What it covers |
 |---|---|---|
 | Rule tests on synthetic events and states | `test_watch_rules.py`, `test_borrower.py`, `test_market_risk.py`, `test_admin.py` | every alert fires at its threshold and stays silent below it |
 | Model tests | `test_propagate.py`, `test_decide.py` | loss propagation and the verdict |
 | End to end on recorded real data | `test_demo_snapshot.py`, `test_watch_replay.py`, `test_watch_user_replay.py` | the `analyze` demo and three recorded watch ranges (a vault, a borrower with 6 borrows, a depositor) |
-| Fixes and tools | `test_fixes.py`, `test_graph.py` | the snapshot clock, oracle ambiguity, cross-checks, the graph output |
+| HTTP API | `test_api.py` | every route, the block cursor of `/api/alerts`, the 404s that name the command to run, and the OpenAPI surface |
+| Fixes and tools | `test_fixes.py`, `test_graph.py`, `test_light_reads.py` | the snapshot clock, oracle ambiguity, cross-checks, the graph output, light reads on quiet batches (D61), RPC routing and retries |
 
 **Re-recording.** When a reader starts making new requests, the replays miss them. Re-record with `watch --blocks 1000 --record` (vault) or `watch --user <address> --blocks 300 --record`, then prune the responses the tests no longer read. The free RPC's short state window means a recording must be made in one go, close to the chain head.
 
@@ -257,6 +258,9 @@ The full list, with impact and effort, is §5 of `ANALYSIS_MONITORING.md`.
 | `README.md` | how to run each mode, the alert trigger tables |
 | `ANALYSIS_MONITORING.md` | the risk model (graph, impact, monitoring, execution) and the gaps |
 | `docs/how-risk-is-computed.md` | the `analyze` model, step by step |
+| `docs/scenarios-and-breakeven.md` | scenarios and breakeven probabilities as a complement to the Monte Carlo, with a learn section |
+| `docs/vault-depositor-scenarios.md` | a vault depositor's loss under a scenario, on Sentora RLUSD Main, with a learn section |
+| `docs/graph-propagation.md` | the dependency graph as a propagation engine (transmission functions, DebtRank), with a learn section |
 | `docs/how-a-block-is-analysed.md` | one watch batch, with a real transaction |
 | `docs/alert-runbook.md` | what each alert means and what to do |
 | `docs/glossary.md` | the terms |
@@ -264,5 +268,6 @@ The full list, with impact and effort, is §5 of `ANALYSIS_MONITORING.md`.
 | `docs/websocket-vs-polling.md` | the choice of polling |
 | `docs/user-watcher-options.md` | the options behind `watch --user` |
 | `docs/graph-example.html` | a rendered dependency graph |
+| `PROVIDERS.md` | every external provider: endpoints, queries, measured limits, trust model |
 | `NEXT_STEP.md` | what comes next, and what each step needs |
 | `CLAUDE.md` / `AGENTS.md` | conventions for editing the code |

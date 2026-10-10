@@ -157,6 +157,8 @@ Two pieces are deliberately *not* re-implemented: the vault's accrual (it reads 
 
 ### 4.2 Probabilities: base rates and Monte Carlo instead of a breakeven probability
 
+Detailed, with a worked example on the demo position and a learn section: `docs/scenarios-and-breakeven.md`.
+
 **What was proposed.** Team 2 warns that probabilities are "the weakest part of any such model" and proposes the **breakeven probability** p\* = exit cost ÷ L(severe case): exit if you believe the severe case is more likely than p\*. Team 1's Claude thread asks for named scenarios first and Monte Carlo later; its ChatGPT thread lists the trade-off: deterministic is explainable, Monte Carlo gives distributions but rests on hard-to-calibrate assumptions.
 
 **What the implementation does.** `analyze` estimates a yearly probability per layer from DefiLlama's hack record (by protocol size and category) and from registry entries for depegs, runs 20,000 simulated months, and decides from the expected loss, the CVaR 99 % and the exit cost. Its line "exit would only pay if incident probabilities were N× the estimates" (`risk_multiple_to_exit`) is a global version of Team 2's idea: how wrong the probabilities must be to change the decision.
@@ -168,6 +170,8 @@ Two pieces are deliberately *not* re-implemented: the vault's accrual (it reads 
 - **Scenarios as the default verdict basis** (S, a decision to take as a team): decide from "the worst named scenario you believe above p\*" and keep the Monte Carlo as context.
 
 ### 4.3 Scope of `analyze`: one borrower, not a vault depositor
+
+Detailed, with a worked example on real data and a learn section: `docs/vault-depositor-scenarios.md`.
 
 **What was proposed.** Team 2 frames the use case as the track's: a fund *depositing* in vaults, with the loss aggregated over every market the vault allocates to (Σ over markets of the vault's share of supply × bad debt), and an exit cost that comes from withdrawal liquidity, not from a swap.
 
@@ -183,6 +187,8 @@ Two pieces are deliberately *not* re-implemented: the vault's accrual (it reads 
 - **Limits to state in its output:** liquidations are assumed to clear at the oracle price with the liquidation bonus, so there is no slippage and no cascade (see 4.5 and the cascade loop in §5); the vault's version decides who bears the loss (a Vault V2 realises it for every holder at the next accrual).
 
 ### 4.4 The graph: a rendering, not the engine
+
+Detailed, with a worked example on real data and a learn section: `docs/graph-propagation.md`.
 
 **What was proposed.** Team 2 makes the graph the engine. Each edge type carries a **transmission function** (how a shock on the child becomes a loss on the parent): `allocates_to` passes the vault's share of a market's bad debt; `collateral` is zero until the LLTV buffer is used up, then non-linear; `priced_by` depends on the failure mode (overpricing, underpricing, freeze). Shocks spread with **DebtRank** (Battiston et al., 2012): each node passes a shock once (which handles cycles), paths below ε of the position are pruned, and terminal nodes stop the spread. Adding a protocol then means producing edges of existing types. Team 1 asks for the same in other words: look-through exposure and blast radius.
 

@@ -53,7 +53,7 @@ Each step below gives its goal, what it delivers, its size (**S** about a day, *
 
 **Goal.** Warn and critical alerts reach you when you are not looking at the terminal. Today they stay in the terminal and the JSONL file.
 
-**Delivers.** A notifier behind the existing alert printer, configured by environment variables; a deduplication store so a standing alert is not resent after each restart (gap D4); a test mode that sends one sample alert.
+**Delivers.** A notifier behind the existing alert printer, configured in `keys.ini` (section `[alerts]`); a deduplication store so a standing alert is not resent after each restart (gap D4); a test mode that sends one sample alert.
 
 **Size.** S.
 
@@ -63,7 +63,7 @@ Each step below gives its goal, what it delivers, its size (**S** about a day, *
 - Grouping: one message per alert, or one digest per batch.
 
 **Needs from you.**
-- The chosen channel's credentials, passed as environment variables and never committed: a Telegram bot token and chat id, a webhook URL, an ntfy topic, or SMTP settings.
+- The chosen channel's credentials, written in `keys.ini` and never committed: a Telegram bot token and chat id, a webhook URL, an ntfy topic, or SMTP settings.
 
 **Already available.** The alert objects carry everything a message needs (level, title, detail, transaction, your impact).
 
@@ -122,7 +122,7 @@ Each step below gives its goal, what it delivers, its size (**S** about a day, *
 
 **Needs from you.** Nothing blocking. Confirm which of the three matters to you, so it can be done first.
 
-**Already available.** The Vault V1.1 source and events (`morpho-org/metamorpho-v1.1`, read at a pinned commit), the `MorphoVaultV1Adapter` and `MidnightAdapter` sources in `lib/vault-v2`, and Morpho's Midnight documentation in `lib/docs.morpho.org-developers-docs/midnight`.
+**Already available.** The Vault V1.1 source and events (`morpho-org/metamorpho-v1.1`, read at a pinned commit), the `MorphoVaultV1Adapter` and `MidnightAdapter` sources in `docs/external/morpho/lib/vault-v2`, and Morpho's Midnight documentation in `docs/external/docs.morpho.org-developers-docs/midnight`.
 
 ## 5. Tests on a forked chain
 
@@ -139,7 +139,7 @@ Each step below gives its goal, what it delivers, its size (**S** about a day, *
 **Needs from you.**
 - An **archive RPC** endpoint (paid tier of Alchemy, Infura, QuickNode or similar): forking at a past block needs historical state, which the free endpoint refuses.
 
-**Already available.** Foundry 1.5.0 (`forge`, `anvil`, `cast`) is installed; the Morpho Blue and Vault V2 sources are at the pinned commits in `lib/morpho-blue` and `lib/vault-v2`.
+**Already available.** Foundry 1.5.0 (`forge`, `anvil`, `cast`) is installed; the Morpho Blue and Vault V2 sources are at the pinned commits in `docs/external/morpho/lib/morpho-blue` and `docs/external/morpho/lib/vault-v2`.
 
 ## 6. Reliable infrastructure
 
@@ -234,9 +234,11 @@ Each step below gives its goal, what it delivers, its size (**S** about a day, *
 
 | Material | Where | Used for |
 |---|---|---|
-| Morpho developer documentation | `../lib/docs.morpho.org-developers-docs` | contracts, Bundles, addresses on every chain, Midnight, exit routes |
-| Morpho Blue source at `8e26ca6a` | `../lib/morpho-blue` | events, liquidation and shares maths, authorisation rules |
-| Vault V2 source at `d992cb84` | `../lib/vault-v2` | vault, adapters (market, V1, Midnight), timelocks, gates |
+| Morpho developer documentation | `docs/external/docs.morpho.org-developers-docs` | contracts, Bundles, addresses on every chain, Midnight, exit routes |
+| Etherscan API documentation | `docs/external/docs.etherscan.io-api-reference-docs` | V2 endpoints (`getsourcecode`, `getabi`, …), step 3 |
+| Etherscan API key | `keys.ini`, section `[etherscan]` (git-ignored) | verified sources and ABIs, step 3; tested 2026-10-10 |
+| Morpho Blue source at `8e26ca6a` | `docs/external/morpho/lib/morpho-blue` | events, liquidation and shares maths, authorisation rules |
+| Vault V2 source at `d992cb84` | `docs/external/morpho/lib/vault-v2` | vault, adapters (market, V1, Midnight), timelocks, gates |
 | Vault V1.1 events | `morpho-org/metamorpho-v1.1` at `3b17547e`, read online | step 4 |
 | Foundry 1.5.0 | `forge`, `anvil`, `cast` installed | step 5 |
 | DeFi hack corpus | the `search-crypto-hack` skill | step 8 |
@@ -262,7 +264,7 @@ Grouped by kind, for all steps:
 - [ ] Optionally, audit reports and post-mortems of the protocols you use (step 8).
 - [ ] The `morpho-org/bundles` repository at the release you would use (step 9).
 
-**Access and credentials** (environment variables, never committed)
+**Access and credentials** (in `keys.ini`, git-ignored, never committed; `keys.example.ini` lists the names)
 - [ ] Credentials of the alert channel (step 1).
 - [ ] An RPC provider key with archive and WebSocket access (steps 5 and 6), and an RPC per extra chain (step 7).
 - [ ] An Etherscan API key, free tier (step 3).

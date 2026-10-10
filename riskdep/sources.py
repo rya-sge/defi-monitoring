@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import time
 import warnings
 from pathlib import Path
@@ -25,6 +26,11 @@ LLAMA = "https://api.llama.fi"
 LLAMA_COINS = "https://coins.llama.fi"
 LLAMA_YIELDS = "https://yields.llama.fi"
 RPC = "https://ethereum-rpc.publicnode.com"
+
+# Where a request is sent can differ from the URL it is cached under: RISKDEP_RPC_URL sends the main RPC's requests
+# to another endpoint (a local node or proxy, a paid endpoint with its key) while cache keys, snapshots and replays
+# keep the public URL, so the offline fixtures stay valid and a key never reaches a committed file.
+ROUTES: dict[str, str] = {RPC: os.environ["RISKDEP_RPC_URL"]} if os.environ.get("RISKDEP_RPC_URL") else {}
 
 
 class CacheMiss(RuntimeError):
@@ -60,22 +66,24 @@ class Fetcher:
             raise CacheMiss(
                 f"no cached response for {method} {url} {json.dumps(body)[:120] if body else ''}; rerun with --live"
             )
+        target = ROUTES.get(url, url)
         last = None
         for attempt in range(3):
             try:
                 self.network_calls += 1
                 if method == "GET":
-                    r = requests.get(url, timeout=60)
+                    r = requests.get(target, timeout=60)
                 else:
-                    r = requests.post(url, json=body, timeout=60)
+                    r = requests.post(target, json=body, timeout=60)
                 if r.status_code >= 400:
-                    # the free node answers some refusals (archive reads) with 403 + a JSON-RPC error body
+                    # the free node answers some refusals (archive reads) with 403 + a JSON-RPC error body;
+                    # kept apart from `body`, which a retry must send again unchanged
                     try:
-                        body = r.json()
+                        err = r.json()
                     except ValueError:
-                        body = None
-                    if body is not None and "error" in json.dumps(body)[:2000]:
-                        data = body
+                        err = None
+                    if err is not None and "error" in json.dumps(err)[:2000]:
+                        data = err
                         break
                 r.raise_for_status()
                 data = r.json()
@@ -84,7 +92,8 @@ class Fetcher:
                 last = e
                 time.sleep(1.5 * (attempt + 1))
         else:
-            raise SourceError(f"{method} {url} failed after 3 attempts: {last}")
+            # a routed URL may carry a key: name the public one only
+            raise SourceError(f"{method} {url} failed after 3 attempts: {str(last).replace(target, url)}")
         if transform:
             data = transform(data)
         if self.mode == "direct":

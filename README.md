@@ -16,10 +16,12 @@ All data comes from keyless public sources: the publicnode Ethereum RPC, the Mor
 
 ```bash
 uv sync                             # Python >= 3.10
-uv run pytest -q tests              # 112 tests, offline
+uv run pytest -q tests              # 126 tests, offline
 ```
 
 Outside an activated virtualenv, prefix the `python3 -m riskdep …` commands below with `uv run`.
+
+`RISKDEP_RPC_URL` (optional) sends the main RPC's requests to another endpoint, for example a local node, a proxy or a paid endpoint with its key. Cached requests, snapshots and replays keep the public URL, so the offline tests are unaffected and the key is never written to a file. See `PROVIDERS.md`.
 
 ## watch: Morpho Vault V2 depositor
 
@@ -31,7 +33,7 @@ python3 -m riskdep watch --blocks 1000 --record            # same, saving every 
 python3 -m riskdep watch --replay                          # re-run the recorded range offline
 ```
 
-At start it reads the vault's structure on-chain (vault → adapters → Blue markets: collateral, LLTV, the vault's share, utilisation, caps, the liquidity market). It reports what a plain withdrawal can pay (idle assets plus the liquidity adapter's market, per the Morpho docs) separately from what only `forceDeallocate` can reach, at the adapter's penalty, and prints standing findings such as concentration or an exit that can't be done in full. It also lists every borrower of the vault's markets (Morpho API, positions read on-chain) and prints each market's liquidation curve and unrealised bad debt; positions are re-read when an event touches them and fully refreshed every 300 blocks. Finally it prints the **admin surface** of those markets: each oracle and the feeds it reads, the collateral and loan tokens, Pendle SY and yield tokens, whether each is upgradeable and who controls it, and each oracle's gap to DefiLlama's price. It then polls every 12 s, 2 blocks behind the head, and prints one line per relevant transaction. Each alert is also appended to `out/watch-<vault>.jsonl`, and the cursor in `out/watch-<vault>.cursor` lets a restart resume where it stopped.
+At start it reads the vault's structure on-chain (vault → adapters → Blue markets: collateral, LLTV, the vault's share, utilisation, caps, the liquidity market). It reports what a plain withdrawal can pay (idle assets plus the liquidity adapter's market, per the Morpho docs) separately from what only `forceDeallocate` can reach, at the adapter's penalty, and prints standing findings such as concentration or an exit that can't be done in full. It also lists every borrower of the vault's markets (Morpho API, positions read on-chain) and prints each market's liquidation curve and unrealised bad debt; positions are re-read when an event touches them and fully refreshed every 300 blocks. A live batch with no event re-reads only what moves without one (oracle prices, `totalAssets`, `realAssets`, idle cash, the depositor's gates); the full state read runs on any event and at least every 25 blocks (D61). Finally it prints the **admin surface** of those markets: each oracle and the feeds it reads, the collateral and loan tokens, Pendle SY and yield tokens, whether each is upgradeable and who controls it, and each oracle's gap to DefiLlama's price. It then polls every 12 s, 2 blocks behind the head, and prints one line per relevant transaction. Each alert is also appended to `out/watch-<vault>.jsonl`, and the cursor in `out/watch-<vault>.cursor` lets a restart resume where it stopped.
 
 | Level | What triggers it |
 |---|---|
