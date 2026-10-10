@@ -205,9 +205,9 @@ Details, with a real transaction decoded step by step: `docs/how-a-block-is-anal
 
 | State | Where | Written by | Notes |
 |---|---|---|---|
-| Request cache | `data/snapshot/*.json` | `sources.Fetcher` in `live` and `refresh` modes | key = hash of (method, URL, body); doubles as the offline demo of `analyze` |
-| Date of the snapshot | `data/snapshot/as_of.json` | `analyze --refresh` | offline runs use it as "now" through `clock.py` |
-| Recorded watch ranges | `data/replay/<vault>/`, `data/replay/user-<address>/` | `watch --blocks N --record` | re-run offline by `--replay` and by the tests |
+| Request cache | `fixtures/snapshot/*.json` | `sources.Fetcher` in `live` and `refresh` modes | key = hash of (method, URL, body); doubles as the offline demo of `analyze` |
+| Date of the snapshot | `fixtures/snapshot/as_of.json` | `analyze --refresh` | offline runs use it as "now" through `clock.py` |
+| Recorded watch ranges | `fixtures/replay/<vault>/`, `fixtures/replay/user-<address>/` | `watch --blocks N --record` | re-run offline by `--replay` and by the tests |
 | Facts and thresholds | `riskdep/registry.json` | a person, by hand | every value has its basis; reference in `docs/registry-reference.md` |
 | Cursor | `out/watch-*.cursor` | the watch loops, last in each batch | a restart resumes after it |
 | Alerts | `out/watch-*.jsonl` | the watch loops | one JSON object per alert |

@@ -1,7 +1,7 @@
 """Keyless data sources behind one cached fetcher.
 
 Every request is keyed by a hash of (method, url, body) and stored under
-data/snapshot/, so a live run doubles as the offline demo snapshot.
+fixtures/snapshot/, so a live run doubles as the offline demo snapshot.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ from . import clock
 warnings.filterwarnings("ignore", message=".*doesn't match a supported version.*")
 import requests  # noqa: E402
 
-SNAPSHOT_DIR = Path(__file__).resolve().parent.parent / "data" / "snapshot"
+SNAPSHOT_DIR = Path(__file__).resolve().parent.parent / "fixtures" / "snapshot"
 
 PENDLE = "https://api-v2.pendle.finance/core"
 MORPHO = "https://blue-api.morpho.org/graphql"

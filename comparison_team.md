@@ -56,7 +56,7 @@ This document compares the two teammate notes in `teammate/` with what `riskdep`
 |---|---|---|---|---|
 | Language | Python | TypeScript (viem, `@morpho-org/blue-sdk-viem`) | Python | Python was kept. Morpho's maths (LIF, health factor, share accounting) is re-implemented from the pinned sources in `lib/` rather than taken from the SDK. Covered by tests. |
 | Graph library | NetworkX | React Flow + elk / dagre | NetworkX (in `discover.py`) + Cytoscape.js for rendering | — |
-| Storage | DuckDB / Parquet + PostgreSQL | Snapshot JSON versioned in git | JSON request cache (`data/snapshot/`), recorded replays (`data/replay/`), JSONL alerts, cursor files | Closest to Team 1 / Claude's "snapshot as a contract", and simpler than both |
+| Storage | DuckDB / Parquet + PostgreSQL | Snapshot JSON versioned in git | JSON request cache (`fixtures/snapshot/`), recorded replays (`fixtures/replay/`), JSONL alerts, cursor files | Closest to Team 1 / Claude's "snapshot as a contract", and simpler than both |
 | Simulation | NumPy / SciPy, deterministic first | Pure function of the price vector; Monte Carlo as a thin loop on top | NumPy Monte Carlo, 20,000 months, seeded | — |
 | UI | Streamlit | Vite + React + Tailwind | Static HTML | No interactive UI |
 | Deployment | Docker Compose | Static site + GitHub Actions cron | Local CLI | No CI yet (gap T2) |

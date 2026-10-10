@@ -42,8 +42,8 @@
 
 - **Design first.** Each mode was built from a plan in `plan/` (design, numbered decisions `D1…`, tracker, interview log). Module docstrings cite those decisions (e.g. `D21`, `D37`); read the matching plan row before changing behaviour it governs.
 - **Pure rules, I/O at the edges.** `rules.py`, `borrower_rules.py` and `propagate.py` are pure functions (decoded events + state before/after → alerts); network access lives in `sources.py`, `vault.py`, `borrower.py`, `poller.py`, `crosscheck.py`.
-- **One cached fetcher.** `sources.py` keys every request by a hash of (method, url, body) and stores it under `data/snapshot/`, so a live run doubles as the offline demo snapshot. `RISKDEP_RPC_URL` changes where the main RPC's requests are sent, never the URL they are cached under. `--record` saves watch ranges under `data/replay/<vault>/` or `data/replay/user-<address>/`; `--replay` re-runs them offline.
-- **One clock.** `clock.py` makes offline runs use `data/snapshot/as_of.json` as "now", so the demo is reproducible on any later day. Never call `time.time()`/`datetime.now()` directly in analysis code.
+- **One cached fetcher.** `sources.py` keys every request by a hash of (method, url, body) and stores it under `fixtures/snapshot/`, so a live run doubles as the offline demo snapshot. `RISKDEP_RPC_URL` changes where the main RPC's requests are sent, never the URL they are cached under. `--record` saves watch ranges under `fixtures/replay/<vault>/` or `fixtures/replay/user-<address>/`; `--replay` re-runs them offline.
+- **One clock.** `clock.py` makes offline runs use `fixtures/snapshot/as_of.json` as "now", so the demo is reproducible on any later day. Never call `time.time()`/`datetime.now()` directly in analysis code.
 - **Registry, not constants.** Facts, assumptions, priors and watch thresholds live in `riskdep/registry.json` (`watch` key for alert thresholds), each with a stated basis.
 - **Alert levels** are `info` / `warn` / `critical`; the trigger tables are in `README.md`.
 - **Watch loop invariant:** discover, read state, poll, assess, alert, and save the cursor **last** (`out/watch-*.cursor`), so a restart resumes without skipping blocks. Polling runs 2 blocks behind the head every 12 s; deeper reorgs are not handled. A live batch with no event reads only what moves without one (`vault.read_light`, `borrower.read_prices`); any event, gap, undecoded log or refresh, and `watch.full_state_every_blocks`, force a full read (D61). Replays and `--blocks` runs always read in full.
@@ -56,7 +56,7 @@
 riskdep/
   __main__.py         entry point → cli.main
   cli.py              argparse: analyze, watch, graph
-  sources.py          keyless HTTP/RPC sources behind one cached fetcher (data/snapshot/)
+  sources.py          keyless HTTP/RPC sources behind one cached fetcher (fixtures/snapshot/)
   clock.py            single clock; snapshot date when offline
   abi.py              Morpho Blue / Vault V2 / adapter event and function signatures
   registry.json       facts, assumptions, priors, thresholds
@@ -112,7 +112,7 @@ pyproject.toml        project metadata, dependencies, ruff and pytest configurat
   - `chainlink/docs.chain.link-data-feeds-docs/` — Chainlink Data Feeds documentation (price, rates, SmartData / Proof of Reserve, SVR feeds; `latestRoundData`, heartbeat and deviation, L2 sequencer uptime). **Git-ignored**: it exists only in the local checkout, so read it there; a fresh clone does not have it.
 
   The seven source repositories are git submodules (`.gitmodules`), pinned at the commits above: after a clone, run `git submodule update --init`. To move a pin, check out the new commit inside the submodule and stage the submodule path.
-- `data/snapshot/` (analyze demo cache + `as_of.json`) and `data/replay/` (recorded watch ranges) — test fixtures; do not delete or regenerate casually.
+- `fixtures/snapshot/` (analyze demo cache + `as_of.json`) and `fixtures/replay/` (recorded watch ranges) — test fixtures; do not delete or regenerate casually. **Tracked in git, not ignored, on purpose:** every test runs offline from these cached responses, so CI and any fresh clone need them; a cache file present on one machine only makes a test pass locally and fail in CI. They used to live under `data/`, which `.gitignore` ignores, and new cache files were silently left out of commits (the exit-queue test failed in CI for that reason). So a new cached response (`--record`, `--live`, or a live fetch into these folders) is committed with the change that needs it: check `git status fixtures/`. They hold public responses only: API keys go on the request, never into a cache file (`sources.Fetcher`, `secret`).
 - `out/` — run outputs (reports, alert `.jsonl`, cursors); git-ignored.
 - `conftest.py` — puts the repo root on `sys.path` for tests.
 - `pyproject.toml` — project metadata, the runtime dependencies, the `dev` dependency group, and the ruff and pytest configuration.

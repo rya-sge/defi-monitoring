@@ -27,7 +27,7 @@ Outside an activated virtualenv, prefix the `python3 -m riskdep …` commands be
 python3 -m riskdep watch                                   # Sentora RLUSD Main, its largest depositor, live
 python3 -m riskdep watch --vault <V2 address> --user <addr> --level warn
 python3 -m riskdep watch --blocks 1000                     # check the last 1000 blocks, then stop
-python3 -m riskdep watch --blocks 1000 --record            # same, saving every response under data/replay/<vault>
+python3 -m riskdep watch --blocks 1000 --record            # same, saving every response under fixtures/replay/<vault>
 python3 -m riskdep watch --replay                          # re-run the recorded range offline
 ```
 
@@ -87,7 +87,7 @@ python3 -m riskdep analyze --live --pendle-market <market> --pt-amount <n>
 
 Writes `out/report.html` and `out/report.json`.
 
-- **Data date.** An offline run uses the snapshot's date, `data/snapshot/as_of.json`, as "now", so the demo gives the same result on any later day. `--refresh` refetches everything and rewrites that date; `--live` fetches only what is missing and uses today's date.
+- **Data date.** An offline run uses the snapshot's date, `fixtures/snapshot/as_of.json`, as "now", so the demo gives the same result on any later day. `--refresh` refetches everything and rewrites that date; `--live` fetches only what is missing and uses today's date.
 - **Oracle.** Whether the lending market's oracle follows the PT market is inferred by comparing their prices. When the PT trades within 1 % of par (near maturity), the test can't tell, so the report says *ambiguous* and shows the verdict under the other oracle behaviour too.
 
 ## Layout
@@ -100,6 +100,6 @@ riskdep/     sources · abi · vault · poller · rules · market_risk · drain 
              positions · borrower · borrower_rules · watch_user (watch --user) · graph
              discover · priors · propagate · simulate · decide · report (analyze)
              cli · registry.json (facts, assumptions, thresholds)
-data/        snapshot/ (analyze demo), replay/<vault>/ and replay/user-<address>/ (recorded watch ranges)
+fixtures/    snapshot/ (analyze demo), replay/<vault>/ and replay/user-<address>/ (recorded watch ranges); tracked in git, the tests read them
 tests/
 ```
