@@ -1,0 +1,1 @@
+{"method": "POST", "url": "https://ethereum-rpc.publicnode.com", "body": {"jsonrpc": "2.0", "id": 1, "method": "eth_blockNumber", "params": []}, "fetched": "2026-10-10T21:54:42Z", "response": {"jsonrpc": "2.0", "result": "0x18f3e78", "id": 1}}

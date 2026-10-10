@@ -1,0 +1,51 @@
+@startmindmap
+<style>
+mindmapDiagram {
+  node {
+    BackgroundColor #EAF6F0
+    LineColor #2E8B67
+  }
+  :depth(1) {
+    BackgroundColor #2E8B67
+    FontColor white
+  }
+}
+</style>
+* riskdep Monte Carlo
+** Inputs (priors.py)
+*** One prior per layer
+*** p_year -> horizon probability
+*** Beta severity, recovery
+*** Basis in registry.json
+** Draws (simulate.run)
+*** 20,000 paths, seed 7
+*** Bernoulli occurrence per layer
+*** Beta severity per layer
+*** D12: issuer hack forces a depeg
+** One path (propagate.loss)
+*** True value vs oracle value
+*** Liquidation: oracle x LLTV < debt
+*** Limited liability
+** Outputs
+*** Expected loss, P(loss), P(liquidation)
+*** VaR / CVaR at 95 % and 99 %
+*** Attribution: 4,000 draws per layer
+*** Interaction term
+left side
+** Decision (decide.verdict)
+*** Carry vs expected loss vs exit cost
+*** Tail budget on CVaR 99 %
+*** De-lever rerun, same seed
+*** Oracle-sensitivity rerun
+*** Risk multiple to exit
+** Assumptions
+*** Independent layers
+*** Fixed priors
+*** Incidents only
+*** One position
+** Planned
+*** Incident mode, book, breakeven
+*** Rates and implied yield
+*** Common shock, cascade
+*** Uncertain priors
+@endmindmap

@@ -20,7 +20,7 @@ from .rules import Alert
 from .vault import _call
 
 W = REGISTRY["watch"]
-CURVE_DROPS = (0.02, 0.05, 0.10, 0.20)  # D50
+CURVE_DROPS = (0.02, 0.05, 0.10, 0.20, 0.30, 0.50)  # D50, widened by D98: issuer NAV cuts create bad debt past 20 %
 CHUNK = 200
 TOUCHING = ("Borrow", "Repay", "SupplyCollateral", "WithdrawCollateral", "Liquidate")
 

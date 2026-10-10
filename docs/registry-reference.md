@@ -111,6 +111,8 @@ The conservative default for a yield token not in `issuers`: a 15 % yearly depeg
 | `pt_stress_extra_discount` | multiplier | during a depeg, an oracle that follows the PT market sees the depeg × (1 + this), because the PT trades below its backing as the Pendle pool drains (0.5) | `propagate.py`, `simulate.py`, `decide.py` |
 | `gas_exit_usd` | USD | gas cost added to every exit and de-lever estimate (25) | `decide.py` |
 | `tail_budget` | fraction of equity | REDUCE when CVaR 99 % exceeds this share of the equity (0.5) | `decide.py` |
+| `incident.exit_min_gain` | fraction of the loss | vault incident mode: EXIT only when leaving first cuts the depositor's loss by at least this share (0.05) | `vault_incident.py` |
+| `incident.reduce_margin` | fraction | incident mode: the partial sale puts liquidation this far beyond the incident's oracle drop (0.01) | `scenario.py` |
 
 ## `watch`
 
@@ -139,6 +141,7 @@ The thresholds of `watch --vault` and `watch --user`. Changing them changes when
 | `curve_warn_share` | fraction of the market's borrows | 0.25 | `LiquidationCurve` warning: the debt liquidatable at `curve_drop` reaches this share |
 | `mint_share_critical` | fraction of the supply | 0.05 | `Admin.Mint` critical: one transaction minting this share of a collateral or yield token |
 | `oracle_divergence_warn` | fraction | 0.03 | `OracleDivergence` warning: oracle price vs DefiLlama's collateral ÷ loan price |
+| `divergence_check_every_blocks` | blocks | 25 | `OracleDivergence` between full refreshes: the batch's oracle prices against DefiLlama prices at most this old (D97) |
 | `drain_buy_cost` | fraction | 0.005 | the cost c of buying the collateral at the drain's size, in d\* = 1 − LLTV / (1 + c); low on purpose, so the threshold is early |
 | `drain_margin` | fraction (points of discount) | 0.02 | `DrainWindow` warn: the collateral's discount to its oracle within this distance of d\*; critical at d\* |
 | `drain_check_every_blocks` | blocks | 25 | how often DefiLlama's prices are re-read for the drain threshold; oracle prices come with every state read |
@@ -161,7 +164,7 @@ The sibling-market search and the oracle classification of the `graph` command (
 | `oracle_fall_share` | fraction | 0.2 | a feed whose answer fell in at least this share of its changes is `price-tracking`; below it, `constant-price` (an accrual or exchange rate) |
 | `oracle_children_getters` | signatures | `FEED_1()`, `FEED_2()`, `innerOracle()` | getters of a composite or wrapper input; its class comes from the inputs they return, `price-tracking` if one is |
 | `oracle_getters` | list | `twapDuration()` → price-tracking when nonzero; `baseDiscountPerYear()` → constant-price when it answers | structural getters that classify an input, each with `when` (`nonzero` or `answers`), `class` and `basis` |
-| `oracle_patterns` | list | contract names (`PendleChainlinkOracle`, `PendleSparkLinearDiscountOracle`, `LossAdjustedPTFeed`, …) and description fragments (`FUNDAMENTAL`, `exchange rate`, `net asset value`, `discount`) | the last rule: a case-insensitive `match` in the input's `description()` or verified contract name (Etherscan, optional) gives its `class`; each entry has a `basis` |
+| `oracle_patterns` | list | contract names (`PendleChainlinkOracle`, `PendleSparkLinearDiscountOracle`, `LossAdjustedPTFeed`, `CustomAggregator` for Midas's issuer-published NAV feeds, …) and description fragments (`FUNDAMENTAL`, `exchange rate`, `net asset value`, `discount`) | the last rule: a case-insensitive `match` in the input's `description()` or verified contract name (Etherscan, optional) gives its `class`; each entry has a `basis` |
 | `oracle_basis` | text | — | the rules in order, and the 2026-10-10 probe behind the history thresholds |
 
 **Adding a pattern.** When a graph shows an input `not classified`, read its verified source, decide whether a market move reaches its answer, and add `{"match": "<contract name or description fragment>", "class": "price-tracking" | "constant-price", "basis": "<what it computes, source, date>"}`. Prefer a structural getter in `oracle_getters` when the contract exposes one: it needs no Etherscan key.

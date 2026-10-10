@@ -76,7 +76,7 @@ For one position with collateral value $v$ at the oracle price and debt $D$, at 
 | D48 | contract | Unrealised bad debt, vault side: the vault's share (its share of the market's supply × the market's unrealised bad debt) as a fraction of the vault's total assets; warn from 0.01 %, critical from 0.1 %, on crossing; the depositor's share in `depositor_impact` | agreed, agent's default | registry `watch.unrealised_bad_debt_warn` / `_critical` | S2 |
 | D49 | contract | Steep curve: warn when the debt liquidatable at a 5 % oracle fall is ≥ 25 % of the market's borrows, on crossing; for vault markets only above `utilization_min_share` of the vault | agreed, agent's default | registry `watch.curve_drop`, `watch.curve_warn_share` | S2 |
 | D51 | module | A borrower's own position is excluded from the curves of its borrowed markets, which show the other borrowers only; markets where a vault holds less than one whole token are not followed | agreed, found in S2: the demo borrower otherwise dominated its own market's curve | live run | S2 |
-| D50 | contract | Curve points −2, −5, −10, −20 %; amounts in the loan token | agreed, agent's default | — | S1 |
+| D50 | contract | Curve points −2, −5, −10, −20 %; amounts in the loan token. *Revised by D98 (plan `2026-10-11-vault-incident`): −30 and −50 % added* | agreed, agent's default | — | S1 |
 
 # Execution
 

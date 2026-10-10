@@ -280,6 +280,7 @@ def run(opts: Options) -> int:
                 after, EQ.vault_cases(vrisk, after), batch.to_block, f if refresh else None, drained=vd.drained(after)
             )
             + aw.step(f, batch.events, state_block, refresh)
+            + aw.check_divergence(f, batch.to_block, {mid: m.oracle_price for mid, m in after.markets.items()})
         ):
             p.alert(al)
         poller.save(batch.to_block)
