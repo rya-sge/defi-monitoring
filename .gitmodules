@@ -7,3 +7,9 @@
 [submodule "docs/external/pendle/lib/external-integration"]
 	path = docs/external/pendle/lib/external-integration
 	url = https://github.com/pendle-finance/external-integration
+[submodule "docs/external/morpho/lib/morpho-blue"]
+	path = docs/external/morpho/lib/morpho-blue
+	url = https://github.com/morpho-org/morpho-blue
+[submodule "docs/external/morpho/lib/vault-v2"]
+	path = docs/external/morpho/lib/vault-v2
+	url = https://github.com/morpho-org/vault-v2
