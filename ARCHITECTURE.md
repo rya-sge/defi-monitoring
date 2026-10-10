@@ -46,6 +46,7 @@ flowchart TB
     borrower_rules["borrower_rules · borrow alerts"]
     market_risk["market_risk · bad debt, curves"]
     exit_queue["exit_queue · run on a vault"]
+    drain["drain · drain threshold"]
     admin["admin · admin surface"]
     model["decide → simulate → propagate, priors"]
   end
@@ -66,9 +67,11 @@ flowchart TB
   watch -->|"events + state"| rules
   watch --> market_risk
   watch --> exit_queue
+  watch --> drain
   watch_user --> borrower_rules
   watch_user --> market_risk
   watch_user --> exit_queue
+  watch_user --> drain
   exit_queue --> market_risk
   watch --> admin
   watch_user --> admin
@@ -86,14 +89,15 @@ flowchart TB
 | Module | Imports |
 |---|---|
 | `cli` | `clock`, `crosscheck`, `decide`, `discover`, `graph`, `priors`, `report`, `simulate`, `sources`, `watch`, `watch_user` |
-| `watch` | `admin`, `crosscheck`, `discover`, `exit_queue`, `market_risk`, `poller`, `rules`, `sources`, `vault` |
-| `watch_user` | `abi`, `admin`, `borrower`, `borrower_rules`, `crosscheck`, `discover`, `exit_queue`, `market_risk`, `poller`, `positions`, `rules`, `sources`, `vault`, `watch` |
+| `watch` | `admin`, `crosscheck`, `discover`, `drain`, `exit_queue`, `market_risk`, `poller`, `rules`, `sources`, `vault` |
+| `watch_user` | `abi`, `admin`, `borrower`, `borrower_rules`, `crosscheck`, `discover`, `drain`, `exit_queue`, `market_risk`, `poller`, `positions`, `rules`, `sources`, `vault`, `watch` |
 | `report` | `clock`, `decide`, `discover`, `priors`, `simulate` |
 | `graph` | `abi`, `borrower`, `discover`, `positions`, `sources`, `vault` |
 | `rules` | `abi`, `discover`, `vault` |
 | `borrower_rules` | `abi`, `borrower`, `discover`, `rules` |
 | `market_risk` | `abi`, `discover`, `rules`, `sources`, `vault` |
 | `exit_queue` | `discover`, `market_risk`, `rules`, `sources` |
+| `drain` | `discover`, `rules`, `sources`, `vault` |
 | `admin` | `abi`, `borrower`, `discover`, `rules`, `sources`, `vault` |
 | `decide` | `discover`, `simulate` |
 | `simulate` | `discover`, `priors`, `propagate` |
@@ -122,10 +126,11 @@ The layers, from the bottom:
 - **Rules and models.** Pure functions from state to alerts or numbers:
   - `rules.py` (vault) and `borrower_rules.py` (borrows) map decoded events and before/after state to alerts;
   - `market_risk.py` values every borrower of a market;
+  - `drain.py` computes each vault market's drain threshold d\* and what a drain would take (`docs/drain-threshold.md`);
   - `exit_queue.py` models a run on a vault: what a depositor recovers at par and loses at each queue position (`docs/exit-queue.md`);
   - `priors.py`, `propagate.py`, `simulate.py` and `decide.py` form the `analyze` model.
 
-  `market_risk.py`, `exit_queue.py` and `admin.py` mix both kinds: `market_risk`'s `Tracker`, `exit_queue`'s `holders` and `admin`'s `AdminWatch` read state, and their `value` and `assess_*` functions are pure. `admin.py` covers the contracts a market depends on beyond Morpho (oracles, feeds, tokens, Pendle SY): upgradeability, admins, owners, feeds, pauses, mints, and the oracle's gap to DefiLlama's price.
+  `market_risk.py`, `drain.py`, `exit_queue.py` and `admin.py` mix both kinds: `market_risk`'s `Tracker`, `drain`'s `read_pa`, `exit_queue`'s `holders` and `admin`'s `AdminWatch` read state, and their `value` and `assess_*` functions are pure. `admin.py` covers the contracts a market depends on beyond Morpho (oracles, feeds, tokens, Pendle SY): upgradeability, admins, owners, feeds, pauses, mints, and the oracle's gap to DefiLlama's price.
 - **Mode loops and outputs.** `watch.py` and `watch_user.py` run the polling loops; `report.py` and `graph.py` write the HTML and JSON outputs.
 - **Entry.** `cli.py` parses the command line and dispatches.
 
@@ -200,9 +205,9 @@ Details, with a real transaction decoded step by step: `docs/how-a-block-is-anal
 
 | State | Where | Written by | Notes |
 |---|---|---|---|
-| Request cache | `data/snapshot/*.json` | `sources.Fetcher` in `live` and `refresh` modes | key = hash of (method, URL, body); doubles as the offline demo of `analyze` |
-| Date of the snapshot | `data/snapshot/as_of.json` | `analyze --refresh` | offline runs use it as "now" through `clock.py` |
-| Recorded watch ranges | `data/replay/<vault>/`, `data/replay/user-<address>/` | `watch --blocks N --record` | re-run offline by `--replay` and by the tests |
+| Request cache | `fixtures/snapshot/*.json` | `sources.Fetcher` in `live` and `refresh` modes | key = hash of (method, URL, body); doubles as the offline demo of `analyze` |
+| Date of the snapshot | `fixtures/snapshot/as_of.json` | `analyze --refresh` | offline runs use it as "now" through `clock.py` |
+| Recorded watch ranges | `fixtures/replay/<vault>/`, `fixtures/replay/user-<address>/` | `watch --blocks N --record` | re-run offline by `--replay` and by the tests |
 | Facts and thresholds | `riskdep/registry.json` | a person, by hand | every value has its basis; reference in `docs/registry-reference.md` |
 | Cursor | `out/watch-*.cursor` | the watch loops, last in each batch | a restart resumes after it |
 | Alerts | `out/watch-*.jsonl` | the watch loops | one JSON object per alert |
@@ -226,7 +231,7 @@ The `Fetcher` has four modes: `offline` (cache only; a miss is an error), `live`
 
 | Kind | Files | What it covers |
 |---|---|---|
-| Rule tests on synthetic events and states | `test_watch_rules.py`, `test_borrower.py`, `test_market_risk.py`, `test_exit_queue.py`, `test_admin.py` | every alert fires at its threshold and stays silent below it |
+| Rule tests on synthetic events and states | `test_watch_rules.py`, `test_borrower.py`, `test_market_risk.py`, `test_exit_queue.py`, `test_drain.py`, `test_admin.py` | every alert fires at its threshold and stays silent below it |
 | Model tests | `test_propagate.py`, `test_decide.py` | loss propagation and the verdict |
 | End to end on recorded real data | `test_demo_snapshot.py`, `test_watch_replay.py`, `test_watch_user_replay.py` | the `analyze` demo and three recorded watch ranges (a vault, a borrower with 6 borrows, a depositor) |
 | Fixes and tools | `test_fixes.py`, `test_graph.py`, `test_light_reads.py` | the snapshot clock, oracle ambiguity, cross-checks, the graph output, light reads on quiet batches (D61), RPC routing and retries |
@@ -246,6 +251,7 @@ The design decisions are numbered across six plans, in the order the increments 
 | `plan/2026-10-10-market-borrowers.plan.md` | every borrower: unrealised bad debt, liquidation curves | D45–D51 |
 | `plan/2026-10-10-admin-surface.plan.md` | admins of oracles, Morpho Blue and collateral issuers; oracle divergence | D52–D60 |
 | `plan/2026-10-10-exit-queue.plan.md` | a depositor's place in a run on a vault | D62–D67 |
+| `plan/2026-10-10-drain-threshold.plan.md` | when a depeg empties a market: d\*, the Public Allocator, `DrainWindow` | D69–D74 |
 
 A change that departs from a decision is recorded in that plan's table.
 

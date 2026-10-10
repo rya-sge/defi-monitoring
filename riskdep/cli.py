@@ -12,12 +12,12 @@ from pathlib import Path
 from . import clock, crosscheck, decide, discover, priors, report, simulate
 from . import sources as S
 
-# D14: largest borrower of Morpho market PT-sUSDE-26NOV2026 / USDC, cached in data/snapshot.
+# D14: largest borrower of Morpho market PT-sUSDE-26NOV2026 / USDC, cached in fixtures/snapshot.
 DEMO_MARKET = "0x5613b170ded221c588b6e9637b910f49e5508680ceede207f44aa72e5c46cb05"
 DEMO_USER = "0xdf81987465681D0515058fe0A47A3bD174012730"
 DEMO_VAULT = "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf"  # Sentora RLUSD Main, largest Vault V2 on 2026-10-10
 DEMO_BORROWER = "0xdf81987465681d0515058fe0a47a3bd174012730"  # 6 Blue borrows on 2026-10-10
-REPLAY_DIR = Path(__file__).resolve().parent.parent / "data" / "replay"
+REPLAY_DIR = Path(__file__).resolve().parent.parent / "fixtures" / "replay"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -56,7 +56,7 @@ def main(argv: list[str] | None = None) -> int:
         help="with --user: a Blue market id to watch as a borrow, skipping the Morpho API lookup (repeatable)",
     )
     w.add_argument("--blocks", type=int, help="check the last N blocks, then stop")
-    w.add_argument("--record", action="store_true", help="with --blocks: save every response under data/replay/<vault>")
+    w.add_argument("--record", action="store_true", help="with --blocks: save every response under fixtures/replay/<vault>")
     w.add_argument("--replay", action="store_true", help="re-run a recorded range offline")
     w.add_argument("--level", choices=["info", "warn", "critical"], default="info", help="lowest level printed")
     w.add_argument("--max-polls", type=int, help="stop after N empty polls (live mode)")

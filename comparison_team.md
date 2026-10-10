@@ -56,7 +56,7 @@ This document compares the two teammate notes in `teammate/` with what `riskdep`
 |---|---|---|---|---|
 | Language | Python | TypeScript (viem, `@morpho-org/blue-sdk-viem`) | Python | Python was kept. Morpho's maths (LIF, health factor, share accounting) is re-implemented from the pinned sources in `lib/` rather than taken from the SDK. Covered by tests. |
 | Graph library | NetworkX | React Flow + elk / dagre | NetworkX (in `discover.py`) + Cytoscape.js for rendering | — |
-| Storage | DuckDB / Parquet + PostgreSQL | Snapshot JSON versioned in git | JSON request cache (`data/snapshot/`), recorded replays (`data/replay/`), JSONL alerts, cursor files | Closest to Team 1 / Claude's "snapshot as a contract", and simpler than both |
+| Storage | DuckDB / Parquet + PostgreSQL | Snapshot JSON versioned in git | JSON request cache (`fixtures/snapshot/`), recorded replays (`fixtures/replay/`), JSONL alerts, cursor files | Closest to Team 1 / Claude's "snapshot as a contract", and simpler than both |
 | Simulation | NumPy / SciPy, deterministic first | Pure function of the price vector; Monte Carlo as a thin loop on top | NumPy Monte Carlo, 20,000 months, seeded | — |
 | UI | Streamlit | Vite + React + Tailwind | Static HTML | No interactive UI |
 | Deployment | Docker Compose | Static site + GitHub Actions cron | Local CLI | No CI yet (gap T2) |
@@ -265,7 +265,7 @@ Ranked by value for the track and by effort, given the existing code.
 | # | Idea | From | Value | Effort | Fits on top of |
 |---|---|---|---|---|---|
 | 1 | ~~**Run / queue model for vault exit**: loss as a function of queue position, depositor concentration, φ~~ **done**: `exit_queue.py`, `ExitQueue` alert, `docs/exit-queue.md` | Team 2 | High: it is the decision for a vault depositor | M | `vault.withdrawable()`, `force_withdrawable()`, unrealised bad debt in `market_risk.py` |
-| 2 | **Fixed-oracle drain threshold d\*** per market, plus the drainable amount (idle + Public Allocator `maxIn` + cap headroom) | Team 2 | High: an early, computable exit trigger | S–M | Oracle mode inference, caps already read in `vault.py`; Public Allocator not read yet |
+| 2 | ~~**Fixed-oracle drain threshold d\*** per market, plus the drainable amount (idle + Public Allocator `maxIn` + cap headroom)~~ **done**: `drain.py`, `DrainWindow` alert, `docs/drain-threshold.md` | Team 2 | High: an early, computable exit trigger | S–M | Oracle mode inference, caps already read in `vault.py`; Public Allocator not read yet |
 | 3 | **Shared-node exposure and alert** (accumulation risk / blast radius) | Team 1, Team 2 | High for discovery; directly visible in the graph example | S once there is a shared graph (R3 after R1); a first version can be computed from `graph.json` | `graph.py` output |
 | 4 | **Scenario library** (named shocks) with the loss per vault depositor | Team 1 / Claude, Team 2 (failure modes) | High: answers "how much do we lose if…" | M | `propagate.loss()` + `market_risk` curves |
 | 5 | **Push alerts and deduplication** | Team 1 / ChatGPT | High in production | S | Alert objects already complete (next step 1) |

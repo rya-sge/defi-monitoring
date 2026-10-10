@@ -39,7 +39,7 @@ Every request to the data providers goes through the cached fetcher of `riskdep/
 | Method | Used for | Code |
 |---|---|---|
 | `eth_blockNumber` | the chain head, for the watch loop and the cross-checks | `poller.py`, `watch.py`, `watch_user.py`, `crosscheck.py`, `cli.py` |
-| `eth_call` (single and JSON-RPC batches) | contract reads at a fixed block: Morpho Blue markets and positions, Vault V2 state, adapters, oracles and feeds, token metadata, rate models | `sources.rpc_call`, `sources.rpc_batch` and every reader |
+| `eth_call` (single and JSON-RPC batches) | contract reads at a fixed block: Morpho Blue markets and positions, Vault V2 state, adapters, oracles and feeds, token metadata, rate models, the Vault V2 Public Allocator's settings (`0x00b8…1e27`) | `sources.rpc_call`, `sources.rpc_batch` and every reader |
 | `eth_getLogs` | the events of new blocks: vaults and adapters, Morpho Blue on the watched market ids, authorisations, admin events, mints | `poller.py` |
 | `eth_getStorageAt` | proxy slots (EIP-1967, ZeppelinOS) of the admin surface | `admin.py` (via `sources.rpc_batch_methods`) |
 | `eth_getCode` | minimal-proxy (EIP-1167) detection; whether a vault holder is a contract or a wallet (EIP-7702 delegations count as wallets) | `admin.py`, `discover.py`, `graph.py`, `exit_queue.py` |
@@ -98,7 +98,7 @@ Every request to the data providers goes through the cached fetcher of `riskdep/
 
 | Path | Used for | Code |
 |---|---|---|
-| `/prices/current/{chain:address,…}` | current token prices: PT holdings, and the independent price oracles are compared with | `sources.coin_prices`, `discover.py`, `admin.py` |
+| `/prices/current/{chain:address,…}` | current token prices: PT holdings, and the independent price oracles are compared with (oracle divergence, and the drain threshold every 25 blocks) | `sources.coin_prices`, `discover.py`, `admin.py` |
 | `/chart/{chain:address}` | one year of daily prices: the worst drawdown of a yield token | `sources.coin_drawdown`, `discover.py` |
 
 **Note.** Some tokens are not priced (no entry); the oracle comparison then reports "not checked" for that market.
