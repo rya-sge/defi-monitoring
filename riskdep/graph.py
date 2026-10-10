@@ -8,6 +8,11 @@ Node types follow ANALYSIS_MONITORING.md §1:
   Admin     who decides for a vault: owner, curator, allocators, sentinels
   External  off-chain dependencies of a yield source (registry.json)
 Every edge comes from an on-chain attribute or a role getter, with the amount it carries where one exists.
+
+Sibling markets (plan 2026-10-10-sibling-markets, D76–D85): Blue markets no actor holds that share a held market's
+collateral, underlying or base price input, or lend that collateral. They join the held market through the shared
+asset, oracle or feed node, never through a market → market edge. Every Blue market carries its oracle class and its
+liquidation curve, the data the propagation engine of docs/graph-propagation.md needs.
 """
 
 from __future__ import annotations
@@ -22,7 +27,11 @@ from eth_abi import decode
 
 from . import borrower as B
 from . import discover
+from . import market_risk as MR
+from . import oracle_class as OC
+from . import siblings as SB
 from . import sources as S
+from .abi import MORPHO_BLUE
 from .discover import REGISTRY
 from .positions import discover_user
 from .vault import _call, _symbol, _uint, discover_vault, read_state
@@ -99,6 +108,11 @@ def _oracle(g: Graph, f, oracle: str, block) -> str:
     feeds = [(name[:-2], "0x" + r[-40:]) for name, r in zip(ORACLE_GETTERS, res) if r and int(r, 16)]
     shape = "Morpho ChainlinkOracleV2" if any(r is not None for r in res) else "custom (no ChainlinkOracleV2 getters)"
     price = _uint(S.rpc_batch(f, [_call(oracle, "price()")], block)[0])
+    standard = shape.startswith("Morpho")
+    base = [OC.probe(f, a, block, vault="VAULT" in n) for n, a in feeds if n in OC.BASE_ROLES]
+    if not standard:
+        base = [OC.probe(f, oracle, block)]  # a custom oracle is read as one input (D83)
+    cls, basis = OC.classify_oracle(base, standard)
     g.node(
         oracle,
         "Oracle",
@@ -107,8 +121,11 @@ def _oracle(g: Graph, f, oracle: str, block) -> str:
         shape=shape,
         implementation=impl,
         price_raw=str(price) if price is not None else "reverts",
-        source="price() and getters read on-chain",
+        oracle_class=cls,
+        class_basis=basis,
+        source="price() and getters read on-chain; class from the base-side inputs (D82–D84)",
     )
+    probes = {p.address: p for p in base if not p.vault}
     for name, addr in feeds:
         desc = S.rpc_batch(f, [_call(addr, "description()")], block)[0]
         label = name
@@ -127,12 +144,20 @@ def _oracle(g: Graph, f, oracle: str, block) -> str:
                 role_in_oracle=name,
                 source="oracle getter, symbol() on-chain",
             )
-            g.edge(oracle, fid, "converts through")
+            g.edge(oracle, fid, "converts through", role=name)
         else:
+            fcls = OC.classify_input(probes[addr]) if addr in probes else (None, None)
             fid = g.node(
-                addr, "Oracle", label, address=addr, role_in_oracle=name, source="oracle getter, description() on-chain"
+                addr,
+                "Oracle",
+                label,
+                address=addr,
+                role_in_oracle=name,
+                oracle_class=fcls[0],
+                class_basis=fcls[1],
+                source="oracle getter, description() on-chain",
             )
-            g.edge(oracle, fid, "reads")
+            g.edge(oracle, fid, "reads", role=name)
     return oracle
 
 
@@ -150,7 +175,9 @@ def _market(g: Graph, f, m: B.BorrowMarket, block, quotes_pt: bool = True) -> st
     coll = _asset(g, f, m.collateral_token, block, m.collateral_symbol)
     g.edge(mid, loan, "lends")
     g.edge(mid, coll, "takes as collateral")
-    g.edge(mid, _oracle(g, f, m.oracle, block), "priced by")
+    orc = _oracle(g, f, m.oracle, block)
+    g.edge(mid, orc, "priced by")
+    g.node(mid, "Pool", "", oracle_class=g.nodes[orc]["details"].get("oracle_class"))
     if quotes_pt and m.collateral_symbol.upper().startswith("PT-") and f"pendle:{m.collateral_token}" not in g.nodes:
         try:
             pm = discover.find_pendle_market(f, m.collateral_token)
@@ -202,9 +229,121 @@ def _suppliers(g: Graph, f: S.Fetcher, m: B.BorrowMarket, block) -> None:
         )
 
 
-def build(f: S.Fetcher, block: int, user: str | None = None, vaults: list[str] | None = None) -> Graph:
+def _siblings(
+    g: Graph, f: S.Fetcher, held: dict[str, B.BorrowMarket], block
+) -> tuple[dict[str, B.BorrowMarket], dict[str, tuple[str, str]]]:
+    """Sibling markets of the held ones (D76–D79): found with the Morpho API, re-read on-chain, added through _market.
+    Returns them and the underlyings read on the way."""
+    seeds = [
+        SB.Market(
+            mid,
+            m.collateral_token,
+            m.loan_token,
+            m.oracle,
+            frozenset(
+                e["target"] for e in g.edges if e["source"] == m.oracle and e["details"].get("role") in OC.BASE_ROLES
+            ),
+            label=m.label,
+        )
+        for mid, m in held.items()
+    ]
+    cands = SB.candidates(f)
+    und = SB.underlyings(f, {c.collateral for c in cands} | {s.collateral for s in seeds}, block)
+    found = SB.match(seeds, cands, {t: u for t, (u, _) in und.items()})
+    markets = B.discover_markets(f, [s.id for s in found], block) if found else {}
+    for s in found:
+        if s.id not in markets:
+            continue  # the API listed a market the chain does not know: the chain decides (D78)
+        nid = _market(g, f, markets[s.id], block)
+        g.node(
+            nid,
+            "Pool",
+            "",
+            sibling=True,
+            linked_by="; ".join(f"{rel} with {held[seed].label}" for seed, rel in s.links),
+            source="sibling found with the Morpho API markets query; parameters and oracle read on-chain",
+        )
+    return markets, und
+
+
+def _wraps(g: Graph, f: S.Fetcher, und: dict[str, tuple[str, str]], block) -> None:
+    """An ERC-4626 share → the asset it redeems into, for every asset of the graph (D80)."""
+    missing = {nid for nid, n in g.nodes.items() if n["kind"] == "Asset" and nid.startswith("0x") and nid not in und}
+    und = {**und, **SB.underlyings(f, missing, block)} if missing else und
+    for nid in [k for k, n in g.nodes.items() if n["kind"] == "Asset"]:
+        target, how = und.get(nid, (None, None))
+        if how == "erc4626":
+            g.edge(
+                nid,
+                _asset(g, f, target, block),
+                "wraps",
+                note="an ERC-4626 share: redeems into this asset at the vault's exchange rate",
+            )
+
+
+def _market_state(g: Graph, f: S.Fetcher, markets: dict[str, B.BorrowMarket], block) -> None:
+    """Supply, borrow, the collateral of the borrowers and the liquidation curve of every Blue market (D81), from all
+    its borrowers (market_risk, D45)."""
+    if not markets:
+        return
+    infos = {mid: MR.MarketInfo(mid, m.lltv, m.loan_decimals, m.loan_symbol, m.label) for mid, m in markets.items()}
+    tracker = MR.Tracker(infos)
+    tracker.refresh(f, block)
+    ids = list(markets)
+    calls = []
+    for mid in ids:
+        calls += [
+            _call(MORPHO_BLUE, "market(bytes32)", ["bytes32"], [bytes.fromhex(mid[2:])]),
+            _call(markets[mid].oracle, "price()"),
+        ]
+    res = S.rpc_batch(f, calls, block)
+    prices = {mid: _uint(res[2 * i + 1]) for i, mid in enumerate(ids)}
+    risks = tracker.compute(prices)
+    for i, mid in enumerate(ids):
+        m, r, raw = markets[mid], risks[mid], res[2 * i]
+        ld, cd = 10**m.loan_decimals, 10**m.collateral_decimals
+        supply, borrow = (decode(["uint128"] * 6, bytes.fromhex(raw[2:]))[0], r.total_borrow) if raw else (0, 0)
+        coll = sum(c for c, _ in tracker.positions.get(mid, {}).values())
+        g.node(
+            mid,
+            "Pool",
+            "",
+            total_supply=supply / ld,
+            total_borrow=borrow / ld,
+            loan_unit=m.loan_symbol,
+            utilization=f"{borrow / supply:.1%}" if supply else None,
+            borrowers=r.borrowers,
+            collateral_of_borrowers=coll / cd,
+            collateral_unit=m.collateral_symbol,
+            unrealised_bad_debt=r.unrealised_bad_debt / ld,
+            liquidation_curve=[
+                {
+                    "oracle_fall": p.drop,
+                    "liquidatable_debt": p.liquidatable_debt / ld,
+                    "positions": p.positions,
+                    "bad_debt": p.bad_debt / ld,
+                    "collateral_liquidatable": p.collateral / cd,
+                }
+                for p in r.curve
+            ],
+            state_source="Morpho Blue market() and every borrower's position() on-chain, borrowers from the Morpho API",
+        )
+        g.edge(
+            mid,
+            m.collateral_token,
+            "takes as collateral",
+            coll / cd,
+            m.collateral_symbol,
+            note="collateral of the market's borrowers; liquidations sell it (curve on the market)",
+        )
+
+
+def build(
+    f: S.Fetcher, block: int, user: str | None = None, vaults: list[str] | None = None, siblings: bool = True
+) -> Graph:
     g = Graph()
     vaults = [v.lower() for v in (vaults or [])]
+    held: dict[str, B.BorrowMarket] = {}  # the seed markets of the sibling search (D76)
     if user:
         user = user.lower()
         up = discover_user(f, user)
@@ -222,6 +361,7 @@ def build(f: S.Fetcher, block: int, user: str | None = None, vaults: list[str] |
             for mid, m in markets.items():
                 st = states[mid]
                 node = _market(g, f, m, block)
+                held[mid] = m
                 hf = st.hf(m.lltv)
                 g.edge(
                     pos,
@@ -254,10 +394,11 @@ def build(f: S.Fetcher, block: int, user: str | None = None, vaults: list[str] |
         g.edge(vid, _asset(g, f, view.asset, block, view.asset_symbol), "denominated in")
         if user and st.depositor_shares:
             g.edge(f"user:{user}", vid, "deposits in", st.depositor_assets / unit, view.asset_symbol)
+        read = B.discover_markets(f, view.market_ids, block)  # decimals included, for the curves
         for a in view.adapters:
             for mp in a.markets.values():
                 ms = st.markets[mp.id]
-                m = B.BorrowMarket(
+                m = read.get(mp.id) or B.BorrowMarket(
                     mp.id,
                     mp.loan_token,
                     mp.collateral_token,
@@ -266,8 +407,10 @@ def build(f: S.Fetcher, block: int, user: str | None = None, vaults: list[str] |
                     int(round(mp.lltv * 1e18)),
                     view.asset_symbol,
                     mp.collateral_symbol,
+                    view.decimals,
                 )
                 node = _market(g, f, m, block)
+                held[mp.id] = m
                 g.edge(
                     vid,
                     node,
@@ -330,6 +473,24 @@ def build(f: S.Fetcher, block: int, user: str | None = None, vaults: list[str] |
             )
             for r in rs:
                 g.edge(nid, vid, verb[r])
+    found, und = _siblings(g, f, held, block) if siblings and held else ({}, {})
+    _wraps(g, f, und, block)
+    _market_state(g, f, {**held, **found}, block)
+    return g
+
+
+def build_all(f: S.Fetcher, block: int, users: list[str], vaults: list[str], siblings: bool = True) -> Graph:
+    """One graph for several addresses and vaults: the vaults are built with the first address."""
+    g = None
+    for i, u in enumerate(users or [None]):
+        part = build(f, block, u, vaults if i == 0 else [], siblings)
+        if g is None:
+            g = part
+            continue
+        for n in part.nodes.values():
+            g.node(n["id"], n["kind"], n["label"], **n["details"])
+        for e in part.edges:
+            g.edge(e["source"], e["target"], e["rel"], e["amount"], e["unit"], **e["details"])
     return g
 
 
@@ -350,7 +511,7 @@ h1{font-size:1.05rem;margin:0 0 4px}h2{font-size:.85rem;text-transform:uppercase
 .sw.round{border-radius:50%}.sw.diamond{transform:rotate(45deg) scale(.8)}
 input[type=search]{width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg)}
 table{border-collapse:collapse;width:100%;font-size:.82rem}td{border-bottom:1px solid var(--line);padding:4px 2px;vertical-align:top;word-break:break-word}
-td:first-child{color:var(--muted);width:38%}button{padding:5px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);cursor:pointer}
+td{white-space:pre-line}td:first-child{color:var(--muted);width:38%}button{padding:5px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);cursor:pointer}
 @media (max-width:760px){.app{grid-template-columns:1fr;grid-template-rows:auto 70vh;height:auto}aside{border-right:0;border-bottom:1px solid var(--line)}}
 """
 
@@ -364,7 +525,7 @@ SHAPES = {
 }
 DESCR = {
     "Actor": "whose capital is at stake: an address, a Vault V2",
-    "Pool": "where liquidity sits: Blue market, Pendle pool",
+    "Pool": "where liquidity sits: Blue market (dashed: sibling), Pendle pool",
     "Asset": "token: loan, collateral, yield source, reused vault share",
     "Oracle": "market oracle and the feeds it reads",
     "Admin": "decides for a vault: owner, curator, allocator, sentinel",
@@ -387,6 +548,7 @@ def to_html(g: Graph, title: str, subtitle: str) -> str:
 <h1>{html.escape(title)}</h1><p class="muted">{html.escape(subtitle)}</p>
 <h2>Node types</h2><div class="legend">{legend}</div>
 <p class="muted">Shapes repeat the colour: rounded box Actor, ellipse Pool, tag Asset, diamond Oracle, triangle Admin, square External.
+A dashed, paler Pool is a sibling market: no actor of the graph holds it, and it joins a held market through the asset, oracle or feed they share.
 Edge width grows with the amount carried (log scale, in the token of the edge). Zoom in to read asset, oracle and off-chain labels; click a node to isolate its neighbours.</p>
 <h2>Find</h2><input type="search" id="q" placeholder="symbol, address, market id…">
 <p><button id="fit">Fit</button> <button id="lay">Re-layout</button></p>
@@ -398,7 +560,7 @@ const DATA={json.dumps(data, default=str)};
 const SHAPES={json.dumps(SHAPES)};
 const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const fmt=x=>x==null?"":(Math.abs(x)>=1e6?(x/1e6).toFixed(2)+"M":Math.abs(x)>=1e3?(x/1e3).toFixed(1)+"k":x.toFixed(2));
-const els=[...DATA.nodes.map(n=>({{data:{{id:n.id,label:n.label,kind:n.kind,details:n.details}}}})),
+const els=[...DATA.nodes.map(n=>({{data:{{id:n.id,label:n.label,kind:n.kind,details:n.details,sibling:n.details.sibling?1:0}}}})),
  ...DATA.edges.map((e,i)=>({{data:{{id:"e"+i,source:e.source,target:e.target,rel:e.rel,amount:e.amount,unit:e.unit,details:e.details,
    w:e.amount?Math.min(10,1+Math.log10(1+e.amount)/1.2):1,label:e.amount>=1?fmt(e.amount)+" "+(e.unit||""):""}}}}))];
 const cy=cytoscape({{container:document.getElementById("cy"),elements:els,wheelSensitivity:0.2,
@@ -407,16 +569,20 @@ const cy=cytoscape({{container:document.getElementById("cy"),elements:els,wheelS
    "text-wrap":"wrap","text-max-width":120,"border-width":1,"border-color":css("--line")}}}},
   {{selector:'node[kind="Actor"]',style:{{"width":44,"height":30,"font-weight":"bold","font-size":11,"text-max-width":90}}}},
   {{selector:'node[kind="Asset"],node[kind="Oracle"],node[kind="External"]',style:{{"min-zoomed-font-size":9}}}},
+  {{selector:"node[sibling = 1]",style:{{"border-style":"dashed","border-width":2,"border-color":css("--fg"),"background-opacity":0.55}}}},
   {{selector:"edge",style:{{"width":"data(w)","line-color":css("--edge"),"target-arrow-color":css("--edge"),
    "target-arrow-shape":"triangle","curve-style":"bezier","opacity":0.75,"label":"data(label)","font-size":8,
    "color":css("--muted"),"text-rotation":"autorotate","text-background-color":css("--bg"),"text-background-opacity":0.8}}}},
   {{selector:".faded",style:{{"opacity":0.08}}}},{{selector:":selected",style:{{"border-width":3,"border-color":css("--fg"),"line-color":css("--fg")}}}}],
  layout:{{name:"preset"}}}});
 // roots passed as a collection: ids such as "0x6dc5…" start with a digit and make a CSS selector fail
-const roots=()=>cy.nodes().filter(n=>n.data("kind")==="Actor"||n.data("kind")==="Admin");
+// sibling markets are roots too: no actor of the graph points at them, they hang from the shared nodes below
+const roots=()=>cy.nodes().filter(n=>n.data("kind")==="Actor"||n.data("kind")==="Admin"||n.data("sibling")===1);
 const relayout=()=>cy.layout({{name:"breadthfirst",directed:true,spacingFactor:1.5,roots:roots()}}).run();
 relayout();
-function row(k,v){{if(v==null||v==="")return"";const s=String(v);const link=/^0x[0-9a-f]{{40}}$/.test(s)?
+const num=x=>typeof x==="number"?x.toLocaleString("en-US",{{maximumFractionDigits:Math.abs(x)<1?4:2}}):String(x);
+const val=v=>Array.isArray(v)?v.map(o=>o&&typeof o==="object"?Object.entries(o).map(([a,b])=>a.replace(/_/g," ")+" "+num(b)).join(", "):num(o)).join("\\n"):num(v);
+function row(k,v){{if(v==null||v==="")return"";const s=val(v);const link=/^0x[0-9a-f]{{40}}$/.test(s)?
  `<a href="https://etherscan.io/address/${{s}}" target="_blank" rel="noopener">${{s}}</a>`:s.replace(/[&<>]/g,c=>({{"&":"&amp;","<":"&lt;",">":"&gt;"}}[c]));
  return `<tr><td>${{k.replace(/_/g," ")}}</td><td>${{link}}</td></tr>`}}
 cy.on("tap","node",ev=>{{const d=ev.target.data();const nb=ev.target.closedNeighborhood();cy.elements().addClass("faded");nb.removeClass("faded");

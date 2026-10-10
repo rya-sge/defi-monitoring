@@ -1,0 +1,103 @@
+# eRPC: a local RPC proxy for riskdep (optional). See docs/erpc.md for why and how to run it.
+#
+# It spreads riskdep's requests over several free Ethereum endpoints, retries a refused or throttled call on another
+# one, and caches what it has already answered. No rate budget is set on purpose: in eRPC 0.3.0 a spent budget rejects
+# calls at once (there is no queue, `waitTime` is ignored), which turned a 200-call batch into rate-limit errors on
+# 2026-10-10. The upstreams' own limits decide, eRPC fails over, and riskdep resends what still comes back throttled. riskdep reaches it through RISKDEP_RPC_URL:
+#   export RISKDEP_RPC_URL=http://127.0.0.1:4000/main/evm/1
+# No key is needed and none belongs here: every upstream below is public and keyless.
+#
+# Upstreams: tested on 2026-10-10 with riskdep's own call patterns (30-call eth_call batches at a block 60 behind the
+# head, eth_getLogs, eth_getStorageAt). dRPC and 1RPC are left out on purpose: riskdep's block-hash cross-check calls
+# dRPC directly, and routing the main RPC through it would compare that node with itself (PROVIDERS.md). 1RPC answers
+# 410 "discontinued" anyway. Keep PROVIDERS.md in step with this list.
+#
+# Pinned: eRPC 0.3.0 (2026-09-21).
+
+logLevel: warn
+
+server:
+  httpHostV4: "127.0.0.1"  # local only; the Docker recipe in docs/erpc.md rewrites it to 0.0.0.0 inside the container
+  httpPortV4: 4000
+  listenV6: false
+  maxTimeout: 60s
+
+projects:
+  - id: main
+    networks:
+      - architecture: evm
+        evm:
+          chainId: 1
+        failsafe:
+          timeout:
+            duration: 30s
+          retry:
+            maxAttempts: 4
+            delay: 300ms
+    upstreams:
+      # full batches: 30 calls answered in one request in the 2026-10-10 probe
+      - id: publicnode
+        endpoint: https://ethereum-rpc.publicnode.com
+        autoIgnoreUnsupportedMethods: true
+        evm:
+          chainId: 1
+        jsonRpc:
+          supportsBatch: true
+          batchMaxSize: 50
+          batchMaxWait: 20ms
+      - id: blastapi
+        endpoint: https://eth-mainnet.public.blastapi.io
+        autoIgnoreUnsupportedMethods: true
+        evm:
+          chainId: 1
+        jsonRpc:
+          supportsBatch: true
+          batchMaxSize: 50
+          batchMaxWait: 20ms
+      - id: mevblocker
+        endpoint: https://rpc.mevblocker.io
+        autoIgnoreUnsupportedMethods: true
+        evm:
+          chainId: 1
+        jsonRpc:
+          supportsBatch: true
+          batchMaxSize: 50
+          batchMaxWait: 20ms
+      # small batches only: they refuse or throttle 20 to 30 calls in one request
+      - id: blockrazor
+        endpoint: https://eth.blockrazor.xyz
+        autoIgnoreUnsupportedMethods: true
+        evm:
+          chainId: 1
+        jsonRpc:
+          supportsBatch: true
+          batchMaxSize: 10
+          batchMaxWait: 20ms
+      - id: nodies
+        endpoint: https://eth-pokt.nodies.app
+        autoIgnoreUnsupportedMethods: true
+        evm:
+          chainId: 1
+        jsonRpc:
+          supportsBatch: true
+          batchMaxSize: 10
+          batchMaxWait: 20ms
+      - id: tenderly
+        endpoint: https://gateway.tenderly.co/public/mainnet
+        autoIgnoreUnsupportedMethods: true
+        evm:
+          chainId: 1
+
+database:
+  evmJsonRpcCache:
+    connectors:
+      - id: memory
+        driver: memory
+    policies:
+      # riskdep reads at a fixed block number, so an answer is reused only for the same block; 30 s covers one graph
+      # run's repeated reads (a token's symbol, an oracle's feeds) without outliving a reorg the tool would notice
+      - connector: memory
+        finality: finalized
+      - connector: memory
+        finality: unfinalized
+        ttl: 30s

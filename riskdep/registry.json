@@ -246,5 +246,80 @@
     "drain_check_every_blocks": 25,
     "drain_basis": "D70, D72. drain_buy_cost: the cost c of buying the collateral at the drain's size, in d* = 1 - LLTV / (1 + c); 0.5 % is low on purpose (a lower cost gives an earlier, more conservative threshold) and is not measured per token. drain_margin: warn when the collateral's discount to the oracle is within 2 points of d*. drain_check_every_blocks: DefiLlama's prices are re-read every 25 blocks (~5 min); oracle prices come with every state read.",
     "exit_queue_basis": "D64, D66. exit_queue_phi: the share of the other depositors' assets assumed to leave before you in a run, Team 2's single parameter phi; 0.5 is a middle case with no data behind it. exit_queue_stuck_warn: warn when at least half of the position would be stuck if every contract holder (vault, fund, multisig) withdrew first; critical when, in addition, the vault already carries unrealised bad debt."
+  },
+  "graph": {
+    "sibling_min_tvl_usd": 1000000,
+    "sibling_max_per_seed": 10,
+    "sibling_basis": "D79. A market with less than $1M supplied (its TVL, Morpho API supplyAssetsUsd) is never a sibling, and at most 10 per held market are kept, the largest borrow first, since borrow is what liquidations sell. Raised from a $100k borrow floor on 2026-10-10 at the person's request, to keep graph runs short: the example graph (Sentora RLUSD Main and two borrowers) went from 65 siblings and 8 to 12 minutes against the free RPC. Held markets are never filtered by size.",
+    "oracle_history_rounds": 24,
+    "oracle_history_min": 6,
+    "oracle_fall_share": 0.2,
+    "oracle_children_getters": [
+      "FEED_1()",
+      "FEED_2()",
+      "innerOracle()"
+    ],
+    "oracle_getters": [
+      {
+        "getter": "twapDuration()",
+        "when": "nonzero",
+        "class": "price-tracking",
+        "basis": "Pendle PendleChainlinkOracle: a TWAP of the Pendle AMM (900 s on PT-reUSD), so a pool move reaches the price"
+      },
+      {
+        "getter": "baseDiscountPerYear()",
+        "when": "answers",
+        "class": "constant-price",
+        "basis": "Pendle linear-discount oracle: a deterministic discount to maturity, no market input"
+      }
+    ],
+    "oracle_patterns": [
+      {
+        "match": "PendleChainlinkOracle",
+        "class": "price-tracking",
+        "basis": "Pendle AMM TWAP oracle (contract name)"
+      },
+      {
+        "match": "PendleSparkLinearDiscountOracle",
+        "class": "constant-price",
+        "basis": "Pendle linear discount to maturity (contract name)"
+      },
+      {
+        "match": "NetAssetValueChainlinkAdapter",
+        "class": "constant-price",
+        "basis": "net asset value reported by the issuer (contract name)"
+      },
+      {
+        "match": "TranchesChainlinkOracle",
+        "class": "constant-price",
+        "basis": "Idle tranche exchange rate (contract name)"
+      },
+      {
+        "match": "LossAdjustedPTFeed",
+        "class": "constant-price",
+        "basis": "PT discount lowered only by the SY's own accounting losses (exchangeRate against pyIndexStored), no market input (verified source, 2026-10-10)"
+      },
+      {
+        "match": "FUNDAMENTAL",
+        "class": "constant-price",
+        "basis": "RedStone fundamental feed: the issuer's redemption value, not a market price"
+      },
+      {
+        "match": "exchange rate",
+        "class": "constant-price",
+        "basis": "an exchange rate between a token and its underlying, not a market price"
+      },
+      {
+        "match": "net asset value",
+        "class": "constant-price",
+        "basis": "net asset value reported by the issuer"
+      },
+      {
+        "match": "discount",
+        "class": "constant-price",
+        "basis": "a discount schedule or a discounted NAV, not a market price"
+      }
+    ],
+    "oracle_basis": "D82-D84. One oracle input, first rule that applies: a base vault is an exchange rate; a composite (FEED_1/FEED_2) or wrapper (innerOracle) takes its children's class, price-tracking if one is; a structural getter of oracle_getters; at least oracle_history_min past rounds readable over the last oracle_history_rounds: price-tracking when falls are at least oracle_fall_share of the changes (probe 2026-10-10: USDC/USD, USDS/USD and ETH/USD fell 9-14 times in 24 rounds, three exchange-rate and NAV feeds never fell); no history and an answer of exactly 1.0: pegged; a case-insensitive pattern of oracle_patterns in description() or the verified contract name (Etherscan, optional); otherwise not classified."
   }
 }

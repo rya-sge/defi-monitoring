@@ -40,7 +40,9 @@ An edge exists because an attribute of one node names another node:
 | actor (lender) → market: *supplies* | the market's main suppliers (Morpho API), amounts from `position(id, supplier)`; an adapter is resolved to its vault with `parentVault()` |
 | actor (address) → market: *borrows from*, with debt, collateral and health factor | the user's `position(id, user)` |
 | actor (address) → vault: *deposits in* | vault shares, `balanceOf(user)` |
-| market → loan asset, collateral asset, oracle | the five `MarketParams` of the market id |
+| market → loan asset, collateral asset, oracle | the five `MarketParams` of the market id; *takes as collateral* carries the collateral of the market's borrowers |
+| sibling market → the shared asset, oracle or feed | a Blue market no actor holds, found because it shares a held market's collateral, underlying or collateral-side price input, or lends that collateral (Morpho API `markets`, then `idToMarketParams` on-chain); it has no edge to the held market itself |
+| asset → asset: *wraps* | an ERC-4626 share's `asset()` |
 | oracle → feed: *reads*; oracle → vault share: *converts through* | the oracle's configuration (`BASE_FEED_1()`, `BASE_VAULT()` on a Morpho `ChainlinkOracleV2`) |
 | collateral PT → Pendle pool → yield source | Pendle market data |
 | admin → vault: *owns*, *curates*, *allocates*, *can de-risk* | the role getters and their change events (`SetCurator`, `SetIsAllocator`, …) |
@@ -55,6 +57,9 @@ An edge exists because an attribute of one node names another node:
 | Vaults and lenders as actors; the main suppliers of a borrower's markets (≥ 5 % of supply, up to 5 per market), vaults resolved through their adapter | done, in the `graph` command | `riskdep/graph.py` |
 | Admin nodes: owner and curator on-chain, allocators and sentinels from the Morpho API, each confirmed with `isAllocator` / `isSentinel` | done, in the `graph` command | `riskdep/graph.py` |
 | Oracle decomposed into feeds (Morpho `ChainlinkOracleV2` getters, feed `description()`) | done, in the `graph` command; custom oracles stay one node | `riskdep/graph.py` |
+| Sibling markets: the Blue markets that share a held market's collateral, underlying or collateral-side price input, or lend that collateral, joined through the shared node | done, in the `graph` command (plan `2026-10-10-sibling-markets`); Blue only, one hop | `riskdep/siblings.py`, `riskdep/graph.py` |
+| Oracle class on every market oracle and input: `price-tracking`, `constant-price` or `not classified`, with its basis | done, in the `graph` command | `riskdep/oracle_class.py` |
+| Every Blue market node, held or sibling, with supply, borrow, the collateral of its borrowers and its liquidation curve | done, in the `graph` command | `riskdep/graph.py` (`market_risk`) |
 | One graph shared by `analyze` and `watch` | missing: the `graph` command draws the graph, the rules still work on their own structures | — |
 
 ### Example
@@ -88,7 +93,7 @@ Status: **done** for the paths the tool follows (vault → market, borrower → 
 
 For a market, the amount of collateral that becomes liquidatable for each oracle fall of 1 %, 2 %, … 20 % is the market's liquidation curve. It needs every borrower's position in the market, not only the user's. It says how much collateral would be sold into the market at once, and therefore how much price impact and bad debt a fall would cause.
 
-Status: **done** for the watched markets (`riskdep/market_risk.py`): every borrower is listed, and each batch computes the debt liquidatable after a 2, 5, 10 and 20 % fall, with the bad debt it would leave. The price impact of the cascade itself is not simulated.
+Status: **done** for the watched markets (`riskdep/market_risk.py`): every borrower is listed, and each batch computes the debt liquidatable after a 2, 5, 10 and 20 % fall, with the bad debt it would leave. The `graph` command computes the same curve, with the collateral that would be sold, for every held and sibling market. The price impact of the cascade itself is not simulated.
 
 ### DEX liquidity and slippage
 
@@ -128,6 +133,7 @@ A market liquidates on its oracle's price, not on the market price. A gap betwee
 | Oracle moves between two reads (≥ 5 %) | done (`watch`) |
 | Oracle that stops answering (`price()` reverts) | done (`watch --user`) |
 | Oracle vs an independent market price (DefiLlama), at start and every 300 blocks | done (`riskdep/admin.py`), warn from a 3 % gap |
+| Oracle class from its structure and its feeds' round history: does a market fall reach the price? | done in `graph` (`riskdep/oracle_class.py`); `analyze` still infers it from the price, `drain.py` does not use it (D70) |
 
 ### Positions and holders
 
@@ -206,6 +212,9 @@ Gaps found while building and testing the tool, ranked by how much they limit th
 | R3 | Shared nodes are drawn but not measured: no alert says that one feed (for example `RLUSD / USD` under all 10 Sentora markets) carries several positions at once. | medium | S after R1 |
 | R4 | ~~Lender concentration is not watched.~~ Done (plan `2026-10-10-lenders-and-timelocks`): `watch --user` lists each borrowed market's main lenders, warns when one funds ≥ 50 %, and when a main lender withdraws ≥ 5 % of the supply. | — | done |
 | R2 | No general propagation limits (exposure floor, depth, severity floor). | low until R1 exists | S after R1 |
+| R5 | Sibling markets are found on Morpho Blue only: the same collateral borrowed on Euler, Aave, Silo or Fluid, or sold through another pool, is not in the graph. | medium | M per venue |
+| R6 | Sibling markets are drawn, not watched: `watch` does not follow their liquidations, oracle moves or bad debt, and the curves in the graph are read once. | medium | M |
+| R7 | Oracle classes are binary and per input: a meta-oracle that switches source after a deviation (`MetaOracleDeviationTimelock`) and an input known only by name without the Etherscan key stay `not classified`. | low | S per oracle type |
 
 ### Data and infrastructure
 

@@ -20,6 +20,7 @@ Rules for editing:
 - [`unknown_issuer`](#unknown_issuer)
 - [Top-level parameters of `analyze`](#top-level-parameters-of-analyze)
 - [`watch`](#watch)
+- [`graph`](#graph)
 - [How to add a yield issuer](#how-to-add-a-yield-issuer)
 
 ## `chain`
@@ -56,7 +57,7 @@ Read by `discover.py`, `priors.py` and `graph.py`. A token not listed here falls
 
 ## `stables`
 
-The loan tokens' issuers, keyed by address (USDC, USDT): `symbol`, `issuer`, `basis`. Descriptive only: for a borrower, a depeg of the loan token lowers the debt, so the model has no loss channel for it. Read by `discover.py` and `graph.py`.
+The loan tokens' issuers, keyed by address (USDC, USDT): `symbol`, `issuer`, `basis`. Descriptive only: for a borrower, a depeg of the loan token lowers the debt, so the model has no loss channel for it. Read by `discover.py` and `graph.py`. `siblings.py` treats these tokens as terminal: they never link two markets as sibling markets (D77).
 
 ## `protocols`
 
@@ -145,6 +146,25 @@ The thresholds of `watch --vault` and `watch --user`. Changing them changes when
 | `exit_queue_stuck_warn` | fraction of the position | 0.5 | `ExitQueue` warn: the share of the position stuck if every contract holder withdrew first; critical when the vault also carries unrealised bad debt |
 
 The health-factor levels of `watch --user` are not here: they are a command-line option, `--hf` (default `1.10,1.05,1.02`).
+
+## `graph`
+
+The sibling-market search and the oracle classification of the `graph` command (plan `2026-10-10-sibling-markets`, D79, D83, D84). Read by `siblings.py` and `oracle_class.py`. Changing them changes which markets appear and how oracles are labelled; no alert depends on them.
+
+| Key | Unit | Default | What it controls |
+|---|---|---|---|
+| `sibling_min_tvl_usd` | USD | 1,000,000 | a market with less supplied (its TVL) is never a sibling; it is also the floor of the Morpho API `markets` query. Held markets are never filtered. Lower it to see small markets, at the cost of a longer run |
+| `sibling_max_per_seed` | markets | 10 | the most siblings kept for one held market, the largest borrow first (borrow is what liquidations sell) |
+| `sibling_basis` | text | — | why |
+| `oracle_history_rounds` | rounds | 24 | how many past rounds of a feed are read with `getRoundData` |
+| `oracle_history_min` | rounds | 6 | below this many readable past rounds, history does not decide and the next rules apply |
+| `oracle_fall_share` | fraction | 0.2 | a feed whose answer fell in at least this share of its changes is `price-tracking`; below it, `constant-price` (an accrual or exchange rate) |
+| `oracle_children_getters` | signatures | `FEED_1()`, `FEED_2()`, `innerOracle()` | getters of a composite or wrapper input; its class comes from the inputs they return, `price-tracking` if one is |
+| `oracle_getters` | list | `twapDuration()` → price-tracking when nonzero; `baseDiscountPerYear()` → constant-price when it answers | structural getters that classify an input, each with `when` (`nonzero` or `answers`), `class` and `basis` |
+| `oracle_patterns` | list | contract names (`PendleChainlinkOracle`, `PendleSparkLinearDiscountOracle`, `LossAdjustedPTFeed`, …) and description fragments (`FUNDAMENTAL`, `exchange rate`, `net asset value`, `discount`) | the last rule: a case-insensitive `match` in the input's `description()` or verified contract name (Etherscan, optional) gives its `class`; each entry has a `basis` |
+| `oracle_basis` | text | — | the rules in order, and the 2026-10-10 probe behind the history thresholds |
+
+**Adding a pattern.** When a graph shows an input `not classified`, read its verified source, decide whether a market move reaches its answer, and add `{"match": "<contract name or description fragment>", "class": "price-tracking" | "constant-price", "basis": "<what it computes, source, date>"}`. Prefer a structural getter in `oracle_getters` when the contract exposes one: it needs no Etherscan key.
 
 ## How to add a yield issuer
 

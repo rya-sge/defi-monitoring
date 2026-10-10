@@ -28,6 +28,10 @@ When one thing fails (a price feed, a collateral token, a Pendle pool, a market)
   - `market_risk.py` knows how a price fall becomes bad debt in one market;
   - the alert rules know vaults and borrows.
 - **None of them reads the graph.** A shock on a node the code was not written for (an issuer's custodian, a shared feed) produces no number.
+- **The graph now holds what the engine needs** (plan `2026-10-10-sibling-markets`):
+  - **sibling markets**, the Blue markets nobody in the graph holds that share a held market's collateral, underlying or collateral-side feed, or lend that collateral, joined through the shared node; on RockawayX USDC Yield, 10 of them with $218M of debt, among them PRIME/PYUSD ($189M) on the feed under the vault's liquidity market;
+  - an **oracle class** on every market oracle, `price-tracking` or `constant-price`, which decides how a collateral fall reaches a market (rows below);
+  - on every Blue market node, its **liquidation curve with the collateral that would be sold**, the input of the squeeze row below; and a `wraps` edge from an ERC-4626 share to its asset.
 
 This is gap R1 of `ANALYSIS_MONITORING.md`. Its visible symptom is gap R3: the graph shows that one `RLUSD / USD` feed sits under all of Sentora's markets, but nothing measures what that means.
 
@@ -49,7 +53,9 @@ The edges `graph.py` already produces, with the function each would carry. Most 
 | actor (vault or lender) → market, *supplies* | bad debt BD in the market | loss = share of the market's supply × BD | `market_risk` (vault side) |
 | actor (borrower) → market, *borrows from* | a fall of the market's oracle price | loss of the position: none above the liquidation distance, then liquidation (`propagate.loss`) | `propagate`, `borrower` |
 | actor (depositor) → vault, *deposits in* | vault loss L | loss = depositor's share of the vault × L | `market_risk.assess_vault_bad_debt` |
-| market → collateral asset, *takes as collateral* | collateral price falls by x | the oracle price falls by x, if the oracle follows that asset; then bad debt from the market's borrowers | `market_risk.value` |
+| market → collateral asset, *takes as collateral* | collateral price falls by x | `price-tracking` oracle: the oracle falls by x, the curve says what is liquidated and the bad debt left; `constant-price` oracle: nothing is liquidated, and once the collateral is worth less than the debt the shortfall is the lenders' (and the market can be drained, `drain.py`) | `market_risk.value`, `oracle_class` |
+| collateral asset ← market, the same edge read backwards (squeeze) | a fall of x on the collateral, in any market that takes it, held or sibling | that market's liquidations sell the curve's `collateral_liquidatable` at x into the pool, which pushes the price further; the next round starts from the new price. Needs a slippage curve per pool | curve on the market node; slippage not yet |
+| asset (ERC-4626 share) → asset, *wraps* | the underlying loses x | the share loses x once its vault records it; an oracle converting through the share follows only then | not yet |
 | market → oracle, *priced by* | oracle misreports by −x / +x / freezes | −x: like a collateral fall (liquidations, no real loss of value); +x: borrowers can borrow too much, a loss only if exploited; freeze: no liquidations, bad debt builds silently | partly (`propagate`, oracle event) |
 | oracle → feed, *reads* | feed misreports by x | a base feed: oracle price × (1 + x); a quote feed: oracle price ÷ (1 + x) | not yet |
 | oracle → vault share, *converts through* | share's exchange rate falls by x | oracle price × (1 − x) | not yet |
@@ -134,7 +140,7 @@ In three steps, each useful on its own:
 - **Exposure is not loss.** Step 1 measures what depends on a node; the loss depends on the failure mode and severity.
 - **Non-linear functions.** DebtRank was designed with linear weights; with liquidation thresholds the order in which shocks arrive and their size matter, so the engine must apply the edge functions, not a single weight.
 - **Simultaneous shocks.** A real crisis moves several nodes at once (a depeg drains the pool and the oracle follows). The engine must accept a set of shocked nodes, not only one.
-- **Coverage of the graph.** The engine is as good as the graph. Custom oracles without the standard getters are one opaque node, and the off-chain dependencies come from a hand-kept registry.
+- **Coverage of the graph.** The engine is as good as the graph. Custom oracles without the standard getters are one opaque node, the off-chain dependencies come from a hand-kept registry, and sibling markets are Morpho Blue markets one hop from a held one: the same collateral on Euler, Aave, Silo or Fluid is not in the graph.
 - **No feedback loop yet.** Liquidations sell collateral and push its price further; that loop needs the slippage curve of point 4.5.
 
 ## Learn: what you need to understand
