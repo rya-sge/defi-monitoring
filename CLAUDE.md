@@ -112,7 +112,7 @@ pyproject.toml        project metadata, dependencies, ruff and pytest configurat
   - `pendle/lib/pendle-core-v2-public` (`87685c89`), `pendle/lib/Pendle-SY-Public` (`73676d93`), `pendle/lib/external-integration` (`1694fea0`) — Pendle core (PT/YT, markets, router, oracles), SY wrappers, integration examples.
   - `docs.etherscan.io-api-reference-docs/` — Etherscan API V2 reference (`getsourcecode`, `getabi`, …); the key is in `keys.ini`.
 
-  The source repositories keep their own `.git`; commit them as submodules or as plain files, not as bare embedded repositories.
+  The five source repositories are git submodules (`.gitmodules`), pinned at the commits above: after a clone, run `git submodule update --init`. To move a pin, check out the new commit inside the submodule and stage the submodule path.
 - `data/snapshot/` (analyze demo cache + `as_of.json`) and `data/replay/` (recorded watch ranges) — test fixtures; do not delete or regenerate casually.
 - `out/` — run outputs (reports, alert `.jsonl`, cursors); git-ignored.
 - `conftest.py` — puts the repo root on `sys.path` for tests.
