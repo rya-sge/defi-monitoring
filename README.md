@@ -12,7 +12,7 @@ All data comes from keyless public sources: the publicnode Ethereum RPC, the Mor
 
 ```bash
 pip install -r requirements.txt     # Python >= 3.10
-python3 -m pytest -q tests          # 77 tests, offline
+python3 -m pytest -q tests          # 78 tests, offline
 ```
 
 ## watch: Morpho Vault V2 depositor
@@ -33,7 +33,7 @@ At start it reads the vault's structure on-chain (vault → adapters → Blue ma
 | warn | risk-increasing functions that can change with no notice (timelock 0, not abdicated), listed at start; a timelocked change submitted (`Submit`, decoded, with its execution date and timelock) or made live (`Accept`), new adapter, cap raised, fee or gate change, shorter timelock, `ForceDeallocate`, new liquidity adapter, a market crossing 25 % of the vault, ≥ 99 % utilisation on a market holding ≥ 10 %, an oracle moving ≥ 5 %, you no longer able to exit in full with a plain withdrawal, a gate blocking your exit, a block range that could not be read |
 | info | allocation moves, caps lowered, cancelled changes, liquidations without bad debt, your own and large (≥ 1 %) deposits and withdrawals |
 
-Thresholds live in `riskdep/registry.json` (`watch`).
+Thresholds live in `riskdep/registry.json` (`watch`), documented in `docs/registry-reference.md`. What to do about each alert: `docs/alert-runbook.md`. Terms: `docs/glossary.md`.
 
 **Cross-checks** (`riskdep/crosscheck.py`), at start and then every 300 blocks for `watch`, and once per `analyze` run:
 - the block hash from the main RPC is compared with an independent one (`eth.drpc.org`, then `1rpc.io`); a difference is a *critical* alert;
@@ -57,8 +57,8 @@ The Morpho API (`userByAddress`) finds the positions: Blue markets where the add
 | Level | What triggers it, for a borrow |
 |---|---|
 | critical | HF below the third level (default 1.02); HF ≤ 1, liquidatable; a `Liquidate` naming the address as borrower |
-| warn | HF below the second level (default 1.05); one lender funding ≥ 50 % of a borrowed market, at start; a main lender withdrawing ≥ 5 % of a borrowed market's supply; a borrow, repay or collateral withdrawal made on your behalf by another address; a `SetAuthorization` by the address; the borrow APY 50 % above its value at start; utilisation ≥ 99 %; an oracle move ≥ 5 % or an oracle that stops answering |
-| info | HF below the first level (default 1.10), and once when it recovers above it; your own borrows, repays and collateral moves |
+| warn | HF below the second level (default 1.05); one lender funding ≥ 50 % of a borrowed market, at start; a main lender withdrawing ≥ 5 % of a borrowed market's supply; a borrow or collateral withdrawal made on your behalf by another address; a `SetAuthorization` by the address; the borrow APY 50 % above its value at start; utilisation ≥ 99 %; an oracle move ≥ 5 % or an oracle that stops answering |
+| info | HF below the first level (default 1.10), and once when it recovers above it; your own borrows, repays and collateral moves; a repay or added collateral by another address, which lowers your risk |
 
 Alerts go to `out/watch-user-<address>.jsonl`, and a restart resumes from `out/watch-user-<address>.cursor`. Every 300 blocks the tool looks for new positions and refreshes the exit quotes. A Blue `Borrow` on your behalf in a market not yet watched is picked up at once. Not covered: direct Blue supply, Vault V1 deposits, exit quotes for collateral other than a PT, and Morpho's opt-in pre-liquidation contracts. Authorising one of them still raises the `SetAuthorization` alert. The options behind these choices are in `docs/user-watcher-options.md`.
 
@@ -88,7 +88,8 @@ Writes `out/report.html` and `out/report.json`.
 
 ```
 plan/        the two charrette plans (design, decisions, tracker, interview log)
-docs/        how-risk-is-computed.md · how-a-block-is-analysed.md · websocket-vs-polling.md · user-watcher-options.md · graph-example.html/.json
+docs/        alert-runbook.md · glossary.md · registry-reference.md · how-risk-is-computed.md · how-a-block-is-analysed.md
+             websocket-vs-polling.md · user-watcher-options.md · graph-example.html/.json
 riskdep/     sources · abi · vault · poller · rules · watch (watch --vault)
              positions · borrower · borrower_rules · watch_user (watch --user) · graph
              discover · priors · propagate · simulate · decide · report (analyze)

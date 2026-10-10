@@ -215,7 +215,7 @@
   "pt_stress_basis": "During an underlying depeg, PT trades below its redemption value as LPs withdraw from the Pendle pool: market-tracking oracles see the depeg amplified by 1.5x.",
   "gas_exit_usd": 25,
   "tail_budget": 0.5,
-  "tail_budget_basis": "Recommend reducing when CVaR95 exceeds 50% of equity.",
+  "tail_budget_basis": "Recommend reducing when CVaR99, the average loss of the worst 1 % of simulated months, exceeds 50 % of equity.",
   "watch": {
     "market_share_warn": 0.25,
     "utilization_warn": 0.99,

@@ -229,12 +229,11 @@ Gaps found while building and testing the tool, ranked by how much they limit th
 |---|---|---|---|
 | T1 | Tests replay small recorded ranges (300 to 1,000 blocks); no run against a forked chain with a forced liquidation or bad debt. | medium | M |
 | T2 | No continuous integration. | low | S |
-| T3 | Missing documents: a glossary for non-specialist readers, an alert runbook (what to do for each alert), and a reference for `registry.json`. | medium | S |
+| T3 | ~~Missing documents.~~ Done: `docs/alert-runbook.md` (what each alert means and what to do), `docs/glossary.md`, `docs/registry-reference.md`. | — | done |
 | T4 | A frozen copy of an earlier version, with an old date bug, remains in `../projet/`. | low | S |
 
 ### Suggested order
 
-1. **T3:** the alert runbook and glossary, now that G1 and R4 are done.
-2. **C1 with G2:** both need every borrower of the held markets; together they give a vault depositor the early signal and the size of the risk.
-3. **C2 and M3:** extend `analyze` beyond PT collateral, with a generic exit quote.
-4. **D5, then X1:** push alerts first, then execution with its own security design.
+1. **C1 with G2:** both need every borrower of the held markets; together they give a vault depositor the earliest loss signal and the size of the liquidation risk.
+2. **C2 and M3:** extend `analyze` beyond PT collateral, with a generic exit quote.
+3. **D5, then X1:** push alerts first, then execution with its own security design.

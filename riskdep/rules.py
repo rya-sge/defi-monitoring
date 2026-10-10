@@ -202,7 +202,7 @@ def assess_event(e: Event, ctx: Ctx, held: set[str], dep: str | None) -> Alert |
         return Alert("warn", e.block, tx, f"Vault.{e.name}", f"{e.name[3:]} set to {v / 1e18:.2%}" + (" per year" if "Management" in e.name else ""), "", None, {})
     if e.name in ("SetReceiveSharesGate", "SetSendSharesGate", "SetReceiveAssetsGate", "SetSendAssetsGate",
                   "SetAdapterRegistry", "SetCurator", "SetOwner", "SetIsAllocator", "SetIsSentinel",
-                  "DecreaseTimelock", "Abdicate", "SetForceDeallocatePenalty", "SetMaxRate"):
+                  "DecreaseTimelock", "IncreaseTimelock", "Abdicate", "SetForceDeallocatePenalty", "SetMaxRate"):
         detail = ", ".join(f"{k}={v}" for k, v in a.items())
         lvl = "info" if e.name in ("IncreaseTimelock", "Abdicate", "SetIsSentinel", "SetMaxRate") else "warn"
         return Alert(lvl, e.block, tx, f"{who}.{e.name}", f"Vault configuration: {e.name}", detail, None, {})

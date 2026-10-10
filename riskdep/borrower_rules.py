@@ -75,7 +75,10 @@ def assess_events(events: list[Event], user: str, markets: dict[str, BorrowMarke
             token, dec = ((m.collateral_symbol, m.collateral_decimals) if "Collateral" in e.name
                           else (m.loan_symbol, m.loan_decimals))
             own = a.get("caller") == user
-            out.append(Alert("info" if own else "warn", e.block, e.tx, f"Blue.{e.name}",
+            # Blue requires authorisation only for Borrow and WithdrawCollateral; anyone may Repay or
+            # SupplyCollateral on another's behalf, and both lower the position's risk
+            risky = e.name in ("Borrow", "WithdrawCollateral")
+            out.append(Alert("warn" if (risky and not own) else "info", e.block, e.tx, f"Blue.{e.name}",
                              (f"Your {e.name}" if own else f"{e.name} on your behalf by {a.get('caller')}") + f" on {m.label}",
                              f"{_units(a['assets'], dec)} {token}", None, {"market": m.id, "caller": a.get("caller")}))
     return out

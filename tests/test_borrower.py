@@ -167,3 +167,10 @@ def test_main_lender_withdrawal_warns_small_one_is_silent():
     assert assess_events([tiny], USER, {M: market()}, {M: {LENDER: sp2}}, before) == []
     other = ev("Withdraw", id=M, caller=OTHER, onBehalf=OTHER, receiver=OTHER, assets=500 * E18, shares=0)
     assert assess_events([other], USER, {M: market()}, {M: {LENDER: sp2}}, before) == []
+
+
+def test_repay_or_collateral_added_by_another_address_is_info():
+    al = assess_events([ev("Repay", id=M, caller=OTHER, onBehalf=USER, assets=10 ** 6, shares=0)], USER, {M: market()})
+    assert al[0].level == "info"
+    al = assess_events([ev("SupplyCollateral", id=M, caller=OTHER, onBehalf=USER, assets=E18)], USER, {M: market()})
+    assert al[0].level == "info"

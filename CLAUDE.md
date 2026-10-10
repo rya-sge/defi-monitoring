@@ -76,7 +76,7 @@ tests/                pytest, all offline (snapshot + recorded replays)
 - `README.md` — usage of every mode, alert trigger tables, limits.
 - `ANALYSIS_MONITORING.md` — design note: dependency graph, impact, monitoring, execution, and gaps of the current implementation (done / partial / missing).
 - `plan/` — the four plans (`defi-risk-dependency`, `morpho-vault-v2-watcher`, `morpho-user-watcher`, `lenders-and-timelocks`).
-- `docs/` — `how-risk-is-computed.md`, `how-a-block-is-analysed.md`, `websocket-vs-polling.md`, `user-watcher-options.md`, `graph-example.html/.json`.
+- `docs/` — `alert-runbook.md` (what each alert means and what to do), `glossary.md`, `registry-reference.md` (every `registry.json` key), `how-risk-is-computed.md`, `how-a-block-is-analysed.md`, `websocket-vs-polling.md`, `user-watcher-options.md`, `graph-example.html/.json`.
 - `data/snapshot/` (analyze demo cache + `as_of.json`) and `data/replay/` (recorded watch ranges) — test fixtures; do not delete or regenerate casually.
 - `out/` — run outputs (reports, alert `.jsonl`, cursors); git-ignored.
 - `conftest.py` — puts the repo root on `sys.path` for tests.
@@ -89,7 +89,7 @@ Python 3.10.12 (requires ≥ 3.10). From `requirements.txt`, tested with: reques
 
 ```bash
 pip install -r requirements.txt
-python3 -m pytest -q tests                         # 77 tests, offline
+python3 -m pytest -q tests                         # 78 tests, offline
 python3 -m riskdep analyze --demo                  # cached snapshot, no network → out/report.html/.json
 python3 -m riskdep watch --replay                  # re-run the recorded vault range offline
 python3 -m riskdep watch --blocks 1000 --record    # live range, saved for --replay
@@ -100,7 +100,8 @@ python3 -m riskdep graph --example                 # out/graph.html + out/graph.
 ## Conventions
 
 - Tests must stay offline: a new network call needs a cached snapshot or a recorded replay behind it.
-- New thresholds or assumptions go in `registry.json` with their basis, not as literals in code.
+- New thresholds or assumptions go in `registry.json` with their basis, not as literals in code, and in `docs/registry-reference.md`.
+- A new or changed alert gets its row in `docs/alert-runbook.md`.
 - Rule modules stay pure (no I/O); put fetching in the source/state modules.
 - A behaviour change that departs from a plan decision is recorded in that plan's decision table.
 - Package version is `riskdep/__init__.py` `__version__` (currently `0.1.0`); there is no `CHANGELOG.md` yet.
