@@ -78,7 +78,7 @@ The oracle-failure event of `analyze`.
 | Key | Unit | Meaning |
 |---|---|---|
 | `techniques` | list | DefiLlama hack techniques counted as oracle failures (misconfigured, stale, predictable); spot-price manipulation is excluded |
-| `unverified_factor` | multiplier | applied when the oracle's code is unverified (today 2) |
+| `unverified_factor` | multiplier | applied when the oracle's source is not verified on Etherscan, or when that cannot be checked (no key, no cached answer); a verified oracle gets 1 (D68). Today 2 |
 | `p_year_floor` | probability per year | minimum (today 1 %) |
 | `severity` | Beta | how far the oracle misreports downwards (mean 10 %) |
 

@@ -77,7 +77,7 @@ The tool builds the list of layers from the data, not by hand:
 | Yield source (issuer) | sUSDe, issued by Ethena, with its off-chain dependencies (exchanges holding hedges, custodians) | the Pendle market's underlying asset, looked up in `registry.json` |
 | Pendle market | the PT/SY pool and the SY adapter | the Pendle market whose PT is the collateral |
 | Lending market | Morpho Blue market, LLTV 91.5 % | the position itself |
-| Oracle | `0xF8b2…1b08`, an unverified contract | the market parameters, then its code read on-chain |
+| Oracle | `0xF8b2…1b08`, an EIP-1167 clone of `MetaOracleDeviationTimelock`, source verified on Etherscan | the market parameters, then its code read on-chain, then Etherscan `getsourcecode` |
 | Loan asset | USDC | the market parameters |
 
 **The oracle's behaviour is inferred**, because it decides whether a temporary price drop can liquidate the position. The tool compares the price the oracle returns with the PT's market price:
@@ -105,7 +105,7 @@ $$
 
 Sizing the base rate by protocol size matters. An earlier version used the category rate alone and gave Morpho Blue 15 % a year, because the lending category is dominated by small forks that are hacked often.
 
-The **oracle** is handled separately. Only misconfigured, stale or predictable-oracle exploits are counted (24 over 5 years, across 179 lending and CDP protocols), because manipulating the spot price of a thin token does not apply to a PT oracle. That gives 2.68 % a year, doubled because the demo oracle's code is unverified.
+The **oracle** is handled separately. Only misconfigured, stale or predictable-oracle exploits are counted (24 over 5 years, across 179 lending and CDP protocols), because manipulating the spot price of a thin token does not apply to a PT oracle. That gives 2.68 % a year. The prior is doubled (`oracle.unverified_factor`) when the oracle's source is not verified on Etherscan, or when that cannot be checked (no key): the demo oracle's implementation, `MetaOracleDeviationTimelock` by Steakhouse Financial, is verified, so it stays at 2.68 %.
 
 ### Market events: from `registry.json`
 
@@ -116,8 +116,8 @@ A depeg of the yield source is not an exploit and is not in the hack record. Its
 | Event | $p$ per year | Severity mean | Over 30 days |
 |---|---|---|---|
 | sUSDe depeg | 12.0 % | 8.2 % (75 % recovered) | 1.05 % |
-| Oracle misprice | 5.36 % | 10.0 % | 0.45 % |
 | Morpho Blue exploit | 5.03 % | 9.1 % | 0.42 % |
+| Oracle misprice | 2.68 % | 10.0 % | 0.22 % |
 | Ethena exploit / loss of backing | 1.33 % | 28.6 % | 0.11 % |
 | Pendle market / SY exploit | 1.21 % | 13.8 % | 0.10 % |
 | Ethereum incident | 1.00 % | 0.5 % | 0.08 % |
@@ -166,17 +166,17 @@ From the 20,000 losses:
 
 | Measure | Demo | Meaning |
 |---|---|---|
-| Expected loss | 7,080 USD | the average month |
-| P(any loss) | 2.09 % | months in which something happened |
-| P(liquidation) | 1.25 % | months ending in a liquidation |
+| Expected loss | 6,265 USD | the average month |
+| P(any loss) | 1.91 % | months in which something happened |
+| P(liquidation) | 1.07 % | months ending in a liquidation |
 | VaR 95 % | 0 USD | 95 % of months lose nothing at all |
-| CVaR 95 % | 141,610 USD | average loss of the worst 5 % of months |
-| VaR 99 % | 470,345 USD | the loss exceeded in 1 % of months |
-| CVaR 99 % | 518,872 USD | average of the worst 1 %: the whole equity |
+| CVaR 95 % | 125,294 USD | average loss of the worst 5 % of months |
+| VaR 99 % | 386,890 USD | the loss exceeded in 1 % of months |
+| CVaR 99 % | 510,184 USD | average of the worst 1 %: 98 % of the equity |
 
 The tail is measured at 99 % because incidents happen in only about 2 % of months, so the 95 % level falls among the months with no loss and VaR 95 % reads zero.
 
-**Attribution.** Each layer's share of the expected loss is its 30-day probability times its average loss when it alone fails, estimated with 4,000 draws per layer. For the demo: depeg 3,760 USD, oracle 1,514, Morpho 1,066, Ethena 511, Pendle 353, Ethereum 16. The remainder, −140 USD, comes from months in which two failures overlap, where the second adds less because the equity is already gone.
+**Attribution.** Each layer's share of the expected loss is its 30-day probability times its average loss when it alone fails, estimated with 4,000 draws per layer. For the demo: depeg 3,760 USD, Morpho 1,066, oracle 747, Ethena 511, Pendle 353, Ethereum 16. The remainder, −189 USD, comes from months in which two failures overlap, where the second adds less because the equity is already gone.
 
 ## 6. Decide: stay, reduce or exit
 
@@ -192,7 +192,7 @@ $$
 
 - **Carry**: what the position earns, the PT's fixed yield on the collateral minus the interest on the debt. Demo: 16,203 − 10,506 = **5,697 USD**.
 - **Exit cost**: what leaving costs today, from a real quote by Pendle's API for selling all the collateral. Demo: 1.99 % price impact, 490 USD of fees and 25 USD of gas, so **78,946 USD**.
-- **Expected loss** from section 5: **7,080 USD**.
+- **Expected loss** from section 5: **6,265 USD**.
 
 The rules, in order:
 
@@ -205,11 +205,11 @@ The rules, in order:
 
 The demo gives **REDUCE**, and all three reasons apply:
 
-- the carry, 5,697 USD, is less than the expected loss of 7,080 USD;
-- CVaR 99 % is 100 % of the equity;
+- the carry, 5,697 USD, is less than the expected loss of 6,265 USD;
+- CVaR 99 % is 98 % of the equity;
 - the 5.2 % liquidation distance is below the 12.2 % stress drop.
 
-Exiting is still not worth it: the expected loss would have to be 12 times larger to cover carry plus exit cost.
+Exiting is still not worth it: the expected loss would have to be 13.5 times larger to cover carry plus exit cost.
 
 **The de-lever suggestion.** For REDUCE, the tool solves for the amount of collateral to sell, with the proceeds repaying debt, that brings the liquidation distance up to the stress drop. Selling $x$ USD of collateral to repay $x$ of debt gives $d = t$ when
 
@@ -217,7 +217,7 @@ $$
 x = \frac{D - k V}{1 - k}, \qquad k = (1 - t) \cdot \text{LLTV}
 $$
 
-where $t$ is the target distance. It then gets a real quote for that smaller sale and re-runs the whole simulation on the reduced position. For the demo: sell 1.29M USD (33 %), at a quoted cost of 1,023 USD. That raises the health factor to 1.14, pushes liquidation out to a 12.2 % drop, lowers the expected loss from 7,080 to 4,609 USD and CVaR 99 % from 518,872 to 435,116 USD, and lowers the carry from 5,697 to 4,350 USD.
+where $t$ is the target distance. It then gets a real quote for that smaller sale and re-runs the whole simulation on the reduced position. For the demo: sell 1.29M USD (33 %), at a quoted cost of 1,023 USD. That raises the health factor to 1.14, pushes liquidation out to a 12.2 % drop, lowers the expected loss from 6,265 to 4,308 USD and CVaR 99 % from 510,184 to 410,778 USD, and lowers the carry from 5,697 to 4,350 USD.
 
 ## 7. How sure is the result
 
@@ -225,8 +225,8 @@ where $t$ is the target distance. It then gets a real quote for that smaller sal
 
 | | Market-tracking (used) | Fundamental |
 |---|---|---|
-| Expected loss | 7,080 USD | 4,179 USD |
-| P(liquidation) | 1.25 % | 0.46 % |
+| Expected loss | 6,265 USD | 3,363 USD |
+| P(liquidation) | 1.07 % | 0.28 % |
 | Verdict | REDUCE | REDUCE |
 
 The verdict does not depend on the oracle here; the report says so, or warns when it does.

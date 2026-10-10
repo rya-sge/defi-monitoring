@@ -11,7 +11,14 @@ from riskdep.poller import Poller
 
 RDIR = REPLAY_DIR / DEMO_VAULT
 META = json.loads((RDIR / "start.json").read_text())
-DOCS = Path(__file__).resolve().parents[1] / "docs" / "external" / "morpho" / "docs.morpho.org-developers-docs" / "contracts"
+DOCS = (
+    Path(__file__).resolve().parents[1]
+    / "docs"
+    / "external"
+    / "morpho"
+    / "docs.morpho.org-developers-docs"
+    / "contracts"
+)
 
 
 def test_discovery_matches_real_assets():

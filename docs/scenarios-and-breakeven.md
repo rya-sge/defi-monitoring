@@ -35,17 +35,17 @@ For the demo position:
 | Equity (collateral − debt) | 520,236 USD |
 | Carry (what staying earns) | 5,697 USD |
 | Exit cost (price impact, fees, gas) | 78,946 USD |
-| Expected loss (simulation) | 7,080 USD |
-| CVaR 99 % | 518,872 USD, the whole equity |
+| Expected loss (simulation) | 6,265 USD |
+| CVaR 99 % | 510,184 USD, 98 % of the equity |
 
-The verdict is **REDUCE**: the expected loss exceeds the carry, and the worst months lose everything, but a full exit costs more than it saves. The report adds one line in the direction the teammates ask for: *a full exit would only pay if incident probabilities were 12 times the estimates* (`risk_multiple_to_exit` = (carry + exit cost) ÷ expected loss = 84,643 ÷ 7,080).
+The verdict is **REDUCE**: the expected loss exceeds the carry, and the worst months lose almost everything, but a full exit costs more than it saves. The report adds one line in the direction the teammates ask for: *a full exit would only pay if incident probabilities were 13.5 times the estimates* (`risk_multiple_to_exit` = (carry + exit cost) ÷ expected loss = 84,643 ÷ 6,265).
 
 ## 3. Why the teammates question it
 
 - **Team 2:** probabilities are "the weakest part of any such model". Nobody knows the chance that Ethena loses a third of its backing next month, and a base rate built from other protocols' hacks is at best an order of magnitude.
 - **Team 1:** start with named scenarios, which a manager can read and discuss, and add a Monte Carlo later.
 
-Both point at the same thing: the verdict depends on numbers the user cannot check. If the true depeg probability were three times higher, would the answer change? The current report answers only globally (the "12 times" line), not scenario by scenario.
+Both point at the same thing: the verdict depends on numbers the user cannot check. If the true depeg probability were three times higher, would the answer change? The current report answers only globally (the "13.5 times" line), not scenario by scenario.
 
 ## 4. The breakeven probability
 
@@ -220,7 +220,7 @@ Expected values treat a sure loss of 5,000 USD and a 1 % chance of losing 500,00
 2. **Why does reducing have a much lower p\* than exiting?** It costs about 2,400 USD instead of about 84,600 (exit cost plus carry), and for small and medium shocks it removes most of the loss by moving the liquidation distance beyond the shock.
 3. **Why does reducing not help against a 30 % loss of Ethena's backing?** The loss is larger than the equity even after de-levering, so the equity is lost in both cases; only exiting avoids it.
 4. **If you believe a 10 % oracle misprice has a 1 % chance this month, what should you do?** Reduce (p\* reduce 0.5 % < 1 %), not exit (p\* exit 17.7 % > 1 %).
-5. **What does "exit only pays if probabilities were 12 times the estimates" mean?** The expected loss over all scenarios, weighted by the model's probabilities, would have to be 12 times larger before exiting beats staying.
+5. **What does "exit only pays if probabilities were 13.5 times the estimates" mean?** The expected loss over all scenarios, weighted by the model's probabilities, would have to be 13.5 times larger before exiting beats staying.
 
 ### Further reading
 

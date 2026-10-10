@@ -198,24 +198,27 @@ def layer_priors(f: S.Fetcher, pos: Position) -> list[Prior]:
             )
         )
     if orc:
-        o = REGISTRY["oracle"]
-        n_oracle = sum(1 for h in st["hacks"] if h.get("technique") in o["techniques"])
-        users = st["cat_n"].get("Lending", 0) + st["cat_n"].get("CDP", 0)
-        base = n_oracle / (max(1, users) * st["years"])
-        unverified = "unverified" in g.nodes[orc[0]]["evidence"]
-        factor = o["unverified_factor"] if unverified else 1.0
-        p = min(REGISTRY["frequency"]["cap"], max(o["p_year_floor"], base * factor))
-        out.append(
-            Prior(
-                "oracle",
-                orc[0],
-                "Oracle misprice / misconfiguration",
-                p,
-                o["severity"]["a"],
-                o["severity"]["b"],
-                f"{n_oracle} misconfigured/stale-oracle hacks / {users} Lending+CDP protocols / {st['years']}y "
-                f"= {base:.2%}/yr; × {factor} ({'implementation unverified' if unverified else 'verified'}) "
-                f"→ {p:.2%}/yr. Severity: {o['basis']}",
-            )
-        )
+        out.append(oracle_prior(orc[0], g.nodes[orc[0]].get("verified"), st))
     return out
+
+
+def oracle_prior(node: str, verified: bool | None, st: dict) -> Prior:
+    """Pure: the oracle layer's prior. `verified` comes from Etherscan (D68): True, False, or None when it could not
+    be checked, which is treated as unverified (conservative)."""
+    o = REGISTRY["oracle"]
+    n_oracle = sum(1 for h in st["hacks"] if h.get("technique") in o["techniques"])
+    users = st["cat_n"].get("Lending", 0) + st["cat_n"].get("CDP", 0)
+    base = n_oracle / (max(1, users) * st["years"])
+    factor = 1.0 if verified is True else o["unverified_factor"]
+    status = {True: "verified", False: "implementation unverified", None: "verification not checked"}[verified]
+    p = min(REGISTRY["frequency"]["cap"], max(o["p_year_floor"], base * factor))
+    return Prior(
+        "oracle",
+        node,
+        "Oracle misprice / misconfiguration",
+        p,
+        o["severity"]["a"],
+        o["severity"]["b"],
+        f"{n_oracle} misconfigured/stale-oracle hacks / {users} Lending+CDP protocols / {st['years']}y "
+        f"= {base:.2%}/yr; × {factor} ({status} on Etherscan) → {p:.2%}/yr. Severity: {o['basis']}",
+    )

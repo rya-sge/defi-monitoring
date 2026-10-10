@@ -140,6 +140,7 @@ Every source is public and needs no API key. The exact endpoints, queries and me
 | Morpho API `blue-api.morpho.org/graphql` | finding things the chain cannot list cheaply: a user's positions, a market's borrowers and top suppliers, a vault's allocators, sentinels and holders, a default depositor | `positions`, `borrower`, `market_risk`, `exit_queue`, `graph`, `vault` |
 | Pendle API `api-v2.pendle.finance/core` | PT markets, implied yield, real swap quotes for exit costs | `discover`, `watch_user` |
 | DefiLlama `api.llama.fi`, `coins.llama.fi` | protocol list and hack record (incident base rates), token prices and one-year price history, the independent price oracles are compared with | `priors`, `discover`, `admin` |
+| Etherscan `api.etherscan.io/v2/api`, key in `keys.ini` (optional) | whether the `analyze` oracle's source is verified; without the key, "not checked" | `discover` (via `sources.contract_source`) |
 
 **Trust model.**
 - **The chain is authoritative.** The APIs are used to *find* positions and addresses; every amount, health factor, cap and price used in a decision is then read on-chain.
@@ -238,7 +239,7 @@ The design decisions are numbered across six plans, in the order the increments 
 
 | Plan | Increment | Decisions |
 |---|---|---|
-| `plan/2026-10-10-defi-risk-dependency.plan.md` | `analyze`: the PT position model and verdict | D1–D17, D18a–c |
+| `plan/2026-10-10-defi-risk-dependency.plan.md` | `analyze`: the PT position model and verdict | D1–D17, D18a–c, D68 |
 | `plan/2026-10-10-morpho-vault-v2-watcher.plan.md` | `watch --vault` | D18–D30 |
 | `plan/2026-10-10-morpho-user-watcher.plan.md` | `watch --user` | D31–D40 |
 | `plan/2026-10-10-lenders-and-timelocks.plan.md` | main lenders, timelock lengths | D41–D44 |

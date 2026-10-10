@@ -36,7 +36,7 @@
 
 ## What this project is
 
-`riskdep` is a Python CLI (`python3 -m riskdep`) for the risk of DeFi positions on Ethereum, centred on Morpho. It has four subcommands: `analyze` (batch STAY / REDUCE / EXIT report for a Pendle PT used as Morpho Blue collateral), `watch` (follow a Morpho Vault V2 block by block and alert a depositor), `watch --user` (find every Blue borrow and Vault V2 deposit of an address and monitor them together) and `graph` (interactive dependency graph). All data comes from keyless public sources: the publicnode Ethereum RPC, the Morpho and Pendle APIs, DefiLlama.
+`riskdep` is a Python CLI (`python3 -m riskdep`) for the risk of DeFi positions on Ethereum, centred on Morpho. It has four subcommands: `analyze` (batch STAY / REDUCE / EXIT report for a Pendle PT used as Morpho Blue collateral), `watch` (follow a Morpho Vault V2 block by block and alert a depositor), `watch --user` (find every Blue borrow and Vault V2 deposit of an address and monitor them together) and `graph` (interactive dependency graph). All data comes from public sources: the publicnode Ethereum RPC, the Morpho and Pendle APIs, DefiLlama, all keyless; and Etherscan, whose key in `keys.ini` is optional (without it, an oracle's source verification reads "not checked").
 
 ## Key concepts
 
