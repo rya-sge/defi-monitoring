@@ -124,8 +124,10 @@ These are not data sources: the browser loads them when a report is opened, at a
 
 ## Changing a provider
 
+- **Keys and secrets** live in `keys.ini` at the repository root, which is git-ignored and readable only by its owner (`chmod 600`). `keys.example.ini` is the committed template: same sections and names, no values. Copy it with `cp keys.example.ini keys.ini`. No provider used today needs a key; the sections are ready for next steps 1 to 6.
+
 - **Endpoints** are constants: `RPC`, `MORPHO`, `PENDLE`, `LLAMA`, `LLAMA_COINS` in `riskdep/sources.py`, `SECOND_RPCS` in `riskdep/crosscheck.py`, and the script URLs in `riskdep/report.py` and `riskdep/graph.py`.
-- **A paid RPC** (archive and WebSocket access, needed by next steps 5 and 6) replaces `RPC`; its key must come from an environment variable, never from a committed file.
+- **A paid RPC** (archive and WebSocket access, needed by next steps 5 and 6) replaces `RPC`; its URL and key go in `keys.ini` (section `[rpc]`), which is git-ignored, never in a committed file.
 - **After any change:**
   - re-record the replays (`watch --blocks 1000 --record`, `watch --user <address> --blocks 300 --record`), because cached requests are keyed by their URL and body;
   - run the tests;

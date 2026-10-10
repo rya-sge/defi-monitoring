@@ -53,7 +53,7 @@ Each step below gives its goal, what it delivers, its size (**S** about a day, *
 
 **Goal.** Warn and critical alerts reach you when you are not looking at the terminal. Today they stay in the terminal and the JSONL file.
 
-**Delivers.** A notifier behind the existing alert printer, configured by environment variables; a deduplication store so a standing alert is not resent after each restart (gap D4); a test mode that sends one sample alert.
+**Delivers.** A notifier behind the existing alert printer, configured in `keys.ini` (section `[alerts]`); a deduplication store so a standing alert is not resent after each restart (gap D4); a test mode that sends one sample alert.
 
 **Size.** S.
 
@@ -63,7 +63,7 @@ Each step below gives its goal, what it delivers, its size (**S** about a day, *
 - Grouping: one message per alert, or one digest per batch.
 
 **Needs from you.**
-- The chosen channel's credentials, passed as environment variables and never committed: a Telegram bot token and chat id, a webhook URL, an ntfy topic, or SMTP settings.
+- The chosen channel's credentials, written in `keys.ini` and never committed: a Telegram bot token and chat id, a webhook URL, an ntfy topic, or SMTP settings.
 
 **Already available.** The alert objects carry everything a message needs (level, title, detail, transaction, your impact).
 
@@ -262,7 +262,7 @@ Grouped by kind, for all steps:
 - [ ] Optionally, audit reports and post-mortems of the protocols you use (step 8).
 - [ ] The `morpho-org/bundles` repository at the release you would use (step 9).
 
-**Access and credentials** (environment variables, never committed)
+**Access and credentials** (in `keys.ini`, git-ignored, never committed; `keys.example.ini` lists the names)
 - [ ] Credentials of the alert channel (step 1).
 - [ ] An RPC provider key with archive and WebSocket access (steps 5 and 6), and an RPC per extra chain (step 7).
 - [ ] An Etherscan API key, free tier (step 3).

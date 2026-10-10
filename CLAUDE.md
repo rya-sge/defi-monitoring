@@ -91,6 +91,7 @@ pyproject.toml        project metadata, dependencies, ruff and pytest configurat
 - `README.md` — usage of every mode, alert trigger tables, limits.
 - `NEXT_STEP.md` — the recommended next steps, with what each needs (decisions, sources, credentials, infrastructure).
 - `PROVIDERS.md` — every external provider (RPC, APIs, CDNs): endpoints, queries, limits, trust model. Keep it current.
+- `keys.example.ini` — template of the API keys and secrets (no values); the real `keys.ini` is git-ignored.
 - `ANALYSIS_MONITORING.md` — design note: dependency graph, impact, monitoring, execution, and gaps of the current implementation (done / partial / missing).
 - `plan/` — the six plans (`defi-risk-dependency`, `morpho-vault-v2-watcher`, `morpho-user-watcher`, `lenders-and-timelocks`, `market-borrowers`, `admin-surface`).
 - `docs/` — `alert-runbook.md` (what each alert means and what to do), `glossary.md`, `registry-reference.md` (every `registry.json` key), `how-risk-is-computed.md`, `scenarios-and-breakeven.md`, `vault-depositor-scenarios.md`, `graph-propagation.md`, `how-a-block-is-analysed.md`, `websocket-vs-polling.md`, `user-watcher-options.md`, `graph-example.html/.json`.
@@ -125,6 +126,7 @@ uv run ruff format . && uv run ruff check .            # format and lint, 120 co
 - New thresholds or assumptions go in `registry.json` with their basis, not as literals in code, and in `docs/registry-reference.md`.
 - A new or changed alert gets its row in `docs/alert-runbook.md`.
 - Any change that adds, removes or replaces a data provider, endpoint, query or browser script (RPC, API, CDN) updates `PROVIDERS.md` in the same commit.
+- Keys and secrets go only in `keys.ini` (git-ignored, `chmod 600`), never in code, docs or committed files; a new key gets its name, with no value, in `keys.example.ini`. Do not use `.env` files for this project.
 - Rule modules stay pure (no I/O); put fetching in the source/state modules.
 - A behaviour change that departs from a plan decision is recorded in that plan's decision table.
 - Leave format and lint to ruff, at 120 columns, in pre-commit and in CI; never mix a style-only commit with a behaviour change.
