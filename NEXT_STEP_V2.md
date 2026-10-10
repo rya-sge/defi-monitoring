@@ -67,133 +67,329 @@ If time allows only one phase, do **A**. If two, **A then B1–B3**. Those five 
 
 ## 4. Phase A: answer the brief's question as asked
 
+Each step below has a **why** (what the brief or the review asks), a **how** (modules, functions, formulas, data), the **output** a user sees, and the **tests**. Names in `code` that do not exist yet are proposals.
+
 ### A1. Incident mode (K20)
 
 **Why.** The brief's worked example marks layer 3, the oracle, as "incident", and its task is the impact "when one of them is affected". Today every input is a yearly probability.
 
-**What.**
-- `analyze --shock oracle=-0.10`, `--shock issuer_depeg=0.08`, `--shock pool=-0.03`, combinable.
-- With the shock certain: the loss in USD and as a share of equity, whether the position is liquidated, and the verdict.
-- The same function behind a critical alert in the watches, so an alert carries an impact number.
+**How.**
+- **CLI.** `analyze --shock <event>=<severity>`, repeatable. The events are the ones `propagate.loss` already understands: `chain`, `issuer_hack`, `issuer_depeg`, `amm`, `oracle`, `lending`. Severity is a fraction: `--shock oracle=0.10` means the oracle reads 10 % low.
+- **Computation.** A new pure function `scenario.impact(pos, shocks, recovery)` in a new module `riskdep/scenario.py`. It calls `propagate.loss(...)` once with the given shocks and returns a `ScenarioResult`:
+  - the loss in USD and as a share of equity;
+  - whether the position is liquidated;
+  - the path text `propagate.loss` already builds ("oracle misreports −10.0 %", "liquidated: 92 % of collateral seized…");
+  - the exit cost now, from `decide.exit_cost_usd` and today's Pendle quote.
+- **Verdict with the incident certain.** In `decide.py`, a new `verdict_given(pos, result, quote)`:
+  - EXIT if the loss of staying exceeds the exit cost (no probability involved: the incident has happened);
+  - REDUCE if a partial de-lever (the existing `sale_to_reach`) avoids the liquidation for less than the loss;
+  - STAY otherwise.
+- **Watches.** On a critical alert whose event maps to a layer (`OracleDivergence`, `Admin.Upgraded` on an oracle, `DrainWindow`, a depeg seen by `admin.read_divergence`), `watch --user` calls `scenario.impact` with the observed size, and adds the loss to the alert's `depositor_impact` and detail.
 
-**Builds on.** `propagate.loss()` already computes the loss of a given shock; `decide` already gives the verdict.
+**Output.** A "Scenario" block at the top of `report.html` and a `scenario` key in `report.json`:
 
-**Proof.** The brief's example run on the demo position: "the oracle drops 10 %: liquidated, loss X, exit now costs Y".
+```
+Incident: oracle −10.0 %
+  liquidated: yes (HF 1.053 → 0.95); loss $27,400 (5.3 % of equity)
+  exit now costs $78,946 (1.99 % impact + fees)
+  verdict given the incident: REDUCE: selling $1.29M (33 %) avoids the liquidation for $1,023
+```
+(Figures illustrative, to be computed.)
+
+**Tests.** `tests/test_scenario.py`: an oracle shock just below and just above the liquidation distance (5.16 % on the demo) flips `liquidated`; a shock of 0 gives no loss; the CLI parses repeated `--shock`.
+
+**Size.** S. Everything it needs exists; the work is the CLI, the result type and the report block.
 
 ### A2. How fast (K22)
 
-**Why.** The brief asks what an incident does to the book "and how fast". USR fell 97 % in 17 minutes, and PT-reUSD's oracle moved in 9.
+**Why.** The brief asks what an incident does to the book "and how fast". USR fell 97 % in 17 minutes; PT-reUSD's oracle moved in 9.
 
-**What.** Per scenario, the time from the incident to liquidation next to the time to exit:
+**How.**
+- **Time to impact**, from the oracle type that B4 identifies (until then, from the current `oracle_mode`):
 
-| Oracle type | Time to liquidation |
+| Oracle type | Time from the incident to the liquidation |
 |---|---|
-| TWAP | about the TWAP window |
-| meta-oracle with a timelock | the challenge timelock |
-| linear discount or fixed | never: lenders take the loss |
+| market feed (Chainlink-style) | the feed's next update: within its heartbeat, or at once past its deviation threshold |
+| Pendle TWAP | about the TWAP window (15 min for the common setting) |
+| meta-oracle with a deviation timelock (the demo) | `challengeTimelockDuration`, read on-chain from the verified contract |
+| linear discount or fixed | never: no liquidation, lenders take the loss |
 
-Time to exit is one block through the Pendle pool, at the depth left.
+- **Time to exit:** one block through the Pendle pool, at the depth left. The exit is "possible in time" when time to exit < time to impact, and the quote at the stressed depth (B3) is still above the debt.
+- A new field `time_to_impact_s` (or `None` for "never") in `ScenarioResult`.
 
-**Builds on.** A1, B4 for the oracle type; the demo oracle's `challengeTimelockDuration` is readable now that its source is verified.
+**Output.** One line per scenario: "liquidation in ≈ 15 min (TWAP); exit takes one block: exit before the TWAP catches up".
+
+**Tests.** The mapping per oracle type; the demo oracle's timelock read from a cached `eth_call`.
+
+**Size.** S once A1 exists.
 
 ### A3. A book, the breakeven and one number (K21, M6)
 
-**Why.** The brief's example is a book of ten 10 % pockets, one affected, unwinding at 11 %, and it asks the system to make "expensive and certain against cheap and uncertain" explicit. Team 2 proposed the breakeven probability for exactly this. `docs/scenarios-and-breakeven.md` worked it out; it is not in the tool.
+**Why.** The brief's example is a book of ten 10 % pockets, one affected, unwinding at 11 %, and it asks the system to make "expensive and certain against cheap and uncertain" explicit. Team 2 proposed the breakeven probability for exactly this. `docs/scenarios-and-breakeven.md` worked it out; the tool does not compute it.
 
-**What.**
-- **A book file:** a list of positions, each an address and market or vault, with its weight. `analyze --book book.json` runs every position. Positions that share a layer (an issuer, an oracle, a feed) are combined, which is M6.
-- **The breakeven probability** p\* = (exit cost + carry) / L(scenario), per scenario. It does not depend on a base rate. On the brief's own numbers (11 % exit cost, a total loss of the pocket), p\* = 11 %.
-- **One headline line** above the verdict, for example: "Book loss if the oracle fails: 0.9 % of the book. Exiting pocket 3 costs 0.11 % of the book and pays if you believe P(failure) > 11 % this month. Verdict: REDUCE pocket 3."
-- **A reproduction of the brief's example** as a test.
+**How.**
+- **Book file.** `book.json`, a list of pockets:
+  ```json
+  {"name": "Book A", "value_usd": 40000000, "pockets": [
+    {"name": "PT loop", "weight": 0.10, "kind": "borrow", "market": "0x…", "user": "0x…"},
+    {"name": "RLUSD vault", "weight": 0.10, "kind": "vault", "vault": "0x6dc5…", "user": "0x…"},
+    {"name": "sUSDS", "weight": 0.10, "kind": "hold", "token": "0x…"}]}
+  ```
+  `analyze --book book.json` builds a `Position` per pocket with the existing discovery and scales its amounts to `weight × value_usd`.
+- **Shared layers (M6).** Every pocket's graph gives node ids (issuer, oracle, feed, Morpho market, Pendle pool). A new `book.shared_layers(positions)` lists the nodes that appear in more than one pocket. In the Monte Carlo, a shared node is drawn **once** per path and applied to every pocket that holds it, instead of once per pocket.
+- **Breakeven probability.** For each scenario s from A1 or C1, with L(s) the loss of the pocket if s happens over the horizon:
 
-**Builds on.** `analyze` per position, A1 for the scenario losses.
+  $$p^\star(s) = \frac{\text{exit cost} + \text{carry}}{L(s)}$$
+
+  Exit pays when one believes P(s) > p\*. No base rate is needed. A new pure `decide.breakeven(exit_cost, carry, loss_if)`.
+- **Headline.** A new `report.headline(book_result)`: the largest book loss among the scenarios, as a share of the book, the pocket it comes from, its exit cost as a share of the book, its p\*, and the verdict.
+- **The brief's example as a test.** Ten pockets of 10 %, one wiped out by a scenario, an exit cost of 11 % of the pocket: the book loses 10 %, exiting costs 1.1 % of the book, p\* = 11 %.
+
+**Output.**
+```
+Book A ($40M, 3 pockets)
+  worst scenario: USDe depeg −20 %: book −1.2 % (PT loop liquidated)
+  exiting the PT loop costs 0.20 % of the book; exit pays if P(depeg) > 16 % this month
+  shared layers: USDe (PT loop, RLUSD vault), RLUSD/USD feed (RLUSD vault, 7 markets)
+```
+(Illustrative.)
+
+**Tests.** `tests/test_book.py`: the brief's example; a shared node drawn once (two pockets on one issuer lose together in the same paths); weights that do not sum to 1 are rejected.
+
+**Size.** S–M: the book loop and the report are S; drawing shared nodes once in `simulate.run` is the M part.
 
 ## 5. Phase B: make the PT-loop number defensible
 
 ### B1. The borrow rate (K10)
 
-The AdaptiveCurveIRM sets the rate at 100 % utilisation to 4× the rate at target, and the rate at target doubles in 5 days while utilisation stays there (`docs/external/morpho/docs.morpho.org-developers-docs/contracts/irm.md`). For a 7.6× loop, the carry is a thin spread (5.01 % − 3.74 % on the demo). **What:** draw a utilisation path, apply the IRM rule, and subtract its cost from the carry in each simulated month. No new data source is needed: the watches already read utilisation.
+**Why.** For a 7.6× loop the carry is a thin spread (5.01 % − 3.74 % on the demo); a +10 pp borrow rate for 30 days costs $28,060, 4.5× the whole modelled expected loss.
+
+**How.**
+- **The rule,** from `docs/external/morpho/docs.morpho.org-developers-docs/contracts/irm.md` (AdaptiveCurveIRM): target utilisation 90 %, `CURVE_STEEPNESS` 4, `ADJUSTMENT_SPEED` 50 per year. With u the utilisation and e its normalised distance to the target:
+  - the borrow rate is `rateAtTarget × curve(e)`, where the curve reaches 4× at 100 % utilisation and 1/4 at 0 %;
+  - `rateAtTarget` grows as exp(50 × e × t), t in years: at 100 % utilisation it doubles in about 5 days (exp(50 × 5/365) ≈ 1.98).
+- **Data.** `rateAtTarget(id)` is a public mapping on the IRM contract (address in the market parameters); utilisation is already read. A new `irm.py` with pure `borrow_rate(rate_at_target, u)` and `step(rate_at_target, u, dt)`.
+- **Utilisation path.** Per Monte Carlo path, draw a utilisation path over the horizon: a two-state model (normal around its current level, stressed at 100 %), the entry probability into the stressed state and its length set in `registry.json` with a basis, later fitted from the market's history (archive RPC, version 1 step 6) or Morpho's API.
+- **In the model.** `simulate.run` subtracts, per path, the extra interest (rate path − current rate) × debt × time from the carry. The rate also raises the debt, which lowers the HF: if the HF crosses 1 on a path, the position is liquidated with the existing rule.
+- **A rate scenario for A1:** `--shock borrow_rate=+0.10` (10 pp for the horizon).
+
+**Output.** A "rates" layer in the attribution table ("borrow rate: $X of expected loss") and the rate scenario in the scenario table.
+
+**Tests.** The IRM formulas against the doc's constants (4× at 100 %, doubling in ≈ 5 days); the demo's +10 pp for 30 days gives $28,060.
+
+**Size.** S.
 
 ### B2. The PT's implied yield (K11)
 
-A PT's price before maturity moves with its implied yield: +20 pp costs 2.2 % on the demo and +40 pp liquidates it under a market-tracking oracle. **What:** draw the implied-yield move from the Pendle market's history, price the PT from it, and pass the price to the oracle according to its type (B4).
+**Why.** A PT's price before maturity moves with its implied yield. On the demo (46.6 days left), +20 pp costs 2.2 % and +40 pp liquidates it under a market-tracking oracle. PT-reUSD's implied yield went from about 11 % to more than 20 % in nine minutes.
+
+**How.**
+- **Price.** PT price in the underlying = (1 + y)^(−T), T the time to maturity in years. A move Δy gives the new price; it is pure, in `pricing.py`.
+- **Distribution.** From Pendle's `GET /v3/{chainId}/markets/{address}/historical-data` (fields `timestamp`, `impliedApy`), keyless, cached like the other Pendle calls: the distribution of the largest implied-yield rise over a window of the horizon's length. With little history, a registry default with a basis.
+- **In the model.** A new event `pt_yield` with probability 1 per path and a drawn Δy. The price change goes to the collateral's market value, and to the oracle according to its type (B4): a market-tracking or TWAP oracle sees it; a linear-discount oracle does not.
+- **Scenario:** `--shock pt_yield=+0.20` (20 pp).
+
+**Tests.** The price table of `GAP.md` K11 (+5 pp → −0.59 %, … +40 pp → −4.04 %); the liquidation of the demo at +40 pp under a market-tracking oracle.
+
+**Size.** S. One new cached Pendle call (`PROVIDERS.md` updated).
 
 ### B3. Horizon and stressed exit cost (K12)
 
-The rule compares a one-off exit cost with a 30-day loss, while the PT redeems at par in 46.6 days. **What:**
-- set the horizon to the PT's maturity;
-- compare three choices: exit now, hold to maturity, de-lever;
-- report the exit cost under stress (the quote at the pool depth of the stress scenario), not only today's calm quote.
+**Why.** The rule compares a one-off exit cost ($78,946) with a 30-day loss, while the PT redeems at par in 46.6 days.
+
+**How.**
+- **Horizon.** For a PT, the default horizon becomes the time to maturity (`--horizon` still overrides). For open-ended positions it stays 30 days, and the exit cost is spread over the expected holding period, a registry parameter.
+- **Three choices** compared in `decide.verdict`, each over the same horizon:
+  - exit now: − exit cost;
+  - hold to maturity: carry − expected loss;
+  - de-lever: the existing `Reduction`.
+- **Stressed exit cost.** Ask Pendle's swap quote at several sizes (already done for the de-lever), fit price impact against size, and recompute it at the pool depth of the stress scenario: depth × (1 − the share of LPs assumed to leave, a registry parameter).
+
+**Output.** A three-row comparison table in the report; the exit cost shown "today" and "under stress".
+
+**Tests.** The horizon rule; the three-way choice on synthetic numbers.
+
+**Size.** S.
 
 ### B4. Oracle structure, and liquidation without an incident (K7, K8)
 
 **Why.** The oracle decides which channel a shock takes, and "conservative" depends on the side: market-tracking is worst for a borrower, linear discount for a lender. The demo oracle is a `MetaOracleDeviationTimelock`, which is neither. On 2026-08-25 a $320k trade moved a TWAP oracle and liquidated 33 PT-reUSD positions at the demo's LLTV.
 
-**What.**
-- Read the oracle's structure (`MorphoChainlinkOracleV2` feeds and vaults, the meta-oracle's primary, backup and timelocks) and map each known type to its rule. Fall back to price inference only for unknown types.
-- Add a "pool move" event for TWAP-based oracles. Its size comes from Pendle's quote at several sizes (already available); its cost is the liquidation incentive on the repaid debt.
+**How.**
+- **Identify the type** with a new `oracles.py`:
+  1. Etherscan's verified contract name (`sources.contract_source`, already used): `MorphoChainlinkOracleV2`, `MetaOracleDeviationTimelock`, Pendle's oracles.
+  2. Otherwise, the getters: `BASE_FEED_1()` etc. (Chainlink-style), `primaryOracle()` / `backupOracle()` (meta-oracle).
+  3. Otherwise, today's price inference.
+- **Resolve its inputs:**
+  - `MorphoChainlinkOracleV2`: price = SCALE × (base vault rate × base feeds) ÷ (quote vault rate × quote feeds), from `docs/external/morpho/lib/morpho-blue-oracles`. Each feed is classified as a market feed or an exchange rate (from its `description()`, already read by `admin.py`).
+  - Meta-oracle: the primary and backup oracles (each resolved recursively), the deviation threshold, the challenge and healing timelocks, and which one is live (`currentOracle()`).
+- **Map each type to a rule** that `propagate.loss` applies per event: which events the oracle sees (`issuer_depeg`, `pt_yield`, `pool`), with what lag (A2), and with what amplification.
+- **Pool-move event.** For TWAP-based oracles, a new event `pool`: a trade of size Q moves the PT price by impact(Q), from Pendle quotes at several sizes. Its frequency comes from the implied-yield history (B2). Its loss is the liquidation incentive on the repaid debt, with no loss of value.
 
-**Builds on.** `docs/external/morpho/lib/morpho-blue-oracles`, the verified source on Etherscan (D68), `admin.py`'s feed discovery.
+**Output.** The oracle node in the report says what it is, for example "meta-oracle: primary X, backup Y; switches after its challenge timelock once they deviate by more than its threshold" with the values read on-chain, and which shocks it passes.
+
+**Tests.** The type detection on the cached demo oracle; the meta-oracle's switch rule; a TWAP pool move that liquidates at the demo LLTV.
+
+**Size.** M.
 
 ### B5. The priors (K17, K1, K3, K5, K2, K18)
 
-All in `priors.py` and `registry.json`, each with a stated basis:
-- **K17, K1:** weight hacks by age (a half-life of 1–2 years) and tier protocols by their TVL at the hack date, not today's. Use the result as a category base rate only.
-- **K3:** stop counting oracle hacks in both the lending layer and the oracle layer.
-- **K5:** a two-part depeg severity for synthetic dollars (frequent shallow, rare near-total), fitted to on-chain prices.
-- **K2:** an operational prior for off-chain issuers (custodian, CEX, fund manager, keys).
-- **K18:** a bounded protocol multiplier (for example 0.25×–4×) from what `admin.py` already reads (admin powers, upgrades since the last audit) and one keyless Nexus Mutual price call. The report shows both factors, so a reader can dispute one without rejecting the number.
+All in `priors.py` and `registry.json`, each change with a stated basis:
+
+| Gap | Change | How |
+|---|---|---|
+| K17 | Weight hacks by age | weight = 0.5^(age / half-life), half-life 1.5 years in the registry; the tier rate becomes Σ weights ÷ (protocols × effective years) |
+| K1 | Tier by TVL at the hack date | DefiLlama `/protocol/{slug}` (keyless) gives each protocol's TVL history; take the TVL on the hack's date; keep hacked protocols now below $1M; show the rate with and without them |
+| K3 | No double count | remove the oracle techniques from the hacks counted for the lending layer |
+| K5 | Two-part depeg severity | for a synthetic dollar: a shallow Beta at the current frequency, plus a collapse branch with severity near total and its own frequency (from K2) |
+| K2 | Off-chain prior | a registry `operational` block per off-chain issuer: custodian, CEX, fund manager, keys, each with a probability, a severity and a source |
+| K18 | Protocol multiplier | base rate × m, m clipped to [0.25, 4]; m is a product of factors with a basis: admin powers (upgradeable, timelock, multisig threshold, from `admin.py`), upgrades since the last audit (`Upgraded` events), Nexus Mutual's cover price (`https://api.nexusmutual.io/v2/capacity`, keyless), immutability and formal verification (registry) |
+
+**Output.** The basis line of each prior shows both parts: "category base rate 2.7 %/yr × 0.4 (immutable, formally verified) → 1.1 %/yr".
+
+**Tests.** The decay weights; the survivorship count on the snapshot (305 of 1,070 hacks dropped today); m clipped at its bounds.
+
+**Size.** S–M. Two new keyless calls (DefiLlama protocol history, Nexus Mutual), cached in `fixtures/snapshot/`.
 
 ## 6. Phase C: correlation, cascade and the tail
 
 ### C1. Named scenarios and a common shock (K6)
 
-Both teams asked for scenarios: Team 1 before any Monte Carlo, Team 2 as the basis of the breakeven. Every large loss in GAP.md's incident list was a chain of layers. **What:** a scenario library in `registry.json`, each run through A1:
-- a replay of the Nov 2025 contagion (xUSD → deUSD → USDX);
-- a replay of Resolv;
-- a PT yield spike with a pool drain;
-- a CEX-only wick.
+**Why.** Both teams asked for scenarios: Team 1 before any Monte Carlo, Team 2 as the basis of the breakeven. Every large loss in GAP.md's incident list was a chain of layers.
 
-Then add a common-shock factor that raises every layer's probability in the same Monte Carlo draw.
+**How.**
+- **Library.** A `scenarios` block in `registry.json`. Each scenario is a set of shocks with a basis and, where it applies, a time profile:
+  ```json
+  "usde_depeg_20": {"shocks": {"issuer_depeg": 0.20, "pt_yield": 0.15, "pool": 0.05},
+                    "basis": "USDe −35 % on one CEX on 2025-10-10; on-chain pools held near par …"}
+  ```
+  Initial set: Nov 2025 contagion (issuer → issuer: several issuers depeg together), Resolv (unbacked mint: issuer collapse, the oracle keeps par), PT yield spike with a pool drain, CEX-only wick (no on-chain move: nothing happens, which is itself a check).
+- **Run.** `analyze --scenarios` runs every scenario through A1 and prints a table with p\* per row (A3). The report puts this table before the Monte Carlo, as Team 1 asked.
+- **Common shock.** In `simulate.run`, a latent "stress month" drawn with a registry probability; in a stress month, every layer's probability is multiplied by a registry factor. This creates the co-movement the independent draws lack.
+
+**Tests.** Each scenario's shocks reach `propagate.loss`; with the common shock on, P(two layers in the same path) exceeds the product of their probabilities.
+
+**Size.** M (the scenario sizes need sourcing).
 
 ### C2. Liquidation cascade with slippage (K9, M3 part 2)
 
-LlamaRisk measured PT supply on lending markets at 12.8× to 30× the Pendle AMM's depth. **What:** the loop proposed in `comparison_team.md`. Collateral seized at a drop goes to Pendle's price impact for that size, which gives a new drop, until stable. It uses the per-market curves `market_risk.py` already computes. For collateral other than PT, start with Team 1's parametric k·√volume and calibrate k from quotes when one is available (the KyberSwap probe showed keyless quotes exist).
+**Why.** LlamaRisk measured PT supply on lending markets at 12.8× to 30× the Pendle AMM's depth, and its bad debt rose from $7M to $70M as the PT drop went from $0.12 to $0.21.
+
+**How.**
+- **The loop,** in a new pure `cascade.run(drop, curve, impact)`:
+  1. at a drop d, the market's curve (`market_risk.value`, already computed per market) gives the collateral liquidatable;
+  2. liquidators sell it: the price impact for that size gives an extra drop Δd;
+  3. d ← d + Δd; stop when Δd is below a tolerance or after N rounds.
+- **The impact curve:** for a PT, Pendle quotes at several sizes, fitted as impact(Q) = k·√Q; for other collateral, Team 1's parametric k·√Q with k in the registry (calibrated from KyberSwap quotes on on-chain venues only, when one is wanted).
+- **Where it is used:** the final drop replaces the initial one in `propagate.loss` for the scenario, and in the watches' bad-debt curve.
+
+**Output.** The scenario table gains "after the cascade: −x %".
+
+**Tests.** No liquidation → no extra drop; a steep curve with a thin pool converges to a deeper drop; the loop stops.
+
+**Size.** M.
 
 ### C3. A verdict that sees the tail (K13, K14)
 
-The demo's CVaR 99 % is 98 % of equity, yet the verdict is REDUCE, because EXIT depends on the mean only. **What:**
-- sample the priors themselves and report ranges;
-- compare carry with the upper bound of the expected loss;
-- let a CVaR beyond a second, higher budget give EXIT;
-- report P(loss > x % of equity).
+**Why.** The demo's CVaR 99 % is 98 % of equity, yet the verdict is REDUCE, because EXIT depends on the mean only.
+
+**How.**
+- **Parameter uncertainty.** In `simulate.run`, draw each prior's probability from a Beta fitted to its counts (n hacks over N protocol-years) before drawing the incidents; repeat over K outer draws. Report the expected loss and CVaR as a 5–95 % range.
+- **Rules,** in `decide.verdict`:
+  - compare carry with the **upper** end of the expected-loss range;
+  - EXIT when CVaR 99 % exceeds a second budget, `tail_budget_exit` (for example 80 % of equity), next to the existing REDUCE budget;
+  - report P(loss > x % of equity) for x in a registry list.
+
+**Tests.** A wider prior widens the range; the second budget turns REDUCE into EXIT.
+
+**Size.** S–M.
 
 ## 7. Phase D: the vault depositor
 
 ### D1. `analyze --vault` (K16)
 
-**Why.** The brief's setter runs curated vaults, and `comparison_team.md` §4.3 calls the depositor's loss the largest gap against the impact criterion. The watches now have the exit queue and the drain threshold. What is missing is a loss number under a scenario.
+**Why.** The brief's setter runs curated vaults, and `comparison_team.md` §4.3 calls the depositor's loss the largest gap against the impact criterion. The watches have the exit queue and the drain threshold; a loss number under a scenario is missing.
 
-**What.**
-- **Loss:** for each scenario, the depositor's loss = their share of the vault × Σ over markets of the vault's share of supply × the market's bad debt at that drop (`market_risk.value`). That is the table worked out by hand in `docs/vault-depositor-scenarios.md`.
-- **Loans revalued at the market price:** existing loans in a market whose oracle does not follow the market get valued at the market price too. `docs/drain-threshold.md` shows why: 45.7M already lent against USDe stays invisible today.
-- **Drain as a loss channel:** d\* becomes a loss channel, with the probability of crossing it taken from the depeg prior.
-- **Version rule:** bad debt is realised differently by vault version (V1.0, V1.1, V2).
+**How.**
+- **CLI.** `analyze --vault <address> [--user <address>]`, and `"kind": "vault"` pockets in a book (A3).
+- **State.** `vault.discover_vault`, `vault.read_state` and `market_risk.VaultRisk` give each market, the vault's share of its supply, and every borrower's position.
+- **Loss per scenario.** A scenario maps to a drop per collateral (BTC −30 %, USDe −20 %, a shared quote feed misreporting). For each market, `market_risk.value` at that drop gives the bad debt. The vault's loss = Σ share of supply × bad debt; the depositor's = their share of the vault × that. This is the table done by hand in `docs/vault-depositor-scenarios.md`, generated.
+- **Market-price revaluation.** In `market_risk.value`, a second valuation of every position at the **market** price (DefiLlama, as the drain uses). For a market whose oracle does not follow the market, the bad debt at the market price is the real exposure, which the oracle-price valuation hides.
+- **The drain as a loss channel.** If a scenario takes a market past d\* (`drain.py`), add the drainable amount × (1 − (1 − δ)/LLTV) as bad debt, and remove it from the exit capacity.
+- **Exit.** The exit queue (`exit_queue.py`) gives what the depositor recovers at par per queue position; p\* per scenario uses the forgone yield plus the `forceDeallocate` penalty as the exit cost.
+- **Version rule.** Vault V2 realises bad debt for every holder through `realAssets()`; for a V1.1 vault (once F2 reads it), the last holders take it.
 
-**Proof.** The Sentora table of `docs/vault-depositor-scenarios.md` produced by the tool.
+**Output.** The two tables of `docs/vault-depositor-scenarios.md` §5, produced by the tool, with STAY / REDUCE / EXIT AS FAR AS POSSIBLE.
+
+**Tests.** The Sentora numbers on the recorded replay (`fixtures/replay/0x6dc5…`): BTC −50 % gives about 61M of vault bad debt.
+
+**Size.** M.
 
 ## 8. Phase E: discovery depth and the brief's scope items
 
 Discovery is 30 % of the score, judged on "depth and correctness".
 
-- **E1, depth (K19).** Put the admin surface the watches already discover into `analyze`'s graph as layers with their own priors (B5's multiplier). Look through one level where it is on-chain: sUSDS → USDS → PSM → USDC, or the ERC-4626 vault behind an exchange-rate oracle. Draw the off-chain part (custodians, CEX hedges) as typed registry nodes, so the depth is visible even where it is not computed.
-- **E2, feed quality (K23), named in the brief's scope.** Heartbeat and deviation threshold, the age of the last update against the heartbeat (the Morpho oracle does not check staleness), the number of sources, one feed carrying several markets (R3), and which source a meta-oracle is using. Documentation is local: `docs/external/chainlink/docs.chain.link-data-feeds-docs/`.
-- **E3, TVL concentration (K25), named in the brief's scope.** Per layer: the protocol's share of the chain's category TVL, the position's or market's share of the PT supply and of the pool depth. DefiLlama `/protocols` is already cached. A high share means both a systemic node and a slow exit.
+### E1. Depth in `analyze` (K19)
+
+**How.**
+- **Admin surface as layers.** Build an `admin.AdminWatch` for the position's market in `analyze` (it already runs in the watches). Each upgradeable contract becomes a node "upgrade of X" with a prior: the protocol base rate × B5's admin factor. Draw them in the report's graph and in `graph`.
+- **One look-through level, on-chain where possible:**
+  - an ERC-4626 vault in the oracle (`BASE_VAULT`): its `asset()`, and that asset's own oracle layers;
+  - sUSDS → USDS → the PSM → USDC (addresses and the PSM's balance read on-chain);
+  - a Pendle SY → its yield token (already discovered by `admin.py`).
+- **Off-chain look-through as typed nodes.** From `registry.json` (custodians, CEX hedges, signing keys for each issuer), drawn as nodes with their source, so the depth shows even where it is not computed.
+
+**Tests.** The demo graph gains the admin and look-through nodes; each has a source.
+
+**Size.** M.
+
+### E2. Feed quality (K23)
+
+**How.** For every Chainlink-style feed `admin.py` discovers:
+- `latestRoundData()`: the age of the last update (`now − updatedAt`);
+- heartbeat and deviation threshold: from Chainlink's published feed data (to probe; the local docs are `docs/external/chainlink/docs.chain.link-data-feeds-docs/`), otherwise a registry entry;
+- `aggregator()` and the number of oracles, where the aggregator exposes it;
+- shared feeds: the number of watched markets whose oracle reads the same feed (R3);
+- for a meta-oracle: which source is live, and whether a challenge or a healing is running (`isChallenged()`, `isHealing()`).
+
+A new alert `FeedStale` when the age exceeds the heartbeat × a registry margin, with a runbook row.
+
+**Tests.** Staleness against a synthetic heartbeat; the shared-feed count on the Sentora replay (the `RLUSD / USD` feed under 7 markets).
+
+**Size.** S–M.
+
+### E3. TVL concentration (K25)
+
+**How.** From DefiLlama `/protocols` (already cached) and on-chain supplies:
+- the protocol's share of its category's TVL on the chain (Morpho in Ethereum lending);
+- the market's PT collateral as a share of the PT's supply, and against the Pendle pool's depth (the LlamaRisk measure);
+- the vault's share of each market (already computed).
+
+One concentration line per layer in the report; a registry threshold marks a "systemic node" and feeds B3's stressed exit cost.
+
+**Size.** S.
 
 ## 9. Phase F: external venues and other chains
 
-- **F1, external venues (K24), named in the brief's scope.** The setter runs market-neutral strategies, so its positions have a hedge leg on a perp venue; USDe has the same structure inside. Start with a typed "external venue" node (venue, custody, withdrawal delay, funding-rate exposure), a prior with a basis, and a funding-rate scenario. A full perp-venue model is a separate project.
-- **F2, other chains and Vault V1 (C5, C4).** Morpho is deployed on many EVM chains, and the setter has SOL mandates. EVM chains mostly need an RPC per chain and the address table already in the Morpho docs. Solana is a new stack. Vault V1 deposits (step 4 of version 1) can now read `docs/external/morpho/lib/metamorpho-v1.1`.
+### F1. External venues (K24)
+
+**Why.** The setter runs market-neutral strategies, so its positions have a hedge leg on a perp venue; USDe has the same structure inside.
+
+**How.**
+- A typed `venue` node in the registry and the graph: the venue (on-chain perp such as Hyperliquid, or a CEX), custody, the withdrawal delay, funding-rate exposure.
+- A prior per venue with a basis (exchange failure, withdrawal halt), and a `funding` scenario: a negative funding rate for N days, applied to the hedge's notional.
+- A book pocket `"kind": "hedge"` that offsets a spot pocket in A3's book.
+
+**Size.** M for the typed node and scenario; a full perp-venue model is a separate project.
+
+### F2. Other chains, Vault V1 (C5, C4)
+
+**How.**
+- **EVM chains:** make the chain a parameter: an RPC per chain in `keys.ini` (`[rpc]`), the Morpho addresses per chain from `docs/external/morpho/docs.morpho.org-developers-docs/contracts/addresses.md`, `chainId` in the Morpho and Pendle API calls, the cache keyed by chain.
+- **Vault V1:** a second reader beside `vault.py`, from `docs/external/morpho/lib/metamorpho-v1.1` (withdraw queue, caps, `lostAssets`), plugged into the same rules, exit queue and drain.
+- **Solana:** a new stack (accounts and programs instead of contracts and logs); out of scope before the event unless the book requires it.
+
+**Size.** M per EVM chain after the first; Vault V1 M; Solana L.
 
 ## 10. The demo
 
