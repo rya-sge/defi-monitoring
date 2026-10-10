@@ -17,10 +17,10 @@ QUERY = """query($a:String!){ userByAddress(address:$a, chainId:1){
 @dataclass
 class UserPositions:
     address: str
-    borrows: list[str] = field(default_factory=list)          # Blue market ids with debt > 0
-    vaults: list[str] = field(default_factory=list)           # Vault V2 addresses with shares > 0
+    borrows: list[str] = field(default_factory=list)  # Blue market ids with debt > 0
+    vaults: list[str] = field(default_factory=list)  # Vault V2 addresses with shares > 0
     api_state: dict[str, dict] = field(default_factory=dict)  # market id -> API collateral / borrowAssets
-    collateral_only: int = 0                                   # markets with collateral but no debt (not watched)
+    collateral_only: int = 0  # markets with collateral but no debt (not watched)
 
 
 def discover_user(f: S.Fetcher, address: str) -> UserPositions:

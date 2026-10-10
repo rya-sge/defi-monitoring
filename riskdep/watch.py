@@ -8,8 +8,8 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import crosscheck
 from . import admin as AD
+from . import crosscheck
 from . import market_risk as MR
 from . import sources as S
 from .discover import REGISTRY
@@ -27,9 +27,9 @@ class Options:
     vault: str
     depositor: str | None
     out_dir: Path
-    mode: str = "direct"              # direct | record | replay
+    mode: str = "direct"  # direct | record | replay
     replay_dir: Path | None = None
-    blocks: int | None = None         # process the last N blocks then stop
+    blocks: int | None = None  # process the last N blocks then stop
     min_level: str = "info"
     color: bool = True
     poll_seconds: float = W["poll_seconds"]
@@ -69,20 +69,35 @@ def _fetcher(opts: Options) -> S.Fetcher:
 
 
 def exposure_table(view: VaultView, st, p: Printer) -> None:
-    unit = 10 ** view.decimals
+    unit = 10**view.decimals
     p.line(f"{view.name} ({view.address}) · {view.asset_symbol} · block {st.block}")
-    p.line(f"  total assets {st.total_assets / unit:,.0f} · idle {st.idle / unit:,.0f} · share price {st.share_price:.6f}")
-    p.line(f"  plain withdrawal can pay {st.withdrawable / unit:,.0f} "
-           f"({'idle + liquidity market ' + str(view.liquidity_market)[:10] + '…' if view.liquidity_market else 'idle only: no liquidity adapter'})"
-           f" · {st.force_withdrawable / unit:,.0f} more via forceDeallocate")
+    p.line(
+        f"  total assets {st.total_assets / unit:,.0f} · idle {st.idle / unit:,.0f} · share price {st.share_price:.6f}"
+    )
+    p.line(
+        f"  plain withdrawal can pay {st.withdrawable / unit:,.0f} "
+        f"({'idle + liquidity market ' + str(view.liquidity_market)[:10] + '…' if view.liquidity_market else 'idle only: no liquidity adapter'})"
+        f" · {st.force_withdrawable / unit:,.0f} more via forceDeallocate"
+    )
     if st.depositor:
-        p.line(f"  depositor {st.depositor}: {st.depositor_assets / unit:,.0f} {view.asset_symbol} "
-               f"({st.depositor_shares / st.total_supply:.2%} of the vault)" if st.total_supply else "")
+        p.line(
+            f"  depositor {st.depositor}: {st.depositor_assets / unit:,.0f} {view.asset_symbol} "
+            f"({st.depositor_shares / st.total_supply:.2%} of the vault)"
+            if st.total_supply
+            else ""
+        )
     if view.timelocks:
+
         def fmt(t, ab):
             return "abdicated" if ab else ("0" if t == 0 else f"{t / 86400:g}d")
-        p.line("  timelocks: " + ", ".join(f"{sig.split('(')[0]}{'' if c == view.address else ' (adapter)'} {fmt(t, ab)}"
-                                          for (c, sig), (t, ab) in view.timelocks.items()))
+
+        p.line(
+            "  timelocks: "
+            + ", ".join(
+                f"{sig.split('(')[0]}{'' if c == view.address else ' (adapter)'} {fmt(t, ab)}"
+                for (c, sig), (t, ab) in view.timelocks.items()
+            )
+        )
     for a in view.adapters:
         p.line(f"  adapter {a.address} [{a.kind}] real assets {st.real_assets.get(a.address, 0) / unit:,.0f}")
         rows = sorted(a.markets.values(), key=lambda m: -st.markets[m.id].vault_assets)
@@ -90,13 +105,18 @@ def exposure_table(view: VaultView, st, p: Printer) -> None:
             m = st.markets[mp.id]
             share = m.vault_assets / st.total_assets if st.total_assets else 0
             tag = " [liquidity]" if mp.id == view.liquidity_market else ""
-            p.line(f"    {(mp.collateral_symbol + tag):<22} LLTV {mp.lltv:6.1%}  {m.vault_assets / unit:>16,.0f}  {share:6.1%}"
-                   f"  util {m.utilization:6.1%}  withdrawable {m.withdrawable / unit:>14,.0f}")
+            p.line(
+                f"    {(mp.collateral_symbol + tag):<22} LLTV {mp.lltv:6.1%}  {m.vault_assets / unit:>16,.0f}  {share:6.1%}"
+                f"  util {m.utilization:6.1%}  withdrawable {m.withdrawable / unit:>14,.0f}"
+            )
 
 
 def _cross_check(f: S.Fetcher, p: Printer, view: VaultView, st, block: int) -> None:
     """Main RPC vs an independent one, and the Morpho API vs the chain (crosscheck.py)."""
-    checks = [crosscheck.second_rpc(f, block), crosscheck.vault_total_assets(f, view.address, st.total_assets, view.decimals)]
+    checks = [
+        crosscheck.second_rpc(f, block),
+        crosscheck.vault_total_assets(f, view.address, st.total_assets, view.decimals),
+    ]
     for c in checks:
         if c.ok is False:
             level = "critical" if c.name == "second RPC" else "warn"
@@ -122,7 +142,9 @@ def run(opts: Options) -> int:
         dep = opts.depositor.lower() if opts.depositor else largest_depositor(f, opts.vault)
         if opts.mode == "record":
             state_dir.mkdir(parents=True, exist_ok=True)
-            meta_path.write_text(json.dumps({"vault": opts.vault, "head": pinned, "cursor": start_cursor, "depositor": dep}))
+            meta_path.write_text(
+                json.dumps({"vault": opts.vault, "head": pinned, "cursor": start_cursor, "depositor": dep})
+            )
 
     safe0 = (pinned or int(S.rpc(f, "eth_blockNumber", []), 16)) - W["confirmations"]
     first_block = start_cursor if start_cursor is not None else safe0
@@ -134,8 +156,10 @@ def run(opts: Options) -> int:
     p = Printer(opts, view.address)
     exposure_table(view, before, p)
     if state0 != first_block:
-        p.line(f"  note: events are checked from block {first_block + 1}; state older than block {state0} "
-               "is not served by the free RPC, so state-based rules start there")
+        p.line(
+            f"  note: events are checked from block {first_block + 1}; state older than block {state0} "
+            "is not served by the free RPC, so state-based rules start there"
+        )
     vrisk = MR.VaultRisk(f, view, before, state0)
     MR.curve_table(p.line, vrisk.risks, vrisk.markets)
     aw = AD.AdminWatch(f, list(vrisk.markets), state0)
@@ -144,11 +168,22 @@ def run(opts: Options) -> int:
         p.alert(al)
     _cross_check(f, p, view, before, state0)
 
-    cursor_path = (state_dir / "replay.cursor") if opts.mode in ("record", "replay") else opts.out_dir / f"watch-{view.address}.cursor"
+    cursor_path = (
+        (state_dir / "replay.cursor")
+        if opts.mode in ("record", "replay")
+        else opts.out_dir / f"watch-{view.address}.cursor"
+    )
     if opts.mode in ("record", "replay") or opts.blocks:
         cursor_path.unlink(missing_ok=True)
-    poller = Poller(f, {**aw.kinds(), **view.kinds}, view.market_ids, cursor_path, W["confirmations"], W["max_range"],
-                    extra_filters=aw.filters())
+    poller = Poller(
+        f,
+        {**aw.kinds(), **view.kinds},
+        view.market_ids,
+        cursor_path,
+        W["confirmations"],
+        W["max_range"],
+        extra_filters=aw.filters(),
+    )
     if start_cursor is not None:
         poller.cursor = start_cursor
     elif poller.cursor is None:
@@ -184,12 +219,22 @@ def run(opts: Options) -> int:
         for w_ in poller.warnings:
             p.line(f"WARN     {w_}")
         if batch.gap:
-            p.alert(Alert("warn", batch.from_block, None, "Gap", f"Blocks {batch.gap[0]}–{batch.gap[1]} could not be read",
-                          "too old for the free RPC; events in them were not checked"))
+            p.alert(
+                Alert(
+                    "warn",
+                    batch.from_block,
+                    None,
+                    "Gap",
+                    f"Blocks {batch.gap[0]}–{batch.gap[1]} could not be read",
+                    "too old for the free RPC; events in them were not checked",
+                )
+            )
         safe = batch.head - W["confirmations"]
         state_block = max(batch.to_block, safe - W["state_window_blocks"])
-        if any(e.name in ("AddAdapter", "RemoveAdapter") for e in batch.events) or \
-                any(e.contract == "adapter" and e.name == "Allocate" and e.args["marketId"] not in view.market_ids for e in batch.events):
+        if any(e.name in ("AddAdapter", "RemoveAdapter") for e in batch.events) or any(
+            e.contract == "adapter" and e.name == "Allocate" and e.args["marketId"] not in view.market_ids
+            for e in batch.events
+        ):
             view = discover_vault(f, opts.vault, state_block)
             poller.kinds, poller.market_ids = view.kinds, view.market_ids
             p.line(f"structure changed: rediscovered at block {state_block}")
@@ -199,15 +244,19 @@ def run(opts: Options) -> int:
             aw = AD.AdminWatch(f, list(vrisk.markets), state_block)
             poller.kinds, poller.extra_filters = {**aw.kinds(), **view.kinds}, aw.filters()
         refresh = batch.to_block - last_check >= W["crosscheck_every_blocks"]
-        for al in assess_batch(batch.events, Ctx(view, before, after), dep, batch.to_block) + \
-                vrisk.step(f, batch.events, after, state_block, batch.to_block, refresh) + \
-                aw.step(f, batch.events, state_block, refresh):
+        for al in (
+            assess_batch(batch.events, Ctx(view, before, after), dep, batch.to_block)
+            + vrisk.step(f, batch.events, after, state_block, batch.to_block, refresh)
+            + aw.step(f, batch.events, state_block, refresh)
+        ):
             p.alert(al)
         poller.save(batch.to_block)
-        unit = 10 ** view.decimals
-        p.line(f"·        #{batch.from_block}–{batch.to_block}: {len(batch.events)} events"
-               + (f", {batch.unknown} undecoded" if batch.unknown else "")
-               + f" · share price {after.share_price:.6f} · plain withdrawal {after.withdrawable / unit:,.0f}")
+        unit = 10**view.decimals
+        p.line(
+            f"·        #{batch.from_block}–{batch.to_block}: {len(batch.events)} events"
+            + (f", {batch.unknown} undecoded" if batch.unknown else "")
+            + f" · share price {after.share_price:.6f} · plain withdrawal {after.withdrawable / unit:,.0f}"
+        )
         before = after
         if batch.to_block - last_check >= W["crosscheck_every_blocks"]:
             _cross_check(f, p, view, after, batch.to_block)

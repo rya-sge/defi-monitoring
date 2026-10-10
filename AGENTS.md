@@ -2,7 +2,17 @@
 
 > **Note — keep in sync:** `AGENTS.md` and `CLAUDE.md` must always be **identical**. Any edit to one must be applied verbatim to the other.
 
+> **Note — never commit:** an assistant must **never** run `git commit`, `git push`, `git tag`, `git merge`, `git rebase` or `git reset --hard` in this repository. Staging (`git add`) and read-only inspection (`git status`, `git diff`, `git log`) are fine; creating or moving history is the author's alone.
+>
+> Two reasons, one practical and one editorial. Commits here are GPG-signed (`commit.gpgsign = true`), and gpg cannot read a passphrase from a non-interactive session: the attempt fails with `gpg: cannot open '/dev/tty'` and leaves a half-staged index behind. And the author reviews the diff before it becomes history — a commit made for them removes the one checkpoint where a wrong change is still cheap to drop.
+>
+> So end a piece of work by leaving the tree ready and handing over the **one-line commit message** the note below asks for. If several commits are wanted — a style-only commit split from a behaviour commit, say — hand over the staging and commit commands for each, in order, and let the author run them.
+
+> **Note — be concise:** keep every summary, report and explanation short and direct. Lead with the result, state what changed and what it costs, stop. No preamble, no restating the request, no recap of steps the reader just watched, no closing paragraph that says the same thing again. Prose only where a table or a one-line command would not do.
+
 > **Note — commit messages:** After each group of modifications or each feature added, always provide a **one-line GitHub commit message** (Conventional-Commits style, e.g. `feat: ...`, `fix: ...`, `docs: ...`).
+>
+> **Every reply that changed a file ends with it** — the commit message is the last thing in the reply, nothing after it. A reply that touched the repository and does not end that way is unfinished.
 >
 > **Never put `!` in a commit message** — not as the breaking-change marker (`feat!: ...`), not anywhere else. In an interactive bash, `!` inside double quotes triggers history expansion, so `git commit -m "feat!: ..."` aborts with `bash: !: unrecognized history modifier`. Signal a breaking change with an uppercase `BREAKING CHANGE:` line in the commit body instead, and keep the subject line free of `!`.
 
@@ -72,6 +82,7 @@ riskdep/
 tests/                pytest, all offline (snapshot + recorded replays)
   test_watch_rules.py, test_watch_replay.py, test_borrower.py, test_watch_user_replay.py,
   test_graph.py, test_market_risk.py, test_admin.py, test_decide.py, test_propagate.py, test_demo_snapshot.py, test_fixes.py
+pyproject.toml        project metadata, dependencies, ruff and pytest configuration
 ```
 
 ## Other important files
@@ -85,21 +96,26 @@ tests/                pytest, all offline (snapshot + recorded replays)
 - `data/snapshot/` (analyze demo cache + `as_of.json`) and `data/replay/` (recorded watch ranges) — test fixtures; do not delete or regenerate casually.
 - `out/` — run outputs (reports, alert `.jsonl`, cursors); git-ignored.
 - `conftest.py` — puts the repo root on `sys.path` for tests.
+- `pyproject.toml` — project metadata, the runtime dependencies, the `dev` dependency group, and the ruff and pytest configuration.
+- `uv.lock` — the exact resolved version of every dependency; committed, because this is an application and not a library.
+- `.pre-commit-config.yaml` — the pre-commit hooks: `ruff check --fix`, then `ruff format`.
+- `.github/workflows/ci.yml` — CI on every push, two parallel jobs on Python 3.10: `checks` (`ruff check`) and `tests` (`pytest`).
 
 ## Dependencies (tested versions)
 
-Python 3.10.12 (requires ≥ 3.10). From `requirements.txt`, tested with: requests 2.25.1, numpy 2.1.1, networkx 2.8.8, eth-utils 5.3.1, eth-abi 5.2.0, pytest 7.4.4. The HTML outputs load Mermaid (report) and Cytoscape.js (graph) from a CDN.
+Python ≥ 3.10; CI runs the suite on 3.10, the floor `requires-python` in `pyproject.toml` declares. `uv.lock` is the source of truth for versions; it currently pins requests 2.34.2, numpy 2.5.3, networkx 3.7, eth-utils 6.0.0, eth-abi 6.0.0, eth-hash 0.8.0 with pycryptodome 3.24.0, and in the `dev` group pytest 9.1.1 and ruff 0.17.0. `eth-hash[pycryptodome]` is a runtime dependency in its own right: `eth-abi`/`eth-utils` pull `eth-hash` in without a keccak backend, and `abi.py` needs one to compute event signatures — without the extra, `pytest` fails at collection with `ImportError: None of these hashing backends are installed`. The HTML outputs load Mermaid (report) and Cytoscape.js (graph) from a CDN.
 
 ## Common commands
 
 ```bash
-pip install -r requirements.txt
-python3 -m pytest -q tests                         # 99 tests, offline
-python3 -m riskdep analyze --demo                  # cached snapshot, no network → out/report.html/.json
-python3 -m riskdep watch --replay                  # re-run the recorded vault range offline
-python3 -m riskdep watch --blocks 1000 --record    # live range, saved for --replay
-python3 -m riskdep watch --user <address>          # every Morpho position of an address, live
-python3 -m riskdep graph --example                 # out/graph.html + out/graph.json
+uv sync
+uv run pytest -q tests                                 # 99 tests, offline
+uv run python -m riskdep analyze --demo                # cached snapshot, no network → out/report.html/.json
+uv run python -m riskdep watch --replay                # re-run the recorded vault range offline
+uv run python -m riskdep watch --blocks 1000 --record  # live range, saved for --replay
+uv run python -m riskdep watch --user <address>        # every Morpho position of an address, live
+uv run python -m riskdep graph --example               # out/graph.html + out/graph.json
+uv run ruff format . && uv run ruff check .            # format and lint, 120 columns
 ```
 
 ## Conventions
@@ -109,4 +125,6 @@ python3 -m riskdep graph --example                 # out/graph.html + out/graph.
 - A new or changed alert gets its row in `docs/alert-runbook.md`.
 - Rule modules stay pure (no I/O); put fetching in the source/state modules.
 - A behaviour change that departs from a plan decision is recorded in that plan's decision table.
-- Package version is `riskdep/__init__.py` `__version__` (currently `0.1.0`); there is no `CHANGELOG.md` yet.
+- Leave format and lint to ruff, at 120 columns, in pre-commit and in CI; never mix a style-only commit with a behaviour change.
+- `uv.lock` is committed: change a dependency with `uv add` / `uv lock`, never by editing the lock by hand — CI runs `uv sync --locked` and fails if the lock has drifted from `pyproject.toml`.
+- Package version lives in `pyproject.toml` and must stay in step with `riskdep/__init__.py` `__version__` (currently `0.1.0`); nothing in the code reads `__version__`, only the docs cite it. There is no `CHANGELOG.md` yet.

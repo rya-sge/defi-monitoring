@@ -22,7 +22,7 @@ def test_borrower_positions_match_the_api():
     for mid, st in states.items():
         api = up.api_state[mid]
         assert st.collateral == api["collateral"]
-        assert abs(st.debt / api["borrowAssets"] - 1) < 1e-3          # interest since the API's last update
+        assert abs(st.debt / api["borrowAssets"] - 1) < 1e-3  # interest since the API's last update
         hf = st.hf(markets[mid].lltv)
         assert 1 < hf < 2 and st.apy is not None
 
@@ -43,6 +43,7 @@ def test_depositor_replay_uses_the_vault_rules(tmp_path, capsys):
 
 def test_hf_levels_are_validated(capsys):
     import pytest
+
     for bad in ("1.1,abc", "0.9", "1.3,1.2,1.1,1.05"):
         with pytest.raises(SystemExit):
             main(["watch", "--user", DEPOSITOR, "--hf", bad])

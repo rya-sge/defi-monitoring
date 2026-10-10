@@ -1,7 +1,5 @@
 """Admin surface rules and the poller's filter handling (plan 2026-10-10-admin-surface, US14, US15)."""
 
-from pathlib import Path
-
 import pytest
 
 from riskdep.abi import MORPHO_BLUE, Event
@@ -16,26 +14,39 @@ ZERO = "0x" + "00" * 20
 
 
 def contracts():
-    return {TOKEN: Contract(TOKEN, ["collateral of X/USDC"], mint_watch=True, is_collateral=True, symbol="X",
-                            impl="0x" + "01" * 20, owner="0x" + "02" * 20, total_supply=1_000),
-            ORACLE: Contract(ORACLE, ["feed of the oracle of X/USDC"], symbol="X / USD", aggregator="0x" + "03" * 20)}
+    return {
+        TOKEN: Contract(
+            TOKEN,
+            ["collateral of X/USDC"],
+            mint_watch=True,
+            is_collateral=True,
+            symbol="X",
+            impl="0x" + "01" * 20,
+            owner="0x" + "02" * 20,
+            total_supply=1_000,
+        ),
+        ORACLE: Contract(ORACLE, ["feed of the oracle of X/USDC"], symbol="X / USD", aggregator="0x" + "03" * 20),
+    }
 
 
 def ev(name, address=TOKEN, contract="admin", **args):
     return Event(name, contract, address, 10, "0x" + "ab" * 32, 0, args)
 
 
-@pytest.mark.parametrize("event,args,level", [
-    ("Upgraded", {"implementation": NEW}, "critical"),
-    ("BeaconUpgraded", {"beacon": NEW}, "critical"),
-    ("AdminChanged", {"previousAdmin": ZERO, "newAdmin": NEW}, "warn"),
-    ("OwnershipTransferred", {"previousOwner": ZERO, "newOwner": NEW}, "warn"),
-    ("Paused", {"account": NEW}, "critical"),
-    ("Unpaused", {"account": NEW}, "info"),
-    ("RoleGranted", {"role": "0x" + "00" * 32, "account": NEW, "sender": NEW}, "warn"),
-    ("RoleGranted", {"role": "0x" + "11" * 32, "account": NEW, "sender": NEW}, "info"),
-    ("RoleRevoked", {"role": "0x" + "00" * 32, "account": NEW, "sender": NEW}, "info"),
-])
+@pytest.mark.parametrize(
+    "event,args,level",
+    [
+        ("Upgraded", {"implementation": NEW}, "critical"),
+        ("BeaconUpgraded", {"beacon": NEW}, "critical"),
+        ("AdminChanged", {"previousAdmin": ZERO, "newAdmin": NEW}, "warn"),
+        ("OwnershipTransferred", {"previousOwner": ZERO, "newOwner": NEW}, "warn"),
+        ("Paused", {"account": NEW}, "critical"),
+        ("Unpaused", {"account": NEW}, "info"),
+        ("RoleGranted", {"role": "0x" + "00" * 32, "account": NEW, "sender": NEW}, "warn"),
+        ("RoleGranted", {"role": "0x" + "11" * 32, "account": NEW, "sender": NEW}, "info"),
+        ("RoleRevoked", {"role": "0x" + "00" * 32, "account": NEW, "sender": NEW}, "info"),
+    ],
+)
 def test_admin_events_on_a_collateral_token(event, args, level):
     al = assess_events([ev(event, **args)], contracts(), 10)
     assert len(al) == 1 and al[0].level == level
@@ -52,14 +63,20 @@ def test_feed_change_is_warn():
 
 
 def test_large_mint_is_critical_small_is_silent():
-    assert assess_events([ev("Transfer", **{"from": ZERO, "to": NEW, "value": 100})], contracts(), 10)[0].level == "critical"
+    assert (
+        assess_events([ev("Transfer", **{"from": ZERO, "to": NEW, "value": 100})], contracts(), 10)[0].level
+        == "critical"
+    )
     assert assess_events([ev("Transfer", **{"from": ZERO, "to": NEW, "value": 10})], contracts(), 10) == []
     assert assess_events([ev("Transfer", **{"from": NEW, "to": ZERO, "value": 900})], contracts(), 10) == []
 
 
 def test_blue_owner_actions():
-    al = assess_events([ev("SetOwner", MORPHO_BLUE, "blue", newOwner=NEW),
-                        ev("EnableIrm", MORPHO_BLUE, "blue", irm=NEW)], contracts(), 10)
+    al = assess_events(
+        [ev("SetOwner", MORPHO_BLUE, "blue", newOwner=NEW), ev("EnableIrm", MORPHO_BLUE, "blue", irm=NEW)],
+        contracts(),
+        10,
+    )
     assert [a.level for a in al] == ["warn", "info"]
 
 
@@ -101,8 +118,13 @@ class FakeF:
 def test_long_address_lists_are_split_and_optional_failures_tolerated(tmp_path):
     f = FakeF(fail_optional=True)
     addrs = [f"0x{i:040x}" for i in range(20)]
-    p = Poller(f, {"0x" + "ab" * 20: "vault"}, [], tmp_path / "c",
-               extra_filters=[{"address": addrs, "topics": ["0xopt"], "_optional": True}])
+    p = Poller(
+        f,
+        {"0x" + "ab" * 20: "vault"},
+        [],
+        tmp_path / "c",
+        extra_filters=[{"address": addrs, "topics": ["0xopt"], "_optional": True}],
+    )
     p._logs(1, 2)
     sent = [q for q in f.bodies if q.get("topics") == ["0xopt"]]
     assert len(sent) == 3 and all(len(q["address"]) <= MAX_ADDRESSES for q in sent)

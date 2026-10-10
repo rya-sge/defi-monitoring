@@ -13,9 +13,11 @@ All data comes from keyless public sources: the publicnode Ethereum RPC, the Mor
 ## Install
 
 ```bash
-pip install -r requirements.txt     # Python >= 3.10
-python3 -m pytest -q tests          # 99 tests, offline
+uv sync                             # Python >= 3.10
+uv run pytest -q tests              # 99 tests, offline
 ```
+
+Outside an activated virtualenv, prefix the `python3 -m riskdep …` commands below with `uv run`.
 
 ## watch: Morpho Vault V2 depositor
 

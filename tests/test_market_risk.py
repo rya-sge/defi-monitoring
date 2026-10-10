@@ -4,22 +4,22 @@ import pytest
 
 from riskdep.market_risk import MarketInfo, Tracker, assess_curves, assess_vault_bad_debt, value
 
-E6 = 10 ** 6
+E6 = 10**6
 M = "0x" + "11" * 32
 INFO = MarketInfo(M, 0.9, 6, "USDC", "X/USDC (LLTV 90.0%)")
-PRICE = 10 ** 36 // 10 ** 12          # 1 collateral unit (18 decimals) = 1 USDC (6 decimals)
-TOTALS = (1_000 * E6, 1_000 * E6 * 10 ** 6)   # borrow assets, borrow shares: 1 share-unit = 1e-6 asset
+PRICE = 10**36 // 10**12  # 1 collateral unit (18 decimals) = 1 USDC (6 decimals)
+TOTALS = (1_000 * E6, 1_000 * E6 * 10**6)  # borrow assets, borrow shares: 1 share-unit = 1e-6 asset
 
 
 def pos(collateral_usdc: float, debt_usdc: float) -> tuple[int, int]:
-    return int(collateral_usdc * 10 ** 18), int(debt_usdc * E6 * 10 ** 6)
+    return int(collateral_usdc * 10**18), int(debt_usdc * E6 * 10**6)
 
 
 def test_value_counts_liquidatable_and_unrealised_bad_debt():
     positions = {
-        "a": pos(100, 80),     # HF 1.125: safe now, liquidatable after a 20 % fall
-        "b": pos(100, 95),     # HF 0.947: liquidatable now, covered (100 / LIF ≥ 95)
-        "c": pos(90, 100),     # underwater: bad debt 100 − 90 / LIF
+        "a": pos(100, 80),  # HF 1.125: safe now, liquidatable after a 20 % fall
+        "b": pos(100, 95),  # HF 0.947: liquidatable now, covered (100 / LIF ≥ 95)
+        "c": pos(90, 100),  # underwater: bad debt 100 − 90 / LIF
     }
     r = value(positions, TOTALS, PRICE, INFO)
     lif = INFO.lif

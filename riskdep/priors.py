@@ -6,7 +6,6 @@ Severity and market (non-exploit) events: registry.json, each with its basis (D1
 
 from __future__ import annotations
 
-import time
 from dataclasses import dataclass
 
 from . import clock
@@ -16,11 +15,11 @@ from .discover import REGISTRY, Position
 
 @dataclass
 class Prior:
-    event: str          # id of the event, e.g. "issuer_depeg"
-    node: str           # graph node it hits
-    layer: str          # human label
+    event: str  # id of the event, e.g. "issuer_depeg"
+    node: str  # graph node it hits
+    layer: str  # human label
     p_year: float
-    a: float            # Beta severity
+    a: float  # Beta severity
     b: float
     basis: str
     recovery: float = 0.0
@@ -65,10 +64,18 @@ def hack_stats(f: S.Fetcher) -> dict:
         tier_h[_tier(p.get("tvl"))] += 1
     yrs = cfg["years"]
     overall = sum(cat_h.values()) / (sum(cat_n.values()) * yrs)
-    return {"years": yrs, "hacks": hacks, "protocols": protocols,
-            "cat_n": cat_n, "cat_h": cat_h, "tier_n": tier_n, "tier_h": tier_h, "overall": overall,
-            "tier_rate": {t: tier_h[t] / (tier_n[t] * yrs) if tier_n[t] else overall for t in tier_n},
-            "cat_rate": {c: cat_h.get(c, 0) / (n * yrs) for c, n in cat_n.items()}}
+    return {
+        "years": yrs,
+        "hacks": hacks,
+        "protocols": protocols,
+        "cat_n": cat_n,
+        "cat_h": cat_h,
+        "tier_n": tier_n,
+        "tier_h": tier_h,
+        "overall": overall,
+        "tier_rate": {t: tier_h[t] / (tier_n[t] * yrs) if tier_n[t] else overall for t in tier_n},
+        "cat_rate": {c: cat_h.get(c, 0) / (n * yrs) for c, n in cat_n.items()},
+    }
 
 
 def _protocol(st: dict, slug: str) -> dict | None:
@@ -102,10 +109,12 @@ def exploit_p_year(st: dict, slug: str | None, category: str) -> tuple[float, st
     mult = 1.0 if cat_rate is None else min(hi, max(lo, cat_rate / st["overall"]))
     factor, age = _age_factor(proto.get("listedAt") if proto else None)
     p = min(cfg["cap"], max(cfg["floor"], base * mult * factor))
-    note = (f"tier {TIER_LABEL[tier]}: {st['tier_h'][tier]} hacks / {st['tier_n'][tier]} protocols / {st['years']}y "
-            f"= {base:.2%}/yr; × category '{category}' {mult:.2f} "
-            f"({st['cat_h'].get(category, 0)} hacks / {st['cat_n'].get(category, 0)} protocols); "
-            f"× age {factor} ({age}) → {p:.2%}/yr")
+    note = (
+        f"tier {TIER_LABEL[tier]}: {st['tier_h'][tier]} hacks / {st['tier_n'][tier]} protocols / {st['years']}y "
+        f"= {base:.2%}/yr; × category '{category}' {mult:.2f} "
+        f"({st['cat_h'].get(category, 0)} hacks / {st['cat_n'].get(category, 0)} protocols); "
+        f"× age {factor} ({age}) → {p:.2%}/yr"
+    )
     if not proto:
         note = f"protocol '{slug}' not found on DefiLlama, smallest tier assumed; " + note
     return p, note
@@ -117,31 +126,77 @@ def layer_priors(f: S.Fetcher, pos: Position) -> list[Prior]:
     out: list[Prior] = []
 
     ch = REGISTRY["chain"]["ethereum"]
-    out.append(Prior("chain", "chain:ethereum", "Ethereum (settlement)", ch["p_year"],
-                     ch["severity"]["a"], ch["severity"]["b"], ch["basis"]))
+    out.append(
+        Prior(
+            "chain",
+            "chain:ethereum",
+            "Ethereum (settlement)",
+            ch["p_year"],
+            ch["severity"]["a"],
+            ch["severity"]["b"],
+            ch["basis"],
+        )
+    )
 
     und = pos.underlying_address
     reg = REGISTRY["issuers"].get(und) or REGISTRY["unknown_issuer"]
     name = f"{pos.underlying_symbol} issuer" + (f" ({reg['issuer']})" if "issuer" in reg else "")
     dp = reg["depeg"]
-    out.append(Prior("issuer_depeg", f"issuer:{und}", f"{name}: depeg", dp["p_year"],
-                     dp["severity"]["a"], dp["severity"]["b"], dp["basis"], recovery=dp["recovery"]))
+    out.append(
+        Prior(
+            "issuer_depeg",
+            f"issuer:{und}",
+            f"{name}: depeg",
+            dp["p_year"],
+            dp["severity"]["a"],
+            dp["severity"]["b"],
+            dp["basis"],
+            recovery=dp["recovery"],
+        )
+    )
     p, note = exploit_p_year(st, reg.get("llama_slug"), reg.get("category", "Yield"))
-    out.append(Prior("issuer_hack", f"issuer:{und}", f"{name}: exploit / loss of backing", p,
-                     reg["hack"]["severity"]["a"], reg["hack"]["severity"]["b"], f"{note}. Severity: {reg['hack']['basis']}"))
+    out.append(
+        Prior(
+            "issuer_hack",
+            f"issuer:{und}",
+            f"{name}: exploit / loss of backing",
+            p,
+            reg["hack"]["severity"]["a"],
+            reg["hack"]["severity"]["b"],
+            f"{note}. Severity: {reg['hack']['basis']}",
+        )
+    )
 
     pr = REGISTRY["protocols"]["pendle"]
     p, note = exploit_p_year(st, pr["llama_slug"], pr["category"])
-    out.append(Prior("amm", f"amm:{pos.pendle_market}", "Pendle market / SY adapter exploit", p,
-                     pr["severity"]["a"], pr["severity"]["b"], f"{note}. Severity: {pr['basis']}"))
+    out.append(
+        Prior(
+            "amm",
+            f"amm:{pos.pendle_market}",
+            "Pendle market / SY adapter exploit",
+            p,
+            pr["severity"]["a"],
+            pr["severity"]["b"],
+            f"{note}. Severity: {pr['basis']}",
+        )
+    )
 
     lend = [n for n, a in g.nodes(data=True) if a["kind"] == "lending"]
     orc = [n for n, a in g.nodes(data=True) if a["kind"] == "oracle"]
     if lend:
         mr = REGISTRY["protocols"]["morpho-blue"]
         p, note = exploit_p_year(st, mr["llama_slug"], mr["category"])
-        out.append(Prior("lending", lend[0], "Morpho Blue exploit", p, mr["severity"]["a"], mr["severity"]["b"],
-                         f"{note}. Severity: {mr['basis']}"))
+        out.append(
+            Prior(
+                "lending",
+                lend[0],
+                "Morpho Blue exploit",
+                p,
+                mr["severity"]["a"],
+                mr["severity"]["b"],
+                f"{note}. Severity: {mr['basis']}",
+            )
+        )
     if orc:
         o = REGISTRY["oracle"]
         n_oracle = sum(1 for h in st["hacks"] if h.get("technique") in o["techniques"])
@@ -150,8 +205,17 @@ def layer_priors(f: S.Fetcher, pos: Position) -> list[Prior]:
         unverified = "unverified" in g.nodes[orc[0]]["evidence"]
         factor = o["unverified_factor"] if unverified else 1.0
         p = min(REGISTRY["frequency"]["cap"], max(o["p_year_floor"], base * factor))
-        out.append(Prior("oracle", orc[0], "Oracle misprice / misconfiguration", p, o["severity"]["a"], o["severity"]["b"],
-                         f"{n_oracle} misconfigured/stale-oracle hacks / {users} Lending+CDP protocols / {st['years']}y "
-                         f"= {base:.2%}/yr; × {factor} ({'implementation unverified' if unverified else 'verified'}) "
-                         f"→ {p:.2%}/yr. Severity: {o['basis']}"))
+        out.append(
+            Prior(
+                "oracle",
+                orc[0],
+                "Oracle misprice / misconfiguration",
+                p,
+                o["severity"]["a"],
+                o["severity"]["b"],
+                f"{n_oracle} misconfigured/stale-oracle hacks / {users} Lending+CDP protocols / {st['years']}y "
+                f"= {base:.2%}/yr; × {factor} ({'implementation unverified' if unverified else 'verified'}) "
+                f"→ {p:.2%}/yr. Severity: {o['basis']}",
+            )
+        )
     return out
