@@ -157,6 +157,8 @@ Two pieces are deliberately *not* re-implemented: the vault's accrual (it reads 
 
 ### 4.2 Probabilities: base rates and Monte Carlo instead of a breakeven probability
 
+Detailed, with a worked example on the demo position and a learn section: `docs/scenarios-and-breakeven.md`.
+
 **What was proposed.** Team 2 warns that probabilities are "the weakest part of any such model" and proposes the **breakeven probability** p\* = exit cost ÷ L(severe case): exit if you believe the severe case is more likely than p\*. Team 1's Claude thread asks for named scenarios first and Monte Carlo later; its ChatGPT thread lists the trade-off: deterministic is explainable, Monte Carlo gives distributions but rests on hard-to-calibrate assumptions.
 
 **What the implementation does.** `analyze` estimates a yearly probability per layer from DefiLlama's hack record (by protocol size and category) and from registry entries for depegs, runs 20,000 simulated months, and decides from the expected loss, the CVaR 99 % and the exit cost. Its line "exit would only pay if incident probabilities were N× the estimates" (`risk_multiple_to_exit`) is a global version of Team 2's idea: how wrong the probabilities must be to change the decision.

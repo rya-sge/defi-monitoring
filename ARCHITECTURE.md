@@ -257,6 +257,7 @@ The full list, with impact and effort, is §5 of `ANALYSIS_MONITORING.md`.
 | `README.md` | how to run each mode, the alert trigger tables |
 | `ANALYSIS_MONITORING.md` | the risk model (graph, impact, monitoring, execution) and the gaps |
 | `docs/how-risk-is-computed.md` | the `analyze` model, step by step |
+| `docs/scenarios-and-breakeven.md` | scenarios and breakeven probabilities as a complement to the Monte Carlo, with a learn section |
 | `docs/how-a-block-is-analysed.md` | one watch batch, with a real transaction |
 | `docs/alert-runbook.md` | what each alert means and what to do |
 | `docs/glossary.md` | the terms |
