@@ -6,6 +6,8 @@ Risk tooling for DeFi positions on Ethereum, built with the charrette loop: desi
 - **`watch`**: follows a **Morpho Vault V2** block by block and alerts on every transaction that changes a depositor's exposure, losses or ability to exit. Plan: `plan/2026-10-10-morpho-vault-v2-watcher.plan.md`.
 - **`watch --user`**: finds every Morpho Blue borrow and Vault V2 deposit of an address and follows them together: health factor, liquidation, actions on your behalf, borrow rate. Plan: `plan/2026-10-10-morpho-user-watcher.plan.md`.
 
+How the system is built (components, data sources, data flow, state, testing): `ARCHITECTURE.md`.
+
 All data comes from keyless public sources: the publicnode Ethereum RPC, the Morpho and Pendle APIs, and DefiLlama.
 
 ## Install
