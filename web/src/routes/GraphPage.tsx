@@ -46,11 +46,9 @@ export function GraphPage() {
   return (
     <div className="graph-layout">
       <aside className="graph-aside">
-        <h1 style={{ fontSize: '1.05rem' }}>{data.title}</h1>
+        <h1>{data.title}</h1>
         {/* The subtitle is the provenance line: chain, block, how it was read. */}
-        <p className="muted" style={{ fontSize: '0.84rem' }}>
-          {data.subtitle}
-        </p>
+        <p className="block-sub">{data.subtitle}</p>
 
         <h2>Node types</h2>
         <div className="legend">
@@ -69,7 +67,7 @@ export function GraphPage() {
             </label>
           ))}
         </div>
-        <p className="muted" style={{ fontSize: '0.8rem' }}>
+        <p className="block-sub">
           Shape repeats the colour: rounded box Actor, ellipse Pool, tag Asset, diamond Oracle,
           triangle Admin, square External. Edge width grows with the amount carried (log scale, in
           the edge's token). Click a node to isolate its neighbours.
@@ -85,7 +83,6 @@ export function GraphPage() {
           placeholder="symbol, address, market id…"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          style={{ width: '100%' }}
         />
         <div className="graph-actions">
           <button type="button" onClick={() => setFitNonce((n) => n + 1)}>
@@ -120,14 +117,14 @@ function SelectionPanel({ selection }: { selection: GraphSelection }) {
     const { node, incoming, outgoing } = selection;
     return (
       <div>
-        <p style={{ margin: '0 0 8px' }}>
+        <p>
           <b>{node.label}</b> <span className="muted">{node.kind}</span>
         </p>
         <DetailsTable details={node.details} />
         {outgoing.length > 0 ? (
           <>
-            <h3 style={{ margin: '14px 0 4px', fontSize: '0.8rem' }}>Outgoing</h3>
-            <ul className="reasons" style={{ fontSize: '0.82rem' }}>
+            <h3>Outgoing</h3>
+            <ul className="reasons">
               {outgoing.map((line) => (
                 <li key={`out-${line}`}>{line}</li>
               ))}
@@ -136,8 +133,8 @@ function SelectionPanel({ selection }: { selection: GraphSelection }) {
         ) : null}
         {incoming.length > 0 ? (
           <>
-            <h3 style={{ margin: '14px 0 4px', fontSize: '0.8rem' }}>Incoming</h3>
-            <ul className="reasons" style={{ fontSize: '0.82rem' }}>
+            <h3>Incoming</h3>
+            <ul className="reasons">
               {incoming.map((line) => (
                 <li key={`in-${line}`}>{line}</li>
               ))}
@@ -152,7 +149,7 @@ function SelectionPanel({ selection }: { selection: GraphSelection }) {
   const amount = edgeLabel(edge.amount, edge.unit);
   return (
     <div>
-      <p style={{ margin: '0 0 8px' }}>
+      <p>
         <b>{sourceLabel}</b> <span className="muted">— {edge.rel} →</span> <b>{targetLabel}</b>
       </p>
       <DetailsTable details={{ ...(amount ? { amount } : {}), ...edge.details }} />

@@ -2,8 +2,8 @@ import { useMemo } from 'react';
 import {
   Bar,
   BarChart,
-  Cell,
   CartesianGrid,
+  Cell,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -12,8 +12,8 @@ import {
 import type { TooltipContentProps } from 'recharts';
 import { useReport } from '../api/hooks';
 import { ErrorState, Loading } from '../components/States';
-import { KpiRow } from '../components/Kpi';
-import type { KpiProps } from '../components/Kpi';
+import { StatRow } from '../components/Stat';
+import type { StatProps } from '../components/Stat';
 import type { Report, SimulationLayer } from '../api/types';
 import { compactUsd, days, num, percent, usd } from '../lib/format';
 
@@ -30,17 +30,17 @@ export function PositionPage() {
 function PositionView({ report }: { report: Report }) {
   const { position, decision, simulation, exit_quote, oracle_sensitivity } = report;
 
-  const kpis = useMemo<KpiProps[]>(() => {
+  const stats = useMemo<StatProps[]>(() => {
     const hf = position.health_factor;
-    const hfTone: KpiProps['tone'] =
+    const hfTone: StatProps['tone'] =
       hf == null ? 'neutral' : hf <= 1.02 ? 'critical' : hf <= 1.1 ? 'warn' : 'ok';
-    const dropTone: KpiProps['tone'] =
+    const dropTone: StatProps['tone'] =
       position.liquidation_drop == null
         ? 'neutral'
         : position.liquidation_drop < decision.stress_drop
           ? 'warn'
           : 'ok';
-    const netTone: KpiProps['tone'] = decision.net_stay_usd < 0 ? 'critical' : 'ok';
+    const netTone: StatProps['tone'] = decision.net_stay_usd < 0 ? 'critical' : 'ok';
 
     return [
       {
@@ -82,40 +82,38 @@ function PositionView({ report }: { report: Report }) {
   return (
     <div className="page">
       <h1>{position.label}</h1>
-      <p className="muted">
+      <p className="lede">
         {position.collateral_symbol} collateral against {position.loan_symbol} · oracle{' '}
         <b>{position.oracle_mode}</b>
         {position.oracle_ambiguous ? ' (ambiguous)' : ''} · report generated {report.generated} from
         data as of {report.data_as_of} ({report.mode})
       </p>
 
-      <h2>Verdict</h2>
       <section className="verdict" data-verdict={decision.verdict}>
+        <h2 className="visually-hidden">Verdict</h2>
         <div className="verdict-badge">{decision.verdict}</div>
-        <div>
-          <p className="verdict-headline">{decision.headline}</p>
-          <ul className="reasons">
-            {decision.reasons.map((reason) => (
-              <li key={reason}>{reason}</li>
-            ))}
-          </ul>
-        </div>
+        <p className="verdict-headline">{decision.headline}</p>
+        <ul className="reasons">
+          {decision.reasons.map((reason) => (
+            <li key={reason}>{reason}</li>
+          ))}
+        </ul>
       </section>
 
       <h2>Position</h2>
-      <KpiRow items={kpis} />
+      <StatRow items={stats} />
 
       <h2>Where the expected loss comes from</h2>
-      <div className="charts">
+      <div className="blocks">
         <LayerContributionChart layers={simulation.layers} total={simulation.expected_loss_usd} />
         <TailChart report={report} />
       </div>
 
       <h2>Exit and sensitivity</h2>
-      <div className="charts">
-        <div className="chart-card">
+      <div className="blocks">
+        <div className="block">
           <h3>A full exit now</h3>
-          <p className="chart-sub">{exit_quote.source}</p>
+          <p className="block-sub">{exit_quote.source}</p>
           <table className="detail-table">
             <tbody>
               <tr>
@@ -142,9 +140,9 @@ function PositionView({ report }: { report: Report }) {
           </table>
         </div>
 
-        <div className="chart-card">
+        <div className="block">
           <h3>If the oracle were read differently</h3>
-          <p className="chart-sub">
+          <p className="block-sub">
             {oracle_sensitivity
               ? `The inference is ambiguous; this is the verdict under the ${oracle_sensitivity.oracle_mode} reading.`
               : 'The oracle reading is unambiguous, so no alternative was computed.'}
@@ -216,13 +214,10 @@ function LayerContributionChart({ layers, total }: { layers: SimulationLayer[]; 
     [layers],
   );
 
-  // One hue per layer, from the graph palette, so a layer keeps its colour.
-  const palette = ['#0072B2', '#CC79A7', '#009E73', '#D55E00', '#E69F00', '#999999'];
-
   return (
-    <div className="chart-card">
+    <div className="block">
       <h3>Contribution to the expected loss</h3>
-      <p className="chart-sub">
+      <p className="block-sub">
         {usd(total)} over the horizon, split across the layers that can cause it.
       </p>
       <ResponsiveContainer width="100%" height={40 + data.length * 44}>
@@ -239,18 +234,14 @@ function LayerContributionChart({ layers, total }: { layers: SimulationLayer[]; 
             dataKey="name"
             stroke="var(--muted)"
             fontSize={11}
-            width={168}
-            tickFormatter={(v: string) => (v.length > 30 ? `${v.slice(0, 29)}…` : v)}
+            width={196}
+            tickFormatter={(v: string) => (v.length > 36 ? `${v.slice(0, 35)}…` : v)}
           />
           <Tooltip
             content={(props) => <LayerTooltip {...props} />}
             cursor={{ fill: 'var(--line)', opacity: 0.3 }}
           />
-          <Bar dataKey="contribution" radius={[0, 3, 3, 0]} isAnimationActive={false}>
-            {data.map((datum, index) => (
-              <Cell key={datum.name} fill={palette[index % palette.length]} />
-            ))}
-          </Bar>
+          <Bar dataKey="contribution" fill="var(--muted)" isAnimationActive={false} />
         </BarChart>
       </ResponsiveContainer>
     </div>
@@ -287,9 +278,9 @@ function TailChart({ report }: { report: Report }) {
   ];
 
   return (
-    <div className="chart-card">
+    <div className="block">
       <h3>Tail measures</h3>
-      <p className="chart-sub">
+      <p className="block-sub">
         {simulation.n.toLocaleString('en-US')} paths over {simulation.horizon_days} days. Equity is{' '}
         {usd(position.equity_usd)}; P(any loss) {percent(simulation.p_any_loss)}, P(liquidation){' '}
         {percent(simulation.p_liquidation)}.
@@ -308,11 +299,11 @@ function TailChart({ report }: { report: Report }) {
             content={(props) => <TailTooltip {...props} equity={position.equity_usd} />}
             cursor={{ fill: 'var(--line)', opacity: 0.3 }}
           />
-          <Bar dataKey="value" radius={[3, 3, 0, 0]} isAnimationActive={false}>
+          <Bar dataKey="value" isAnimationActive={false}>
             {data.map((datum) => (
               <Cell
                 key={datum.name}
-                fill={datum.value >= position.equity_usd ? 'var(--critical)' : 'var(--kind-actor)'}
+                fill={datum.value >= position.equity_usd ? 'var(--critical)' : 'var(--muted)'}
               />
             ))}
           </Bar>

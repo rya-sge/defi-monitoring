@@ -119,8 +119,8 @@ pyproject.toml        project metadata, dependencies, ruff and pytest configurat
 - `openapi.json` — the committed front/back contract, generated from `riskdep/api/`; CI fails if it has drifted.
 - `pyproject.toml` — project metadata, the runtime dependencies, the `dev` dependency group, and the ruff and pytest configuration.
 - `uv.lock` — the exact resolved version of every dependency; committed, because this is an application and not a library.
-- `.pre-commit-config.yaml` — the pre-commit hooks: `ruff check --fix`, then `ruff format`.
-- `.github/workflows/ci.yml` — CI on every push, two parallel jobs on Python 3.10: `checks` (`ruff check`) and `tests` (`pytest`).
+- `.pre-commit-config.yaml` — the pre-commit hooks: `ruff check --fix`, then `ruff format`, then `prettier --write` over `web/` only. Prettier is pinned to the version in `web/pnpm-lock.yaml` and runs in pre-commit's own node environment, so the hook does not need `web/node_modules`; its `exclude` repeats `web/.prettierignore`, which prettier cannot find from the repo root.
+- `.github/workflows/ci.yml` — CI on every push, three parallel jobs: `checks` (`ruff check` plus the `openapi.json` drift check) and `tests` (`pytest`) on Python 3.10, and `web` (`pnpm lint && pnpm build`) on Node 22 with pnpm 11.
 
 ## The web frontend (`web/`)
 
@@ -154,7 +154,7 @@ web/src/
 - **Routes are lazy because Recharts and Cytoscape are heavy and no page needs both.** A new heavy dependency belongs behind `lazyRouteComponent`, not in the shell.
 - **`GraphCanvas` is the one imperative component.** Cytoscape is built in an effect, `onSelect` is held in a ref so the tap handlers bind once, and the CSS tokens are read with `getComputedStyle` at mount — so a runtime theme switch would need a re-init, which is why `data-theme` has no toggle yet.
 
-**Tooling.** TypeScript is strict with `noUnusedLocals`/`noUnusedParameters`, split into `tsconfig.app.json` (src) and `tsconfig.node.json` (vite config); eslint runs `recommendedTypeChecked` over both projects and makes `no-explicit-any` and `consistent-type-imports` errors. Prettier is 100 columns, single quotes, trailing commas — **not** ruff's 120, and the two should not be unified; the generated fixtures are in `.prettierignore`. There are no frontend tests and CI does not touch `web/`, so `pnpm lint && pnpm build` (the build type-checks with `tsc -b`) is the only gate — run both before handing work over.
+**Tooling.** TypeScript is strict with `noUnusedLocals`/`noUnusedParameters`, split into `tsconfig.app.json` (src) and `tsconfig.node.json` (vite config); eslint runs `recommendedTypeChecked` over both projects and makes `no-explicit-any` and `consistent-type-imports` errors. Prettier is 100 columns, single quotes, trailing commas — **not** ruff's 120, and the two should not be unified; the generated fixtures are in `.prettierignore`. There are no frontend tests, so `pnpm lint && pnpm build` (the build type-checks with `tsc -b`) is the whole gate — the `web` CI job runs exactly that, and the pre-commit `prettier` hook formats `web/` before it gets there. Run both before handing work over.
 
 ## Dependencies (tested versions)
 

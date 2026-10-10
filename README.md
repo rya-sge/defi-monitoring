@@ -131,7 +131,7 @@ uv run python -c "import json,riskdep.api as a; print(json.dumps(a.app.openapi()
 | `GET /api/targets` | one entry per `out/watch-*.jsonl`: the watch targets with alerts |
 | `GET /api/alerts?target=&since=&level=&limit=` | alerts after a block cursor; pass the returned `cursor` back as `since` |
 
-**Limits.** Read-only: no wallet, no transaction, no form to launch a run — the Position and Graph pages read whatever the backend serves for the default position, and the Alerts page passes only `min_level` (the `target` filter and `POST /api/analyze` are typed and wired in the client, but no page offers them). Dark mode follows the system; the `data-theme` override the stylesheet supports has no toggle. Alerts arrive by polling `/api/alerts` every 3 s with a block cursor, not over a socket; a failed poll is surfaced and retried on the next tick. No frontend tests, and CI does not build `web/`.
+**Limits.** Read-only: no wallet, no transaction, no form to launch a run — the Position and Graph pages read whatever the backend serves for the default position, and the Alerts page passes only `min_level` (the `target` filter and `POST /api/analyze` are typed and wired in the client, but no page offers them). Dark mode follows the system; the `data-theme` override the stylesheet supports has no toggle. Alerts arrive by polling `/api/alerts` every 3 s with a block cursor, not over a socket; a failed poll is surfaced and retried on the next tick. No frontend tests; CI does build `web/` and checks its formatting (`pnpm lint && pnpm build`).
 
 ## Layout
 

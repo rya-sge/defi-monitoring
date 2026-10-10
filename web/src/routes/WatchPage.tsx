@@ -16,7 +16,7 @@ const STATUS_LABEL: Record<StreamStatus, string> = {
 
 const STATUS_COLOR: Record<StreamStatus, string> = {
   connecting: 'var(--muted)',
-  open: 'var(--ok)',
+  open: 'var(--fg)',
   closed: 'var(--muted)',
   error: 'var(--warn)',
 };
@@ -27,7 +27,7 @@ export function WatchPage() {
   return (
     <div className="page">
       <h1>Alerts</h1>
-      <p className="muted">
+      <p className="lede">
         Server-Sent Events from <code className="mono">/api/watch/stream</code>, newest first.{' '}
         {USE_MOCKS
           ? 'Mock mode: a fixed set of alerts is replayed every 1.5 s, then the stream ends.'
@@ -80,7 +80,7 @@ function WatchStream({
 
   return (
     <>
-      <div className="level-counts" style={{ marginTop: 18 }}>
+      <div className="level-counts">
         {ALERT_LEVELS.map((level) => (
           <div className="level-count" key={level} data-level={level}>
             <b>{counts[level]}</b>
@@ -90,13 +90,10 @@ function WatchStream({
       </div>
 
       <div className="watch-toolbar">
-        <span className="chip" style={{ color: STATUS_COLOR[status] }}>
-          <span className="dot" />
+        <span className="watch-status" style={{ color: STATUS_COLOR[status] }}>
           {STATUS_LABEL[status]}
         </span>
-        <label htmlFor="min-level" className="muted">
-          Minimum level
-        </label>
+        <label htmlFor="min-level">Minimum level</label>
         <select
           id="min-level"
           value={minLevel}
@@ -174,7 +171,7 @@ function AlertRow({
             <span className="muted">no tx</span>
           )}
         </span>
-        <span className="chip">{alert.event}</span>
+        <span className="mono">{alert.event}</span>
         {alert.depositor_impact != null ? (
           <span
             className="alert-impact"
@@ -189,16 +186,11 @@ function AlertRow({
       <div className="alert-detail">{alert.detail}</div>
       {hasData ? (
         <div>
-          <button
-            type="button"
-            onClick={onToggle}
-            aria-expanded={expanded}
-            style={{ padding: '2px 8px', fontSize: '0.78rem' }}
-          >
+          <button type="button" onClick={onToggle} aria-expanded={expanded}>
             {expanded ? 'Hide data' : 'Show data'}
           </button>
           {expanded ? (
-            <div style={{ marginTop: 8 }}>
+            <div className="alert-data">
               <DetailsTable details={alert.data} />
             </div>
           ) : null}

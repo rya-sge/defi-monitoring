@@ -1,69 +1,59 @@
-/* Palette copied from riskdep/graph.py so the web UI and the CLI's standalone
-   HTML outputs look like one tool. Light is the base; dark overrides tokens. */
+/* One ground, one ink, one rule. Colour is reserved for severity — info, warn,
+   critical, ok — so that where colour appears, it means "act on this". The
+   categorical palette of the dependency graph lives in lib/graph.ts, mirrored
+   from riskdep/graph.py: there, colour is data, not chrome. */
 :root {
   --bg: #ffffff;
-  --fg: #1f2328;
-  --muted: #59636e;
-  --panel: #f6f8fa;
-  --line: #d1d9e0;
-  --edge: #8c959f;
-
-  --kind-actor: #0072b2;
-  --kind-pool: #009e73;
-  --kind-asset: #e69f00;
-  --kind-oracle: #cc79a7;
-  --kind-admin: #d55e00;
-  --kind-external: #999999;
+  --fg: #15181d;
+  --muted: #5c636d;
+  --line: #d9dce1;
+  --edge: #9aa1a9;
 
   --info: #0072b2;
-  --warn: #b26a00;
+  --warn: #9c5c00;
   --critical: #c5221f;
   --ok: #0f7b4f;
 
-  --info-bg: #0072b215;
-  --warn-bg: #b26a0015;
-  --critical-bg: #c5221f15;
+  /* Proximity scale. The step between a label and its value is visibly
+     smaller than the step between two groups; that difference is the layout. */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 14px;
+  --s4: 22px;
+  --s5: 36px;
+  --s6: 56px;
 
-  --radius: 8px;
+  --measure: 74ch;
   --mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  --sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --bg: #0d1117;
-    --fg: #e6edf3;
-    --muted: #9198a1;
-    --panel: #151b23;
-    --line: #3d444d;
+    --bg: #0e1116;
+    --fg: #e7ecf2;
+    --muted: #949ba5;
+    --line: #2f353d;
     --edge: #6e7681;
 
     --info: #58a6ff;
     --warn: #e3b341;
     --critical: #ff7b72;
     --ok: #3fb950;
-
-    --info-bg: #58a6ff18;
-    --warn-bg: #e3b34118;
-    --critical-bg: #ff7b7218;
   }
 }
 
 :root[data-theme='dark'] {
-  --bg: #0d1117;
-  --fg: #e6edf3;
-  --muted: #9198a1;
-  --panel: #151b23;
-  --line: #3d444d;
+  --bg: #0e1116;
+  --fg: #e7ecf2;
+  --muted: #949ba5;
+  --line: #2f353d;
   --edge: #6e7681;
 
   --info: #58a6ff;
   --warn: #e3b341;
   --critical: #ff7b72;
   --ok: #3fb950;
-
-  --info-bg: #58a6ff18;
-  --warn-bg: #e3b34118;
-  --critical-bg: #ff7b7218;
 }
 
 * {
@@ -80,20 +70,32 @@ body,
 body {
   background: var(--bg);
   color: var(--fg);
-  font:
-    15px/1.5 system-ui,
-    -apple-system,
-    'Segoe UI',
-    sans-serif;
+  font: 15px/1.55 var(--sans);
   -webkit-font-smoothing: antialiased;
+  caret-color: var(--fg);
+  accent-color: var(--fg);
+  scrollbar-color: var(--edge) transparent;
 }
 
+::selection {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+/* Links stay ink; the underline is the affordance. Spending a hue here would
+   compete with severity, which is the only thing colour is for. */
 a {
-  color: var(--info);
+  color: inherit;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+a:hover {
+  text-decoration-thickness: 2px;
 }
 
 :focus-visible {
-  outline: 2px solid var(--info);
+  outline: 2px solid var(--fg);
   outline-offset: 2px;
 }
 
@@ -106,7 +108,33 @@ a {
   white-space: nowrap;
 }
 
-/* ------------------------------------------------------------------- shell */
+/* --------------------------------------------------------------- headings */
+
+h1 {
+  font-size: 1.5rem;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  margin: 0 0 var(--s1);
+  max-width: var(--measure);
+}
+
+/* More space above than below: the heading belongs to what follows it. */
+h2 {
+  font-size: 1rem;
+  margin: var(--s6) 0 var(--s3);
+}
+
+h3 {
+  font-size: 0.92rem;
+  margin: 0 0 var(--s1);
+}
+
+p {
+  margin: 0 0 var(--s3);
+  max-width: var(--measure);
+}
+
+/* ------------------------------------------------------------------ shell */
 
 .shell {
   display: flex;
@@ -117,11 +145,11 @@ a {
 .topbar {
   display: flex;
   align-items: baseline;
-  gap: 24px;
+  gap: var(--s4);
   flex-wrap: wrap;
-  padding: 12px 20px;
+  padding: var(--s3) var(--s4);
   border-bottom: 1px solid var(--line);
-  background: var(--panel);
+  background: var(--bg);
   position: sticky;
   top: 0;
   z-index: 10;
@@ -135,41 +163,37 @@ a {
 .brand span {
   color: var(--muted);
   font-weight: 400;
-  margin-left: 8px;
-  font-size: 0.85rem;
+  margin-left: var(--s2);
+  font-size: 0.82rem;
 }
 
 .nav {
   display: flex;
-  gap: 4px;
+  gap: var(--s3);
 }
 
 .nav a {
-  padding: 5px 11px;
-  border-radius: var(--radius);
   text-decoration: none;
   color: var(--muted);
   font-size: 0.92rem;
 }
 
 .nav a:hover {
-  background: var(--bg);
   color: var(--fg);
+  text-decoration: underline;
 }
 
 .nav a.active {
-  background: var(--bg);
   color: var(--fg);
-  font-weight: 600;
-  box-shadow: inset 0 0 0 1px var(--line);
+  font-weight: 700;
 }
 
 .topbar-right {
   margin-left: auto;
   display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 0.82rem;
+  align-items: baseline;
+  gap: var(--s4);
+  font-size: 0.8rem;
   color: var(--muted);
 }
 
@@ -179,70 +203,30 @@ a {
 }
 
 .page {
-  padding: 24px 20px 56px;
-  max-width: 1180px;
+  padding: var(--s5) var(--s4) var(--s6);
+  max-width: 1120px;
   margin: 0 auto;
 }
 
 /* ------------------------------------------------------------- primitives */
 
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  font-size: 0.78rem;
-  color: var(--muted);
-  white-space: nowrap;
-}
-
-.dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: currentColor;
-  flex: none;
-}
-
 .mono {
   font-family: var(--mono);
-  font-size: 0.86em;
+  font-size: 0.88em;
+  font-variant-numeric: tabular-nums;
 }
 
 .muted {
   color: var(--muted);
 }
 
-h1 {
-  font-size: 1.3rem;
-  margin: 0 0 4px;
-}
-
-h2 {
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+.lede {
   color: var(--muted);
-  margin: 32px 0 10px;
-}
-
-h3 {
-  font-size: 0.95rem;
-  margin: 0 0 8px;
-}
-
-.card {
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--panel);
-  padding: 16px;
+  margin-bottom: var(--s5);
 }
 
 .state {
-  padding: 48px 20px;
-  text-align: center;
+  padding: var(--s6) 0;
   color: var(--muted);
 }
 
@@ -254,9 +238,10 @@ button,
 select,
 input[type='search'] {
   font: inherit;
-  padding: 5px 10px;
+  font-size: 0.9rem;
+  padding: var(--s1) var(--s2);
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: 0;
   background: var(--bg);
   color: var(--fg);
 }
@@ -266,7 +251,7 @@ button {
 }
 
 button:hover:not(:disabled) {
-  border-color: var(--muted);
+  border-color: var(--fg);
 }
 
 button:disabled {
@@ -276,35 +261,14 @@ button:disabled {
 
 /* ---------------------------------------------------------------- verdict */
 
-.verdict {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 20px;
-  align-items: start;
-  border: 1px solid var(--line);
-  border-left-width: 5px;
-  border-radius: var(--radius);
-  background: var(--panel);
-  padding: 18px 20px;
-}
-
-.verdict[data-verdict='STAY'] {
-  border-left-color: var(--ok);
-}
-
-.verdict[data-verdict='REDUCE'] {
-  border-left-color: var(--warn);
-}
-
-.verdict[data-verdict='EXIT'] {
-  border-left-color: var(--critical);
-}
-
+/* No box, no rule, no tint: the verdict is the largest thing on the page and
+   the only coloured word in it. That is the whole hierarchy. */
 .verdict-badge {
-  font-size: 1.5rem;
+  font-size: clamp(2.2rem, 6vw, 3.1rem);
   font-weight: 800;
-  letter-spacing: -0.02em;
-  line-height: 1.1;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  margin-bottom: var(--s3);
 }
 
 .verdict[data-verdict='STAY'] .verdict-badge {
@@ -320,145 +284,157 @@ button:disabled {
 }
 
 .verdict-headline {
-  margin: 0 0 12px;
-  font-size: 1rem;
+  font-size: 1.08rem;
+  line-height: 1.5;
+  margin: 0 0 var(--s4);
+  max-width: var(--measure);
 }
 
 .reasons {
   margin: 0;
-  padding-left: 20px;
+  padding-left: 1.1em;
   display: grid;
-  gap: 6px;
-  font-size: 0.9rem;
-  color: var(--fg);
+  gap: var(--s2);
+  font-size: 0.92rem;
+  max-width: var(--measure);
 }
 
-/* -------------------------------------------------------------------- kpis */
+/* -------------------------------------------------------------- stat rows */
 
-.kpis {
+.stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(176px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr));
+  gap: var(--s4) var(--s5);
 }
 
-.kpi {
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 12px 14px;
-  background: var(--panel);
-}
-
-.kpi-label {
-  font-size: 0.74rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+.stat-label {
+  font-size: 0.8rem;
   color: var(--muted);
 }
 
-.kpi-value {
-  font-size: 1.3rem;
-  font-weight: 700;
+.stat-value {
+  font-family: var(--mono);
+  font-size: 1.5rem;
+  font-weight: 600;
   letter-spacing: -0.02em;
-  margin-top: 4px;
   font-variant-numeric: tabular-nums;
+  margin-top: var(--s1);
 }
 
-.kpi-value[data-tone='warn'] {
+.stat-value[data-tone='warn'] {
   color: var(--warn);
 }
 
-.kpi-value[data-tone='critical'] {
+.stat-value[data-tone='critical'] {
   color: var(--critical);
 }
 
-.kpi-value[data-tone='ok'] {
+.stat-value[data-tone='ok'] {
   color: var(--ok);
 }
 
-.kpi-note {
-  font-size: 0.78rem;
+.stat-note {
+  font-size: 0.8rem;
   color: var(--muted);
-  margin-top: 3px;
+  margin-top: var(--s1);
 }
 
-/* ------------------------------------------------------------------ charts */
+/* ----------------------------------------------------------------- blocks */
 
-.charts {
+/* Two columns of content with nothing drawn around them: the gap is the
+   separation, and it is wider than any gap inside a block. */
+.blocks {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(min(400px, 100%), 1fr));
+  gap: var(--s5) var(--s6);
 }
 
-.chart-card {
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--panel);
-  padding: 16px;
+.block {
   min-width: 0;
 }
 
-.chart-card h3 {
-  margin-bottom: 2px;
-}
-
-.chart-sub {
-  font-size: 0.8rem;
+.block-sub {
+  font-size: 0.82rem;
   color: var(--muted);
-  margin: 0 0 12px;
+  margin: 0 0 var(--s3);
 }
 
 .chart-tooltip {
   background: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 8px 10px;
+  border: 1px solid var(--fg);
+  padding: var(--s2);
   font-size: 0.82rem;
   max-width: 320px;
-  box-shadow: 0 4px 14px rgb(0 0 0 / 0.12);
 }
 
 .chart-tooltip strong {
   display: block;
-  margin-bottom: 3px;
+  margin-bottom: var(--s1);
 }
 
-/* ------------------------------------------------------------------- table */
+/* ------------------------------------------------------------------ table */
 
 .detail-table {
   border-collapse: collapse;
   width: 100%;
-  font-size: 0.84rem;
+  font-size: 0.86rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .detail-table td {
   border-bottom: 1px solid var(--line);
-  padding: 5px 4px;
+  padding: var(--s2) var(--s3) var(--s2) 0;
   vertical-align: top;
   overflow-wrap: anywhere;
 }
 
+.detail-table tr:last-child td {
+  border-bottom: 0;
+}
+
 .detail-table td:first-child {
   color: var(--muted);
-  width: 40%;
+  width: 42%;
 }
 
 .scroll-x {
   overflow-x: auto;
 }
 
-/* ------------------------------------------------------------------- graph */
+/* ------------------------------------------------------------------ graph */
 
 .graph-layout {
   display: grid;
-  grid-template-columns: 320px 1fr;
-  height: calc(100vh - 54px);
+  grid-template-columns: 340px 1fr;
+  height: calc(100vh - 53px);
 }
 
 .graph-aside {
-  background: var(--panel);
   border-right: 1px solid var(--line);
-  padding: 16px;
+  padding: var(--s4);
   overflow: auto;
+}
+
+.graph-aside h1 {
+  font-size: 1.05rem;
+}
+
+.graph-aside h2 {
+  margin-top: var(--s5);
+}
+
+.graph-aside h3 {
+  margin: var(--s4) 0 var(--s1);
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.graph-aside .reasons {
+  font-size: 0.84rem;
+}
+
+.graph-aside input[type='search'] {
+  width: 100%;
 }
 
 .graph-canvas {
@@ -473,25 +449,32 @@ button:disabled {
 
 .legend label {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 4px 0;
+  align-items: flex-start;
+  gap: var(--s2);
+  margin: var(--s3) 0;
   cursor: pointer;
   font-size: 0.85rem;
 }
 
+/* The control and the colour key line up with the first line of the label,
+   not with the middle of a description that wraps to three lines. */
+.legend label > input,
+.legend .swatch {
+  margin-top: 0.28em;
+}
+
+/* The one place a colour chip is content: it keys the node colour in the
+   canvas, alongside the shape that repeats it. */
 .swatch {
-  width: 13px;
-  height: 13px;
-  border-radius: 3px;
-  border: 1px solid var(--line);
+  width: 11px;
+  height: 11px;
   flex: none;
 }
 
 .graph-actions {
   display: flex;
-  gap: 8px;
-  margin: 10px 0 0;
+  gap: var(--s2);
+  margin-top: var(--s3);
 }
 
 @media (max-width: 860px) {
@@ -507,101 +490,87 @@ button:disabled {
   }
 }
 
-/* ------------------------------------------------------------------ alerts */
-
-.watch-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin: 16px 0;
-}
+/* ----------------------------------------------------------------- alerts */
 
 .level-counts {
   display: flex;
-  gap: 8px;
-}
-
-.level-count {
-  display: flex;
-  align-items: baseline;
-  gap: 7px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 7px 12px;
-  background: var(--panel);
+  flex-wrap: wrap;
+  gap: var(--s4) var(--s5);
+  margin: var(--s4) 0;
 }
 
 .level-count b {
-  font-size: 1.15rem;
+  font-family: var(--mono);
+  font-size: 1.5rem;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
-.level-count[data-level='info'] {
+.level-count[data-level='info'] b {
   color: var(--info);
 }
 
-.level-count[data-level='warn'] {
+.level-count[data-level='warn'] b {
   color: var(--warn);
 }
 
-.level-count[data-level='critical'] {
+.level-count[data-level='critical'] b {
   color: var(--critical);
 }
 
 .level-count span {
+  display: block;
   color: var(--muted);
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-size: 0.8rem;
+}
+
+.watch-toolbar {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
+  flex-wrap: wrap;
+  margin: var(--s4) 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.watch-status {
+  margin-right: var(--s5);
+}
+
+.ticks {
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-family: var(--mono);
+  margin: 0 0 var(--s4);
 }
 
 .alert-list {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: grid;
-  gap: 8px;
 }
 
+/* Rows, not cards: one hairline keeps two alerts from reading as one. */
 .alert {
-  border: 1px solid var(--line);
-  border-left-width: 4px;
-  border-radius: var(--radius);
-  padding: 11px 14px;
-  background: var(--panel);
   display: grid;
-  gap: 4px;
-}
-
-.alert[data-level='info'] {
-  border-left-color: var(--info);
-  background: var(--info-bg);
-}
-
-.alert[data-level='warn'] {
-  border-left-color: var(--warn);
-  background: var(--warn-bg);
-}
-
-.alert[data-level='critical'] {
-  border-left-color: var(--critical);
-  background: var(--critical-bg);
+  gap: var(--s1);
+  padding: var(--s3) 0;
+  border-bottom: 1px solid var(--line);
 }
 
 .alert-head {
   display: flex;
   align-items: baseline;
-  gap: 10px;
+  gap: var(--s3);
   flex-wrap: wrap;
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   color: var(--muted);
 }
 
 .alert-level {
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  color: var(--fg);
 }
 
 .alert[data-level='info'] .alert-level {
@@ -617,16 +586,18 @@ button:disabled {
 }
 
 .alert-title {
-  font-weight: 600;
-  font-size: 0.97rem;
+  font-weight: 700;
+  max-width: var(--measure);
 }
 
 .alert-detail {
-  font-size: 0.88rem;
-  color: var(--fg);
+  font-size: 0.92rem;
+  color: var(--muted);
+  max-width: var(--measure);
 }
 
 .alert-impact {
+  font-family: var(--mono);
   font-variant-numeric: tabular-nums;
   font-weight: 600;
   margin-left: auto;
@@ -640,9 +611,7 @@ button:disabled {
   color: var(--ok);
 }
 
-.ticks {
-  font-size: 0.8rem;
-  color: var(--muted);
-  font-family: var(--mono);
-  margin: 0 0 14px;
+.alert-data {
+  margin-top: var(--s2);
+  max-width: 640px;
 }

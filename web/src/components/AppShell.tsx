@@ -22,18 +22,16 @@ export function AppShell() {
             Alerts
           </Link>
         </nav>
+        {/* Provenance, not ornament: where the numbers come from and how old
+            they are. Only the failure spends colour. */}
         <div className="topbar-right">
-          {USE_MOCKS ? <span className="chip">mock fixtures</span> : null}
+          {USE_MOCKS ? <span>mock fixtures</span> : null}
           {health ? (
-            <span className="chip" title={`Backend mode: ${health.mode}`}>
-              <span className="dot" style={{ color: 'var(--ok)' }} />
+            <span title={`Backend mode: ${health.mode}`}>
               {health.mode} · data as of {health.data_as_of}
             </span>
           ) : error ? (
-            <span className="chip" style={{ color: 'var(--critical)' }}>
-              <span className="dot" />
-              backend unreachable
-            </span>
+            <span style={{ color: 'var(--critical)' }}>backend unreachable</span>
           ) : null}
         </div>
       </header>
