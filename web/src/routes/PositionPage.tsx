@@ -16,6 +16,36 @@ import { StatRow } from '../components/Stat';
 import type { StatProps } from '../components/Stat';
 import type { Report, SimulationLayer } from '../api/types';
 import { compactUsd, days, num, percent, usd } from '../lib/format';
+import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
+
+const REASONS = 'grid max-w-measure list-disc gap-2 pl-[1.1em] text-[0.92rem]';
+const BLOCKS = 'grid grid-cols-[repeat(auto-fit,minmax(min(400px,100%),1fr))] gap-x-14 gap-y-9';
+const BLOCK_SUB = 'mb-3.5 text-[0.82rem] text-muted-foreground';
+const TOOLTIP = 'max-w-[320px] border border-foreground bg-background p-2 text-[0.82rem]';
+
+const VERDICT_TONE: Record<string, string> = {
+  STAY: 'text-ok',
+  REDUCE: 'text-warn',
+  EXIT: 'text-critical',
+};
+
+/** A label/value pair table; the figures line up, nothing is drawn around it. */
+function SpecTable({ rows }: { rows: [string, React.ReactNode][] }) {
+  return (
+    <Table className="text-[0.86rem] tabular-nums">
+      <TableBody>
+        {rows.map(([label, value]) => (
+          <TableRow key={label}>
+            <TableCell className="w-[42%] py-2 pr-3.5 align-top whitespace-normal text-muted-foreground">
+              {label}
+            </TableCell>
+            <TableCell className="py-2 align-top whitespace-normal">{value}</TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
 
 export function PositionPage() {
   const { data, isPending, error } = useReport();
@@ -80,20 +110,26 @@ function PositionView({ report }: { report: Report }) {
   }, [position, decision, simulation]);
 
   return (
-    <div className="page">
+    <div className="mx-auto max-w-[1120px] px-5.5 pt-9 pb-14">
       <h1>{position.label}</h1>
-      <p className="lede">
+      <p className="mb-9 text-muted-foreground">
         {position.collateral_symbol} collateral against {position.loan_symbol} · oracle{' '}
         <b>{position.oracle_mode}</b>
         {position.oracle_ambiguous ? ' (ambiguous)' : ''} · report generated {report.generated} from
         data as of {report.data_as_of} ({report.mode})
       </p>
 
-      <section className="verdict" data-verdict={decision.verdict}>
-        <h2 className="visually-hidden">Verdict</h2>
-        <div className="verdict-badge">{decision.verdict}</div>
-        <p className="verdict-headline">{decision.headline}</p>
-        <ul className="reasons">
+      {/* No box, no rule, no tint: the verdict is the largest thing on the page
+          and the only coloured word in it. That is the whole hierarchy. */}
+      <section>
+        <h2 className="sr-only">Verdict</h2>
+        <div
+          className={`mb-3.5 text-[clamp(2.2rem,6vw,3.1rem)] leading-none font-extrabold tracking-[-0.03em] ${VERDICT_TONE[decision.verdict]}`}
+        >
+          {decision.verdict}
+        </div>
+        <p className="mb-5.5 text-[1.08rem] leading-[1.5]">{decision.headline}</p>
+        <ul className={REASONS}>
           {decision.reasons.map((reason) => (
             <li key={reason}>{reason}</li>
           ))}
@@ -104,81 +140,60 @@ function PositionView({ report }: { report: Report }) {
       <StatRow items={stats} />
 
       <h2>Where the expected loss comes from</h2>
-      <div className="blocks">
+      <div className={BLOCKS}>
         <LayerContributionChart layers={simulation.layers} total={simulation.expected_loss_usd} />
         <TailChart report={report} />
       </div>
 
       <h2>Exit and sensitivity</h2>
-      <div className="blocks">
-        <div className="block">
+      <div className={BLOCKS}>
+        <div>
           <h3>A full exit now</h3>
-          <p className="block-sub">{exit_quote.source}</p>
-          <table className="detail-table">
-            <tbody>
-              <tr>
-                <td>exit cost</td>
-                <td>{usd(decision.exit_cost_usd)}</td>
-              </tr>
-              <tr>
-                <td>price impact</td>
-                <td>{percent(exit_quote.price_impact)}</td>
-              </tr>
-              <tr>
-                <td>fee</td>
-                <td>{usd(exit_quote.fee_usd, 2)}</td>
-              </tr>
-              <tr>
-                <td>quote</td>
-                <td>{exit_quote.estimated ? 'estimated (no live quote)' : 'live'}</td>
-              </tr>
-              <tr>
-                <td>pays off only if incidents are</td>
-                <td>{num(decision.risk_multiple_to_exit, 1)}× the estimates</td>
-              </tr>
-            </tbody>
-          </table>
+          <p className={BLOCK_SUB}>{exit_quote.source}</p>
+          <SpecTable
+            rows={[
+              ['exit cost', usd(decision.exit_cost_usd)],
+              ['price impact', percent(exit_quote.price_impact)],
+              ['fee', usd(exit_quote.fee_usd, 2)],
+              ['quote', exit_quote.estimated ? 'estimated (no live quote)' : 'live'],
+              [
+                'pays off only if incidents are',
+                `${num(decision.risk_multiple_to_exit, 1)}× the estimates`,
+              ],
+            ]}
+          />
         </div>
 
-        <div className="block">
+        <div>
           <h3>If the oracle were read differently</h3>
-          <p className="block-sub">
+          <p className={BLOCK_SUB}>
             {oracle_sensitivity
               ? `The inference is ambiguous; this is the verdict under the ${oracle_sensitivity.oracle_mode} reading.`
               : 'The oracle reading is unambiguous, so no alternative was computed.'}
           </p>
           {oracle_sensitivity ? (
-            <table className="detail-table">
-              <tbody>
-                <tr>
-                  <td>verdict</td>
-                  <td>
-                    {oracle_sensitivity.verdict}
-                    {oracle_sensitivity.verdict === decision.verdict ? ' (the same)' : ''}
-                  </td>
-                </tr>
-                <tr>
-                  <td>expected loss</td>
-                  <td>
-                    {usd(oracle_sensitivity.expected_loss_usd)} (vs{' '}
-                    {usd(simulation.expected_loss_usd)})
-                  </td>
-                </tr>
-                <tr>
-                  <td>CVaR 99</td>
-                  <td>
-                    {usd(oracle_sensitivity.cvar99_usd)} (vs {usd(simulation.cvar99_usd)})
-                  </td>
-                </tr>
-                <tr>
-                  <td>P(liquidation)</td>
-                  <td>
-                    {percent(oracle_sensitivity.p_liquidation)} (vs{' '}
-                    {percent(simulation.p_liquidation)})
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            <SpecTable
+              rows={[
+                [
+                  'verdict',
+                  `${oracle_sensitivity.verdict}${
+                    oracle_sensitivity.verdict === decision.verdict ? ' (the same)' : ''
+                  }`,
+                ],
+                [
+                  'expected loss',
+                  `${usd(oracle_sensitivity.expected_loss_usd)} (vs ${usd(simulation.expected_loss_usd)})`,
+                ],
+                [
+                  'CVaR 99',
+                  `${usd(oracle_sensitivity.cvar99_usd)} (vs ${usd(simulation.cvar99_usd)})`,
+                ],
+                [
+                  'P(liquidation)',
+                  `${percent(oracle_sensitivity.p_liquidation)} (vs ${percent(simulation.p_liquidation)})`,
+                ],
+              ]}
+            />
           ) : null}
         </div>
       </div>
@@ -186,7 +201,7 @@ function PositionView({ report }: { report: Report }) {
       {position.notes.length > 0 ? (
         <>
           <h2>Notes and cross-checks</h2>
-          <ul className="reasons">
+          <ul className={REASONS}>
             {position.notes.map((note) => (
               <li key={note}>{note}</li>
             ))}
@@ -215,9 +230,9 @@ function LayerContributionChart({ layers, total }: { layers: SimulationLayer[]; 
   );
 
   return (
-    <div className="block">
+    <div>
       <h3>Contribution to the expected loss</h3>
-      <p className="block-sub">
+      <p className={BLOCK_SUB}>
         {usd(total)} over the horizon, split across the layers that can cause it.
       </p>
       <ResponsiveContainer width="100%" height={40 + data.length * 44}>
@@ -253,7 +268,7 @@ function LayerTooltip({ active, payload }: TooltipContentProps) {
   const datum = payload[0].payload as LayerDatum;
   const { layer } = datum;
   return (
-    <div className="chart-tooltip">
+    <div className={TOOLTIP}>
       <strong>{layer.layer}</strong>
       {usd(layer.contribution_usd)} of expected loss
       <br />
@@ -278,9 +293,9 @@ function TailChart({ report }: { report: Report }) {
   ];
 
   return (
-    <div className="block">
+    <div>
       <h3>Tail measures</h3>
-      <p className="block-sub">
+      <p className={BLOCK_SUB}>
         {simulation.n.toLocaleString('en-US')} paths over {simulation.horizon_days} days. Equity is{' '}
         {usd(position.equity_usd)}; P(any loss) {percent(simulation.p_any_loss)}, P(liquidation){' '}
         {percent(simulation.p_liquidation)}.
@@ -317,7 +332,7 @@ function TailTooltip({ active, payload, equity }: TooltipContentProps & { equity
   if (!active || !payload?.length) return null;
   const datum = payload[0].payload as TailDatum;
   return (
-    <div className="chart-tooltip">
+    <div className={TOOLTIP}>
       <strong>
         {datum.name}: {usd(datum.value)}
       </strong>

@@ -6,6 +6,23 @@ import { ALERT_LEVELS } from '../api/types';
 import type { Alert, AlertLevel, WatchTick } from '../api/types';
 import { blockNumber, etherscanUrl, shortHash, signedUsd } from '../lib/format';
 import { DetailsTable } from '../components/DetailsTable';
+import { Button } from '@/components/ui/button';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { cn } from 'cn';
+
+const LEVEL_TEXT: Record<AlertLevel, string> = {
+  info: 'text-info',
+  warn: 'text-warn',
+  critical: 'text-critical',
+};
 
 const STATUS_LABEL: Record<StreamStatus, string> = {
   connecting: 'connecting…',
@@ -14,20 +31,21 @@ const STATUS_LABEL: Record<StreamStatus, string> = {
   error: 'reconnecting…',
 };
 
-const STATUS_COLOR: Record<StreamStatus, string> = {
-  connecting: 'var(--muted)',
-  open: 'var(--fg)',
-  closed: 'var(--muted)',
-  error: 'var(--warn)',
+// "live" is the normal state; colour stays for what is wrong.
+const STATUS_CLASS: Record<StreamStatus, string> = {
+  connecting: 'text-muted-foreground',
+  open: 'text-foreground',
+  closed: 'text-muted-foreground',
+  error: 'text-warn',
 };
 
 export function WatchPage() {
   const [minLevel, setMinLevel] = useState<AlertLevel>('info');
 
   return (
-    <div className="page">
+    <div className="mx-auto max-w-[1120px] px-5.5 pt-9 pb-14">
       <h1>Alerts</h1>
-      <p className="lede">
+      <p className="mb-9 text-muted-foreground">
         Server-Sent Events from <code className="mono">/api/watch/stream</code>, newest first.{' '}
         {USE_MOCKS
           ? 'Mock mode: a fixed set of alerts is replayed every 1.5 s, then the stream ends.'
@@ -80,37 +98,40 @@ function WatchStream({
 
   return (
     <>
-      <div className="level-counts">
+      <div className="my-5.5 flex flex-wrap gap-x-9 gap-y-5.5">
         {ALERT_LEVELS.map((level) => (
-          <div className="level-count" key={level} data-level={level}>
-            <b>{counts[level]}</b>
-            <span>{level}</span>
+          <div key={level}>
+            <b className={cn('font-mono text-2xl font-semibold tabular-nums', LEVEL_TEXT[level])}>
+              {counts[level]}
+            </b>
+            <span className="block text-[0.8rem] text-muted-foreground">{level}</span>
           </div>
         ))}
       </div>
 
-      <div className="watch-toolbar">
-        <span className="watch-status" style={{ color: STATUS_COLOR[status] }}>
-          {STATUS_LABEL[status]}
-        </span>
-        <label htmlFor="min-level">Minimum level</label>
-        <select
-          id="min-level"
-          value={minLevel}
-          onChange={(event) => onMinLevelChange(event.target.value as AlertLevel)}
-        >
-          {ALERT_LEVELS.map((level) => (
-            <option key={level} value={level}>
-              {level}
-            </option>
-          ))}
-        </select>
+      <div className="my-5.5 flex flex-wrap items-baseline gap-2 text-[0.85rem] text-muted-foreground">
+        <span className={cn('mr-9', STATUS_CLASS[status])}>{STATUS_LABEL[status]}</span>
+        <Label htmlFor="min-level" className="font-normal">
+          Minimum level
+        </Label>
+        <Select value={minLevel} onValueChange={(value) => onMinLevelChange(value as AlertLevel)}>
+          <SelectTrigger id="min-level" size="sm" className="w-28">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {ALERT_LEVELS.map((level) => (
+              <SelectItem key={level} value={level}>
+                {level}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {ticks.length > 0 ? (
-        <p className="ticks">
+        <p className="mb-5.5 font-mono text-[0.8rem] text-muted-foreground">
           {ticks.map((tick) => (
-            <span key={`${tick.block}-${tick.message}`} style={{ display: 'block' }}>
+            <span key={`${tick.block}-${tick.message}`} className="block">
               block {blockNumber(tick.block)} · {tick.message}
             </span>
           ))}
@@ -118,13 +139,13 @@ function WatchStream({
       ) : null}
 
       {shown.length === 0 ? (
-        <p className="state" role="status" aria-live="polite">
+        <p className="py-14 text-muted-foreground" role="status" aria-live="polite">
           {status === 'open' || status === 'connecting'
             ? 'Waiting for the first alert…'
             : 'No alert at this level.'}
         </p>
       ) : (
-        <ul className="alert-list" aria-live="polite">
+        <ul className="list-none" aria-live="polite">
           {shown.map((alert, index) => {
             const id = keyOf(alert, index);
             return (
@@ -158,9 +179,10 @@ function AlertRow({
   const hasData = Object.keys(alert.data).length > 0;
 
   return (
-    <li className="alert" data-level={alert.level}>
-      <div className="alert-head">
-        <span className="alert-level">{alert.level}</span>
+    // Rows, not cards: one hairline keeps two alerts from reading as one.
+    <li className="grid gap-1 border-b border-border py-3.5">
+      <div className="flex flex-wrap items-baseline gap-3.5 text-[0.8rem] text-muted-foreground">
+        <span className={cn('font-bold', LEVEL_TEXT[alert.level])}>{alert.level}</span>
         <span>block {blockNumber(alert.block)}</span>
         <span className="mono">
           {txUrl && alert.tx ? (
@@ -168,33 +190,35 @@ function AlertRow({
               {shortHash(alert.tx)}
             </a>
           ) : (
-            <span className="muted">no tx</span>
+            'no tx'
           )}
         </span>
         <span className="mono">{alert.event}</span>
         {alert.depositor_impact != null ? (
           <span
-            className="alert-impact"
-            data-sign={alert.depositor_impact < 0 ? 'loss' : 'gain'}
+            className={cn(
+              'ml-auto font-mono font-semibold tabular-nums',
+              alert.depositor_impact < 0 ? 'text-critical' : 'text-ok',
+            )}
             title="Impact on your deposit, in the vault's asset"
           >
             {signedUsd(alert.depositor_impact)}
           </span>
         ) : null}
       </div>
-      <div className="alert-title">{alert.title}</div>
-      <div className="alert-detail">{alert.detail}</div>
+      <div className="max-w-measure font-bold">{alert.title}</div>
+      <div className="max-w-measure text-[0.92rem] text-muted-foreground">{alert.detail}</div>
       {hasData ? (
-        <div>
-          <button type="button" onClick={onToggle} aria-expanded={expanded}>
-            {expanded ? 'Hide data' : 'Show data'}
-          </button>
-          {expanded ? (
-            <div className="alert-data">
-              <DetailsTable details={alert.data} />
-            </div>
-          ) : null}
-        </div>
+        <Collapsible open={expanded} onOpenChange={onToggle}>
+          <CollapsibleTrigger asChild>
+            <Button type="button" variant="outline" size="sm">
+              {expanded ? 'Hide data' : 'Show data'}
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-2 max-w-[640px]">
+            <DetailsTable details={alert.data} />
+          </CollapsibleContent>
+        </Collapsible>
       ) : null}
     </li>
   );

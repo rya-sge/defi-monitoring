@@ -12,6 +12,8 @@ A browser UI over the same three outputs lives in `web/`.
 
 All data comes from keyless public sources: the publicnode Ethereum RPC, the Morpho and Pendle APIs, and DefiLlama.
 
+> **Note — no browser automation.** Do not work on this project through Claude for Chrome, or any other tool that drives a browser on your behalf. Check the UI the ordinary way: `pnpm dev` and look at it.
+
 ## Install
 
 ```bash
@@ -94,7 +96,9 @@ Writes `out/report.html` and `out/report.json`.
 
 ## web: the browser UI
 
-A React single-page app in `web/`, one page per CLI mode: **Position** (the `analyze` report: verdict, KPIs, where the expected loss comes from, tail measures, exit and oracle sensitivity), **Dependency graph** (the `graph` output in Cytoscape, filterable by node kind, searchable, with a selection panel) and **Alerts** (the `watch` stream, newest first, with level counts and a minimum-level filter).
+A React single-page app in `web/`, one page per CLI mode: **Position** (the `analyze` report: verdict, the headline figures, where the expected loss comes from, tail measures, exit and oracle sensitivity), **Dependency graph** (the `graph` output in Cytoscape, filterable by node kind, searchable, with a selection panel) and **Alerts** (the `watch` stream, newest first, with level counts and a minimum-level filter).
+
+Tailwind CSS v4 with shadcn/ui primitives, restyled to a deliberately plain interface: one ground, no cards or panels, square corners, no shadows and no motion. Colour is reserved for severity — `info`, `warn`, `critical`, `ok` — and the level is always written out as well, so an alert reads the same without it. The one other colour on screen is the dependency graph's six node kinds, which are data and are mirrored from `riskdep/graph.py`. Machine values (addresses, hashes, amounts, block numbers) are set in monospace; prose and labels are not.
 
 ```bash
 cd web
@@ -131,7 +135,7 @@ uv run python -c "import json,riskdep.api as a; print(json.dumps(a.app.openapi()
 | `GET /api/targets` | one entry per `out/watch-*.jsonl`: the watch targets with alerts |
 | `GET /api/alerts?target=&since=&level=&limit=` | alerts after a block cursor; pass the returned `cursor` back as `since` |
 
-**Limits.** Read-only: no wallet, no transaction, no form to launch a run — the Position and Graph pages read whatever the backend serves for the default position, and the Alerts page passes only `min_level` (the `target` filter and `POST /api/analyze` are typed and wired in the client, but no page offers them). Dark mode follows the system; the `data-theme` override the stylesheet supports has no toggle. Alerts arrive by polling `/api/alerts` every 3 s with a block cursor, not over a socket; a failed poll is surfaced and retried on the next tick. No frontend tests; CI does build `web/` and checks its formatting (`pnpm lint && pnpm build`).
+**Limits.** Read-only: no wallet, no transaction, no form to launch a run — the Position and Graph pages read whatever the backend serves for the default position, and the Alerts page passes only `min_level` (the `target` filter and `POST /api/analyze` are typed and wired in the client, but no page offers them). Dark mode follows the system; the `data-theme` override the palette supports has no toggle, because Cytoscape reads its colours once at mount and a switch would need a re-init. Alerts arrive by polling `/api/alerts` every 3 s with a block cursor, not over a socket; a failed poll is surfaced and retried on the next tick. No frontend tests; CI does build `web/` and checks its formatting (`pnpm lint && pnpm build`).
 
 ## Layout
 

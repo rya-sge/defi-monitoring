@@ -220,8 +220,13 @@ export function GraphCanvas({
   }, [layoutNonce]);
 
   return (
-    <div className="graph-canvas">
-      <div ref={containerRef} role="img" aria-label="Interactive dependency graph" />
+    <div className="relative min-w-0">
+      <div
+        ref={containerRef}
+        className="size-full"
+        role="img"
+        aria-label="Interactive dependency graph"
+      />
     </div>
   );
 }

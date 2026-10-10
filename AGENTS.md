@@ -8,11 +8,17 @@
 >
 > So end a piece of work by leaving the tree ready and handing over the **one-line commit message** the note below asks for. If several commits are wanted — a style-only commit split from a behaviour commit, say — hand over the staging and commit commands for each, in order, and let the author run them.
 
+> **Note — no browser automation:** do not work on this project through Claude for Chrome, or any other tool that drives a browser on your behalf. Check the UI the ordinary way: `pnpm dev` and look at it.
+
 > **Note — merge conflicts are expected:** several developers work on this project in parallel, so a merge with `main` can conflict even when nothing is wrong: two people edited the same line for different reasons. Treat each side as an intentional change, not an error to discard.
 >
 > To resolve one: read both sides and the commits behind them (`git log --oneline <branch> -- <file>`), check which one matches the current code (the code wins over prose), and keep both intents when they are compatible rather than picking a side. If the two intents contradict and the code does not decide, ask the author. Remove every marker, `git add` the file, and hand over the merge commit as the note above says.
 
 > **Note — be concise:** keep every summary, report and explanation short and direct. Lead with the result, state what changed and what it costs, stop. No preamble, no restating the request, no recap of steps the reader just watched, no closing paragraph that says the same thing again. Prose only where a table or a one-line command would not do.
+
+> **Note — take the simplest route:** solve the problem that was asked with the plainest thing that works. No speculative abstraction, no configuration knob nobody requested, no extra layer in case the requirement grows — if it grows, add it then. Do not deliberate at length over a choice whose options are equivalent in practice: pick one, say which in a clause, move on. A long chain of reasoning about a small change is a sign the change is being made too big.
+>
+> The same applies to the code itself: write the fewest lines that read clearly. Reuse what the module already has instead of adding a parallel helper, delete rather than comment out, and prefer one direct expression to a staircase of intermediates. Concise is not cryptic — a name that explains itself beats a comment explaining a short one.
 
 > **Note — commit messages:** After each group of modifications or each feature added, always provide a **one-line GitHub commit message** (Conventional-Commits style, e.g. `feat: ...`, `fix: ...`, `docs: ...`).
 >
@@ -124,18 +130,19 @@ pyproject.toml        project metadata, dependencies, ruff and pytest configurat
 
 ## The web frontend (`web/`)
 
-React 19 + TypeScript 5.9 + Vite 7, TanStack Router (routes) and Query (fetching), Cytoscape for the graph, Recharts for the report charts. **pnpm**, not npm: `pnpm-lock.yaml` and `pnpm-workspace.yaml` are committed, and `allowBuilds: esbuild` in the workspace file is what lets esbuild run its install script. `web/.env` is committed on purpose — it holds the mock switch and no secret. Usage, the page-by-page tour and the `/api` contract are in `README.md`; what follows is what an agent needs before editing.
+React 19 + TypeScript 5.9 + Vite 7, TanStack Router (routes) and Query (fetching), **Tailwind CSS v4 + shadcn/ui** for the interface, Cytoscape for the graph, Recharts for the report charts. **pnpm**, not npm: `pnpm-lock.yaml` and `pnpm-workspace.yaml` are committed, and `allowBuilds: esbuild` in the workspace file is what lets esbuild run its install script. `web/.env` is committed on purpose — it holds the mock switch and no secret. Usage, the page-by-page tour and the `/api` contract are in `README.md`; what follows is what an agent needs before editing.
 
 ```
 web/src/
   main.tsx            QueryClient (retry 1, no refetch on focus) + RouterProvider
   router.tsx          three routes, each a lazyRouteComponent
-  styles.css          every colour as a CSS custom property; light base, dark overrides
+  index.css           the Tailwind entry: the raw palette, the @theme mapping, the base layer
   api/types.ts        hand-written shapes of the /api payloads
   api/client.ts       fetch wrappers, the USE_MOCKS switch, one method per endpoint
   api/hooks.ts        useHealth / useReport / useGraph / useAnalyze, with the query keys
   api/stream.ts       subscribeWatch: polls /api/alerts with a block cursor, or replays the fixtures when mocking
-  components/         AppShell (header, nav, health chip) · GraphCanvas · Kpi · DetailsTable · States
+  components/         AppShell (header, nav, provenance) · GraphCanvas · Stat · DetailsTable · States
+  components/ui/      vendored shadcn primitives, restyled to the minimal world
   lib/format.ts       usd / percent / num / shortHash / etherscanUrl…, all null-tolerant
   lib/graph.ts        kind colours and shapes, edge width, report-graph normalisation
   routes/             PositionPage · GraphPage · WatchPage
@@ -147,14 +154,16 @@ web/src/
 - **The types are read off real output, not generated.** `api/types.ts` was written from `out/report.json` and `out/graph.json`, which are git-ignored, so `src/mocks/` is the only committed copy. Change a payload in `report.py` or `graph.py` and both the type and the fixture must follow, or mock mode silently renders the old shape.
 - **`inf`/`nan` arrive as `null`.** The report writer's `clean()` maps them, so a health factor with no debt or a risk multiple with no expected loss is `null`. Such fields are typed `number | null` and every formatter in `lib/format.ts` returns an em dash for null — keep that property when adding one.
 - **Two graph shapes, one renderer.** `/api/graph` returns the six capitalised kinds of `graph.py`; the graph embedded in a report is a serialised networkx graph with lowercase kinds and `from`/`to` edges. `lib/graph.ts` maps the second onto the first, and that mapping is a judgement call documented in place — not something the backend states.
-- **The palette is duplicated from `riskdep/graph.py`**, in `lib/graph.ts` (node colours and shapes, edge width curve) and in `styles.css` (the `--kind-*` tokens), so the SPA and the CLI's standalone HTML look like one tool. A colour change touches all three files.
+- **The node palette is duplicated from `riskdep/graph.py` into `lib/graph.ts`** (node colours and shapes, edge width curve), so the SPA and the CLI's standalone HTML look like one tool. A colour change touches both files. It lives in TypeScript and not in the Tailwind theme on purpose: there colour is *data*, keyed to the shape that repeats it, and not part of the interface palette.
+- **`index.css` holds the raw palette; the Tailwind theme is a naming layer over it, never a second palette.** `--bg`, `--fg`, `--muted`, `--line` and `--edge` are a contract with two consumers that cannot read Tailwind: Recharts takes `var(--line)` strings that land in SVG attributes, and `GraphCanvas` resolves those five names with `getComputedStyle` because Cytoscape needs resolved colours. Renaming one means updating `GraphCanvas` in the same commit. shadcn's own token names (`--color-background`, `--color-border`, `--color-card`…) are aliased onto the same values, so a vendored component that still says `bg-card` paints the one ground instead of introducing a surface.
+- **The interface is deliberately minimal and the vendored shadcn components are restyled to match**: one ground, no cards or panels, radius `0` across every scale, no shadows, no motion. Colour is reserved for severity — `info` / `warn` / `critical` / `ok`, plus the graph's data palette — and the level is always a word too, so severity survives without colour. Prose and labels use the system UI stack, every machine value (addresses, hashes, amounts, block numbers) uses the `mono` utility: the two faces are a semantic split, not a per-call-site decision. Re-running `pnpm dlx shadcn add --overwrite` restores the stock radii, shadows and focus rings; strip them again.
 - **Mocks are the default, including with no `.env`:** `USE_MOCKS` is `import.meta.env.VITE_USE_MOCKS !== 'false'`. Every endpoint added to `api/client.ts` needs its fixture branch in the same commit, or mock mode breaks on that page.
 - **Two fixture alerts are invented.** The `critical` entries in `mocks/alerts.ts` are modelled on `docs/alert-runbook.md` because no recorded run has one; the header of that file says so. Never cite their `data` keys as the real event payload.
 - **SSE, not WebSocket:** named events `alert` and `tick`, one JSON object each. `min_level` is a server-side filter, so `WatchPage` restarts the stream by remounting on `key={minLevel}` rather than resetting state in an effect. The browser reconnects on its own; `onStatus` only reports the gap.
 - **Routes are lazy because Recharts and Cytoscape are heavy and no page needs both.** A new heavy dependency belongs behind `lazyRouteComponent`, not in the shell.
 - **`GraphCanvas` is the one imperative component.** Cytoscape is built in an effect, `onSelect` is held in a ref so the tap handlers bind once, and the CSS tokens are read with `getComputedStyle` at mount — so a runtime theme switch would need a re-init, which is why `data-theme` has no toggle yet.
 
-**Tooling.** TypeScript is strict with `noUnusedLocals`/`noUnusedParameters`, split into `tsconfig.app.json` (src) and `tsconfig.node.json` (vite config); eslint runs `recommendedTypeChecked` over both projects and makes `no-explicit-any` and `consistent-type-imports` errors. Prettier is 100 columns, single quotes, trailing commas — **not** ruff's 120, and the two should not be unified; the generated fixtures are in `.prettierignore`. There are no frontend tests, so `pnpm lint && pnpm build` (the build type-checks with `tsc -b`) is the whole gate — the `web` CI job runs exactly that, and the pre-commit `prettier` hook formats `web/` before it gets there. Run both before handing work over.
+**Tooling.** TypeScript is strict with `noUnusedLocals`/`noUnusedParameters`, split into `tsconfig.app.json` (src) and `tsconfig.node.json` (vite config); eslint runs `recommendedTypeChecked` over both projects and makes `no-explicit-any` and `consistent-type-imports` errors, with `react-refresh/only-export-components` turned off for `src/components/ui/**` alone, because the generated primitives export their variants next to the component. Prettier is 100 columns, single quotes, trailing commas — **not** ruff's 120, and the two should not be unified; the generated fixtures are in `.prettierignore`. There are no frontend tests, so `pnpm lint && pnpm build` (the build type-checks with `tsc -b`) is the whole gate — the `web` CI job runs exactly that, and the pre-commit `prettier` hook formats `web/` before it gets there. Run both before handing work over.
 
 ## Dependencies (tested versions)
 

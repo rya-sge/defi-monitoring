@@ -30,4 +30,12 @@ export default tseslint.config(
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
     },
   },
+  {
+    // Vendored shadcn/ui primitives. They are generated, not authored here, and
+    // they export variant objects next to their component, which the Fast
+    // Refresh rule forbids in our own files for good reason. Narrow override
+    // rather than weakening the rule everywhere.
+    files: ['src/components/ui/**/*.tsx'],
+    rules: { 'react-refresh/only-export-components': 'off' },
+  },
 );

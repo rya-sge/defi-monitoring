@@ -1,0 +1,194 @@
+@import 'tailwindcss';
+
+/* One ground, one ink, one rule. Colour is reserved for severity — info, warn,
+   critical, ok — so that where colour appears, it means "act on this". The
+   categorical palette of the dependency graph lives in lib/graph.ts, mirrored
+   from riskdep/graph.py: there, colour is data, not chrome.
+
+   The raw custom properties below stay the single source of the palette. They
+   are read in three ways and all three must keep working:
+     - Tailwind utilities, through the `@theme inline` mapping further down;
+     - `var(--line)` strings handed to Recharts, which land in SVG attributes;
+     - `getComputedStyle(document.documentElement)` in GraphCanvas, because
+       Cytoscape takes resolved colour strings and not CSS.
+   So the names --bg, --fg, --muted, --line and --edge are part of the contract;
+   renaming one means updating GraphCanvas in the same commit.
+
+   Spacing rhythm. The step between a label and its value is visibly smaller
+   than the step between two groups; that difference is the layout. The six
+   steps of the rhythm land exactly on Tailwind's default scale, so they need no
+   tokens of their own — use only these:
+     1 = 4px   2 = 8px   3.5 = 14px   5.5 = 22px   9 = 36px   14 = 56px */
+:root {
+  --bg: #ffffff;
+  --fg: #15181d;
+  --muted: #5c636d;
+  --line: #d9dce1;
+  --edge: #9aa1a9;
+
+  --info: #0072b2;
+  --warn: #9c5c00;
+  --critical: #c5221f;
+  --ok: #0f7b4f;
+
+  --mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  --sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0e1116;
+    --fg: #e7ecf2;
+    --muted: #949ba5;
+    --line: #2f353d;
+    --edge: #6e7681;
+
+    --info: #58a6ff;
+    --warn: #e3b341;
+    --critical: #ff7b72;
+    --ok: #3fb950;
+  }
+}
+
+:root[data-theme='dark'] {
+  --bg: #0e1116;
+  --fg: #e7ecf2;
+  --muted: #949ba5;
+  --line: #2f353d;
+  --edge: #6e7681;
+
+  --info: #58a6ff;
+  --warn: #e3b341;
+  --critical: #ff7b72;
+  --ok: #3fb950;
+}
+
+/* The Tailwind theme is a thin naming layer over those tokens, never a second
+   palette. shadcn's own token names are aliased onto the same four colours, so
+   a vendored component that still says `bg-background` or `border-input` paints
+   the one ground and the one hairline instead of introducing a surface. */
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--fg);
+  --color-muted: var(--bg);
+  --color-muted-foreground: var(--muted);
+  --color-border: var(--line);
+  --color-input: var(--line);
+  --color-ring: var(--fg);
+  --color-primary: var(--fg);
+  --color-primary-foreground: var(--bg);
+  --color-secondary: var(--bg);
+  --color-secondary-foreground: var(--fg);
+  --color-accent: var(--bg);
+  --color-accent-foreground: var(--fg);
+  --color-popover: var(--bg);
+  --color-popover-foreground: var(--fg);
+  --color-card: var(--bg);
+  --color-card-foreground: var(--fg);
+  --color-destructive: var(--critical);
+  --color-destructive-foreground: var(--bg);
+
+  --color-edge: var(--edge);
+  --color-info: var(--info);
+  --color-warn: var(--warn);
+  --color-critical: var(--critical);
+  --color-ok: var(--ok);
+
+  --font-sans: var(--sans);
+  --font-mono: var(--mono);
+  --default-font-family: var(--sans);
+  --default-mono-font-family: var(--mono);
+
+  /* Square. A radius would be the one decorative decision on the page. */
+  --radius: 0px;
+  --radius-xs: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --radius-3xl: 0px;
+
+  --container-measure: 74ch;
+}
+
+/* Mono means "this came from the chain": addresses, hashes, amounts, block
+   numbers, health factors, counts. One utility so the two faces stay a
+   semantic split and not a per-call-site decision. */
+@utility mono {
+  font-family: var(--mono);
+  font-size: 0.88em;
+  font-variant-numeric: tabular-nums;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    caret-color: var(--fg);
+    accent-color: var(--fg);
+    scrollbar-color: var(--edge) transparent;
+  }
+
+  ::selection {
+    background: var(--fg);
+    color: var(--bg);
+  }
+
+  /* Links stay ink; the underline is the affordance. Spending a hue here would
+     compete with severity, which is the only thing colour is for. */
+  a {
+    color: inherit;
+    text-decoration-line: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+  }
+
+  a:hover {
+    text-decoration-thickness: 2px;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--fg);
+    outline-offset: 2px;
+  }
+
+  /* Hierarchy from size, weight and space, over as few steps as possible.
+     Preflight strips the browser's heading sizes, so the scale is restated
+     here once rather than repeated as utilities on every heading. A heading
+     gets more space above it than below: it belongs to what follows. */
+  h1 {
+    max-width: var(--container-measure);
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -0.015em;
+    margin-bottom: 4px;
+  }
+
+  h2 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 56px 0 14px;
+  }
+
+  h3 {
+    font-size: 0.92rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  p {
+    max-width: var(--container-measure);
+    margin-bottom: 14px;
+  }
+}
