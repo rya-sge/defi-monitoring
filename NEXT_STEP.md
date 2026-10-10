@@ -105,9 +105,9 @@ Each step below gives its goal, what it delivers, its size (**S** about a day, *
 **Decisions.** Which admin actions are critical (implementation upgrade, feed change) and which are warn (pause, role change).
 
 **Needs from you.**
-- **Smart-contract sources** of the oracles behind your markets. Morpho's standard oracles are public (`morpho-org/morpho-blue-oracles`), but the demo market's oracle is a minimal proxy whose implementation has no verified source on Sourcify (Etherscan was not checked, as it needs a key): its source must come from Etherscan, from its deployer, or be inferred from bytecode.
+- **Smart-contract sources** of the oracles behind your markets. Morpho's standard oracles are public (`morpho-org/morpho-blue-oracles`), (now a submodule, `docs/external/morpho/lib/morpho-blue-oracles`). The demo market's oracle is a minimal proxy of `MetaOracleDeviationTimelock` (Steakhouse Financial), which has no source on Sourcify but is verified on Etherscan; `analyze` now checks that through the Etherscan key (D68).
 - **Collateral and issuer contracts**: the repositories or verified sources of the tokens you care about, and their documentation on admin roles and upgrade procedures.
-- An **Etherscan API key** (free tier) to fetch verified sources and ABIs automatically, instead of by hand.
+- An **Etherscan API key** (free tier) to fetch verified sources and ABIs automatically, instead of by hand. **Available** in `keys.ini`; used today only for the `analyze` oracle's verification.
 
 ## 4. Complete the position coverage
 
@@ -122,7 +122,7 @@ Each step below gives its goal, what it delivers, its size (**S** about a day, *
 
 **Needs from you.** Nothing blocking. Confirm which of the three matters to you, so it can be done first.
 
-**Already available.** The Vault V1.1 source and events (`morpho-org/metamorpho-v1.1`, read at a pinned commit), the `MorphoVaultV1Adapter` and `MidnightAdapter` sources in `docs/external/morpho/lib/vault-v2`, and Morpho's Midnight documentation in `docs/external/docs.morpho.org-developers-docs/midnight`.
+**Already available.** The Vault V1.1 source and events (`docs/external/morpho/lib/metamorpho-v1.1`, submodule at `3b17547e`), the `MorphoVaultV1Adapter` and `MidnightAdapter` sources in `docs/external/morpho/lib/vault-v2`, and Morpho's Midnight documentation in `docs/external/morpho/docs.morpho.org-developers-docs/midnight`.
 
 ## 5. Tests on a forked chain
 
@@ -234,12 +234,13 @@ Each step below gives its goal, what it delivers, its size (**S** about a day, *
 
 | Material | Where | Used for |
 |---|---|---|
-| Morpho developer documentation | `docs/external/docs.morpho.org-developers-docs` | contracts, Bundles, addresses on every chain, Midnight, exit routes |
+| Morpho developer documentation | `docs/external/morpho/docs.morpho.org-developers-docs` | contracts, Bundles, addresses on every chain, Midnight, exit routes |
 | Etherscan API documentation | `docs/external/docs.etherscan.io-api-reference-docs` | V2 endpoints (`getsourcecode`, `getabi`, …), step 3 |
-| Etherscan API key | `keys.ini`, section `[etherscan]` (git-ignored) | verified sources and ABIs, step 3; tested 2026-10-10 |
+| Etherscan API key | `keys.ini`, section `[etherscan]` (git-ignored) | verified sources and ABIs, step 3; used by `analyze` for oracle verification (D68) |
 | Morpho Blue source at `8e26ca6a` | `docs/external/morpho/lib/morpho-blue` | events, liquidation and shares maths, authorisation rules |
 | Vault V2 source at `d992cb84` | `docs/external/morpho/lib/vault-v2` | vault, adapters (market, V1, Midnight), timelocks, gates |
-| Vault V1.1 events | `morpho-org/metamorpho-v1.1` at `3b17547e`, read online | step 4 |
+| Vault V1.1 source at `3b17547e` | `docs/external/morpho/lib/metamorpho-v1.1` | queues, caps, `lostAssets`, events; step 4 |
+| Morpho oracles source at `9d2a0b66` | `docs/external/morpho/lib/morpho-blue-oracles` | `MorphoChainlinkOracleV2` price formula and feeds; steps 3 and 8 |
 | Foundry 1.5.0 | `forge`, `anvil`, `cast` installed | step 5 |
 | DeFi hack corpus | the `search-crypto-hack` skill | step 8 |
 | Public data | publicnode RPC, Morpho, Pendle and DefiLlama APIs | everything today |
@@ -259,7 +260,7 @@ Grouped by kind, for all steps:
 - [ ] What to do with `../projet/` (step 10).
 
 **Documents and smart-contract sources**
-- [ ] Sources or documentation of the oracles behind your markets, in particular the unverified ones (step 3).
+- [ ] Sources or documentation of the oracles behind your markets, in particular those not verified on Etherscan (step 3).
 - [ ] Sources and documentation of the collateral tokens and issuers you use: admin roles, upgrade procedure, reserves and redemption (steps 2 and 3).
 - [ ] Optionally, audit reports and post-mortems of the protocols you use (step 8).
 - [ ] The `morpho-org/bundles` repository at the release you would use (step 9).
@@ -267,7 +268,7 @@ Grouped by kind, for all steps:
 **Access and credentials** (in `keys.ini`, git-ignored, never committed; `keys.example.ini` lists the names)
 - [ ] Credentials of the alert channel (step 1).
 - [ ] An RPC provider key with archive and WebSocket access (steps 5 and 6), and an RPC per extra chain (step 7).
-- [ ] An Etherscan API key, free tier (step 3).
+- [x] An Etherscan API key, free tier (step 3): in `keys.ini`.
 - [ ] Optionally, a DEX aggregator API key (step 2).
 - [ ] GitHub Actions enabled on the repository (step 10).
 

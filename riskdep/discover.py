@@ -123,10 +123,27 @@ def top_borrower(f: S.Fetcher, market_id: str) -> str:
 ORACLE_GAP = 0.005  # oracle within 0.5 % of the PT market price → reads as market-tracking
 
 
+def oracle_verified(f: S.Fetcher, oracle: str, clone_of: str | None) -> tuple[bool | None, str]:
+    """Whether the code behind the oracle is verified on Etherscan (D68): the implementation of an EIP-1167 clone or
+    of a proxy Etherscan recognises. (None, …) when it cannot be checked: no key and no cached answer."""
+    target = clone_of or oracle
+    src = S.contract_source(f, target)
+    if src is None:
+        return None, "source verification not checked (no Etherscan key or answer)"
+    if src["verified"] and src["proxy"] and src["implementation"] and src["implementation"] != target:
+        impl = S.contract_source(f, src["implementation"])
+        if impl is None:
+            return None, f"proxy verified on Etherscan, implementation {src['implementation']} not checked"
+        src = impl
+    if not src["verified"]:
+        return False, "source not verified on Etherscan"
+    return True, f"source verified on Etherscan ({src['name']})"
+
+
 def infer_oracle(
     f: S.Fetcher, oracle: str, coll_dec: int, loan_dec: int, pt_market_in_loan: float, pt_discount: float | None = None
-) -> tuple[str, float | None, str, bool]:
-    """Return (mode, oracle price in loan units per PT, evidence, ambiguous).
+) -> tuple[str, float | None, str, bool, bool | None]:
+    """Return (mode, oracle price in loan units per PT, evidence, ambiguous, source verified).
 
     The test compares the oracle with the PT market price. It cannot separate a market
     oracle from a linear-discount or a par oracle when the PT itself trades within
@@ -135,12 +152,16 @@ def infer_oracle(
     """
     raw = S.rpc_call(f, oracle, "price()")
     if not raw or raw == "0x":
-        return "market-tracking", None, "price() unreadable; assumed market-tracking (conservative)", True
+        return "market-tracking", None, "price() unreadable; assumed market-tracking (conservative)", True, None
     price = int(raw, 16) / 10 ** (36 + loan_dec - coll_dec)
-    shape = "Chainlink-v2 adapter" if S.rpc_call(f, oracle, "BASE_FEED_1()") else "custom/unverified oracle"
+    shape = "Chainlink-v2 adapter" if S.rpc_call(f, oracle, "BASE_FEED_1()") else "custom oracle"
     code = S.rpc(f, "eth_getCode", [oracle, "latest"]) or ""
+    clone_of = None
     if code.startswith("0x363d3d373d3d3d363d73"):
-        shape += f", EIP-1167 clone of 0x{code[22:62]}"
+        clone_of = "0x" + code[22:62]
+        shape += f", EIP-1167 clone of {clone_of}"
+    verified, vtext = oracle_verified(f, oracle, clone_of)
+    shape += f"; {vtext}"
     gap = price / pt_market_in_loan - 1
     if pt_discount is not None and abs(pt_discount) < 2 * ORACLE_GAP:
         return (
@@ -152,6 +173,7 @@ def infer_oracle(
                 "Ambiguous; treated as market-tracking, the conservative case"
             ),
             True,
+            verified,
         )
     if abs(gap) <= ORACLE_GAP:
         mode = "market-tracking"
@@ -165,7 +187,7 @@ def infer_oracle(
             f"{shape}; reads {price:.4f} vs PT market {pt_market_in_loan:.4f} ({gap:+.2%}): "
             "does not follow the market; a market depeg does not trigger liquidation, a loss of backing still does"
         )
-    return mode, price, why, False
+    return mode, price, why, False, verified
 
 
 def _add(g: nx.DiGraph, node: str, kind: str, label: str, source: str, evidence: str, **attrs):
@@ -279,7 +301,7 @@ def discover_morpho_position(f: S.Fetcher, market_id: str, user: str | None = No
     _build_pt_layers(f, pos, pm)
 
     pt_in_loan = coll["priceUsd"] / loan["priceUsd"]
-    mode, oprice, why, ambiguous = infer_oracle(
+    mode, oprice, why, ambiguous, verified = infer_oracle(
         f, m["oracleAddress"], coll["decimals"], loan["decimals"], pt_in_loan, pos.pt_discount
     )
     pos.oracle_mode, pos.oracle_price, pos.oracle_ambiguous = mode, oprice, ambiguous
@@ -306,9 +328,10 @@ def discover_morpho_position(f: S.Fetcher, market_id: str, user: str | None = No
         f"oracle:{m['oracleAddress'].lower()}",
         "oracle",
         f"Oracle {m['oracleAddress'][:10]}…",
-        "Ethereum RPC eth_call price(), eth_getCode",
+        "Ethereum RPC eth_call price(), eth_getCode; Etherscan getsourcecode",
         why,
         mode=mode,
+        verified=verified,
     )
     sreg = REGISTRY["stables"].get(loan["address"].lower(), {})
     _add(

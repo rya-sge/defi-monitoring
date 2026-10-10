@@ -26,6 +26,9 @@ LLAMA = "https://api.llama.fi"
 LLAMA_COINS = "https://coins.llama.fi"
 LLAMA_YIELDS = "https://yields.llama.fi"
 RPC = "https://ethereum-rpc.publicnode.com"
+ETHERSCAN = "https://api.etherscan.io/v2/api"  # needs a key: keys.ini [etherscan] api_key
+
+KEYS_FILE = Path(__file__).resolve().parent.parent / "keys.ini"  # git-ignored; keys.example.ini is the template
 
 # Where a request is sent can differ from the URL it is cached under: RISKDEP_RPC_URL sends the main RPC's requests
 # to another endpoint (a local node or proxy, a paid endpoint with its key) while cache keys, snapshots and replays
@@ -58,7 +61,11 @@ class Fetcher:
         raw = json.dumps([method, url, body], sort_keys=True).encode()
         return self.dir / (hashlib.sha256(raw).hexdigest()[:24] + ".json")
 
-    def _request(self, method: str, url: str, body=None, transform=None):
+    def cached(self, method: str, url: str, body=None) -> bool:
+        return self._key(method, url, body).exists()
+
+    def _request(self, method: str, url: str, body=None, transform=None, secret: dict | None = None):
+        """`secret` (an API key) is added to the request only: never to the cache key, the stored URL or an error."""
         path = self._key(method, url, body)
         if self.mode not in ("refresh", "direct") and path.exists():
             return json.loads(path.read_text())["response"]
@@ -67,6 +74,10 @@ class Fetcher:
                 f"no cached response for {method} {url} {json.dumps(body)[:120] if body else ''}; rerun with --live"
             )
         target = ROUTES.get(url, url)
+        if secret:
+            from urllib.parse import urlencode
+
+            target += ("&" if "?" in target else "?") + urlencode(secret)
         last = None
         for attempt in range(3):
             try:
@@ -93,7 +104,10 @@ class Fetcher:
                 time.sleep(1.5 * (attempt + 1))
         else:
             # a routed URL may carry a key: name the public one only
-            raise SourceError(f"{method} {url} failed after 3 attempts: {str(last).replace(target, url)}")
+            msg = str(last).replace(target, url)
+            for v in (secret or {}).values():
+                msg = msg.replace(str(v), "***")
+            raise SourceError(f"{method} {url} failed after 3 attempts: {msg}")
         if transform:
             data = transform(data)
         if self.mode == "direct":
@@ -111,14 +125,48 @@ class Fetcher:
         )
         return data
 
-    def get_json(self, url: str, transform=None):
-        return self._request("GET", url, None, transform)
+    def get_json(self, url: str, transform=None, secret: dict | None = None):
+        return self._request("GET", url, None, transform, secret)
 
     def post_json(self, url: str, body, transform=None):
         return self._request("POST", url, body, transform)
 
 
 # --- thin clients -----------------------------------------------------------
+
+
+def api_key(section: str, name: str = "api_key") -> str | None:
+    """A key from keys.ini (never from the environment, never printed); None when absent or empty."""
+    import configparser
+
+    c = configparser.ConfigParser()
+    c.read(KEYS_FILE)
+    return c.get(section, name, fallback="").strip() or None
+
+
+def contract_source(f: Fetcher, address: str) -> dict | None:
+    """Etherscan `getsourcecode`, slimmed to {verified, name, proxy, implementation}; None when it cannot be known
+    (no key and no cached answer, or Etherscan refused). Only the slim answer is cached, never the key."""
+    url = f"{ETHERSCAN}?chainid=1&module=contract&action=getsourcecode&address={address.lower()}"
+    key = api_key("etherscan")
+    if not key and not (f.mode in ("offline", "live") and f.cached("GET", url)):
+        return None
+
+    def slim(d):
+        if str(d.get("status")) != "1" or not d.get("result"):
+            raise SourceError(f"Etherscan: {d.get('message')}")  # raised before caching: a refusal is not stored
+        r = d["result"][0]
+        return {
+            "verified": bool(r.get("SourceCode")),
+            "name": r.get("ContractName") or None,
+            "proxy": r.get("Proxy") not in (None, "", "0"),
+            "implementation": (r.get("Implementation") or "").lower() or None,
+        }
+
+    try:
+        return f.get_json(url, slim, {"apikey": key} if key else None)
+    except (SourceError, CacheMiss):
+        return None
 
 
 def morpho(f: Fetcher, query: str, variables: dict | None = None) -> dict:

@@ -1,6 +1,6 @@
 # Data providers
 
-Every external service the project calls, what it is used for, and what is known about its limits. All of them are public and need no API key. Keep this file current: any change that adds, removes or replaces a provider, endpoint or query updates it in the same commit (see `CLAUDE.md`).
+Every external service the project calls, what it is used for, and what is known about its limits. All of them are public; only Etherscan needs an API key, and the tool runs without it (the check then reads "not checked"). Keep this file current: any change that adds, removes or replaces a provider, endpoint or query updates it in the same commit (see `CLAUDE.md`).
 
 ## Contents
 
@@ -9,8 +9,8 @@ Every external service the project calls, what it is used for, and what is known
 - [Morpho API](#morpho-api)
 - [Pendle API](#pendle-api)
 - [DefiLlama](#defillama)
+- [Etherscan](#etherscan)
 - [Scripts loaded by the HTML outputs](#scripts-loaded-by-the-html-outputs)
-- [Configured but not used yet](#configured-but-not-used-yet)
 - [Defined but unused](#defined-but-unused)
 - [Trust model](#trust-model)
 - [Changing a provider](#changing-a-provider)
@@ -26,6 +26,7 @@ Every external service the project calls, what it is used for, and what is known
 | Pendle | `https://api-v2.pendle.finance/core` | REST API | no | PT markets, implied yield, swap quotes | `riskdep/sources.py` (`PENDLE`) |
 | DefiLlama | `https://api.llama.fi` | REST API | no | protocol list, hack record | `riskdep/sources.py` (`LLAMA`) |
 | DefiLlama Coins | `https://coins.llama.fi` | REST API | no | token prices, price history | `riskdep/sources.py` (`LLAMA_COINS`) |
+| Etherscan | `https://api.etherscan.io/v2/api` | REST API | yes, `keys.ini` `[etherscan]` | whether an oracle's source is verified | `riskdep/sources.py` (`ETHERSCAN`) |
 | jsDelivr | `https://cdn.jsdelivr.net` | CDN (browser) | no | Mermaid in the `analyze` report | `riskdep/report.py` |
 | cdnjs | `https://cdnjs.cloudflare.com` | CDN (browser) | no | Cytoscape.js in the graph page | `riskdep/graph.py` |
 
@@ -41,7 +42,7 @@ Every request to the data providers goes through the cached fetcher of `riskdep/
 | `eth_call` (single and JSON-RPC batches) | contract reads at a fixed block: Morpho Blue markets and positions, Vault V2 state, adapters, oracles and feeds, token metadata, rate models | `sources.rpc_call`, `sources.rpc_batch` and every reader |
 | `eth_getLogs` | the events of new blocks: vaults and adapters, Morpho Blue on the watched market ids, authorisations, admin events, mints | `poller.py` |
 | `eth_getStorageAt` | proxy slots (EIP-1967, ZeppelinOS) of the admin surface | `admin.py` (via `sources.rpc_batch_methods`) |
-| `eth_getCode` | minimal-proxy (EIP-1167) detection | `admin.py`, `discover.py`, `graph.py` |
+| `eth_getCode` | minimal-proxy (EIP-1167) detection; whether a vault holder is a contract or a wallet (EIP-7702 delegations count as wallets) | `admin.py`, `discover.py`, `graph.py`, `exit_queue.py` |
 | `eth_getBlockByNumber` | block hash for the cross-check | `crosscheck.py` |
 
 **Limits measured on 2026-10-10:**
@@ -68,7 +69,7 @@ Every request to the data providers goes through the cached fetcher of `riskdep/
 | `userByAddress` | an address's Blue positions and Vault V2 deposits | `positions.py` |
 | `marketPositions` | a market's borrowers (`borrowShares_gte`), its main suppliers (ordered by supply shares), the largest borrower of a market | `market_risk.py`, `borrower.py`, `discover.py` |
 | `marketById`, `marketPosition` | the `analyze` position and its market | `discover.py` |
-| `vaultV2ByAddress` | the largest depositor of a vault; its allocators and sentinels (graph); its total assets (cross-check) | `vault.py`, `graph.py`, `crosscheck.py` |
+| `vaultV2ByAddress` | the largest depositor of a vault; its holders, first 100 by size, for the exit queue; its allocators and sentinels (graph); its total assets (cross-check) | `vault.py`, `exit_queue.py`, `graph.py`, `crosscheck.py` |
 
 **Notes.** One page holds up to 1,000 items; `list_borrowers` pages with `skip`. Indexed data can lag the chain; the API-vs-chain cross-check warns beyond 0.5 %.
 
@@ -102,6 +103,21 @@ Every request to the data providers goes through the cached fetcher of `riskdep/
 
 **Note.** Some tokens are not priced (no entry); the oracle comparison then reports "not checked" for that market.
 
+## Etherscan
+
+**`https://api.etherscan.io/v2/api`** (API V2, `chainid=1`), REST. Key: `keys.ini`, section `[etherscan]`, `api_key`.
+
+| Query | Used for | Code |
+|---|---|---|
+| `module=contract&action=getsourcecode&address=…` | whether the code behind the `analyze` position's oracle is verified: the implementation of an EIP-1167 clone, or of a proxy Etherscan recognises. A verified oracle drops the ×2 `oracle.unverified_factor` (D68) | `sources.contract_source`, `discover.oracle_verified` |
+
+**Notes.**
+- **The key never leaves the request.** It is added to the outgoing URL only (`Fetcher.get_json(..., secret=…)`): cache keys, cached files and error messages carry the URL without it.
+- **Only a slim answer is cached** (`verified`, `name`, `proxy`, `implementation`), not the source code; a refusal (`status` 0: bad key, rate limit) is never cached.
+- **Without a key** and with no cached answer, verification is "not checked" and the ×2 applies, as before.
+- The free tier's rate limit is not measured and not documented in the local copy of the docs; `analyze` makes one or two calls per run.
+- Documentation: `docs/external/docs.etherscan.io-api-reference-docs`.
+
 ## Scripts loaded by the HTML outputs
 
 These are not data sources: the browser loads them when a report is opened, at a pinned version.
@@ -110,10 +126,6 @@ These are not data sources: the browser loads them when a report is opened, at a
 |---|---|---|
 | Mermaid 11.4.1 | `https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js` | `out/report.html` (`analyze`) |
 | Cytoscape.js 3.30.2 | `https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.2/cytoscape.min.js` | `out/graph.html`, `docs/graph-example.html` |
-
-## Configured but not used yet
-
-**Etherscan API V2, `https://api.etherscan.io/v2/api`** (`chainid=1`), key in `keys.ini` section `[etherscan]`. No code calls it yet; it is meant for step 3 of `NEXT_STEP.md` (verified sources and ABIs of the admin surface). Tested by hand on 2026-10-10: `module=contract&action=getsourcecode` returned the verified source of the demo oracle `0xF8b2…1b08` (an EIP-1167 clone, which Etherscan resolves to its implementation `0x9b46…de5b`, `MetaOracleDeviationTimelock` by Steakhouse Financial, solc 0.8.28). Documentation: `docs/external/docs.etherscan.io-api-reference-docs`. Free-tier limits are not measured yet.
 
 ## Defined but unused
 
@@ -133,9 +145,9 @@ These are not data sources: the browser loads them when a report is opened, at a
 
 ## Changing a provider
 
-- **Keys and secrets** live in `keys.ini` at the repository root, which is git-ignored and readable only by its owner (`chmod 600`). `keys.example.ini` is the committed template: same sections and names, no values. Copy it with `cp keys.example.ini keys.ini`. No provider called by the code today needs a key; the Etherscan key is filled in for step 3, the other sections are ready for next steps 1 to 6.
+- **Keys and secrets** live in `keys.ini` at the repository root, which is git-ignored and readable only by its owner (`chmod 600`). `keys.example.ini` is the committed template: same sections and names, no values. Copy it with `cp keys.example.ini keys.ini`. Only Etherscan needs a key today (read by `sources.api_key`); the other sections are ready for next steps 1 to 6.
 
-- **Endpoints** are constants: `RPC`, `MORPHO`, `PENDLE`, `LLAMA`, `LLAMA_COINS` in `riskdep/sources.py`, `SECOND_RPCS` in `riskdep/crosscheck.py`, and the script URLs in `riskdep/report.py` and `riskdep/graph.py`.
+- **Endpoints** are constants: `RPC`, `MORPHO`, `PENDLE`, `LLAMA`, `LLAMA_COINS`, `ETHERSCAN` in `riskdep/sources.py`, `SECOND_RPCS` in `riskdep/crosscheck.py`, and the script URLs in `riskdep/report.py` and `riskdep/graph.py`.
 - **A paid RPC** (archive and WebSocket access, needed by next steps 5 and 6) is set with `RISKDEP_RPC_URL`, its key included; keep the URL in `keys.ini` (section `[rpc]`, git-ignored) and export it from there. It is never committed, and the cache keys keep the publicnode URL.
 - **After any change:**
   - re-record the replays (`watch --blocks 1000 --record`, `watch --user <address> --blocks 300 --record`), because cached requests are keyed by their URL and body;

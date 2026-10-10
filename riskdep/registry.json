@@ -238,6 +238,9 @@
     "curve_drop": 0.05,
     "curve_warn_share": 0.25,
     "mint_share_critical": 0.05,
-    "oracle_divergence_warn": 0.03
+    "oracle_divergence_warn": 0.03,
+    "exit_queue_phi": 0.5,
+    "exit_queue_stuck_warn": 0.5,
+    "exit_queue_basis": "D64, D66. exit_queue_phi: the share of the other depositors' assets assumed to leave before you in a run, Team 2's single parameter phi; 0.5 is a middle case with no data behind it. exit_queue_stuck_warn: warn when at least half of the position would be stuck if every contract holder (vault, fund, multisig) withdrew first; critical when, in addition, the vault already carries unrealised bad debt."
   }
 }
