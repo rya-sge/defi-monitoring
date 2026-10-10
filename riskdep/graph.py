@@ -1,6 +1,6 @@
 """Dependency graph of an address's Morpho positions and of vaults, as JSON and as an interactive HTML page.
 
-Node types follow ANALYSIS_MONITORING.md §1:
+Node types follow docs/analysis/ANALYSIS_MONITORING.md §1:
   Actor     whose capital is at stake: an address with positions, or a Vault V2 (adapters folded in)
   Pool      where liquidity sits and is priced: a Blue market, a Pendle pool
   Asset     a token; a vault's share token only where another protocol reuses it (an oracle conversion)

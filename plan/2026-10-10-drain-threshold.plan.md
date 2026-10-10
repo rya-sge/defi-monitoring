@@ -1,6 +1,6 @@
 # Drain threshold: when a depeg empties a market, plan
 
-> **Status**: approved: the person, 2026-10-10, "Go" (item 2 of `comparison_team.md` §5, proposed as the step after the exit queue). No interview: the decisions below are the agent's defaults.
+> **Status**: approved: the person, 2026-10-10, "Go" (item 2 of `docs/analysis/comparison_team.md` §5, proposed as the step after the exit queue). No interview: the decisions below are the agent's defaults.
 > **Delivers**: for every market of every Vault V2 a watch follows: the collateral's discount to its oracle, the drain threshold d\* = 1 − LLTV / (1 + c), the amount that can be drained (free liquidity plus the vault's Public Allocator inflow), and the vault's share of it. A `DrainWindow` alert warns within 2 points of d\* and turns critical at d\*; an open drain removes its liquidity from the exit queue. Proof: the start-up table on the recorded Sentora range; a simulated USDe depeg as a test.
 > **Hard rule**: no new provider; the existing alerts keep their meaning; the agent never commits.
 > **Read against**: `defi-monitoring` working tree; `teammate/team2.md` §3 "Fixed oracles"; vault-v2 `d992cb84` (`VaultV2.sol` caps and `isAllocator`, `src/periphery/blue-public-allocator/BluePublicAllocator.sol`: `absoluteCap`, `canPullFromMarket`, `isActiveAdapter`, `vaultData`); Morpho docs `contracts/blue-public-allocator.md` and `contracts/addresses.md` (Ethereum `0x00b8…1e27`); live probe 2026-10-10: the Public Allocator has no role on Sentora RLUSD Main.

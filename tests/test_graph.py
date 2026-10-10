@@ -140,3 +140,30 @@ def test_wraps_edges_and_the_tvl_floor(rockawayx):
     assert {("siUSD", "iUSD"), ("strUSD", "trUSD"), ("nvPRIME", "PRIME")} <= wraps
     # every loan token here is a dollar stablecoin, so the supply in loan units reads as TVL in USD (D79)
     assert all(n["details"]["total_supply"] >= 1e6 for n in _markets(g).values() if n["details"].get("sibling"))
+
+
+# --- Belem RWA EURCV, the sponsor's vault curated by RockawayX (ROCK-VAULT.md), recorded 2026-10-11
+
+BELEM = (
+    Path(__file__).resolve().parent.parent / "fixtures" / "replay" / "graph-0xd6d4b804014ef27836dbe9f8f6bf6c71251548ec"
+)
+
+
+def test_belem_held_markets_and_the_midas_nav_feed():
+    meta = json.loads((BELEM / "meta.json").read_text())
+    g = build_all(S.Fetcher("offline", BELEM), meta["block"], meta["users"], meta["vaults"], meta["siblings"])
+    held = {
+        n["label"].removeprefix("Blue "): n["details"]["oracle_class"]
+        for n in g.nodes.values()
+        if "market_id" in n["details"] and not n["details"].get("sibling")  # siblings can share a held label
+    }
+    assert held == {
+        "mGLOeuro/EURCV": "constant-price",  # Midas MGloEuroCustomAggregatorFeed: the issuer publishes the NAV
+        "WBTC/EURCV": "price-tracking",
+        "cbBTC/EURCV": "price-tracking",
+        "wstETH/EURCV": "price-tracking",
+        "steakEURCV/EURCV": "constant-price",  # ERC-4626 rate
+        "oTFYe/EURCV": "constant-price",  # RedStone fundamental pegged at 1.0
+    }
+    nav = next(n for n in g.nodes.values() if n["label"] == "mGLOeuro/EUR")
+    assert "CustomAggregator" in nav["details"]["class_basis"]

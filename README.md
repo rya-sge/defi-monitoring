@@ -6,7 +6,7 @@ Risk tooling for DeFi positions on Ethereum, built with the charrette loop: desi
 - **`watch`**: follows a **Morpho Vault V2** block by block and alerts on every transaction that changes a depositor's exposure, losses or ability to exit. Plan: `plan/2026-10-10-morpho-vault-v2-watcher.plan.md`.
 - **`watch --user`**: finds every Morpho Blue borrow and Vault V2 deposit of an address and follows them together: health factor, liquidation, actions on your behalf, borrow rate. Plan: `plan/2026-10-10-morpho-user-watcher.plan.md`.
 
-How the system is built (components, data sources, data flow, state, testing): `ARCHITECTURE.md`.
+How the system is built (components, data sources, data flow, state, testing): `docs/analysis/ARCHITECTURE.md`.
 
 All data comes from keyless public sources: the publicnode Ethereum RPC, the Morpho and Pendle APIs, and DefiLlama.
 
@@ -19,7 +19,7 @@ uv run pytest -q tests              # 161 tests, offline
 
 Outside an activated virtualenv, prefix the `python3 -m riskdep …` commands below with `uv run`.
 
-`RISKDEP_RPC_URL` (optional) sends the main RPC's requests to another endpoint, for example a local node, a proxy or a paid endpoint with its key. Cached requests, snapshots and replays keep the public URL, so the offline tests are unaffected and the key is never written to a file. See `PROVIDERS.md`.
+`RISKDEP_RPC_URL` (optional) sends the main RPC's requests to another endpoint, for example a local node, a proxy or a paid endpoint with its key. Cached requests, snapshots and replays keep the public URL, so the offline tests are unaffected and the key is never written to a file. See `docs/analysis/PROVIDERS.md`.
 
 **Faster live runs: eRPC (optional).** The free RPC throttles long runs such as `graph`; riskdep then waits and resends, which is slow but loses nothing. A local eRPC proxy spreads the calls over six free endpoints instead (RockawayX graph: 43 s direct, 20 s through eRPC; the example graph: 8 to 12 min direct, 3 min through eRPC). It takes one binary, the committed `erpc.yaml`, and one variable:
 
@@ -87,7 +87,7 @@ python3 -m riskdep graph --vault <vault> --record                    # save ever
 python3 -m riskdep graph --vault 0xE0181090c22579B6A217f1522cbf8c9f1F0C1965 --replay   # RockawayX USDC Yield, offline
 ```
 
-Builds the graph of `ANALYSIS_MONITORING.md` §1 from live data. Actors are addresses, vaults, and the main lenders of the borrowed markets. Pools are Blue markets and Pendle pools. It also draws assets, oracles with the feeds they read, and vault admins. The output is an interactive HTML page (Cytoscape.js from cdnjs) plus the same data as JSON. `docs/graph-example.html` is a rendered example, built before sibling markets existed.
+Builds the graph of `docs/analysis/ANALYSIS_MONITORING.md` §1 from live data. Actors are addresses, vaults, and the main lenders of the borrowed markets. Pools are Blue markets and Pendle pools. It also draws assets, oracles with the feeds they read, and vault admins. The output is an interactive HTML page (Cytoscape.js from cdnjs) plus the same data as JSON. `docs/graph-example.html` is a rendered example, built before sibling markets existed.
 
 **Sibling markets** (plan `2026-10-10-sibling-markets`). For every Blue market an address or vault of the graph holds, `graph` also adds the other Blue markets that can move its collateral's price or share its price inputs, drawn dashed:
 
