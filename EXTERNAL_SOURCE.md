@@ -10,7 +10,8 @@ This document reviews three outside providers of risk data, whose documentation 
 - [4. Nexus Mutual](#4-nexus-mutual)
 - [5. Three outside views of the same numbers](#5-three-outside-views-of-the-same-numbers)
 - [6. How they fit the project](#6-how-they-fit-the-project)
-- [7. Resources](#7-resources)
+- [7. Proposal: internal and external estimates, weighted](#7-proposal-internal-and-external-estimates-weighted)
+- [8. Resources](#8-resources)
 
 ## 1. Summary
 
@@ -220,10 +221,16 @@ Our model's yearly expected loss per dollar, for each layer, set against the out
 
 | Layer | Ours, p_year | Ours, E[loss]/yr | Nexus price/yr | Nexus ÷ ours | Credora | Pharos |
 |---|---|---|---|---|---|---|
-| sUSDe / USDe depeg | 12 % | 0.98 % (0.25 % after 75 % recovery) | 3.0–3.5 % | **3–14×** | PT-sUSDe collateral PD 1.08 % (docs example) | sUSDe C (55), USDe C+ (62) |
+| sUSDe / USDe depeg | 12 % | 0.98 % (0.25 % after 75 % recovery) | 3.0–3.5 % | **3–14×** | PT-sUSDe collateral PD 1.08 % (worked example in the docs, data from June 2025: an illustration, not a current rating) | sUSDe C (55), USDe C+ (62) |
 | USDS depeg | 5 % | 0.18 % | 0.50–0.54 % | 3× | — | USDS B (71), sUSDS C+ (60) |
 | Pendle exploit | 1.21 % | 0.17 % | 1.15–1.50 % | 7–9× | Pendle notch on PTs | — |
-| Morpho Blue exploit | 5.03 % | 0.46 % | 1.65–2.71 % (blue-chip vaults and markets) | 4–6× | protocol PD **0.13 %** | — |
+| Morpho Blue exploit | 5.03 % | 0.46 % | 1.65–2.71 % (blue-chip vaults and markets) | 4–6× | protocol PD **0.13 %** (stated in the public method page, undated) | — |
+
+**Where the Credora numbers come from.** Neither comes from the API, which needs a whitelisted key. Both are printed in Credora's public documentation:
+- 0.13 % in `protocol-implementations/morpho.md` ("The calculated Morpho Protocol PDs for Ethereum and Base is 0.13%");
+- 1.08 % in the worked example `protocol-implementations/morpho/example-vault.md`, built on two Spark vaults with data from June 2025.
+
+The 0.13 % is a parameter of the method, applied to every Morpho market Credora rates, but undated. The 1.08 % is an example. Neither is a live rating of the markets we watch; those need the API (§3).
 
 **What it shows:**
 1. **Probabilities and prices disagree in opposite directions.**
@@ -234,6 +241,7 @@ Our model's yearly expected loss per dollar, for each layer, set against the out
    The two errors are the ones `GAP.md` names: probabilities too high, severities too thin (K4, K5).
 2. **Ethena is the widest gap.** The market charges 3 %/yr for USDe depeg cover. Our expected loss is 0.98 % at the trough, and only 0.25 % after the assumed 75 % recovery. A 75 % recovery is the assumption the price disagrees with most.
 3. **None of these is the truth.** A cover price includes a loading, Credora's PD is a judgement on a curve, and a Pharos grade is not a probability. Three independent outside numbers that bracket ours are still the best evidence available for the brief's criterion, "is the number defensible". Disagreements should be shown, not hidden.
+4. **Much of the price gap is loading.** Taking out an insurance loading of 3 brings the Nexus-implied depeg frequencies back to ours (sUSDe 12.2 % vs 12 %, USDS 4.6 % vs 5 %); see §7.5. The Morpho exploit disagreement with Credora remains.
 
 ## 6. How they fit the project
 
@@ -269,7 +277,123 @@ Our model's yearly expected loss per dollar, for each layer, set against the out
 | 5 | Pharos supporter key: DEWS and depeg events in the watches | S |
 | 6 | Credora API, if access is granted: PSL next to ours, vault PSL for K16 | S |
 
-## 7. Resources
+## 7. Proposal: internal and external estimates, weighted
+
+The goal: each risk number in `analyze` comes from **our own computation and the outside providers together**, with a stated weight for each, instead of from our computation alone. The weights live in `registry.json`, and the report shows every component, so a reader sees where the number comes from and how far the sources disagree.
+
+### 7.1 What we can use, by access level
+
+| Access | Source | Data | Status |
+|---|---|---|---|
+| **Now, no key** | Nexus Mutual `/v2/products`, `/v2/capacity` | Annual cover price per protocol and per depeg, capacity | checked, works |
+| **Now, no key** | Pharos `/api/safety-grades`, `/api/dependency-graph/v1`, `/api/dependency-scenarios/v1` | Issuer grades, look-through edges, common-mode groups, modelled contagion | checked, works |
+| **Now, no key** | Credora public method docs | Morpho protocol PD 0.13 % (method parameter, undated); smart-contract and maturity tiers; oracle classes | in `../newDocs/` |
+| **Supporter key, $10 donation** | Pharos keyed endpoints | DEWS stress score, depeg events, depeg duration, DEX liquidity, redemption backstops, daily snapshots | to obtain; recommended |
+| **Whitelist form, not guaranteed** | Credora GraphQL | Live rating and PSL for Morpho markets and vaults | to request; the plan works without it |
+| **Already held** | Etherscan (`keys.ini`) | Verified oracle sources | in use (D68) |
+
+The plan must give a full answer with the first three rows only. Each keyed source adds weight when present and drops out cleanly when absent ("not checked", like the cross-checks).
+
+### 7.2 What each source can estimate
+
+The sources do not measure the same thing. Before they can be weighted, each is converted to the same quantity: **a yearly probability of the event** for one layer. The severity stays ours, from `registry.json`, until K5 is fixed.
+
+| Source | Gives | Conversion to a yearly probability | Layers |
+|---|---|---|---|
+| Internal | p_year from the hack record (K17 base rate × K18 multiplier) or a registry entry | none | all |
+| Nexus Mutual | Annual price π, an expected payout plus a loading | p = π ÷ L ÷ mean severity, with L the loading (registry: 3, range 2–5, basis: cover price includes capital cost and margin) | protocol exploit (Morpho, Pendle, Sky), issuer depeg (USDe, USDS) |
+| Pharos | Grade A+ … F (score 0–100) | A table grade → p_year (registry, a judgement at first; calibrated later on Pharos depeg events, keyed) | issuer depeg |
+| Credora (docs) | Morpho protocol PD 0.13 % | none: already a yearly PD | Morpho exploit |
+| Credora (API) | Market or vault PSL: P(loss ≥ 1 %) | compared with our P(loss ≥ 1 % of equity) from the simulation, not blended into a single layer | market, vault (check only) |
+
+**No outside source covers** the oracle layer, the Pendle pool move (K8), the borrow rate (K10) or the PT's implied yield (K11). Those stay internal, with weight 1.
+
+### 7.3 How to weight
+
+**Pool in log space, not linearly.** The sources differ by orders of magnitude (Morpho exploit: 5.03 % ours, 0.13 % Credora). A linear average is dominated by the largest number; a weighted geometric mean (log pooling, the usual way to combine probability forecasts) keeps each source's influence proportional to its weight:
+
+$$
+\log p = \frac{\sum_i w_i \log p_i}{\sum_i w_i}
+$$
+
+**Each weight is the product of three factors.** All three live in `registry.json` with a basis.
+
+$$
+w_i = b_i \times f_i \times r_i
+$$
+
+| Factor | Meaning | Proposed values |
+|---|---|---|
+| b_i, base trust | How much the source's method deserves for this layer | per source and layer, table below |
+| f_i, freshness | 0.5^(age ÷ half-life) | live APIs: half-life 30 days; Credora docs: 180 days; undated figure: fixed 0.5 |
+| r_i, relevance | Does it measure our event? | 1 if the same event (USDe depeg cover for a sUSDe depeg); 0.5 if related (Blue Chip Morpho vaults for one Morpho market); 0 if not |
+
+**Proposed base trust, a starting point to argue about:**
+
+| Layer | Internal | Nexus | Pharos | Credora |
+|---|---|---|---|---|
+| Protocol exploit (Morpho, Pendle, Sky) | 0.3 | 0.4 | — | 0.3 |
+| Issuer depeg (USDe, USDS) | 0.4 | 0.3 | 0.3 | (API only) |
+| Oracle, pool move, rates | 1 | — | — | — |
+
+The reasoning:
+- **Internal stays at least 0.3** on every layer. It is the only source that knows the position (its oracle, LLTV, PT), and K17 already limits how much the hack record alone should weigh.
+- **Nexus gets the most on exploits.** It is the only live price, set by people with capital at risk.
+- **Pharos gets as much as Nexus on depegs.** Its whole method is about stablecoins, and its record covers 27 reconstructed depegs.
+- **Credora's 0.13 % weighs as much as our own hack record** on Morpho exploits. It is an agency's stated parameter, but undated, so its freshness factor halves it.
+
+### 7.4 Guard rails
+
+1. **The blend stays inside the sources' range.** It is clipped to [min p_i, max p_i], so it can never be more extreme than every source.
+2. **Disagreement is shown, not averaged away.** If max p_i ÷ min p_i > 10, the report flags "sources disagree" for that layer and runs the verdict three times: internal only, blended, and the most pessimistic source. If the verdict changes, it says so, as the oracle sensitivity line already does.
+3. **The spread becomes the uncertainty.** The range [min p_i, max p_i] is the interval K14 asks for; the verdict compares carry with the expected loss at the upper end (K13).
+4. **A missing source drops out.** Its weight is 0 and the others renormalise; the report prints "Nexus: not checked" rather than failing.
+5. **Severity stays internal** until K5 is fixed, so the blend changes frequencies only, and the effect of each source stays readable.
+6. **One CLI switch** `--blend internal|blended|pessimistic` (default `blended`) reproduces any of the three runs.
+
+### 7.5 Worked example (snapshot data, 2026-10-10)
+
+Loading L = 3. All three sources are fresh, except Credora's undated figure, kept here at its base weight to show the method.
+
+| Layer | Internal | Nexus-implied | Pharos | Credora | Weights | **Blended** | Spread |
+|---|---|---|---|---|---|---|---|
+| Morpho Blue exploit | 5.03 % | 1.65 % ÷ 3 ÷ 0.091 = 6.04 % | — | 0.13 % | 0.3 / 0.4 / — / 0.3 | **1.81 %** | 46× → "sources disagree" |
+| Pendle exploit | 1.21 % | 1.15 % ÷ 3 ÷ 0.138 = 2.78 % | — | — | 0.5 / 0.5 | **1.83 %** | 2.3× |
+| sUSDe depeg | 12 % | 3.0 % ÷ 3 ÷ 0.082 = 12.2 % | C → 8 % (proposed map) | — | 0.4 / 0.3 / 0.3 | **10.7 %** | 1.5× |
+| USDS depeg | 5 % | 0.50 % ÷ 3 ÷ 0.036 = 4.6 % | B → 4 % | — | 0.4 / 0.3 / 0.3 | **4.6 %** | 1.25× |
+
+**What it shows:**
+- **On depegs, the sources roughly agree once the loading is taken out.** §5's "insurers charge 3–14× our expected loss" is mostly the insurance loading. The **loading L is the single most important assumption** of the Nexus conversion: it should be a range (2–5) shown in the report, not a point.
+- **On Morpho exploits they don't agree.** Our 5.03 % and Nexus's 6.04 % sit on one side, Credora's 0.13 % on the other. The blend lands at 1.81 %, and the 46× spread is itself the finding: the "sources disagree" flag fires, and the verdict is also run with the pessimistic source. This is K4 made visible.
+- **Pharos's grade map is a judgement.** Until it is calibrated on Pharos's own depeg events (keyed), its weight should stay at or below the internal one.
+
+### 7.6 In the code
+
+| Where | What |
+|---|---|
+| `riskdep/sources.py` | `nexus_products()`, `nexus_capacity()`, `pharos_grades()`, `pharos_graph()`, `pharos_scenarios()` (keyless); `pharos(endpoint)`, `credora_ratings(address)` read their key from `keys.ini` and return `None` without it. All through the cached `Fetcher` |
+| `riskdep/outside.py` (new, pure) | `estimates(layer, ...) -> list[Estimate]` with value, source, date, base trust, freshness, relevance; `blend(estimates) -> Blended` (log pool, clip, spread, disagreement flag). No I/O, unit-tested |
+| `riskdep/priors.py` | `Prior` gets `p_internal` and `components`; `p_year` becomes the blended value according to `--blend` |
+| `riskdep/registry.json` | A `blend` section: base trust per layer and source, half-lives, the loading L and its range, the Pharos grade → p table, the disagreement ratio (10); each with a basis |
+| `riskdep/decide.py` | The three-way run when a layer disagrees; "stay and insure" from Nexus price and capacity (K21) |
+| `riskdep/report.py` | An "Outside view" table per layer: every component, its weight, the blend, the spread |
+| `PROVIDERS.md`, `keys.example.ini` | New rows; `[pharos] api_key =` and `[credora] client_secret =` with no values |
+| `fixtures/snapshot/` | One recorded response per endpoint, so tests and the demo stay offline |
+| `tests/test_outside.py` | Log pool, clip, missing source, freshness, disagreement flag; the worked example above as a test case |
+
+### 7.7 Order
+
+| Step | What | Needs | Effort |
+|---|---|---|---|
+| 1 | `outside.py` with Nexus only: exploit and depeg layers, report table, `--blend` | nothing | S |
+| 2 | Pharos keyless grades in the depeg blend; look-through and common-mode groups (K19, K6) | nothing | S–M |
+| 3 | Credora's 0.13 % and method tiers as the documented basis (K17–K18) | nothing | S |
+| 4 | Pharos supporter key: DEWS and depeg events in the watches; calibrate the grade map on depeg events | $10 key | S–M |
+| 5 | Credora API: PSL check per market and vault, and a fourth source in the blend | whitelist | S |
+
+Steps 1–3 need no key, and together they turn §5's comparison into a number the verdict actually uses.
+
+## 8. Resources
 
 ### Local documentation (`../newDocs/`)
 

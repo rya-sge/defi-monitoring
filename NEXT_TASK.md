@@ -24,7 +24,20 @@ This file picks the two tasks to build next from `NEXT_STEP_V2.md` and says how,
 
 ## Task 1: incident mode
 
-### What the user gets
+### Today, and what is missing
+
+What `analyze` does today (checked 2026-10-10, `analyze --demo`):
+- It answers an **unconditional** question: the expected loss over 30 days, drawn from yearly probabilities for six layers, then a STAY / REDUCE / EXIT verdict.
+- The report's layer table has a column **"Loss if it happens"**: for each layer, the mean loss when that layer alone fails, at a severity drawn from its prior. That is the closest thing to an impact number.
+- It does **not** accept an incident: `analyze --demo --shock oracle=0.10` fails with `unrecognized arguments: --shock`.
+
+What is missing, and why it matters for the brief:
+- **The user cannot say what happened.** The brief's task is the impact "when one of them is affected", and its worked example marks the oracle "incident". Today the only input is a probability; nobody can enter "the oracle reads 10 % low" or "USDe is at 0.92".
+- **No verdict given the incident.** "Loss if it happens" is a number in a table, not a decision. When the incident is certain, the probabilities no longer matter, and the question becomes "loss of staying against cost of leaving now". Today's verdict always mixes in the 30-day probabilities.
+- **No "how fast".** The brief asks what an incident does "and how fast". The report has no time to impact: it does not say whether the oracle will liquidate in one block, after a timelock, or never.
+- **The watches cannot price an alert.** A critical alert says what happened, not what it costs the position.
+
+### What the user would get (target output, not available today)
 
 ```bash
 python -m riskdep analyze --demo --shock oracle=0.10
@@ -90,7 +103,21 @@ INCIDENT  oracle −10.0 %
 
 ## Task 2: the book, the breakeven and the headline
 
-### What the user gets
+### Today, and what is missing
+
+What exists today:
+- `analyze` takes **one position**: a Morpho borrow (`--morpho-market`, `--user`) or a PT holding (`--pendle-market`, `--pt-amount`). There is no `--book` option, and no way to analyse several positions together.
+- Its headline is a sentence per position, for example "REDUCE: … the carry ($5,697) does not cover the expected loss ($6,265) …", followed by several dollar amounts.
+- It ends with one global line, "A full exit would only pay if incident probabilities were 13.5× the estimates" (`risk_multiple_to_exit`). That is a partial answer to Team 2's breakeven argument, but it scales **all** probabilities at once.
+- The watches follow several positions of one address, but each one separately; nothing adds them up.
+
+What is missing, and why it matters for the brief:
+- **No book.** The brief's example is a book of ten 10 % pockets, one affected. Its answer depends on the pocket's weight: the same loss is 10 % of the book or 1 %. Today no number is expressed as a share of a book, and the example cannot be entered.
+- **Shared layers counted as independent.** Two pockets backed by the same issuer, or priced by the same feed, fail together. Run one by one, each draws its own depeg, so their joint failure looks rarer than it is and the book's tail looks thinner. This is gap M6 in `ANALYSIS_MONITORING.md`.
+- **No breakeven per scenario.** The brief asks to make "expensive and certain against cheap and uncertain" explicit. The breakeven probability p\* = (exit cost + carry) / L(scenario) does exactly that, scenario by scenario, without relying on a base rate. `docs/scenarios-and-breakeven.md` explains it; the tool does not compute it. The "13.5×" line is one global multiplier, not a probability a manager can compare with their own view of a given scenario.
+- **No single headline.** The brief's subtitle asks for "one number a portfolio manager can act on". Today the reader gets a verdict and several amounts, but no line that says which pocket to act on and above which probability.
+
+### What the user would get (target output, not available today)
 
 ```bash
 python -m riskdep analyze --book book.json
