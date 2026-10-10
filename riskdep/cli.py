@@ -8,7 +8,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import clock, discover, pipeline, report, scenario, vault_incident
+from . import clock, discover, pipeline, report, scenario, vault_book, vault_incident
 from . import sources as S
 
 # D14: largest borrower of Morpho market PT-sUSDE-26NOV2026 / USDC, cached in fixtures/snapshot.
@@ -34,15 +34,28 @@ def main(argv: list[str] | None = None) -> int:
     a.add_argument("--refresh", action="store_true", help="always fetch and rewrite the cache")
     a.add_argument(
         "--vault",
-        help="incident mode for a Vault V2 depositor (with --shock token=<collateral>:<fall>, and --user for the "
-        "depositor); offline it reads fixtures/replay/<vault>/",
+        action="append",
+        help="incident mode for a Vault V2 (with --shock token=… or borrower=…; --user for the depositor); "
+        "repeat it for an ad hoc book of vaults",
+    )
+    a.add_argument(
+        "--book",
+        help="a book of vaults in a JSON file (see examples/), each vault with an optional depositor and label",
+    )
+    a.add_argument(
+        "--record",
+        action="store_true",
+        help="with --vault or --book: read each vault live at the head and save every response under "
+        "fixtures/replay/incident-<vault>/, for offline runs",
     )
     a.add_argument(
         "--shock",
         action="append",
         metavar="EVENT=SEVERITY",
         help="incident mode: a known incident, e.g. oracle=0.10 or issuer_depeg=0.08 (repeatable); events: "
-        + ", ".join(scenario.EVENTS),
+        + ", ".join(scenario.EVENTS)
+        + "; with --vault or --book: token=<collateral>:<fall> (a markdown) or "
+        "borrower=<collateral, market id or all>:<recovery>[:<n>] (the n largest borrowers default)",
     )
     a.add_argument("--out", default=str(Path(__file__).resolve().parent.parent / "out"))
 
@@ -202,12 +215,15 @@ def main(argv: list[str] | None = None) -> int:
         except S.SourceError as e:
             print(f"data source error: {e}", file=sys.stderr)
             return 3
+        ph = _pharos(argparse.Namespace(record=args.record, refresh=False, live=not (args.replay or args.record)))
+        graded = GR.annotate_pharos(g, ph) if ph else 0
         title = "Morpho dependency graph: " + ", ".join([u[:10] + "…" for u in users] + [v[:10] + "…" for v in vaults])
         hp, jp = GR.write(g, Path(args.out), title, GR.subtitle_for(block))
         kinds = {}
         for n in g.nodes.values():
             kinds[n["kind"]] = kinds.get(n["kind"], 0) + 1
         print(f"{len(g.nodes)} nodes ({', '.join(f'{v} {k}' for k, v in kinds.items())}), {len(g.edges)} edges")
+        print(f"Pharos {ph.as_of}: {graded} asset(s) graded" if ph else "Pharos: not checked")
         print(f"html: {hp}\njson: {jp}")
         return 0
 
@@ -275,7 +291,7 @@ def main(argv: list[str] | None = None) -> int:
             print("stopped; the cursor points at the last fully processed block", file=sys.stderr)
             return 0
 
-    if args.vault:
+    if args.vault or args.book:
         return _vault_incident(ap, args)
     try:
         shocks = scenario.parse_shocks(args.shock)
@@ -335,38 +351,78 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
+def _vault_source(vault: str, args) -> tuple[S.Fetcher, int, bool]:
+    """D121: where a vault is read. `--record`: live at the head, every response saved under incident-<vault>/;
+    `--live`: live, nothing saved; offline: the incident recording if there is one, else the watch recording at its
+    state block. Returns (fetcher, block, read every oracle)."""
+    w = discover.REGISTRY["watch"]
+    if args.record:
+        rdir = REPLAY_DIR / f"incident-{vault}"
+        f = S.Fetcher("refresh", rdir)
+        block = int(S.rpc(S.Fetcher("direct"), "eth_blockNumber", []), 16) - w["confirmations"]
+        (rdir / "meta.json").write_text(json.dumps({"vault": vault, "block": block}, indent=1))
+        return f, block, True
+    if args.live or args.refresh:
+        f = S.Fetcher("direct")
+        return f, int(S.rpc(f, "eth_blockNumber", []), 16) - w["confirmations"], False
+    inc_dir, watch_dir = REPLAY_DIR / f"incident-{vault}", REPLAY_DIR / vault
+    if (inc_dir / "meta.json").exists():
+        return S.Fetcher("offline", inc_dir), json.loads((inc_dir / "meta.json").read_text())["block"], False
+    if (watch_dir / "start.json").exists():
+        head = json.loads((watch_dir / "start.json").read_text())["head"]
+        return S.Fetcher("offline", watch_dir), head - w["confirmations"] - w["state_window_blocks"], False
+    raise FileNotFoundError(
+        f"no recording for {vault}: record it with analyze --vault {vault} --record --shock …, or run with --live"
+    )
+
+
+def _pharos(args):
+    """D138: Pharos's dependency graph, keyless and optional. Offline: the recording under fixtures/replay/pharos/;
+    `--record` and `--refresh` re-read and save it; `--live` reads it without saving. None when it cannot be read."""
+    from . import pharos
+
+    mode = "refresh" if args.record or args.refresh else "direct" if args.live else "offline"
+    return pharos.load(S.Fetcher(mode, REPLAY_DIR / "pharos") if mode != "direct" else S.Fetcher("direct"))
+
+
 def _vault_incident(ap, args) -> int:
-    """`analyze --vault`: a known incident on a vault's collateral, for a depositor (plan 2026-10-11-vault-incident)."""
+    """`analyze --vault` / `--book`: a known incident on a collateral, for one vault or a book of vaults
+    (plans 2026-10-11-vault-incident and 2026-10-11-vault-book)."""
     try:
-        token_shocks = vault_incident.parse_token_shocks(args.shock)
+        token_shocks = vault_incident.parse_shocks(args.shock)
+        book = vault_book.load(Path(args.book)) if args.book else vault_book.from_addresses(args.vault, args.user)
     except ValueError as e:
         ap.error(str(e))
     if not token_shocks:
-        ap.error("--vault needs --shock token=<collateral address or symbol>:<fall>, e.g. token=mGLOeuro:0.30")
-    vault = args.vault.lower()
-    w = discover.REGISTRY["watch"]
-    rdir = REPLAY_DIR / vault
+        ap.error(
+            "--vault and --book need --shock token=<collateral address or symbol>:<fall>, e.g. token=mGLOeuro:0.30, "
+            "or --shock borrower=<collateral, market id or all>:<recovery>[:<n>], e.g. borrower=mGLOeuro:0.5"
+        )
+    incidents = []
+    ph = _pharos(args)
     try:
-        if args.live or args.refresh:
-            f = S.Fetcher("direct")
-            block = int(S.rpc(f, "eth_blockNumber", []), 16) - w["confirmations"]
-        else:
-            if not (rdir / "start.json").exists():
-                ap.error(
-                    f"no recording for {vault} in {rdir}: run with --live, or record it with watch --blocks --record"
+        for v in book.vaults:
+            f, block, all_oracles = _vault_source(v.address, args)
+            incidents.append(
+                vault_incident.run(
+                    f, v.address, block, v.depositor or args.user, token_shocks, profile_all=all_oracles, pharos=ph
                 )
-            f = S.Fetcher("offline", rdir)
-            block = (
-                json.loads((rdir / "start.json").read_text())["head"] - w["confirmations"] - w["state_window_blocks"]
             )
-        inc = vault_incident.run(f, vault, block, args.user, token_shocks)
+    except FileNotFoundError as e:
+        ap.error(str(e))
     except S.CacheMiss as e:
         print(f"recording incomplete: {e}", file=sys.stderr)
         return 2
     except S.SourceError as e:
         print(f"data source error: {e}", file=sys.stderr)
         return 3
-    for line in inc.lines():
+    if len(incidents) == 1 and not args.book:
+        for line in incidents[0].lines():
+            print(line)
+        print(f"json:   {vault_incident.write(incidents[0], Path(args.out))}")
+        return 0
+    result = vault_book.aggregate(book, token_shocks, incidents)
+    for line in result.text():
         print(line)
-    print(f"json:   {vault_incident.write(inc, Path(args.out))}")
+    print(f"json:   {vault_book.write(result, Path(args.out))}")
     return 0

@@ -99,9 +99,10 @@ flowchart TB
 
 | Module | Imports |
 |---|---|
-| `cli` | `clock`, `crosscheck`, `decide`, `discover`, `engine`, `graph`, `priors`, `report`, `scenario`, `shock`, `simulate`, `sources`, `vault_incident`, `watch`, `watch_user` |
+| `cli` | `clock`, `crosscheck`, `decide`, `discover`, `engine`, `graph`, `pharos`, `priors`, `report`, `scenario`, `shock`, `simulate`, `sources`, `vault_book`, `vault_incident`, `watch`, `watch_user` |
 | `scenario` | `decide`, `discover`, `oracle_class`, `propagate`, `sources`, `vault` |
 | `vault_incident` | `discover`, `exit_queue`, `market_risk`, `oracle_class`, `scenario`, `sources`, `vault` |
+| `vault_book` | `vault_incident` |
 | `watch` | `admin`, `crosscheck`, `discover`, `drain`, `exit_queue`, `market_risk`, `poller`, `rules`, `sources`, `vault` |
 | `watch_user` | `abi`, `admin`, `borrower`, `borrower_rules`, `crosscheck`, `discover`, `drain`, `exit_queue`, `market_risk`, `poller`, `positions`, `rules`, `scenario`, `sources`, `vault`, `watch` |
 | `report` | `clock`, `decide`, `discover`, `priors`, `simulate` |
@@ -143,6 +144,7 @@ The layers, from the bottom:
 - **Rules and models.** Pure functions from state to alerts or numbers:
   - `rules.py` (vault) and `borrower_rules.py` (borrows) map decoded events and before/after state to alerts;
   - `market_risk.py` values every borrower of a market;
+  - `vault_book.py` applies one incident to a user-defined book of vaults and adds it up in USD;
   - `vault_incident.py` is incident mode for a vault depositor: a collateral's oracle price falls, every borrower of the hit markets is valued at the new price, and the vault's and the depositor's losses, what can leave and a verdict follow;
   - `scenario.py` is incident mode: the impact of a known incident, its time to impact and the verdict with the incident certain, and the impact attached to `OracleDivergence` alerts in `watch --user`;
   - `drain.py` computes each vault market's drain threshold d\* and what a drain would take (`docs/drain-threshold.md`);
@@ -165,6 +167,7 @@ Every source is public and needs no API key. The exact endpoints, queries and me
 | Morpho API `blue-api.morpho.org/graphql` | finding things the chain cannot list cheaply: a user's positions, a market's borrowers and top suppliers, a vault's allocators, sentinels and holders, a default depositor, every market above a TVL floor (sibling search) | `positions`, `borrower`, `market_risk`, `exit_queue`, `graph`, `siblings`, `vault` |
 | Pendle API `api-v2.pendle.finance/core` | PT markets, implied yield, real swap quotes for exit costs, a PT's underlying | `discover`, `watch_user`, `siblings` |
 | DefiLlama `api.llama.fi`, `coins.llama.fi` | protocol list and hack record (incident base rates), token prices and one-year price history, the independent price oracles are compared with | `priors`, `discover`, `admin` |
+| Pharos `api.pharos.watch` (optional, keyless) | issuer grades, off-chain backing and common-mode groups of stablecoins; shown next to our numbers, and the backing as a path an incident follows (`docs/risk-assessment/outside-providers.md`) | `pharos`, `vault_incident`, `graph` |
 | Etherscan `api.etherscan.io/v2/api`, key in `keys.ini` (optional) | whether the `analyze` oracle's source is verified; the contract name of an oracle input no other rule classifies; without the key, "not checked" / "not classified" | `discover`, `oracle_class` (via `sources.contract_source`) |
 
 **Trust model.**
@@ -302,7 +305,11 @@ The design decisions are numbered across twelve plans, in the order the incremen
 | `plan/2026-10-10-sibling-markets.plan.md` | sibling markets and oracle classes in the dependency graph; eRPC; the TVL floor | D75–D88 |
 | `plan/2026-10-10-incident-mode.plan.md` | incident mode: a known incident's impact, time to impact and verdict; alert impacts in `watch --user` | D89–D97 |
 | `plan/2026-10-11-vault-incident.plan.md` | incident mode for a vault depositor; curve widened to −30 and −50 % | D98–D103 |
-| `plan/2026-10-10-propagation-engine.plan.md` | the shock engine: a deterministic failure through the graph, driven by rules; calibrated on Pendle quotes | D104–D118 |
+| `plan/2026-10-10-propagation-engine.plan.md` | the shock engine: a deterministic failure through the graph, driven by rules; calibrated on Pendle quotes | D104–D119 |
+| `plan/2026-10-11-vault-book.plan.md` | a book of vaults under one incident; recording any vault | D120–D125 |
+| `plan/2026-10-11-wrapped-collateral.plan.md` | a token shock reaches the markets whose collateral wraps it | D126–D127 |
+| `plan/2026-10-11-borrower-concentration.plan.md` | borrower concentration and default; exit liquidity; the no-liquidator branch | D128–D132 |
+| `plan/2026-10-11-pharos.plan.md` | Pharos, keyless: grades, off-chain backing, common-mode groups | D133–D138 |
 
 A change that departs from a decision is recorded in that plan's table.
 

@@ -119,7 +119,7 @@ Huma alone backs about $82M across the RockawayX vaults, 28 % of the firm's tota
 | Re reUSD | quota-share reinsurance (US), ≥ 50 % on-chain buffer partly in USDe/sUSDe (Ethena), Pendle PT pool | cat losses above the equity and mezzanine tranches; Ethena depeg; PT pool or Ojo feed |
 | Hastra PRIME / AUTO | Figure home-equity loans on Provenance, wYLDS, bridged from Solana | loan defaults, bridge failure |
 | Midas mGLOeuro | Fasanara receivables fund, Midas issuance contracts | fund NAV markdown; EUR redemption |
-| infiniFi siUSD | Aave, Pendle, Fluid, Ethena (fractional reserve); liUSD takes losses first | strategy loss beyond the liUSD tranche; bank-run on reserves |
+| infiniFi siUSD | fractional reserve, now mostly off-chain credit farms (FalconX, Fasanara, New Silver; Aave paused); safety buffer then liUSD take losses first, then siUSD | strategy loss beyond the liUSD tranche; bank-run on reserves |
 | SG-Forge EURCV (loan asset) | Société Générale-Forge, EUR/USD feed | EURCV depeg: the oracles price EURCV as 1 EUR |
 
 ## 4. What the oracles mean for the analysis
@@ -192,12 +192,42 @@ Both commands were run, and the recordings are in `fixtures/replay/graph-0xd6d4�
 
 The incident lands at once when Midas publishes the new NAV: the oracle is the issuer's own figure, so no market move announces it. For the largest depositor, leaving first changes almost nothing, because it is 99.46 % of the vault and the loss falls on it either way; withdrawing the 1.03M that can leave only reduces its exposure to a further cut. A small depositor in the same vault would be told to EXIT: the first 1.03M out leaves the loss to those who stay.
 
+### 5.2 The RockawayX book under one issuer incident (2026-10-11)
+
+The seven Ethereum vaults are in `examples/rockawayx-ethereum.json` and recorded under `fixtures/replay/incident-<vault>/` (`analyze --book … --record`, plan `2026-10-11-vault-book`). The book is 99.1M USD, each vault at its total assets. Each issuer token cut by 30 %, one at a time:
+
+| Token cut by 30 % | Vaults holding it | In those markets | Book loss | Vaults where leaving first lowers the loss |
+|---|---|---|---|---|
+| PST (Huma) | Confidential RWA USDC, Huma USDC Main | 34.70M | **5.19M (5.24 %)** | Huma USDC Main |
+| fxSAVE (f(x)) | f(x) Protocol Ecosystem USDC | 19.89M | 1.88M (1.90 %) | f(x) Protocol Ecosystem USDC |
+| strUSD (Tori) | USDC Yield, Tori Ecosystem | 14.30M | 1.60M (1.61 %) | both |
+| siUSD (infiniFi) | USDC Yield | 2.36M | 0.40M (0.40 %) | USDC Yield |
+| mGLOeuro (Midas) | Belem RWA EURCV | 4.52M | 0.28M (0.28 %) | none |
+| etrUSD (Tori) | USDC Yield, Tori Ecosystem | 1.86M | 0.26M (0.26 %) | Tori Ecosystem |
+| PRIME (Hastra) | USDC Yield | 1.51M | 0.13M (0.13 %) | USDC Yield |
+| nvPRIME (Nuva) | NUVA Ecosystem | 1.29M | 0.03M (0.03 %) | NUVA Ecosystem |
+| AUTO (Hastra) | Confidential RWA USDC | 0.60M | 0.02M (0.02 %) | none |
+
+**What it says:**
+- **Huma is the book's largest single issuer risk.** A 30 % PST cut costs 5.2M, more than every other issuer's cut combined, because PST backs most of the Confidential RWA vault and all of Huma USDC Main.
+- **Tori reaches two vaults through two tokens** (strUSD and etrUSD); together a 30 % cut on both would cost about 1.9M.
+- **Leaving first lowers the loss in most hit vaults**, because they have many depositors; Belem is the exception, with one depositor at 99.46 %.
+
+**Wrapped collateral (D124, then D126–D127).** The table above matches a token as the markets' direct collateral. Since plan `2026-10-11-wrapped-collateral`, a token also reaches the markets whose collateral wraps it:
+
+| Token cut by 30 % | Vaults reached | In those markets | Book loss | Through |
+|---|---|---|---|---|
+| trUSD (Tori) | Tori Ecosystem, USDC Yield | 17.01M | 1.61M (1.63 %) | strUSD, PT-strUSD, PT-trUSD (oracles constant-price: hidden shortfall) |
+| wYLDS (Hastra) | Confidential RWA USDC, USDC Yield, NUVA Ecosystem | 3.40M | 0.09M (0.09 %) | PRIME, AUTO, nvPRIME |
+
+etrUSD, a vault of Tori vaults, answers no `asset()` and stays opaque.
+
 ## 6. Registry additions this needs
 
 Each entry needs its basis, as `registry.json` requires: issuer category, TVL, age, audits, the Pharos or Nexus estimate where one exists (`EXTERNAL_SOURCE.md` §7), and the redemption route. In order of exposure:
 
 1. **Huma PST** `0x22aE3D9a…d4c7`. Category: private credit. Single-originator concentration.
-2. **f(x) fxSAVE** `0x7743e50F…fc39` (underlying fxUSD `0x65c9a641…`).
+2. **f(x) fxSAVE** `0x7743e50F…fc39` (its asset is the fxSP stability-pool share `0x65c9a641…`, `FxUSDBasePool`; fxUSD itself is `0x0857…d8f6`).
 3. **Tori**:
    - trUSD `0xd0580192…1697`;
    - strUSD `0x28083998…5815`;

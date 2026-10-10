@@ -266,7 +266,7 @@ The watches answer "what is true now, and what would a given fall do?"; the simu
 
 ## 12. Planned changes
 
-From `docs/analysis/NEXT_STEP_V2.md` and `docs/analysis/NEXT_TASK.md`:
+From `docs/analysis/NEXT_STEP.md` and `docs/analysis/NEXT_TASK.md`:
 
 | Change | What it does to the simulation | Step |
 |---|---|---|
@@ -386,7 +386,7 @@ Two positions backed by the same issuer, or priced by the same feed, fail togeth
 - `docs/how-risk-is-computed.md`: the whole model, with the demo's numbers.
 - `docs/scenarios-and-breakeven.md`: the breakeven probability, scenarios against base rates.
 - `docs/analysis/GAP.md`: the model's gaps K1–K25, many of them about the simulation's assumptions.
-- `docs/analysis/NEXT_STEP_V2.md`, `docs/analysis/NEXT_TASK.md`: the planned changes.
+- `docs/analysis/NEXT_STEP.md`, `docs/analysis/NEXT_TASK.md`: the planned changes.
 - `plan/2026-10-10-defi-risk-dependency.plan.md`: decisions D1–D17 (D12: issuer hack → depeg) and D68.
 
 ### Method

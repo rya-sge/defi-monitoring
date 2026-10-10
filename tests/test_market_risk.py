@@ -2,7 +2,14 @@
 
 import pytest
 
-from riskdep.market_risk import MarketInfo, Tracker, assess_curves, assess_vault_bad_debt, value
+from riskdep.market_risk import (
+    MarketInfo,
+    Tracker,
+    assess_concentration,
+    assess_curves,
+    assess_vault_bad_debt,
+    value,
+)
 
 E6 = 10**6
 M = "0x" + "11" * 32
@@ -73,3 +80,18 @@ def test_steep_curve_warns_once_and_respects_eligibility():
     assert al[0].event == "LiquidationCurve" and "30%" in al[0].title
     assert assess_curves({M: risk(liq5_share=0.3)}, {M: risk(liq5_share=0.4)}, {M: INFO}, 10) == []
     assert assess_curves({}, {M: risk(liq5_share=0.3)}, {M: INFO}, 10, eligible=set()) == []
+
+
+def test_concentration_shares_and_alert_on_crossing():
+    spread = {u: pos(200, 10) for u in "abcdefgh"}  # 8 borrowers of 10 each
+    r = value(spread, TOTALS, PRICE, INFO)
+    assert r.top1_share == pytest.approx(1 / 8) and r.top3_share == pytest.approx(3 / 8)
+    assert assess_concentration({}, {M: r}, {M: INFO}, 1) == []
+    one = value({**spread, "whale": pos(2_000, 100)}, TOTALS, PRICE, INFO)  # D129: 100 of 180 > 50 %
+    assert one.top_borrower == "whale"
+    (a,) = assess_concentration({M: r}, {M: one}, {M: INFO}, 2)
+    assert a.event == "BorrowerConcentration" and a.level == "warn" and "56%" in a.title
+    assert assess_concentration({M: one}, {M: one}, {M: INFO}, 3) == []  # on crossing only
+    few = value({"a": pos(200, 10), "b": pos(200, 10)}, TOTALS, PRICE, INFO)  # 2 < 5 borrowers
+    assert len(assess_concentration({}, {M: few}, {M: INFO}, 4)) == 1
+    assert assess_concentration({}, {M: few}, {M: INFO}, 4, eligible=set()) == []

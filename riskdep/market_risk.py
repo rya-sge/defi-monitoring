@@ -55,6 +55,9 @@ class MarketRisk:
     liquidatable_now: int  # debt of positions with HF ≤ 1
     unrealised_bad_debt: int
     curve: list[CurvePoint] = field(default_factory=list)
+    top1_share: float = 0.0  # D128: the largest borrower's share of the market's tracked debt
+    top3_share: float = 0.0
+    top_borrower: str | None = None
 
     def point(self, drop: float) -> CurvePoint | None:
         return next((p for p in self.curve if abs(p.drop - drop) < 1e-9), None)
@@ -85,14 +88,21 @@ def value(
 ) -> MarketRisk:
     """Pure: positions {borrower: (collateral, borrowShares)}, totals (totalBorrowAssets, totalBorrowShares)."""
     tba, tbs = totals
-    debts = []
-    for coll, bshares in positions.values():
+    debts, by_user = [], []
+    for user, (coll, bshares) in positions.items():
         if not bshares:
             continue
         debt = bshares * (tba + 1) // (tbs + 10**6)
         cv = coll * price // 10**36 if price is not None else None
         debts.append((debt, cv, coll))
+        by_user.append((debt, user))
     risk = MarketRisk(m.id, len(debts), tba, 0, 0)
+    total = sum(d for d, _ in by_user)
+    if total:
+        ranked = sorted(by_user, reverse=True)
+        risk.top1_share = ranked[0][0] / total
+        risk.top3_share = sum(d for d, _ in ranked[:3]) / total
+        risk.top_borrower = ranked[0][1]
     if price is None:
         return risk
     for debt, cv, _ in debts:
@@ -228,9 +238,13 @@ class VaultRisk:
 
     def startup(self, st, block) -> list[Alert]:
         dep = st.depositor_shares / st.total_supply if st.total_supply else 0.0
-        return assess_vault_bad_debt(
-            {}, self.risks, self.markets, vault_supply_shares(st, self.markets), st.total_assets, dep, block
-        ) + assess_curves({}, self.risks, self.markets, block, vault_eligible(st, self.markets))
+        return (
+            assess_vault_bad_debt(
+                {}, self.risks, self.markets, vault_supply_shares(st, self.markets), st.total_assets, dep, block
+            )
+            + assess_curves({}, self.risks, self.markets, block, vault_eligible(st, self.markets))
+            + assess_concentration({}, self.risks, self.markets, block, vault_eligible(st, self.markets))
+        )
 
     def step(self, f, events, st, state_block, block, refresh: bool = False) -> list[Alert]:
         if refresh:
@@ -242,6 +256,7 @@ class VaultRisk:
         alerts = assess_vault_bad_debt(
             self.risks, after, self.markets, vault_supply_shares(st, self.markets), st.total_assets, dep, block
         ) + assess_curves(self.risks, after, self.markets, block, vault_eligible(st, self.markets))
+        alerts += assess_concentration(self.risks, after, self.markets, block, vault_eligible(st, self.markets))
         self.risks = after
         return alerts
 
@@ -334,11 +349,49 @@ def assess_curves(
     return out
 
 
+def assess_concentration(
+    before: dict[str, MarketRisk],
+    after: dict[str, MarketRisk],
+    markets: dict[str, MarketInfo],
+    block: int,
+    eligible: set[str] | None = None,
+) -> list[Alert]:
+    """D129, pure: warn when one borrower holds at least `concentration_top1_warn` of a market's debt, or the market has
+    fewer than `concentration_min_borrowers` borrowers; for vault markets only above `utilization_min_share`. On
+    crossing. A market owed by one or two borrowers depends on them repaying more than on any liquidation."""
+    top1, few = W["concentration_top1_warn"], W["concentration_min_borrowers"]
+
+    def flag(r: MarketRisk | None) -> bool:
+        return bool(r and r.borrowers and (r.top1_share >= top1 or r.borrowers < few))
+
+    out = []
+    for mid, r in after.items():
+        if eligible is not None and mid not in eligible:
+            continue
+        if flag(r) and not flag(before.get(mid)):
+            m = markets[mid]
+            out.append(
+                Alert(
+                    "warn",
+                    block,
+                    None,
+                    "BorrowerConcentration",
+                    f"{m.label}: the largest borrower holds {r.top1_share:.0%} of the debt ({r.borrowers} borrowers)",
+                    f"the top 3 hold {r.top3_share:.0%} of {_fmt(r.total_borrow, m)}; if the largest stops repaying, "
+                    f"the market depends on its collateral being sold or redeemed, not on many small liquidations "
+                    f"(analyze --vault … --shock borrower=… prices it). Largest borrower: {r.top_borrower}",
+                    None,
+                    {"market": mid, "top1_share": r.top1_share, "top3_share": r.top3_share, "borrowers": r.borrowers},
+                )
+            )
+    return out
+
+
 def curve_table(lines, risks: dict[str, MarketRisk], markets: dict[str, MarketInfo]) -> None:
     """Print one row per market: borrowers, liquidatable now, unrealised bad debt, the curve."""
     lines("  liquidation curves (debt liquidatable at an oracle fall of, % of the market's borrows):")
     lines(
-        f"    {'market':<42} {'borrowers':>9} {'now':>6} {'bad debt':>14} "
+        f"    {'market':<42} {'borrowers':>9} {'top1':>5} {'top3':>5} {'now':>6} {'bad debt':>14} "
         + " ".join(f"{'-' + format(d, '.0%'):>7}" for d in CURVE_DROPS)
     )
     for mid, r in sorted(
@@ -350,7 +403,7 @@ def curve_table(lines, risks: dict[str, MarketRisk], markets: dict[str, MarketIn
         m = markets[mid]
         tb = r.total_borrow or 1
         lines(
-            f"    {m.label:<42} {r.borrowers:>9} {r.liquidatable_now / tb:>6.1%} "
+            f"    {m.label:<42} {r.borrowers:>9} {r.top1_share:>5.0%} {r.top3_share:>5.0%} {r.liquidatable_now / tb:>6.1%} "
             f"{r.unrealised_bad_debt / 10**m.loan_decimals:>10,.0f} {m.loan_symbol:<4}"
             + " ".join(f"{p.liquidatable_debt / tb:>7.1%}" for p in r.curve)
         )

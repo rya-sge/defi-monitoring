@@ -21,6 +21,8 @@ Numbers for the demo position come from `docs/how-risk-is-computed.md` and the o
 
 ## 1. Verdict
 
+**Update 2026-10-11.** Since this review, the tool answers the brief's question as asked: incident mode for a position and for a vault depositor (K20 done), time to impact from the oracle's type (K22 partial), and a user-defined book of vaults in USD (K21 partial). It was run on the brief's sponsor's own vault (Belem RWA EURCV) and on the curator's seven Ethereum vaults (`ROCK-VAULT.md`). Pharos's keyless dependency graph now adds issuer grades, off-chain backing and common-mode groups (plan `2026-10-11-pharos`; part of K19). That work found two new gaps, K26 (wrapped collateral not matched) and K27 (liquidations of issuer-priced collateral assumed). The status of every gap is in the summary table (§2), and the order of the remaining work is in `NEXT_STEP.md`. The review below is kept as written on 2026-10-10.
+
 The model is careful and well documented, and every number has a stated basis. Its weak point is not the arithmetic but **what it treats as a risk**. It prices incidents: hacks, depegs, oracle failures. For a 7.6× PT loop, the losses that actually happened to positions like this in 2025–2026 mostly came from somewhere else:
 
 1. **Rates, not incidents.**
@@ -47,33 +49,35 @@ Of the scope items the brief names, feed quality, vaults in external venues, TVL
 
 ## 2. Summary table
 
-| Id | Gap | Direction | Evidence | Impact | Effort |
-|---|---|---|---|---|---|
-| K1 | Hack base rate drops hacked protocols whose TVL has since fallen below $1M | under-states | 305 of 1,070 hacks dropped on the snapshot | high | S |
-| K2 | Hack ledger misses off-chain failures (custodian, fund manager, key compromise) | under-states | Stream, Resolv | high | M |
-| K3 | Lending exploit and oracle layers double-count oracle exploits | over-states | Lending category includes oracle hacks | low | S |
-| K4 | Morpho Blue exploit prior (5.0 %/yr) far above other anchors | over-states frequency | Credora 0.13 %/yr; never exploited | low | S |
-| K5 | Depeg severity tail too thin for a synthetic dollar | under-states tail | P(depeg > 50 %) = 0.002 % in the model; USR −97 %, xUSD −77 %, deUSD −98 % | high | S |
-| K6 | Layers independent; only issuer hack → depeg is linked *(graph now shows shared feeds and assets across sibling markets; the simulation still draws independently)* | under-states tail | Nov 2025 cluster; Resolv chain; PT-reUSD | high | M |
-| K7 | Oracle is "market-tracking" or "fundamental"; real oracles are composites *(partial: `oracle_class.py` reads the structure in `graph` and in incident mode; two classes; the ex-ante simulation takes the mode from the structure when it decides (D96); still two classes)* | wrong mechanism | demo oracle is a `MetaOracleDeviationTimelock`; min(TWAP, linear) oracles | high | M |
-| K8 | Oracle manipulation of a thin Pendle pool is not a loss channel | under-states | PT-reUSD, 33 liquidations, LLTV 91.5 % | high | S–M |
-| K9 | Liquidation at the oracle price with LIF; no slippage, no cascade, no partial liquidation *(inputs ready: every held and sibling market in `graph` carries its curve and the collateral seized; no loop yet)* | under-states | LlamaRisk PT supply ≫ AMM depth; Gauntlet, Credora simulate it | medium | M |
-| K10 | Borrow-rate risk of the AdaptiveCurveIRM | under-states | rate ×4 at 100 % utilisation, curve doubles in 5 days | high | S |
-| K11 | PT implied-yield (duration) risk | under-states | +20 pp implied yield = −2.2 % PT price on the demo | medium | S |
-| K12 | Exit cost (one-off) compared with a 30-day loss, while holding to maturity is free | biases to STAY | maturity in 46.6 days | medium | S |
-| K13 | EXIT rule uses the mean only; CVaR 98 % of equity still gives REDUCE | biases to STAY | Bundi: yields cover the mean, not the tail | medium | S |
-| K14 | Point estimates without uncertainty; Poisson-style one event per layer | hides uncertainty | dispersion index 3.27; ξ unstable | medium | M |
-| K15 | Age factor and PT stress ×1.5 have no empirical basis | unknown | no study found | low | S |
-| K16 | Depositor loss under a scenario still missing for vaults (drain d\* done in the watches) | missing | Team 2; deUSD, wstUSR | high | M |
-| K17 | Exploit prior rests only on a 5-year hack history; attack mix shifts yearly | stale, noisy | top classes change every year; a 2-year window raises Morpho Blue to 8.6 % | high | S |
-| K18 | No protocol-specific signal (admin powers, audit scope, insurance price, reputation) | blind to the protocol | 67.6 % of audited incidents outside audit scope (H1 2026); Nexus prices 1.05–1.44 %/yr | medium | S–M |
-| K19 | Discovery stops at the issuer; admin surface not in `analyze` *(partial in `graph`: sibling markets and `wraps` edges; `analyze` unchanged)* | shallow | brief scores depth at 30 %; issuer deps typed by hand | high | M |
-| K20 | No "this component is affected now" input; impact is always probability-weighted *(done 2026-10-10: `analyze --shock`, plan `2026-10-10-incident-mode`; `OracleDivergence` alerts in `watch --user` carry the impact)* | missing | brief's worked example marks the oracle "incident" | high | S |
-| K21 | No book (pocket weights), no breakeven p\*, no single headline number | missing | brief's 10 × 10 % book, 11 % unwind example | high | S–M |
-| K22 | No time to impact or time to exit in `analyze` *(partial 2026-10-10: time to impact per oracle type in incident mode; no time to exit beyond "one block")* | missing | brief asks "and how fast"; USR −97 % in 17 min | medium | S |
-| K23 | Feed quality (heartbeat, staleness, sources, shared feed) not measured *(the feeds' round history is now read, for classification only)* | missing | named in the brief's scope | medium | S–M |
-| K24 | Vaults or hedges in an external venue (perp, CEX) not covered | missing | named in the brief's scope; Belem runs market-neutral | medium | M–L |
-| K25 | Concentration of TVL (protocol share of chain, position share of pool and supply) not measured *(input available: collateral held per Blue market, held and sibling)* | missing | named in the brief's scope | medium | S |
+| Id | Gap | Direction | Evidence | Impact | Effort | Status (2026-10-11), step in `NEXT_STEP.md` |
+|---|---|---|---|---|---|---|
+| K1 | Hack base rate drops hacked protocols whose TVL has since fallen below $1M | under-states | 305 of 1,070 hacks dropped on the snapshot | high | S | open (B5) |
+| K2 | Hack ledger misses off-chain failures (custodian, fund manager, key compromise) | under-states | Stream, Resolv | high | M | open (B5) |
+| K3 | Lending exploit and oracle layers double-count oracle exploits | over-states | Lending category includes oracle hacks | low | S | open (B5) |
+| K4 | Morpho Blue exploit prior (5.0 %/yr) far above other anchors | over-states frequency | Credora 0.13 %/yr; never exploited | low | S | open (B5) |
+| K5 | Depeg severity tail too thin for a synthetic dollar | under-states tail | P(depeg > 50 %) = 0.002 % in the model; USR −97 %, xUSD −77 %, deUSD −98 % | high | S | open (B5) |
+| K6 | Layers independent; only issuer hack → depeg is linked | under-states tail | Nov 2025 cluster; Resolv chain; PT-reUSD | high | M | partial: shared assets, oracles and feeds visible in `graph`; the simulation still draws layers independently (A4) |
+| K7 | Oracle is "market-tracking" or "fundamental"; real oracles are composites | wrong mechanism | demo oracle is a `MetaOracleDeviationTimelock`; min(TWAP, linear) oracles | high | M | partial: `oracle_class.py` used by `graph`, incident mode and the ex-ante mode (D96); meta-oracle sources and switch read; Midas NAV feeds recognised; two classes; `drain.py` does not use it (B4) |
+| K8 | Oracle manipulation of a thin Pendle pool is not a loss channel | under-states | PT-reUSD, 33 liquidations, LLTV 91.5 % | high | S–M | open (B4) |
+| K9 | Liquidation at the oracle price with LIF; no slippage, no cascade, no partial liquidation | under-states | LlamaRisk PT supply ≫ AMM depth; Gauntlet, Credora simulate it | medium | M | partial: curves to −50 % with the collateral seized, on every held and sibling market; no loop (B6) |
+| K10 | Borrow-rate risk of the AdaptiveCurveIRM | under-states | rate ×4 at 100 % utilisation, curve doubles in 5 days | high | S | open (B1) |
+| K11 | PT implied-yield (duration) risk | under-states | +20 pp implied yield = −2.2 % PT price on the demo | medium | S | open (B2) |
+| K12 | Exit cost (one-off) compared with a 30-day loss, while holding to maturity is free | biases to STAY | maturity in 46.6 days | medium | S | open (B3) |
+| K13 | EXIT rule uses the mean only; CVaR 98 % of equity still gives REDUCE | biases to STAY | Bundi: yields cover the mean, not the tail | medium | S | open (B7) |
+| K14 | Point estimates without uncertainty; Poisson-style one event per layer | hides uncertainty | dispersion index 3.27; ξ unstable | medium | M | open; the demo's carry lies inside the expected loss's 95 % interval (B7) |
+| K15 | Age factor and PT stress ×1.5 have no empirical basis | unknown | no study found | low | S | open (B5) |
+| K16 | Depositor loss under a scenario still missing for vaults (drain d\* done in the watches) | missing | Team 2; deUSD, wstUSR | high | M | mostly done: `analyze --vault --shock token=…` (plan `2026-10-11-vault-incident`); missing: loans at the market price, the drain as a loss channel (B8), wrapped collateral (K26) |
+| K17 | Exploit prior rests only on a 5-year hack history; attack mix shifts yearly | stale, noisy | top classes change every year; a 2-year window raises Morpho Blue to 8.6 % | high | S | open (B5) |
+| K18 | No protocol-specific signal (admin powers, audit scope, insurance price, reputation) | blind to the protocol | 67.6 % of audited incidents outside audit scope (H1 2026); Nexus prices 1.05–1.44 %/yr | medium | S–M | open (B5); admin powers already read by `admin.py` |
+| K19 | Discovery stops at the issuer; admin surface not in `analyze` | shallow | brief scores depth at 30 %; issuer deps typed by hand | high | M | partial: `graph` has siblings, `wraps` edges, the admin surface and issuer NAV feeds; `analyze` unchanged (C1) |
+| K20 | No "this component is affected now" input; impact is always probability-weighted | missing | brief's worked example marks the oracle "incident" | high | S | done: `analyze --shock` and `--vault`; `OracleDivergence` on a borrowed market carries the impact; NAV-update alerts for vaults planned (A3) |
+| K21 | No book (pocket weights), no breakeven p\*, no single headline number | missing | brief's 10 × 10 % book, 11 % unwind example | high | S–M | partial: a user-defined book of vaults in USD with a headline (plan `2026-10-11-vault-book`); no p\*, no borrow or PT pockets, no shared draws (A2) |
+| K22 | No time to impact or time to exit in `analyze` | missing | brief asks "and how fast"; USR −97 % in 17 min | medium | S | partial: time to impact per oracle type (incident mode, vault incident); time to exit is "one block" at today's quote (A2, B3) |
+| K23 | Feed quality (heartbeat, staleness, sources, shared feed) not measured | missing | named in the brief's scope | medium | S–M | open; the feeds' round history is read for classification only (C2) |
+| K24 | Vaults or hedges in an external venue (perp, CEX) not covered | missing | named in the brief's scope; Belem runs market-neutral | medium | M–L | open (C4) |
+| K25 | Concentration of TVL (protocol share of chain, position share of pool and supply) not measured | missing | named in the brief's scope | medium | S | open; collateral held per Blue market available from `graph` (C3) |
+| K26 | A vault incident matches a token only as the markets' direct collateral, not through what wraps it (a PT, an ERC-4626 share, a vault of vaults) | under-states reach | trUSD and wYLDS match no RockawayX market, although PT-trUSD, etrUSD and wYLDS-based markets depend on them | medium | S–M | done: plan `2026-10-11-wrapped-collateral`; etrUSD (no `asset()`) stays opaque |
+| K27 | A vault incident assumes liquidations happen; issuer-priced collateral needs a buyer of the issuer's token, and the liquidity liquidations return is not modelled | unknown direction | Belem: 3.68M of mGLOeuro-backed debt liquidatable at a 10 % NAV cut, with one market as the vault's only liquidity source | medium | M | partial: the no-liquidator branch, exit liquidity per token in the registry, borrower concentration and default (plan `2026-10-11-borrower-concentration`); missing: the liquidity liquidations return (B6) |
 
 ## 3. Probabilities
 
@@ -358,7 +362,7 @@ The `tail_budget` of 50 % of equity is a stated choice, but nothing ties it to t
 
 `comparison_team.md` §4.3 already calls this the largest gap against the track's "impact" criterion. The exit queue model and the drain threshold are done; one piece is not.
 
-1. **A depositor loss under a scenario:** Σ over the vault's markets of its share of supply × the market's bad debt at that drop. `market_risk.value()` already returns bad debt at a given drop. **Still missing.**
+1. ~~**A depositor loss under a scenario**~~ **done 2026-10-11** (`analyze --vault --shock token=…`, plan `2026-10-11-vault-incident`; a book of vaults in plan `2026-10-11-vault-book`). Original text: Σ over the vault's markets of its share of supply × the market's bad debt at that drop. `market_risk.value()` already returns bad debt at a given drop. **Still missing.**
 2. ~~**The fixed-oracle drain d\*** (Team 2)~~ **done** in the watches (`riskdep/drain.py`, `DrainWindow` alert, `docs/drain-threshold.md`). With a linear-discount, hardcoded or NAV oracle, a depeg never liquidates, and borrowers can loop the depegged asset in until caps are full; that is what happened on wstUSR, where the oracle marked $1.13 while the market was near $0.63. What remains is to feed it into `analyze`: the drained amount is a loss channel for a depositor, and the probability of crossing d\* comes from the depeg prior (K5).
 
 Incidents add a third: the **realisation rule** depends on the vault version.
@@ -367,6 +371,23 @@ Incidents add a third: the **realisation rule** depends on the vault version.
 - V2 realises it through `realAssets()`.
 
 A V2 vault holding V1.1 shares through `MorphoVaultV1Adapter` inherits the V1.1 behaviour (see `REPOSITORY_ADD.md`).
+
+### K26. Wrapped collateral is not matched (found 2026-10-11)
+
+A vault incident (`--shock token=<collateral>:<fall>`) hits the markets whose collateral **is** that token. A markdown of a token reaches more markets than that: those whose collateral wraps it. In the RockawayX book, `token=trUSD:0.30` and `token=wYLDS:0.30` hit nothing, although PT-trUSD, PT-strUSD, etrUSD (a vault of Tori vaults) and wYLDS-based markets depend on them (`ROCK-VAULT.md` §5.2).
+
+- *(done 2026-10-11, plan `2026-10-11-wrapped-collateral`: `token=trUSD:0.30` now reaches the PT-trUSD, PT-strUSD and strUSD markets of two vaults, 1.61M USD; a market whose oracle does not track a market counts a hidden shortfall, D127.)*
+- **Fix:** resolve each market's collateral to what it wraps, through a PT's SY and yield token, an ERC-4626 share's `asset()` and a vault of vaults' underlying (`siblings.underlyings` and the `wraps` edges already resolve the first two), and pass the fall through, according to the oracle's class (`NEXT_STEP.md` A1).
+
+### K27. Liquidations of issuer-priced collateral are assumed (found 2026-10-11)
+
+A vault incident values every borrower at the shocked oracle price and counts the bad debt as if every liquidatable position were liquidated. For collateral priced by the issuer's NAV (mGLOeuro, PST, fxSAVE, strUSD…), a liquidator receives the issuer's token, which may have no market: it has to be redeemed with the issuer. Two consequences follow:
+
+- **If no liquidator acts,** the bad debt stays unrealised, the share price stays at par, and the market's liquidity stays locked; on Belem the hit market is also the vault's only liquidity source.
+- **If liquidators act,** the debt they repay comes back as free liquidity, which changes what depositors can withdraw. Neither branch is modelled.
+
+- *(partial 2026-10-11, plan `2026-10-11-borrower-concentration`: each hit market shows its collateral's exit liquidity (`exit_liquidity` in the registry, measured once from KyberSwap quotes) and, when thin or absent, the loss if nobody liquidates; the concentration of its borrowers; and `--shock borrower=<target>:<recovery>[:<n>]` prices the default of the largest borrowers, on any vault or book. `BorrowerConcentration` warns in the vault watch. Belem's mGLOeuro market is owed by one borrower: its default at 50 % recovery costs 1.05M EURCV, 22 % of the vault.)*
+- **Fix, rest:** the liquidity returned by liquidations, in the cascade of `NEXT_STEP.md` B6, and the no-liquidator branch as a draw in the conditional Monte Carlo (A4); exit liquidity measured live rather than recorded.
 
 ## 9. Against the challenge brief
 
@@ -386,7 +407,7 @@ The brief is `docs/hackaton_instruction/Hackathon_DeFi-Risk-Dependency-Challenge
 | Impact "when **one of them is affected**" | The report gives, per layer, the loss if it happens ("Loss if it happens", the mean over a severity draw). There is no way to say "**this** oracle is affected now, at this size" and get the impact; the input is always a probability, never an observed incident | partial | K20 |
 | "Is the number defensible" (30 %) | Every number has a basis, but K1–K18 show the exploit, depeg and rate parts are biased or missing | partial | K1–K18 |
 | Stay or exit "despite execution costs" | EL vs carry vs exit cost, a CVaR tail budget, de-lever sizing, a real Pendle quote | met, with K12 and K13 | — |
-| The **book** example: ten pockets of 10 %, one affected, unwinding costs 11 % | Works per position in USD. No book, no pocket weight, no loss as a share of the book; the 11 % example can't be entered or reproduced | missing | K21 |
+| The **book** example: ten pockets of 10 %, one affected, unwinding costs 11 % | Works per position in USD. No book, no pocket weight, no loss as a share of the book; the 11 % example can't be entered or reproduced. *(2026-10-11: a book of vaults exists, with the loss as a share of the book; borrow and PT pockets and p\* are still missing, so the 11 % example cannot be entered yet)* | partial | K21 |
 | "Makes that trade-off explicit" | One line: "a full exit would only pay if probabilities were k× the estimates". No breakeven probability, which is exactly the "expensive and certain vs cheap and uncertain" trade-off | partial | K21 |
 | "What it does to your book, **and how fast**" | Watches alert block by block; the exit queue and the drain window give time for vault depositors. `analyze` has one 30-day horizon and no time to impact or time to exit | partial | K22 |
 | "Turn ... into **one number**" | A verdict label plus several dollar amounts; no single headline number a manager reads first | partial | K21 |
@@ -395,7 +416,7 @@ The brief is `docs/hackaton_instruction/Hackathon_DeFi-Risk-Dependency-Challenge
 | **Vaults that deploy into an external venue**, e.g. a perp exchange | Not covered. Morpho Vault V2 adapters other than Morpho markets are opaque (C4); no perp venue, no off-chain venue | missing | K24 |
 | **Protocols concentrating a large share of on-chain TVL** | Not measured. Lender concentration inside a market is (R4); the share of a chain's TVL that one protocol holds is not | missing | K25 |
 | Working prototype on real data (15 %) | Live and offline runs on real positions, recorded replays, tests | met | — |
-| Belem's context: capital only on protocols that clear a **pre-selection scorecard**; positions are fund deposits and market-neutral strategies | The priors use no scorecard (K18); `analyze` covers a borrower, not a depositor (K16); delta-neutral legs are not modelled (K24) | partial | K16, K18, K24 |
+| Belem's context: capital only on protocols that clear a **pre-selection scorecard**; positions are fund deposits and market-neutral strategies | The priors use no scorecard (K18); `analyze` covers a borrower, not a depositor (K16); delta-neutral legs are not modelled (K24). *(2026-10-11: `analyze --vault` and `--book` cover depositors and curators, run on Belem's own vault)* | partial | K18, K24 |
 
 ### K19. Discovery stops at the issuer
 
@@ -414,7 +435,7 @@ Their failures are exactly the ones that broke issuers in 2025–2026 (K2). The 
   - **`wraps` edges**: an ERC-4626 share to its `asset()`, which is the on-chain look-through for vault-share collateral;
   - **oracle inputs** decomposed, each with its class.
 
-  `analyze` still stops at the issuer, and siblings are found on Morpho Blue only (R5 in `ANALYSIS_MONITORING.md`: Euler, Aave, Silo or Fluid markets on the same collateral are not in the graph).
+  `analyze` still stops at the issuer, and siblings are found on Morpho Blue only: Euler, Aave, Silo or Fluid markets on the same collateral are not in the graph (R5 in `ANALYSIS_MONITORING.md`).
 
 ### K20. No "this component is affected now" mode
 
@@ -508,18 +529,16 @@ The challenge also found choices that the evidence supports.
 
 ## 11. Recommended order
 
-| Order | Gaps | Why first | Effort |
-|---|---|---|---|
-| 0 | K20, K21 | The brief's own question: impact when a component **is** hit, on a book, with the trade-off made explicit (p\*). Reuses `propagate.loss()`; scores on impact (30 %) and decision (25 %) | S–M |
-| 1 | K10, K11, K12 | The largest effect on a PT loop; IRM rules and PT pricing are deterministic, no new data source | S each |
-| 2 | K17, K1, K3, K5 | Decayed hack window as a category base rate only; fix known biases in the existing priors; one data call (TVL history) | S |
-| 2b | K18 (admin powers, upgrades since audit, insurance price) | Protocol multiplier from what `admin.py` already reads and one keyless Nexus Mutual call; audits and reputation by hand later | S–M |
-| 3 | K7, K8 | Oracle structure: decides which channel a shock takes; `oracle_class.py` already classifies the structure in `graph`, so what remains is using it in `analyze` and `drain.py`, a third class for meta-oracles, and the pool-move event | S–M |
-| 4 | K6 + named scenarios, K13 | Correlated stress and a tail-aware verdict; answers both teams | M |
-| 5 | K16 | Depositor loss under a scenario, and d\* fed into `analyze`; the track's use case | M |
-| 6 | K9, K14, K2, K4, K15 | Cascade loop (its inputs, curves and seized collateral per market, are now in `graph`), parameter uncertainty, off-chain priors, recalibration | M |
-| 7 | K19, K23, K25, K22 | The brief's scope items on discovery depth (30 %): admin surface and one look-through level in `analyze`, feed quality, TVL concentration, time to impact | S–M each |
-| 8 | K24, C5 | External venues and other chains: named in the brief, large, and closest to Belem's own book (market-neutral, SOL mandate) | M–L |
+The order of the remaining work now lives in `NEXT_STEP.md`, which merges the earlier plans and follows the reading of the brief in `ANALYSIS_CURRENT.md` (detect → impact → how fast → decide). How the gaps map onto it:
+
+| `NEXT_STEP.md` phase | Steps | Gaps |
+|---|---|---|
+| A: complete the brief's chain | A1 wrapped collateral, A2 breakeven p\* and mixed books, A3 NAV-update detection for vaults, A4 conditional Monte Carlo, A5 HTML | K26, K21, M6, K20 (rest), K22, K6, K14 |
+| B: make the numbers defensible | B1 rates, B2 implied yield, B3 horizon, B4 oracle structure, B5 priors, B6 cascade, B7 tail, B8 market-price loans | K10, K11, K12, K7, K8, K1–K5, K15, K17, K18, K9, K27, K13, K14, K16 (rest) |
+| C: discovery depth and scope | C1 depth and siblings, C2 feed quality, C3 concentration, C4 external venues, C5 other chains and Vault V1 | K19, K23, K25, K24, C5 |
+| Done | incident mode, time to impact, vault incident, book of vaults | K20, K16 (most), K21 (part), K22 (part) |
+
+The order recommended on 2026-10-10 put K20 and K21 first; both are now done or partly done.
 
 ## 12. Resources
 
