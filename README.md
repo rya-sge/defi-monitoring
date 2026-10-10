@@ -1,10 +1,12 @@
 # defi-monitoring
 
-Risk tooling for DeFi positions on Ethereum, built with the charrette loop: design and decisions first (`plan/`), then code. Three modes:
+Risk tooling for DeFi positions on Ethereum, built with the charrette loop: design and decisions first (`plan/`), then code. Five modes:
 
 - **`analyze`**: batch risk report for a Pendle-PT position on Morpho Blue. It discovers the dependency stack, simulates incidents on each layer and ends with STAY / REDUCE / EXIT. Plan: `plan/2026-10-10-defi-risk-dependency.plan.md`.
 - **`watch`**: follows a **Morpho Vault V2** block by block and alerts on every transaction that changes a depositor's exposure, losses or ability to exit. Plan: `plan/2026-10-10-morpho-vault-v2-watcher.plan.md`.
 - **`watch --user`**: finds every Morpho Blue borrow and Vault V2 deposit of an address and follows them together: health factor, liquidation, actions on your behalf, borrow rate. Plan: `plan/2026-10-10-morpho-user-watcher.plan.md`.
+- **`graph`**: draws the dependency graph of a vault or an address, with the sibling markets around it. Plan: `plan/2026-10-10-sibling-markets.plan.md`.
+- **`shock`**: applies a failure to a node of that graph (an oracle reading low or high, a frozen feed, a collateral falling) and propagates it to every market, vault and depositor, by rules you can change. Plan: `plan/2026-10-10-propagation-engine.plan.md`.
 
 How the system is built (components, data sources, data flow, state, testing): `ARCHITECTURE.md`.
 
@@ -14,7 +16,7 @@ All data comes from keyless public sources: the publicnode Ethereum RPC, the Mor
 
 ```bash
 uv sync                             # Python >= 3.10
-uv run pytest -q tests              # 161 tests, offline
+uv run pytest -q tests              # 186 tests, offline
 ```
 
 Outside an activated virtualenv, prefix the `python3 -m riskdep …` commands below with `uv run`.
@@ -103,6 +105,32 @@ Siblings come from the Morpho API (Ethereum markets with at least $1M supplied, 
 **Oracle classes.** Every market oracle is labelled `price-tracking` (a fall of the collateral's market price lowers it: liquidations, possibly a cascade) or `constant-price` (it does not: fixed value, exchange rate, NAV, linear discount; a depeg liquidates nobody and lands on the lenders), or `not classified` when no rule decides. Rules, in order, for each collateral-side input: an ERC-4626 rate; a composite or wrapper takes its inputs' class; Pendle's TWAP (`twapDuration()`) or linear-discount (`baseDiscountPerYear()`) getters; the feed's round history (it falls in at least 20 % of its changes: a market price); an answer of exactly 1.0 with no history; description or verified contract name (Etherscan key optional). Each label carries its basis.
 
 **Market state.** Every Blue market node, held or sibling, carries its supply, borrow, the collateral of its borrowers and its liquidation curve at −2/−5/−10/−20 % (debt, positions, bad debt, collateral that would be sold); the `takes as collateral` edge carries the collateral amount, and an ERC-4626 asset has a `wraps` edge to the token it redeems into. That is the data the propagation engine of `docs/graph-propagation.md` needs.
+
+## shock: what a vault loses when a node fails
+
+```bash
+V=0xE0181090c22579B6A217f1522cbf8c9f1F0C1965                                # RockawayX USDC Yield, recorded graph
+python3 -m riskdep shock --vault $V --replay --list                          # what can be shocked
+python3 -m riskdep shock --vault $V --replay --shock "Ojo PT:reads-low:10%"  # one failure
+python3 -m riskdep shock --vault $V --replay --shock "PRIME / WYLDS:frozen" --shock 0x19ebb35279a16207ec4ba82799cc64715065f7f6:price:-30%
+python3 -m riskdep shock --vault $V --replay --sweep reads-high:20%         # every oracle and feed in turn, ranked
+python3 -m riskdep shock --vault $V --replay --rules my-rules.json --shock …  # your own propagation rules first
+```
+
+A shock is `<node>:<mode>[:<size>]`. The node is an address, a market id or a unique fragment of a label. The mode is `reads-low`, `reads-high` or `frozen` for an oracle or feed, or `price` for an asset's market price. Several shocks apply together.
+
+The engine walks the graph from the shocked node to everything that depends on it:
+- feed → oracle → every market it prices, held or sibling;
+- collateral → the markets taking it, through wrappers and Pendle pools.
+
+In each Blue market it computes, from every borrower's position:
+- the liquidations, and the debt Blue writes off;
+- the debt left insolvent when nobody liquidates (a stuck or constant-price oracle);
+- the drain once the collateral's discount to its oracle passes d\*.
+
+Liquidated collateral is sold into its pool. Where the depth is known (a PT's Pendle pool), that sale lowers the price, the lower price reaches every market taking the collateral, and the loop runs until nothing moves (the squeeze; a PT does not fall below the price at which a buyer earns 50 % APY to maturity). Losses reach the vault by its share of each market, and a depositor (`--user`) by its share of the vault. The output gives the consequences per market and the path each loss took.
+
+How a shock crosses each edge is an ordered list of rules in `registry.json` (`engine`), with criteria on the edge, its two nodes and the effect. Change them, or pass a file with `--rules`, to propagate differently without touching the code. Everything, with worked examples and the rule format: `docs/shock-engine.md`.
 
 ## analyze: Pendle PT on Morpho Blue
 

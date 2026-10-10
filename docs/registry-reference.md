@@ -21,6 +21,7 @@ Rules for editing:
 - [Top-level parameters of `analyze`](#top-level-parameters-of-analyze)
 - [`watch`](#watch)
 - [`graph`](#graph)
+- [`engine`](#engine)
 - [How to add a yield issuer](#how-to-add-a-yield-issuer)
 
 ## `chain`
@@ -165,6 +166,21 @@ The sibling-market search and the oracle classification of the `graph` command (
 | `oracle_basis` | text | — | the rules in order, and the 2026-10-10 probe behind the history thresholds |
 
 **Adding a pattern.** When a graph shows an input `not classified`, read its verified source, decide whether a market move reaches its answer, and add `{"match": "<contract name or description fragment>", "class": "price-tracking" | "constant-price", "basis": "<what it computes, source, date>"}`. Prefer a structural getter in `oracle_getters` when the contract exposes one: it needs no Etherscan key.
+
+## `engine`
+
+The shock engine's propagation rules and settings (plan `2026-10-10-propagation-engine`, D89–D96). Read by `engine.py`; the rule format, every criterion and transmission, and worked examples are in `docs/shock-engine.md`.
+
+| Key | Unit | Default | What it controls |
+|---|---|---|---|
+| `eps` | fraction | 10⁻⁶ | an input that changes by less than this (relative) is not sent on again: the propagation has settled |
+| `max_evaluations` | node evaluations | 20,000 | budget of one run; when spent, the report warns that the numbers are not final |
+| `depth_usd` | USD by asset address | empty | a pool depth for the squeeze beside a PT's Pendle pool liquidity; without one, collateral sold by liquidations moves no price |
+| `edge_rules` | ordered list | 16 rules | how each effect crosses each edge: `id`, `effect`, `rel`, `direction`, `when`, `apply`, `params`, `basis`. The first match wins, and no match stops the effect |
+| `node_rules` | ordered list | `blue-market`, `asset`, `default` | each node's model: a Blue market evaluates its borrowers (`slippage`, `buy_cost`); an asset applies the squeeze (`depth`, `floor`, `stress_yield` 0.5); anything else combines its inputs |
+| `basis` | text | — | why |
+
+**Changing a rule.** Prefer a `--rules` file for a study: the registry's rules are the defaults everyone gets. A change here keeps its `basis` honest and is followed by `python3 -m pytest -q tests/test_engine.py`. The drain threshold uses `watch.drain_buy_cost`.
 
 ## How to add a yield issuer
 

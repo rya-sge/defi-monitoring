@@ -125,6 +125,13 @@ Plain-language definitions of the terms used in this repository's reports, alert
 | **Held market (seed)** | A Blue market an actor of the graph holds: one of a vault's markets, or one the address borrows from. The sibling search starts from these. |
 | **Sibling market** | A Blue market nobody in the graph holds that can move a held market's collateral price or shares its price inputs: same collateral, same underlying, a shared collateral-side feed or vault, or lending that collateral. It joins the held market through the shared node, never directly. |
 | **Wraps** | The edge from an ERC-4626 share to the token it redeems into (siUSD → iUSD): a loss of the underlying reaches the share. |
+| **Shock** | A failure applied to a node by `riskdep shock`: an oracle or feed reading low or high, a frozen one, or a collateral whose market price moves. |
+| **Effect** | What a shock leaves on a node as it propagates: a misreport factor, a freeze, a price factor, a sale, a loss. |
+| **Edge rule** | One entry of `registry.json` → `engine.edge_rules`: when an effect crosses an edge matching its criteria, the transmission it names decides what reaches the next node. The first match wins. |
+| **Transmission** | The function an edge rule applies (`pass`, `collateral_price`, `supplier_loss`, …); a node model (`blue_market`, `asset_price`) does the same for a node. |
+| **Insolvent debt** | Debt the collateral no longer covers at its market price while nobody liquidates it, because the oracle did not move or liquidating does not pay: the lenders' loss once the borrower walks away. |
+| **Squeeze** | Liquidations selling collateral into its pool, which lowers its price and liquidates more, in every market that takes it. |
+| **PT floor** | The price below which a PT's buyers to maturity step in: where it yields the engine's stress yield (50 % APY) until it redeems at par. |
 
 ## Blockchain data and the watcher
 

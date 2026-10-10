@@ -26,7 +26,7 @@ from pathlib import Path
 from eth_abi import decode
 
 from . import borrower as B
-from . import discover
+from . import clock, discover
 from . import market_risk as MR
 from . import oracle_class as OC
 from . import siblings as SB
@@ -189,6 +189,11 @@ def _market(g: Graph, f, m: B.BorrowMarket, block, quotes_pt: bool = True) -> st
             f"Pendle {pm['name']} pool",
             address=pm["address"],
             expiry=pm["expiry"][:10],
+            liquidity_usd=(pm.get("details") or {}).get("liquidity"),
+            implied_apy=(pm.get("details") or {}).get("impliedApy"),
+            days_to_maturity=round(
+                (datetime.fromisoformat(pm["expiry"].replace("Z", "+00:00")).timestamp() - clock.now()) / 86400, 2
+            ),
             source="Pendle API markets",
         )
         g.edge(coll, pool, "trades in / redeems through")
@@ -304,6 +309,13 @@ def _market_state(g: Graph, f: S.Fetcher, markets: dict[str, B.BorrowMarket], bl
         ld, cd = 10**m.loan_decimals, 10**m.collateral_decimals
         supply, borrow = (decode(["uint128"] * 6, bytes.fromhex(raw[2:]))[0], r.total_borrow) if raw else (0, 0)
         coll = sum(c for c, _ in tracker.positions.get(mid, {}).values())
+        tba, tbs = tracker.totals.get(mid, (0, 0))
+        price = prices.get(mid)
+        positions = [
+            [c * price // 10**36 / ld, b * (tba + 1) // (tbs + 10**6) / ld]
+            for c, b in tracker.positions.get(mid, {}).values()
+            if b and price is not None
+        ]  # collateral value at today's oracle price and debt, in loan units: the engine's input (D96)
         g.node(
             mid,
             "Pool",
@@ -316,6 +328,10 @@ def _market_state(g: Graph, f: S.Fetcher, markets: dict[str, B.BorrowMarket], bl
             collateral_of_borrowers=coll / cd,
             collateral_unit=m.collateral_symbol,
             unrealised_bad_debt=r.unrealised_bad_debt / ld,
+            lltv_value=m.lltv,
+            free_liquidity=max(0, supply - borrow) / ld,
+            loan_usd=1.0 if m.loan_token in REGISTRY["stables"] else None,
+            _positions=positions,
             liquidation_curve=[
                 {
                     "oracle_fall": p.drop,
@@ -386,6 +402,7 @@ def build(
             address=va,
             actor_type="Vault V2 (capital provider)",
             total_assets=f"{st.total_assets / unit:,.0f} {view.asset_symbol}",
+            total_assets_value=st.total_assets / unit,
             idle=f"{st.idle / unit:,.0f} {view.asset_symbol}",
             plain_withdrawal_capacity=f"{st.withdrawable / unit:,.0f} {view.asset_symbol}",
             adapters=", ".join(f"{a.address} ({a.kind})" for a in view.adapters),
@@ -494,6 +511,33 @@ def build_all(f: S.Fetcher, block: int, users: list[str], vaults: list[str], sib
     return g
 
 
+def load(
+    users: list[str], vaults: list[str], siblings: bool, mode: str, replay_dir: Path
+) -> tuple[Graph, int, list[str], list[str], bool]:
+    """Build a graph live (`direct`), live while saving every response (`record`), or from a recording (`replay`,
+    whose meta.json fixes the targets, the block and siblings). Returns (graph, block, users, vaults, siblings)."""
+    meta = replay_dir / "meta.json"
+    if mode == "replay":
+        if not meta.exists():
+            raise FileNotFoundError(f"no recorded graph in {replay_dir}")
+        m = json.loads(meta.read_text())
+        users, vaults, block, siblings = m["users"], m["vaults"], m["block"], m["siblings"]
+        clock.set_as_of(m.get("as_of"))  # days to a PT's maturity count from the recording, not from today
+        f = S.Fetcher("offline", replay_dir)
+    else:
+        # a direct run gets no directory: the Fetcher would create an empty one under fixtures/
+        f = S.Fetcher("refresh", replay_dir) if mode == "record" else S.Fetcher("direct")
+        block = int(S.rpc(f, "eth_blockNumber", []), 16) - 2
+    g = build_all(f, block, users, vaults, siblings)
+    if mode == "record":
+        meta.write_text(
+            json.dumps(
+                {"users": users, "vaults": vaults, "block": block, "siblings": siblings, "as_of": clock.now()}, indent=1
+            )
+        )
+    return g, block, users, vaults, siblings
+
+
 CSS = """
 :root{--bg:#ffffff;--fg:#1f2328;--muted:#59636e;--panel:#f6f8fa;--line:#d1d9e0;
 --Actor:#0072B2;--Pool:#009E73;--Asset:#E69F00;--Oracle:#CC79A7;--Admin:#D55E00;--External:#999999;--edge:#8c959f}
@@ -586,7 +630,7 @@ function row(k,v){{if(v==null||v==="")return"";const s=val(v);const link=/^0x[0-
  `<a href="https://etherscan.io/address/${{s}}" target="_blank" rel="noopener">${{s}}</a>`:s.replace(/[&<>]/g,c=>({{"&":"&amp;","<":"&lt;",">":"&gt;"}}[c]));
  return `<tr><td>${{k.replace(/_/g," ")}}</td><td>${{link}}</td></tr>`}}
 cy.on("tap","node",ev=>{{const d=ev.target.data();const nb=ev.target.closedNeighborhood();cy.elements().addClass("faded");nb.removeClass("faded");
- let h=`<b>${{d.label}}</b> <span class="muted">${{d.kind}}</span><table>`+Object.entries(d.details).map(([k,v])=>row(k,v)).join("");
+ let h=`<b>${{d.label}}</b> <span class="muted">${{d.kind}}</span><table>`+Object.entries(d.details).filter(([k])=>!k.startsWith("_")).map(([k,v])=>row(k,v)).join("");
  const out=ev.target.outgoers("edge").map(e=>row("→ "+e.data("rel"),cy.getElementById(e.data("target")).data("label")+(e.data("amount")?" · "+fmt(e.data("amount"))+" "+(e.data("unit")||""):""))).join("");
  const inc=ev.target.incomers("edge").map(e=>row("← "+e.data("rel"),cy.getElementById(e.data("source")).data("label")+(e.data("amount")?" · "+fmt(e.data("amount"))+" "+(e.data("unit")||""):""))).join("");
  document.getElementById("info").innerHTML=h+out+inc+"</table>"}});

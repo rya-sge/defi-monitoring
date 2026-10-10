@@ -195,6 +195,7 @@ The demo sits at the same LLTV with a 5.16 % buffer. In the model, the only path
   - Gauntlet and Credora both simulate liquidator behaviour and depth.
 - **Evidence against it:** on 2025-10-10 lending liquidations cleared with almost no bad debt, but that was blue-chip collateral.
 - **Fix:** the loop already proposed (collateral seized at a drop → Pendle price impact for that size → new drop, until stable), with the per-market curve that `market_risk.py` already computes.
+- **Status: partial.** `riskdep shock` runs that loop across every market taking the collateral (plan `2026-10-10-propagation-engine`, D94). Each market liquidates in full, the sale goes into a constant-product pool sized by the Pendle liquidity, and a PT floor applies where a buyer to maturity earns 50 % APY. `analyze` still liquidates at the oracle price with no slippage, and Pendle quotes per size are not used yet.
 
 ## 6. Loss channels the model does not have
 

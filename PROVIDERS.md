@@ -100,7 +100,7 @@ Every request to the data providers goes through the cached fetcher of `riskdep/
 
 | Path | Used for | Code |
 |---|---|---|
-| `/v1/1/markets/active`, `/v1/1/markets/inactive` | finding the Pendle market of a PT; its SY, underlying and expiry; the underlying of every PT among the sibling candidates | `discover.py` (also called by `admin.py`, `graph.py`, `watch_user.py`), `siblings.py` |
+| `/v1/1/markets/active`, `/v1/1/markets/inactive` | finding the Pendle market of a PT; its SY, underlying and expiry; the underlying of every PT among the sibling candidates; the pool's liquidity and implied yield (`details`), the squeeze depth and PT floor of the shock engine | `discover.py` (also called by `admin.py`, `graph.py`, `watch_user.py`), `siblings.py` |
 | `/v2/1/markets/{market}/data` | implied yield, PT discount, liquidity | `discover.py` |
 | `/v2/sdk/1/markets/{market}/swap` | a real quote for selling PT collateral: price impact and fees of an exit or a de-lever | `discover.exit_quote` |
 

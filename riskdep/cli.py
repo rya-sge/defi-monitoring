@@ -87,7 +87,83 @@ def main(argv: list[str] | None = None) -> int:
     )
     gr.add_argument("--record", action="store_true", help="save every response under fixtures/replay/graph-<target>")
     gr.add_argument("--replay", action="store_true", help="rebuild a recorded graph offline")
+    sh = sub.add_parser(
+        "shock", help="apply a failure to a node of the dependency graph and propagate it (oracle, feed, collateral)"
+    )
+    sh.add_argument("--vault", action="append", default=[], help="Vault V2 whose markets seed the graph (repeatable)")
+    sh.add_argument("--user", action="append", default=[], help="address: its borrows, and its share of a vault's loss")
+    sh.add_argument(
+        "--shock",
+        action="append",
+        default=[],
+        help="<node>:<mode>[:<size>], node = address, market id or a unique label fragment; mode = reads-low, "
+        "reads-high, frozen or price (repeatable: shocks applied together)",
+    )
+    sh.add_argument(
+        "--sweep", help="<mode>[:<size>]: the same failure on every oracle and feed (assets for price) in turn"
+    )
+    sh.add_argument("--rules", help="JSON file whose edge_rules / node_rules are tried before the registry's")
+    sh.add_argument("--list", action="store_true", help="list the nodes that can be shocked and the markets they price")
+    sh.add_argument("--top", type=int, default=15, help="rows of the --sweep ranking")
+    sh.add_argument("--no-siblings", action="store_true", help="leave out the sibling markets")
+    sh.add_argument("--record", action="store_true", help="save every response under fixtures/replay/graph-<target>")
+    sh.add_argument("--replay", action="store_true", help="use a recorded graph, offline")
+    sh.add_argument("--out", default=str(Path(__file__).resolve().parent.parent / "out"))
     args = ap.parse_args(argv)
+
+    if args.cmd == "shock":
+        from . import engine as EN
+        from . import graph as GR
+        from . import shock as SH
+
+        if not args.vault and not args.user:
+            ap.error("shock needs --vault or --user")
+        if not (args.shock or args.sweep or args.list):
+            ap.error("shock needs --shock, --sweep or --list")
+        rdir = REPLAY_DIR / f"graph-{(args.vault or args.user)[0].lower()}"
+        mode = "replay" if args.replay else "record" if args.record else "direct"
+        try:
+            extra = SH.load_rules(args.rules)
+            g, block, users, vaults, _ = GR.load(args.user, args.vault, not args.no_siblings, mode, rdir)
+        except (FileNotFoundError, ValueError) as e:
+            print(e, file=sys.stderr)
+            return 2
+        except S.CacheMiss as e:
+            print(f"replay data incomplete: {e}", file=sys.stderr)
+            return 2
+        except S.SourceError as e:
+            print(f"data source error: {e}", file=sys.stderr)
+            return 3
+        gd = SH._graph_dict(g)
+        target = (vaults or users)[0].lower()
+        print(
+            f"graph of {', '.join(v[:10] + '…' for v in vaults + users)} at block {block:,}: {len(gd['nodes'])} nodes"
+        )
+        if args.list:
+            SH.list_targets(gd)
+            return 0
+        out = Path(args.out)
+        out.mkdir(parents=True, exist_ok=True)
+        try:
+            if args.sweep:
+                m, _, sz = args.sweep.partition(":")
+                shk = EN.parse_shock(f"0x:{m}:{sz}" if sz else f"0x:{m}")
+                rows = SH.run_sweep(gd, shk.mode, shk.size, extra, args.top)
+                path = out / f"shock-sweep-{target}.json"
+                path.write_text(
+                    json.dumps({"block": block, "mode": shk.mode, "size": shk.size, "ranking": rows}, indent=1)
+                )
+            else:
+                shocks = SH.resolve_shocks({n["id"]: n for n in gd["nodes"]}, args.shock)
+                res = EN.run(gd, shocks, extra)
+                data = SH.report(gd, res)
+                path = out / f"shock-{target}.json"
+                path.write_text(json.dumps({"block": block, **data}, indent=1, default=str))
+        except (ValueError, KeyError) as e:
+            print(e, file=sys.stderr)
+            return 2
+        print(f"json: {path}")
+        return 0
 
     if args.cmd == "graph":
         from . import graph as GR
@@ -96,34 +172,18 @@ def main(argv: list[str] | None = None) -> int:
         if args.example or (not users and not vaults):
             users, vaults = [DEMO_BORROWER, "0xb03d620e49b6a21ea9d02142831c3f61c2fcbabc"], [DEMO_VAULT]
         rdir = REPLAY_DIR / f"graph-{(vaults or users)[0].lower()}"
-        siblings = not args.no_siblings
-        if args.replay:
-            if not (rdir / "meta.json").exists():
-                print(f"no recorded graph in {rdir}", file=sys.stderr)
-                return 2
-            meta = json.loads((rdir / "meta.json").read_text())
-            users, vaults, block, siblings = meta["users"], meta["vaults"], meta["block"], meta["siblings"]
-        # a direct run gets no directory: the Fetcher would create an empty one under fixtures/
-        f = (
-            S.Fetcher("offline", rdir)
-            if args.replay
-            else S.Fetcher("refresh", rdir)
-            if args.record
-            else S.Fetcher("direct")
-        )
+        mode = "replay" if args.replay else "record" if args.record else "direct"
         try:
-            if not args.replay:
-                block = int(S.rpc(f, "eth_blockNumber", []), 16) - 2
-            g = GR.build_all(f, block, users, vaults, siblings)
+            g, block, users, vaults, _ = GR.load(users, vaults, not args.no_siblings, mode, rdir)
+        except FileNotFoundError as e:
+            print(e, file=sys.stderr)
+            return 2
         except S.CacheMiss as e:
             print(f"replay data incomplete: {e}", file=sys.stderr)
             return 2
         except S.SourceError as e:
             print(f"data source error: {e}", file=sys.stderr)
             return 3
-        if args.record:
-            meta = {"users": users, "vaults": vaults, "block": block, "siblings": siblings}
-            (rdir / "meta.json").write_text(json.dumps(meta, indent=1))
         title = "Morpho dependency graph: " + ", ".join([u[:10] + "…" for u in users] + [v[:10] + "…" for v in vaults])
         hp, jp = GR.write(g, Path(args.out), title, GR.subtitle_for(block))
         kinds = {}
