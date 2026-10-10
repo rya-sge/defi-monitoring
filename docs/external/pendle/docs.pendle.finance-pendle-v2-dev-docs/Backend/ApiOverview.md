@@ -1,0 +1,444 @@
+# Pendle API Overview
+
+> Source: https://docs.pendle.finance/pendle-v2-dev/Backend/ApiOverview
+
+---
+
+- [](https://docs.pendle.finance/)
+- Off-chain Helpers
+- API Overview
+
+On this page
+# Pendle API Overview
+
+Pendle provides a comprehensive API system that enables developers to integrate with the Pendle protocol for trading, analytics, and portfolio management.
+
+## Understanding Pendle's API System[​](#understanding-pendles-api-system)
+
+**API Base URL**: [https://api-v2.pendle.finance/core/docs](https://api-v2.pendle.finance/core/docs)
+
+Pendle's API consists of two complementary components:
+
+### 1. Hosted SDK (Transaction Generation)[​](#1-hosted-sdk-transaction-generation)
+
+**Purpose**: Generate transaction payloads to interact with Pendle smart contracts
+
+**Use this when you need to**:
+
+- Swap tokens (buy/sell PT, YT)
+- Add or remove liquidity
+- Mint or redeem PT/YT tokens
+- Transfer liquidity between pools
+- Roll over PT positions
+- ... or any other transactions that interact with Pendle smart contracts
+
+📖 [View Hosted SDK Documentation](https://docs.pendle.finance/pendle-v2-dev/Backend/HostedSdk)
+
+### 2. Backend API (Data Queries)[​](#2-backend-api-data-queries)
+
+**Purpose**: Retrieve offchain data for markets, assets, pricing, user positions, and governance
+
+**Use this when you need to**:
+
+- Get offchain data for analytics
+- Get supported markets list with latest data (TVL, volume, underlying APY, swap fee, ...)
+- Get PT/YT/LP/SY asset prices
+- Get sPENDLE and governance data (staking, rewards, ...)
+
+📖 [View Backend API Documentation](https://api-v2.pendle.finance/core/docs)
+
+## API Entry Points[​](#api-entry-points)
+
+All public endpoints are served under `https://api-v2.pendle.finance/core` and follow one of two routing patterns:
+
+### Cross-chain endpoints (recommended)[​](#cross-chain-endpoints-recommended)
+
+These endpoints return data across all chains in a single request. Preferred for new integrations:
+
+| Endpoint | Description |
+| --- | --- |
+| `GET /v2/markets/all` | All markets across all chains — includes pagination, points, and external protocol data |
+| `GET /v1/assets/all` | All assets across all chains |
+| `GET /v1/prices/assets` | Asset prices across all chains |
+
+Deprecated`GET /v1/markets/all` and `GET /v1/markets/points-market` are deprecated. Use `GET /v2/markets/all` instead — it returns the same markets with pagination support and points data included in each market object.
+
+#### Markets — Pagination[​](#markets--pagination)
+
+`GET /v2/markets/all` supports `skip` and `limit` query parameters for pagination:
+
+| Parameter | Default | Maximum | Description |
+| --- | --- | --- | --- |
+| `skip` | `0` | — | Number of records to skip |
+| `limit` | `10` | `100` | Maximum number of records to return |
+
+#### Prices — Error Handling[​](#prices--error-handling)
+
+The price response now includes an `errors` array alongside the price map:
+
+```
+{ priceMap: Record<string, PriceDto>, errors: Error[] }
+```
+
+Non-fatal pricing errors (e.g., assets not found for a given timestamp) are returned in `errors` rather than thrown. Callers should check and handle this field, as a partial result may be returned even when some assets could not be priced.
+
+### Chain-scoped endpoints — `/{version}/{chainId}/...`[​](#chain-scoped-endpoints--versionchainid)
+
+Some endpoints are scoped to a specific chain:
+
+| Endpoint | Description |
+| --- | --- |
+| `GET /v3/{chainId}/markets/{address}/historical-data` | **Market time-series data** with optional APY breakdown — [see Market Data Endpoints](#market-data-endpoints) |
+| ~~`GET /v2/{chainId}/markets/{address}/historical-data`~~ | *(Deprecated)* Use v3 instead for APY breakdown support |
+| ~~`GET /v2/{chainId}/markets/{address}/data`~~ | *(Deprecated)* Market data for a specific address |
+| ~~`GET /v2/sdk/{chainId}/convert`~~ | *(Deprecated)* Generate transaction payload — use `POST /v3/sdk/{chainId}/convert` instead |
+| `GET /v5/{chainId}/transactions/{address}` | Transaction history for an address |
+
+Deprecated
+- `GET /v2/{chainId}/markets/{address}/historical-data` is deprecated. Use [`GET /v3/{chainId}/markets/{address}/historical-data`](#market-data-endpoints) instead, which supports `includeApyBreakdown` for detailed APY composition.
+- `GET /v2/{chainId}/markets/{address}/data` is deprecated.
+- `GET /v2/sdk/{chainId}/convert` (GET) is deprecated. Use `POST /v3/sdk/{chainId}/convert` instead, which accepts a JSON body and supports typed inputs.
+
+For new integrations, prefer cross-chain endpoints where available — they reduce the number of calls needed when working with multiple chains.
+
+### BFF API — `https://api-v2.pendle.finance/bff`[​](#bff-api--httpsapi-v2pendlefinancebff)
+
+The BFF (Backend for Frontend) API powers the official Pendle web app. It is **not intended for third-party integrations**: endpoints may change or be removed without notice. For third-party use, always use the `/core` API documented here.
+
+## Rate Limiting[​](#rate-limiting)
+
+All Pendle API endpoints are rate-limited to ensure service stability and fair usage.
+
+### How Rate Limiting Works[​](#how-rate-limiting-works)
+
+Pendle uses a **Computing Unit (CU)** based system. Every endpoint has a CU cost, which may be fixed or dynamic depending on the endpoint.
+The rate limit is calculated based on the total CU cost of all endpoints.
+
+Each user (IP) has a rate limit of 200 CU per minute, and 200,000 CU per week.
+
+Both limits apply simultaneously. You must stay within both the per-minute AND weekly limits to avoid rate limiting.
+
+**Example**: If an endpoint costs 5 CU, you can call it:
+
+- 40 times per minute (200 ÷ 5 = 40)
+- 40,000 times per week (200,000 ÷ 5 = 40,000)
+
+#### Computing Unit Costs[​](#computing-unit-costs)
+
+Most RESTful API endpoints have fixed costs (typically 1-5 CU), whereas the Hosted SDK has dynamic costs depending on the number of aggregators used. Check the [API documentation](https://api-v2.pendle.finance/core/docs) for specific costs — they're displayed in the "CU" box before each endpoint description.
+
+More on computing unit costs for HostedSdk can be found in [HostedSdk.mdx](https://docs.pendle.finance/pendle-v2-dev/Backend/HostedSdk#select-aggregators).
+
+#### Rate Limit Headers[​](#rate-limit-headers)
+
+Our endpoints return the following headers to help you monitor your usage:
+
+| Header | Description |
+| --- | --- |
+| `X-Computing-Unit` | CU cost of this request |
+| `X-RateLimit-Limit` | Maximum CU per minute (e.g., 200 for free tier) |
+| `X-RateLimit-Remaining` | CU remaining in current minute window |
+| `X-RateLimit-Reset` | Unix timestamp when minute limit resets |
+| `X-RateLimit-Weekly-Limit` | Maximum CU per week (e.g., 200,000 for free tier) |
+| `X-RateLimit-Weekly-Remaining` | CU remaining in current week window |
+| `X-RateLimit-Weekly-Reset` | Unix timestamp when week limit resets |
+
+Example response:
+
+```
+x-computing-unit: 25x-ratelimit-limit: 200x-ratelimit-remaining: 175x-ratelimit-reset: 1724206817x-ratelimit-weekly-limit: 200000x-ratelimit-weekly-remaining: 175000x-ratelimit-weekly-reset: 1724206817
+```
+
+### Best Practices for Rate Limiting[​](#best-practices-for-rate-limiting)
+
+- **Never hardcode rate limits.** Rate limits have evolved over time and may change in the future. Always handle `429` responses gracefully.
+- **Implement exponential backoff.** When you receive a `429 Too Many Requests` response, wait and retry with increasing delays.
+- **Use the right endpoint for the job.** For general price monitoring, use `getAllAssetPricesByAddresses` (updates every ~30 seconds). For pre-swap price checks, use `getMarketSpotSwappingPrice` (updates every block).
+- **Set generous timeouts.** Some API endpoints, particularly those querying complex data, can be slow. Set a client-side HTTP timeout of at least **120 seconds**.
+- **Watch out for RPC rate limits.** A `429` error is most often caused by your **RPC provider**, not the Pendle API — especially when backfilling historical data. Use a private or paid archival RPC (e.g., QuickNode) for intensive operations.
+- **Use pagination correctly.** For endpoints returning large lists, include the `resumeToken` from a response in your next request to fetch subsequent pages.
+
+### I get rate limited, what should I do?[​](#i-get-rate-limited-what-should-i-do)
+
+Our rate limit was designed so that most users can use the API without facing any rate limiting issues, unless you are calling the API unreasonably fast.
+
+So before requesting increased rate limits, please make sure you are not calling the API at an unreasonable rate. Follow our best practices and examples.
+
+If after all that, you are still getting rate limited, you can consider upgrading your plan, details below.
+
+### API Pricing Plans[​](#api-pricing-plans)
+
+If you need higher rate limits, we offer flexible paid plans that scale with your needs.
+
+#### Pricing Structure[​](#pricing-structure)
+
+Our pricing is simple and scalable: **$10/week = 500 CU/min + 1,000,000 CU/week**
+
+You can purchase multiple units to scale your rate limits based on your application's requirements:
+
+| Weekly Cost | CU per Minute | Weekly CU Limit |
+| --- | --- | --- |
+| **$0** (Free) | 200 | 200,000 |
+| **$10** | 500 | 1,000,000 |
+| **$20** | 1,000 | 2,000,000 |
+| **$30** | 1,500 | 3,000,000 |
+| **$40** | 2,000 | 4,000,000 |
+
+**Pricing Model:**
+
+- Each **$10/week** adds **+500 CU/min** and **+1,000,000 CU/week** to your limits
+- Scale up to **$40/week** (2,000 CU/min, 4M CU/week) through our standard plans
+
+**Example:**
+If you want to use 1,000,000 CU per week and you want to use the API for 4 weeks, it would be 10∗4=10 * 4 = 10∗4=40.
+
+If you want to use 2,000,000 CU per week and you want to use the API for 8 weeks (about 2 months), it would be 20∗8=20 * 8 = 20∗8=160.
+
+### How to get an API key[​](#how-to-get-an-api-key)
+
+To get an API key and upgrade your plan:
+
+1. Go to the API dashboard at: [https://api-v2.pendle.finance/dashboard](https://api-v2.pendle.finance/dashboard)
+2. Login with your wallet (you will be asked to sign a message to verify your identity)
+3. Top-up your account with USDC/USDT/DAI on Arbitrum
+4. Choose your plan and create a new API key
+
+Your API key will be generated. Make sure to save it securely as you'll need it to authenticate your requests.
+
+#### How to use your API key[​](#how-to-use-your-api-key)
+
+Include the `Bearer <API_KEY>` in the `Authorization` header in your requests:
+
+```
+Authorization: Bearer <API_KEY>
+```
+
+**Example:**
+
+```
+curl -i -H "Authorization: Bearer your_api_key_here" \  https://api-v2.pendle.finance/core/v1/chains
+```
+
+The response will have rate limit headers as described in [Rate Limit Headers](#rate-limit-headers).
+
+noteYou may occasionally notice `X-Ratelimit-Limit: 200` in responses even when you have a higher rate limit plan.
+This happens when the response is served from **Cloudflare's cache** (indicated by the `CF-Cache-Status: HIT` header).
+When a cache hit occurs, the request never reaches our backend, so **it does not count against your rate limit quota**.
+The `X-Ratelimit-Limit: 200` value in this case is simply a default header from the cached response and does not reflect your actual rate limit.
+
+## API Updates and Deprecation[​](#api-updates-and-deprecation)
+
+- **Deprecation Notice**: Breaking changes are announced at least 30 days in advance. Follow the [Telegram Developer Channel](https://t.me/pendledevelopers) for announcements.
+
+### vePENDLE Deprecation[​](#vependle-deprecation)
+
+vePENDLE has been deprecated and replaced by **sPENDLE**. All endpoints listed under the **Ve Pendle** tag in the [API documentation](https://api-v2.pendle.finance/core/docs) are deprecated — they remain accessible but will not be updated to reflect the new sPENDLE staking system.
+
+The following endpoints are specifically deprecated:
+
+- `GET /v1/ve-pendle/data` — use [`GET /v1/spendle/data`](#get-v1spendledata) instead
+- `GET /v1/ve-pendle/market-fees-chart` — no replacement; fees data is now included in the sPENDLE historical data response
+
+## Market Data Endpoints[​](#market-data-endpoints)
+
+### GET /v3/{chainId}/markets/{address}/historical-data[​](#get-v3chainidmarketsaddresshistorical-data)
+
+Returns time-series data for a specific market, with optional detailed APY composition breakdown.
+
+| Property | Value |
+| --- | --- |
+| Path parameters | `chainId` (number), `address` (string) |
+| Query parameters | `time_frame`, `timestamp_start`, `timestamp_end`, `fields`, `includeFeeBreakdown`, `includeApyBreakdown` |
+| Cache TTL | Varies by time_frame |
+| CU cost | Dynamic: `max(1, ceil(total / 300))` base, `* 1.5 + 1` if `includeApyBreakdown=true`, `* 2 + 1` if `includeFeeBreakdown=true` |
+
+**Key features:**
+
+- **APY Breakdown**: Set `includeApyBreakdown=true` to get detailed yield composition for YT and LP positions, categorized by protocol yield, rewards, fixed yield, and incentives
+- **Flexible fields**: Select specific data fields or use `fields=all` for complete data (not recommended for large time ranges)
+- **Fee breakdown**: Include swap fee details with `includeFeeBreakdown=true` (daily/weekly timeframes only)
+
+**Response includes:**
+
+- Standard time-series fields: `timestamp`, `impliedApy`, `maxApy`, `tvl`, prices, liquidity metrics
+- Optional `ytApyBreakdown`: Structured APY breakdown for YT holders (categories: Protocol Yield, YT Bonus Rewards, YT Extra Rewards)
+- Optional `lpApyBreakdown`: Structured APY breakdown for LP providers (categories: Underlying Yield, External Rewards, PT Fixed Yield, LP Rewards)
+- Optional fee breakdown: `explicitSwapFee`, `implicitSwapFee`, `limitOrderFee`
+
+For detailed schemas, parameters, examples, and migration guide, see the [API Reference](https://api-v2.pendle.finance/core/docs#/Markets/MarketsController_marketHistoricalData_v3).
+
+New in v3The v3 endpoint adds support for detailed APY breakdowns while maintaining full backward compatibility with v2. All existing v2 functionality works identically in v3.
+
+## sPENDLE API Endpoints[​](#spendle-api-endpoints)
+
+These endpoints provide sPENDLE staking statistics and per-user reward data.
+
+### GET /v1/spendle/data[​](#get-v1spendledata)
+
+Returns aggregate sPENDLE staking statistics, including total PENDLE staked, historical APRs, revenues, fees, and airdrop breakdowns. Historical data covers the last 12 epochs.
+
+| Property | Value |
+| --- | --- |
+| Query parameters | None |
+| Cache TTL | 5 minutes |
+| CU cost | 1 |
+
+**Response fields:**
+
+| Field | Description |
+| --- | --- |
+| `totalPendleStaked` | Total PENDLE currently staked |
+| `totalStakedInSpendle` | Total staked in the sPENDLE contract |
+| `virtualSpendleFromVependle` | Virtual sPENDLE balance derived from vePENDLE positions |
+| `sPendleHistoricalData` | Per-epoch historical data: `timestamps`, `revenues`, `aprs`, `fees`, `airdrops`, `buybackAmounts`, `airdropInUSDs`, `airdropBreakdowns`, `allTimeRevenues` |
+| `vependleHistoricalData` | Historical data for the legacy vePENDLE system |
+
+### GET /v1/spendle/:address[​](#get-v1spendle)
+
+Returns claimable and historical rewards for a specific sPENDLE holder, including ETH fee rewards, multi-token merkle proofs, and all-time reward totals.
+
+| Property | Value |
+| --- | --- |
+| Path parameter | `address` — the user's Ethereum address |
+| Query parameters | None |
+| Caching | Not cached |
+| CU cost | 3 |
+
+**Response fields:**
+
+| Field | Description |
+| --- | --- |
+| `ethAccruedAmount` | Accrued ETH fee rewards claimable by the address |
+| `multiTokenProof` | Merkle proof data — `total` and `results[]` for multi-token rewards |
+| `allTimeRewards` | Cumulative rewards keyed by `"chainId-tokenAddress"`, with `lastDistributionAt` timestamp |
+| `vePendlePositionData` | *(Optional)* Legacy vePENDLE position data, if applicable |
+
+## Dashboard Endpoints[​](#dashboard-endpoints)
+
+### GET /v1/dashboard/merkle-rewards/:user[​](#get-v1dashboardmerkle-rewards)
+
+Returns both claimable and claimed merkle-distributed rewards for a user in a single call.
+
+| Property | Value |
+| --- | --- |
+| Path parameter | `user` — the user's Ethereum address |
+| Query parameters | None |
+| CU cost | 4 |
+
+**Response:**
+
+```
+{  claimableRewards: [...],  claimedRewards: [...]}
+```
+
+Each item in `claimableRewards` and `claimedRewards` contains:
+
+| Field | Description |
+| --- | --- |
+| `user` | Ethereum address of the user |
+| `token` | Token address |
+| `merkleRoot` | Merkle root for the distribution |
+| `chainId` | Chain ID of the distribution |
+| `assetId` | Asset identifier |
+| `amount` | Reward amount |
+| `toTimestamp` | *(Optional)* End of the distribution period |
+| `fromTimestamp` | *(Optional)* Start of the distribution period |
+
+Deprecated endpointsThe following endpoints are deprecated and will be removed in a future release. Use `GET /v1/dashboard/merkle-rewards/:user` instead:
+
+- `GET /v1/dashboard/merkle-claimable-rewards/:user`
+- `GET /v1/dashboard/merkle-claimed-rewards/:user`
+
+## Code Examples and Resources[​](#code-examples-and-resources)
+
+### Official Examples[​](#official-examples)
+
+- [Hosted SDK Demo](https://github.com/pendle-finance/pendle-examples-public/tree/main/hosted-sdk-demo/src) - Transaction generation examples
+- [Backend API Demo](https://github.com/pendle-finance/pendle-examples-public/blob/main/backend-api-demo/src/index.ts) - Data query examples
+
+## Getting Help[​](#getting-help)
+
+1. **Documentation**: Start with [API Overview](https://docs.pendle.finance/pendle-v2-dev/Backend/ApiOverview), [Hosted SDK](https://docs.pendle.finance/pendle-v2-dev/Backend/HostedSdk) or [Backend API](https://api-v2.pendle.finance/core/docs) docs
+2. **API Reference**: Explore endpoints at [API Reference](https://api-v2.pendle.finance/core/docs)
+3. **Examples**: Check [GitHub examples](https://github.com/pendle-finance/pendle-examples-public)
+
+## Frequently Asked Questions[​](#frequently-asked-questions)
+
+#### **Q: When should I use Hosted SDK vs RESTful API?**[​](#q-when-should-i-use-hosted-sdk-vs-restful-api)
+
+A: Use Hosted SDK when you need to **send transactions** to the blockchain (swaps, liquidity operations, mints/redeems). Use RESTful API when you need to **get data** (market info, prices, positions). See [Overview](https://docs.pendle.finance/pendle-v2-dev/Backend/ApiOverview#understanding-pendles-api-system).
+
+### Hosted SDK FAQ[​](#hosted-sdk-faq)
+
+#### **Q: How do I know the exact output amount before sending a transaction?**[​](#q-how-do-i-know-the-exact-output-amount-before-sending-a-transaction)
+
+A: There is no way to know the exact output amount before sending a transaction. All output amounts are calculated based on current market conditions and are subject to change until the transaction is executed. You can control how much the output amount can vary compared to the expected amount by setting the `slippage` parameter.
+
+#### **Q: Why do I get different results each time I call the same endpoint?**[​](#q-why-do-i-get-different-results-each-time-i-call-the-same-endpoint)
+
+A: Market conditions change constantly. Each call reflects the current state of liquidity pools and aggregator routes.
+
+#### **Q: Do I need to approve tokens before using the Hosted SDK?**[​](#q-do-i-need-to-approve-tokens-before-using-the-hosted-sdk)
+
+A: Short answer: no. Long answer: yes.
+
+- Short answer: You don't need to approve or have enough token balance to call the Hosted SDK API.
+- Long answer: The Hosted SDK tries its best to return the most accurate route by simulating all the routes it generates. However, if you don't have enough tokens or approvals, the SDK can't simulate the call, and the returned route will be a preview route, which could differ from the actual route.
+In short: if you have sufficient approval and balance, the SDK will be able to simulate the transaction, resulting in a more accurate route. Otherwise, all routes are preview routes.
+
+Also, the API response includes a `requiredApprovals` field listing tokens that need approval. Approve these tokens to the router contract before sending your transaction.
+
+#### **Q: How do I reduce Computing Unit costs when using aggregators?**[​](#q-how-do-i-reduce-computing-unit-costs-when-using-aggregators)
+
+A: Obtain API keys from aggregator partners (KyberSwap, OKX, ParaSwap) and pass them in request headers. This reduces that aggregator's CU cost to 0. See [Reducing Aggregator Costs](https://docs.pendle.finance/pendle-v2-dev/Backend/HostedSdk#reduce-aggregator-computing-units).
+
+#### **Q: What happens if I don't specify which aggregators to use?**[​](#q-what-happens-if-i-dont-specify-which-aggregators-to-use)
+
+A: If `enableAggregator=true` but no `aggregators` parameter is provided, a preset set of aggregators will be used, which may change over time for optimization.
+
+#### **Q: Can I swap any PT to any other PT?**[​](#q-can-i-swap-any-pt-to-any-other-pt)
+
+A: Not all PT pairs are swappable. Try using the Convert API. If the swap is not supported, the API will return an error.
+
+#### **Q: What does the `needScale` parameter do?**[​](#q-what-does-the-needscale-parameter-do)
+
+A: Set `needScale=true` only when your input amounts are updated on-chain (e.g., using contract balance). When enabled, buffer your input amount by ~2% to account for changes during transaction execution. Only applicable to swap actions.
+
+#### **Q: What is `priceImpact` and does it include slippage?**[​](#q-what-is-priceimpact-and-does-it-include-slippage)
+
+A: `priceImpact` is the effect your trade size has on the market price - it's included in the output amount. **Slippage** is different - it's caused by market movement between API call and transaction execution. You set `slippage` parameter as maximum tolerance (e.g., 0.01 = 1%). See the Pendle API documentation for more details on the difference between price impact and slippage.
+
+#### **Q: What's the difference between "Add liquidity" and "Add liquidity ZPI"?**[​](#q-whats-the-difference-between-add-liquidity-and-add-liquidity-zpi)
+
+A:
+
+- **Add liquidity**: Adds liquidity and receives only LP tokens
+- **Add liquidity ZPI** (Zero Price Impact): Adds liquidity while keeping the generated YT tokens
+
+#### **Q: Can I transfer liquidity between different pools?**[​](#q-can-i-transfer-liquidity-between-different-pools)
+
+A: Yes! Use the Convert API with your current position (LP + PT + YT) as `tokensIn` and the target market as `tokensOut`.
+
+#### **Q: What contract is the `to` address in the transaction response?**[​](#q-what-contract-is-the-to-address-in-the-transaction-response)
+
+A: The `to` address is typically the Pendle Router contract. This contract is upgradeable, so the address may change over time. Always use the address returned by the API - never hardcode it.
+
+#### **Q: How do I decode the transaction data to see what function is being called?**[​](#q-how-do-i-decode-the-transaction-data-to-see-what-function-is-being-called)
+
+A: The response includes `contractParamInfo` with:
+
+- `method`: Function name (e.g., `"swapExactTokenForPt"`)
+- `contractCallParamsName`: Parameter names
+- `contractCallParams`: Parameter values
+
+```
+console.log('Method:', response.contractParamInfo.method);console.log('Params:', response.contractParamInfo.contractCallParams);
+```
+
+#### **Q: Is the router address guaranteed to stay the same?**[​](#q-is-the-router-address-guaranteed-to-stay-the-same)
+
+A: No, the router may be updated for protocol improvements. Always use the `tx.to` address from the API response. Changes will be announced publicly via the [Telegram Developer Channel](https://t.me/pendledevelopers).
+
+#### **Q: Can I use the same transaction data multiple times?**[​](#q-can-i-use-the-same-transaction-data-multiple-times)
+
+A: No. Transaction data is specific to current market conditions. Always generate fresh transaction data immediately before sending. Reusing old data will likely fail or give suboptimal results.

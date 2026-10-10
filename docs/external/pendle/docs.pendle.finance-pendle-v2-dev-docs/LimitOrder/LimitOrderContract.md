@@ -1,0 +1,214 @@
+# Limit Order Contract
+
+> Source: https://docs.pendle.finance/pendle-v2-dev/LimitOrder/LimitOrderContract
+
+---
+
+- [](https://docs.pendle.finance/)
+- Limit Orders
+- Contract
+
+On this page
+# Limit Order Contract
+
+The Limit Order contract is where limit orders are settled, allowing orders to be generated off-chain and settled on-chain.
+
+The Limit Order contract provides methods to support:
+
+1. Makers canceling their orders.
+2. Takers filling orders.
+3. A callback function to support arbitrageurs arbitraging limit orders.
+
+You can find the contract's implementation [here](https://github.com/pendle-finance/pendle-core-v2/tree/main/contracts/limit).
+
+## Order Struct Definition[​](#order-struct-definition)
+
+```
+interface IPLimitOrderType {    enum OrderType {        SY_FOR_PT,        PT_FOR_SY,        SY_FOR_YT,        YT_FOR_SY    }}struct Order {    uint256 salt;    uint256 expiry;    uint256 nonce;    IPLimitOrderType.OrderType orderType;    address token;    address YT;    address maker;    address receiver;    uint256 makingAmount;    uint256 lnImpliedRate;    uint256 failSafeRate;    bytes permit;}
+```
+
+You can find the contract's implementation [here](https://github.com/pendle-finance/pendle-core-v2/tree/main/contracts/limit).
+
+## Field Explanations[​](#field-explanations)
+
+- `salt`: A randomly generated number that differentiates between orders.
+- `expiry`: The expiration timestamp of the order. Orders cannot be settled on-chain after this point.
+- `nonce`: This field allows makers to cancel all their created orders by simply increasing the nonce. All orders with a nonce less than the current nonce will be invalid. Orders are typically created with a nonce equal to the current nonce at the time of creation.
+- `orderType`: Indicates the type of trade. There are four types of limit orders:
+
+  1. `SY_FOR_PT`: Swap SY (or another SY's token in) for PT.
+  2. `PT_FOR_SY`: Swap PT for SY (or another SY's token out).
+  3. `SY_FOR_YT`: Swap SY (or another SY's token in) for YT.
+  4. `YT_FOR_SY`: Swap YT for SY (or another SY's token out).
+- `token`: Specifies which token to use for the order. If the orderType is SY_FOR_PT or SY_FOR_YT, this is the token-in address. Otherwise, it's the token-out address.
+- `YT`: The YT address for this limit order. From this address, you can derive the SY and PT addresses.
+- `maker`: The address of the maker who created the order.
+- `receiver`: The address of the receiver, who will get the output amount if the order is settled.
+- `makingAmount`: The amount of input token used to create the order. If the orderType is SY_FOR_PT or SY_FOR_YT, the makingAmount is the SY amount. If PT_FOR_SY or YT_FOR_SY, it refers to the PT or YT amount, respectively.
+- `lnImpliedRate`: The natural logarithm of the implied rate, formatted as a uint256 by multiplying by 10^18 and then rounding to an integer. You can find the actual implied APY with the formula: exp(lnImpliedRate/1018)−1exp(lnImpliedRate/10^{18}) - 1exp(lnImpliedRate/1018)−1.
+- `failSafeRate`: If at the time the limit order is settled, the rate of converting input token to SY or converting from SY to output token (based on the type of order) is lower than this failSafeRate, the order will not be settled.
+- `permit`: Reserved for future use.
+
+## Method Definitions[​](#method-definitions)
+
+### hashOrder[​](#hashorder)
+
+This function returns a unique hash for a given order, allowing you to get the order's status later.
+
+```
+function hashOrder(Order memory order) external view returns (bytes32);
+```
+
+#### Parameters:[​](#parameters)
+
+- `order`: The order to be hashed.
+
+#### Returns:[​](#returns)
+
+- The unique hash of the order.
+
+### cancelSingle[​](#cancelsingle)
+
+This method cancels a specific limit order. Once canceled, the order cannot be filled or settled.
+
+```
+function cancelSingle(Order calldata order) external;
+```
+
+#### Parameters:[​](#parameters-1)
+
+- `order`: The limit order to be canceled.
+
+### cancelBatch[​](#cancelbatch)
+
+This method allows you to cancel multiple limit orders in a single transaction.
+
+```
+function cancelBatch(Order[] calldata orders) external;
+```
+
+#### Parameters:[​](#parameters-2)
+
+- `orders`: An array of limit orders to be canceled.
+
+### preSignSingle[​](#presignsingle)
+
+Registers an order on-chain by setting its remaining amount to `makingAmount`. After pre-signing, takers can fill the order without supplying a signature.
+
+Only the order's `maker` can pre-sign. The order must have a valid `nonce`, an `expiry` strictly between `block.timestamp` and `YT.expiry()`, and must not already exist on-chain.
+
+```
+function preSignSingle(Order calldata order) external;
+```
+
+#### Parameters:[​](#parameters-3)
+
+- `order`: The limit order to be pre-signed.
+
+### preSignBatch[​](#presignbatch)
+
+Pre-signs multiple orders in a single transaction. Each order is validated and registered the same as `preSignSingle`.
+
+```
+function preSignBatch(Order[] calldata orders) external;
+```
+
+#### Parameters:[​](#parameters-4)
+
+- `orders`: An array of limit orders to be pre-signed.
+
+### orderStatusesRaw[​](#orderstatusesraw)
+
+This method retrieves raw remaining and filled amounts for specified orders.
+
+```
+function orderStatusesRaw(    bytes32[] memory orderHashes) external view returns (uint256[] memory remainingsRaw, uint256[] memory filledAmounts);
+```
+
+#### Parameters:[​](#parameters-5)
+
+- `orderHashes`: An array of hashes identifying the orders for which statuses are requested.
+
+#### Returns:[​](#returns-1)
+
+- `remainingsRaw`: The raw remaining amounts for each order. If `remainingsRaw` is zero, the order is unknown to the contract. To distinguish between unknown orders and fully filled orders, known orders have `remainingsRaw` increased by one. For example, if an order has a real remaining of `100`, its `remainingsRaw` will be `101`. Fully filled or canceled orders will have `remainingsRaw` set to one.
+- `filledAmounts`: The filled amounts for each order.
+
+### fill[​](#fill)
+
+The `fill` function allows you to fill one or more limit orders. This is a key operation in a limit order system, where takers fill the orders submitted by makers. It has several parameters and returns multiple values, indicating the outcome of the fill operation.
+
+```
+function fill(        FillOrderParams[] memory params,        address receiver,        uint256 maxTaking,        bytes calldata optData,        bytes calldata callback    ) external returns (uint256 actualMaking, uint256 actualTaking, uint256 totalFee, bytes memory callbackReturn);
+```
+
+#### Parameters:[​](#parameters-6)
+
+- `params`: An array of `FillOrderParams`, specifying the orders to be filled, including order data, signatures, and the amount the taker intends to fill.
+- `receiver`: The address that receives the output tokens when the orders are filled, typically the taker's address.
+- `maxTaking`: The maximum amount of tokens that can be taken from the taker.
+- `optData`: Reserved for future use. Pass empty bytes (`'0x'`).
+- `callback`: Optional callback data for executing additional logic. For most cases, you can pass empty bytes. See the callback part below for more details.
+
+#### Returns:[​](#returns-2)
+
+- `actualMaking`: The total amount of tokens received by the taker from the fill operation.
+- `actualTaking`: The total amount of tokens taken from the taker to complete the fill operation.
+- `totalFee`: The total fee incurred during the fill operation.
+- `callbackReturn`: Data returned from the callback function, if used.
+
+## Signature Validation[​](#signature-validation)
+
+When `fill` is called, the contract validates each `FillOrderParams.signature` against the on-chain status of the order:
+
+1. **Order is already known on-chain** — pre-signed via `preSignSingle` / `preSignBatch`, or partially filled in a previous transaction. Signature validation is **skipped**; the `signature` field can be left empty (`"0x"`).
+2. **Order is unknown on-chain** — the contract calls [`SignatureChecker.isValidSignatureNow(maker, orderHash, signature)`](https://docs.openzeppelin.com/contracts/4.x/api/utils#SignatureChecker), which validates in this order:
+
+  1. **ECDSA recovery** — recovers the signer from `signature` and checks it matches `maker`. Used for EOA makers.
+  2. **ERC-1271 fallback** — if ECDSA recovery fails (including when `signature` is empty or the wrong length), the contract calls `IERC1271(maker).isValidSignature(orderHash, signature)` on the maker contract. The order is accepted iff the call returns the magic value `0x1626ba7e`.
+
+### Implications for makers[​](#implications-for-makers)
+
+- **EOA makers**: sign the order off-chain via EIP-712; the taker submits that signature with the fill.
+- **Smart-contract makers** never need to produce an ECDSA signature. Two patterns are supported:
+
+  - **Whitelist via ERC-1271 (no router state changes)**: implement `isValidSignature(hash, signature)` so that it returns `0x1626ba7e` whenever `hash` is in an internal whitelist — the `signature` argument can be ignored entirely. Takers pass `"0x"`, the ECDSA branch fails immediately, and execution falls through to the maker's `isValidSignature`. Authorizing an order is then just a matter of writing the order hash to the maker contract's whitelist (e.g. via a governance vote, multi-sig approval, or any custom logic) — no call to the Limit Router is needed.
+  - **Pre-sign on the Limit Router**: call `preSignSingle` (or `preSignBatch`) once from the maker. After that the order is "already known", and any subsequent fill works with an empty signature regardless of how the maker implements ERC-1271.
+
+## Callback Mechanism[​](#callback-mechanism)
+
+The `fill` function supports a callback mechanism for executing additional logic during the filling process, making it versatile for arbitrage and other custom operations.
+
+### Callback Interface[​](#callback-interface)
+
+The callback mechanism allows additional logic to be executed during the fill operation. Here's the interface for the callback function:
+
+```
+interface IPLimitRouterCallback {    function limitRouterCallback(        uint256 actualMaking,        uint256 actualTaking,        uint256 totalFee,        bytes memory data    ) external returns (bytes memory);}
+```
+
+#### Parameters:[​](#parameters-7)
+
+- `actualMaking`: The amount of tokens received by the taker's contract from the fill operation. This amount is in SY if the orderType is `SY_FOR_PT` or `SY_FOR_YT`, in PT if it's `PT_FOR_SY`, and in YT if it's `YT_FOR_SY`.
+- `actualTaking`: The amount of tokens the taker's contract must send to the limit order router to complete the fill. This amount is in SY if `PT_FOR_SY` or `YT_FOR_SY`, in PT if it's `SY_FOR_PT`, and in YT if it's `SY_FOR_YT`.
+- `totalFee`: The total fee for the operation.
+- `data`: Additional data provided during the `fill` operation. This corresponds to the callback parameter in the `fill` function.
+
+#### Returns:[​](#returns-3)
+
+- `bytes`: Optional return data from the callback function.
+
+### Callback Flow and Arbitrage Use Cases[​](#callback-flow-and-arbitrage-use-cases)
+
+The callback mechanism enables complex interactions and arbitrage opportunities. Here's a simplified flow for using the callback feature:
+
+1. **Taker Contract Calls `fill`**: The `fill` function is called with the specified parameters and the callback data.
+2. **Tokens Are Transferred**: The `actualMaking` amount is transferred to the receiver (typically the taker's contract).
+3. **Callback Function Is Invoked**: The callback function (`limitRouterCallback`) is called with the `actualMaking`, `actualTaking`, and `totalFee` values, along with the callback parameter in `fill`.
+4. **Callback Logic Executes**: The taker's contract can perform additional operations during the callback, such as arbitrage with Pendle's AMM or other limit orders. The goal is to use the `actualMaking` amount to generate more value than the `actualTaking` amount, creating a profit.
+5. **Send Tokens to Complete**: The taker's contract must send back the `actualTaking` amount to ensure the fill operation completes successfully.
+6. **Limit Order Contract Sends Output**: Once the taker's contract sends the required tokens, the limit order contract transfers the agreed output to the limit order receivers.
+
+![Limit Order Callback Flow](https://docs.pendle.finance/assets/images/limit_order_callback_flow-bcca747a2640e9e901a6987f45b6ee20.png)
+
+This flow allows for flexible and creative use of the `fill` function, providing opportunities for arbitrage and custom contract logic. Arbitrageurs can take advantage of this mechanism to execute strategies that generate profit by finding discrepancies in token values or other market inefficiencies.

@@ -122,7 +122,7 @@ Each step below gives its goal, what it delivers, its size (**S** about a day, *
 
 **Needs from you.** Nothing blocking. Confirm which of the three matters to you, so it can be done first.
 
-**Already available.** The Vault V1.1 source and events (`morpho-org/metamorpho-v1.1`, read at a pinned commit), the `MorphoVaultV1Adapter` and `MidnightAdapter` sources in `lib/vault-v2`, and Morpho's Midnight documentation in `docs/external/docs.morpho.org-developers-docs/midnight`.
+**Already available.** The Vault V1.1 source and events (`morpho-org/metamorpho-v1.1`, read at a pinned commit), the `MorphoVaultV1Adapter` and `MidnightAdapter` sources in `docs/external/morpho/lib/vault-v2`, and Morpho's Midnight documentation in `docs/external/docs.morpho.org-developers-docs/midnight`.
 
 ## 5. Tests on a forked chain
 
@@ -139,7 +139,7 @@ Each step below gives its goal, what it delivers, its size (**S** about a day, *
 **Needs from you.**
 - An **archive RPC** endpoint (paid tier of Alchemy, Infura, QuickNode or similar): forking at a past block needs historical state, which the free endpoint refuses.
 
-**Already available.** Foundry 1.5.0 (`forge`, `anvil`, `cast`) is installed; the Morpho Blue and Vault V2 sources are at the pinned commits in `lib/morpho-blue` and `lib/vault-v2`.
+**Already available.** Foundry 1.5.0 (`forge`, `anvil`, `cast`) is installed; the Morpho Blue and Vault V2 sources are at the pinned commits in `docs/external/morpho/lib/morpho-blue` and `docs/external/morpho/lib/vault-v2`.
 
 ## 6. Reliable infrastructure
 
@@ -237,8 +237,8 @@ Each step below gives its goal, what it delivers, its size (**S** about a day, *
 | Morpho developer documentation | `docs/external/docs.morpho.org-developers-docs` | contracts, Bundles, addresses on every chain, Midnight, exit routes |
 | Etherscan API documentation | `docs/external/docs.etherscan.io-api-reference-docs` | V2 endpoints (`getsourcecode`, `getabi`, …), step 3 |
 | Etherscan API key | `keys.ini`, section `[etherscan]` (git-ignored) | verified sources and ABIs, step 3; tested 2026-10-10 |
-| Morpho Blue source at `8e26ca6a` | `../lib/morpho-blue` | events, liquidation and shares maths, authorisation rules |
-| Vault V2 source at `d992cb84` | `../lib/vault-v2` | vault, adapters (market, V1, Midnight), timelocks, gates |
+| Morpho Blue source at `8e26ca6a` | `docs/external/morpho/lib/morpho-blue` | events, liquidation and shares maths, authorisation rules |
+| Vault V2 source at `d992cb84` | `docs/external/morpho/lib/vault-v2` | vault, adapters (market, V1, Midnight), timelocks, gates |
 | Vault V1.1 events | `morpho-org/metamorpho-v1.1` at `3b17547e`, read online | step 4 |
 | Foundry 1.5.0 | `forge`, `anvil`, `cast` installed | step 5 |
 | DeFi hack corpus | the `search-crypto-hack` skill | step 8 |
