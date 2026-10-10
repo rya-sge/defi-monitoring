@@ -9,7 +9,7 @@ APY   = e^(rate per second × seconds per year) − 1, rate from the market's IR
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from eth_abi import decode
 
@@ -146,6 +146,20 @@ def read_borrows(f: S.Fetcher, markets: dict[str, BorrowMarket], user: str, bloc
     for mid, r in zip(ids, rates):
         out[mid].rate_per_second = _uint(r)
     return out
+
+
+def read_prices(f: S.Fetcher, markets: dict[str, BorrowMarket], block) -> dict[str, int | None]:
+    """The oracle price of each borrowed market: after a batch with no event, the only input of the health factor
+    that moves (D61). Positions and Blue's stored totals change through events; the borrow rate drifts slowly and
+    is re-read at the next full read."""
+    ids = list(markets)
+    res = S.rpc_batch(f, [_call(markets[mid].oracle, "price()") for mid in ids], block)
+    return {mid: _uint(r) for mid, r in zip(ids, res)}
+
+
+def with_prices(before: dict[str, BorrowState], prices: dict[str, int | None]) -> dict[str, BorrowState]:
+    """Pure: the borrows of `before` revalued at new oracle prices (D61)."""
+    return {mid: replace(st, price=prices[mid]) if mid in prices else st for mid, st in before.items()}
 
 
 @dataclass

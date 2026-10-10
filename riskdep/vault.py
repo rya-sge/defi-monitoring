@@ -5,7 +5,7 @@ Everything is read on-chain (D24); the Morpho API is only used to find a default
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from eth_abi import decode, encode
 
@@ -339,6 +339,59 @@ def read_state(f: S.Fetcher, view: VaultView, block: int, depositor: str | None 
         can_send,
         can_recv,
     )
+
+
+def light_state(
+    before: VaultState,
+    block: int,
+    total_assets: int,
+    idle: int,
+    real_assets: dict[str, int],
+    prices: dict[str, int | None],
+    can_send: bool | None,
+    can_recv: bool | None,
+) -> VaultState:
+    """Pure: `before` with the values that can move without an event replaced (D61); the rest is copied."""
+    markets = {mid: replace(m, oracle_price=prices.get(mid, m.oracle_price)) for mid, m in before.markets.items()}
+    return replace(
+        before,
+        block=block,
+        total_assets=total_assets,
+        idle=idle,
+        real_assets={**before.real_assets, **real_assets},
+        markets=markets,
+        can_send_shares=can_send,
+        can_receive_assets=can_recv,
+    )
+
+
+def read_light(f: S.Fetcher, view: VaultView, block: int, before: VaultState) -> VaultState:
+    """The state after a batch with no event (D61): only what moves without one is read.
+
+    Interest accrual and a loss recorded by an adapter move `totalAssets()` and `realAssets()`; feeds move oracle
+    prices; a transfer to the vault moves its idle cash; a gate contract can change who may exit. Blue's stored
+    market totals, the adapters' supply shares, caps, fees, penalties and the depositor's shares change only
+    through events the poller fetches, so they are copied from `before`, which descends from a full read."""
+    v = view.address
+    mlist = [m for a in view.adapters for m in a.markets.values()]
+    calls = [_call(v, "totalAssets()"), _call(view.asset, "balanceOf(address)", ["address"], [v])]
+    if before.depositor:
+        calls += [
+            _call(v, "canSendShares(address)", ["address"], [before.depositor]),
+            _call(v, "canReceiveAssets(address)", ["address"], [before.depositor]),
+        ]
+    calls += [_call(a.address, "realAssets()") for a in view.adapters]
+    calls += [_call(m.oracle, "price()") for m in mlist]
+    it = iter(S.rpc_batch(f, calls, block))
+    ta, idle = (_uint(next(it)) or 0 for _ in range(2))
+    can_send, can_recv = before.can_send_shares, before.can_receive_assets
+    if before.depositor:
+        cs, cr = next(it), next(it)
+        can_send = bool(_uint(cs)) if cs else None
+        can_recv = bool(_uint(cr)) if cr else None
+    real = {a.address: _uint(next(it)) or 0 for a in view.adapters}
+    prices = {m.id: _uint(next(it)) for m in mlist}
+    return light_state(before, block, ta, idle, real, prices, can_send, can_recv)
 
 
 def largest_depositor(f: S.Fetcher, vault: str) -> str | None:

@@ -21,8 +21,8 @@ from .discover import REGISTRY
 from .poller import Poller
 from .positions import discover_user
 from .rules import Alert, Ctx, assess_batch, startup_findings
-from .vault import discover_vault, read_state
-from .watch import Printer, _fetcher, exposure_table
+from .vault import discover_vault, read_light, read_state
+from .watch import Printer, _fetcher, exposure_table, light_read
 
 W = REGISTRY["watch"]
 DEFAULT_LEVELS = (1.10, 1.05, 1.02)
@@ -252,6 +252,8 @@ def run_user(opts: UserOptions) -> int:
         poller.head = lambda: pinned
 
     polls, last_check, backoff = 0, state0, opts.poll_seconds
+    last_full = state0
+    live = opts.mode == "direct" and pinned is None
     while True:
         try:
             batch = poller.next_batch()
@@ -307,12 +309,18 @@ def run_user(opts: UserOptions) -> int:
             btrack.refresh(f, state_block)
             p.line(f"new borrow market(s) found: {', '.join(markets[i].label for i in new if i in markets)}")
 
-        after_b = B.read_borrows(f, markets, user, state_block) if markets else {}
+        refresh = batch.to_block - last_check >= W["crosscheck_every_blocks"]
+        light = light_read(batch, live, refresh, last_full)
+        if not markets:
+            after_b = {}
+        elif light:
+            after_b = B.with_prices(before_b, B.read_prices(f, markets, state_block))
+        else:
+            after_b = B.read_borrows(f, markets, user, state_block)
         for mid in after_b:
             start_apy.setdefault(mid, after_b[mid].apy)
         alerts = BR.assess_events(batch.events, user, markets, _by_address(lenders), before_b)
         alerts += BR.assess_states(before_b, after_b, markets, opts.levels, start_apy, batch.to_block)
-        refresh = batch.to_block - last_check >= W["crosscheck_every_blocks"]
         if binfo:
             btrack.refresh(f, state_block) if refresh else btrack.update(f, batch.events, state_block)
             brisk_after = btrack.compute({mid: st.price for mid, st in after_b.items()})
@@ -323,11 +331,16 @@ def run_user(opts: UserOptions) -> int:
             evs = [
                 e for e in batch.events if e.address in own or (e.contract == "blue" and e.name != "SetAuthorization")
             ]
-            after_v = read_state(f, vt.view, state_block, user)
+            if light:
+                after_v = read_light(f, vt.view, state_block, vt.state)
+            else:
+                after_v = read_state(f, vt.view, state_block, user)
             alerts += assess_batch(evs, Ctx(vt.view, vt.state, after_v), user, batch.to_block)
             alerts += vt.risk.step(f, batch.events, after_v, state_block, batch.to_block, refresh)
             vt.state = after_v
         alerts += aw.step(f, batch.events, state_block, refresh)
+        if not light:
+            last_full = batch.to_block
         for al in alerts:
             p.alert(al)
         poller.save(batch.to_block)
