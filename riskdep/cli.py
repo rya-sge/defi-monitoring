@@ -49,7 +49,43 @@ def main(argv: list[str] | None = None) -> int:
     w.add_argument("--level", choices=["info", "warn", "critical"], default="info", help="lowest level printed")
     w.add_argument("--max-polls", type=int, help="stop after N empty polls (live mode)")
     w.add_argument("--out", default=str(Path(__file__).resolve().parent.parent / "out"))
+    gr = sub.add_parser("graph", help="write the dependency graph of an address's positions and of vaults as HTML + JSON")
+    gr.add_argument("--user", action="append", default=[], help="address whose borrows and Vault V2 deposits to include (repeatable)")
+    gr.add_argument("--vault", action="append", default=[], help="Vault V2 to include (repeatable)")
+    gr.add_argument("--out", default=str(Path(__file__).resolve().parent.parent / "out" / "graph.html"))
+    gr.add_argument("--example", action="store_true",
+                    help="the documented example: the demo borrower, and Sentora RLUSD Main with its largest depositor")
     args = ap.parse_args(argv)
+
+    if args.cmd == "graph":
+        from . import graph as GR
+        users, vaults = list(args.user), list(args.vault)
+        if args.example or (not users and not vaults):
+            users, vaults = [DEMO_BORROWER, "0xb03d620e49b6a21ea9d02142831c3f61c2fcbabc"], [DEMO_VAULT]
+        f = S.Fetcher("direct")
+        try:
+            block = int(S.rpc(f, "eth_blockNumber", []), 16) - 2
+            g = None
+            for i, u in enumerate(users or [None]):
+                part = GR.build(f, block, u, vaults if i == 0 else [])
+                if g is None:
+                    g = part
+                else:
+                    for n in part.nodes.values():
+                        g.node(n["id"], n["kind"], n["label"], **n["details"])
+                    for e in part.edges:
+                        g.edge(e["source"], e["target"], e["rel"], e["amount"], e["unit"], **e["details"])
+        except S.SourceError as e:
+            print(f"data source error: {e}", file=sys.stderr)
+            return 3
+        title = "Morpho dependency graph: " + ", ".join([u[:10] + "…" for u in users] + [v[:10] + "…" for v in vaults])
+        hp, jp = GR.write(g, Path(args.out), title, GR.subtitle_for(block))
+        kinds = {}
+        for n in g.nodes.values():
+            kinds[n["kind"]] = kinds.get(n["kind"], 0) + 1
+        print(f"{len(g.nodes)} nodes ({', '.join(f'{v} {k}' for k, v in kinds.items())}), {len(g.edges)} edges")
+        print(f"html: {hp}\njson: {jp}")
+        return 0
 
     if args.cmd == "watch" and args.user and not args.vault:
         from .watch_user import UserOptions, run_user

@@ -1,0 +1,1862 @@
+{
+ "title": "Morpho dependency graph: 0xdf819874\u2026, 0xb03d620e\u2026, 0x6dc58a0f\u2026",
+ "subtitle": "Ethereum mainnet, read at block 26,162,313 (2026-10-10 13:25 UTC). Positions found with the Morpho API; amounts, parameters, oracles and roles read on-chain.",
+ "nodes": [
+  {
+   "id": "user:0xdf81987465681d0515058fe0a47a3bd174012730",
+   "kind": "Position",
+   "label": "Address 0xdf81\u20262730",
+   "details": {
+    "address": "0xdf81987465681d0515058fe0a47a3bd174012730",
+    "source": "Morpho API userByAddress (positions), Morpho Blue position() on-chain (amounts)"
+   }
+  },
+  {
+   "id": "0x002278ea242ec722813b4fe3c8eeaa07dbc331c731cc0b4248a1bf0771f933ea",
+   "kind": "Pool",
+   "label": "Blue PST/USDC",
+   "details": {
+    "market_id": "0x002278ea242ec722813b4fe3c8eeaa07dbc331c731cc0b4248a1bf0771f933ea",
+    "lltv": "86.0%",
+    "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
+    "source": "Morpho Blue idToMarketParams on-chain"
+   }
+  },
+  {
+   "id": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+   "kind": "Asset",
+   "label": "USDC",
+   "details": {
+    "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "issuer": "Circle",
+    "source": "ERC-20 symbol() on-chain, issuer from registry.json"
+   }
+  },
+  {
+   "id": "0x22ae3d9a738471f405169af055d31c687087d4c7",
+   "kind": "Asset",
+   "label": "PST",
+   "details": {
+    "address": "0x22ae3d9a738471f405169af055d31c687087d4c7",
+    "source": "ERC-20 symbol() on-chain"
+   }
+  },
+  {
+   "id": "0xa5657b406fc4282039861c6fca64452aefec8ac0",
+   "kind": "Oracle",
+   "label": "Oracle 0xa565\u20268ac0",
+   "details": {
+    "address": "0xa5657b406fc4282039861c6fca64452aefec8ac0",
+    "shape": "Morpho ChainlinkOracleV2",
+    "price_raw": "1138172000000000000000000000000000000",
+    "source": "price() and getters read on-chain"
+   }
+  },
+  {
+   "id": "0x4be50be32db1510240d542f77c5b36ca0d0965e6",
+   "kind": "Oracle",
+   "label": "PST-USDC Exchange Rate (Calculated)",
+   "details": {
+    "address": "0x4be50be32db1510240d542f77c5b36ca0d0965e6",
+    "role_in_oracle": "BASE_FEED_1",
+    "source": "oracle getter, description() on-chain"
+   }
+  },
+  {
+   "id": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
+   "kind": "Pool",
+   "label": "Blue PT-reUSD-10DEC2026/USDT",
+   "details": {
+    "market_id": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
+    "lltv": "91.5%",
+    "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
+    "source": "Morpho Blue idToMarketParams on-chain"
+   }
+  },
+  {
+   "id": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+   "kind": "Asset",
+   "label": "USDT",
+   "details": {
+    "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    "issuer": "Tether",
+    "source": "ERC-20 symbol() on-chain, issuer from registry.json"
+   }
+  },
+  {
+   "id": "0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "kind": "Asset",
+   "label": "PT-reUSD-10DEC2026",
+   "details": {
+    "address": "0xecfafdc7741323a945a163ed068b5a3c43483957",
+    "source": "ERC-20 symbol() on-chain"
+   }
+  },
+  {
+   "id": "0x217d6ddcdb95112c51657f6270e8c079cfdb51f0",
+   "kind": "Oracle",
+   "label": "Oracle 0x217d\u202651f0",
+   "details": {
+    "address": "0x217d6ddcdb95112c51657f6270e8c079cfdb51f0",
+    "shape": "Morpho ChainlinkOracleV2",
+    "price_raw": "981718892885071246000000000000000000",
+    "source": "price() and getters read on-chain"
+   }
+  },
+  {
+   "id": "0x77ee147391eac11c92817e771860ff4aad265d89",
+   "kind": "Oracle",
+   "label": "Ojo PT Feed Pendle Chainlink-compatible Oracle",
+   "details": {
+    "address": "0x77ee147391eac11c92817e771860ff4aad265d89",
+    "role_in_oracle": "BASE_FEED_1",
+    "source": "oracle getter, description() on-chain"
+   }
+  },
+  {
+   "id": "pendle:0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "kind": "Pool",
+   "label": "Pendle reUSD pool",
+   "details": {
+    "address": "0x13285bcbc27f92b47b4edb99d744c07b48c977c0",
+    "expiry": "2026-12-10",
+    "source": "Pendle API markets"
+   }
+  },
+  {
+   "id": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+   "kind": "Asset",
+   "label": "reUSD",
+   "details": {
+    "address": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+    "source": "ERC-20 symbol() on-chain"
+   }
+  },
+  {
+   "id": "0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b",
+   "kind": "Pool",
+   "label": "Blue sUSDS/USDT",
+   "details": {
+    "market_id": "0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b",
+    "lltv": "96.5%",
+    "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
+    "source": "Morpho Blue idToMarketParams on-chain"
+   }
+  },
+  {
+   "id": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+   "kind": "Asset",
+   "label": "sUSDS",
+   "details": {
+    "address": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+    "issuer": "Sky",
+    "source": "oracle getter, description() on-chain",
+    "role_in_oracle": "BASE_VAULT"
+   }
+  },
+  {
+   "id": "0x0c426d174fc88b7a25d59945ab2f7274bf7b4c79",
+   "kind": "Oracle",
+   "label": "Oracle 0x0c42\u20264c79",
+   "details": {
+    "address": "0x0c426d174fc88b7a25d59945ab2f7274bf7b4c79",
+    "shape": "Morpho ChainlinkOracleV2",
+    "price_raw": "1113051964191829857329422",
+    "source": "price() and getters read on-chain"
+   }
+  },
+  {
+   "id": "0xaed0c38402a5d19df6e4c03f4e2dced6e29c1ee9",
+   "kind": "Oracle",
+   "label": "DAI / USD",
+   "details": {
+    "address": "0xaed0c38402a5d19df6e4c03f4e2dced6e29c1ee9",
+    "role_in_oracle": "BASE_FEED_1",
+    "source": "oracle getter, description() on-chain"
+   }
+  },
+  {
+   "id": "0x3e7d1eab13ad0104d2750b8863b489d65364e32d",
+   "kind": "Oracle",
+   "label": "USDT / USD",
+   "details": {
+    "address": "0x3e7d1eab13ad0104d2750b8863b489d65364e32d",
+    "role_in_oracle": "QUOTE_FEED_1",
+    "source": "oracle getter, description() on-chain"
+   }
+  },
+  {
+   "id": "0x5613b170ded221c588b6e9637b910f49e5508680ceede207f44aa72e5c46cb05",
+   "kind": "Pool",
+   "label": "Blue PT-sUSDE-26NOV2026/USDC",
+   "details": {
+    "market_id": "0x5613b170ded221c588b6e9637b910f49e5508680ceede207f44aa72e5c46cb05",
+    "lltv": "91.5%",
+    "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
+    "source": "Morpho Blue idToMarketParams on-chain"
+   }
+  },
+  {
+   "id": "0xb195b618ea52b77cb2a58846f452f59f8dfa9390",
+   "kind": "Asset",
+   "label": "PT-sUSDE-26NOV2026",
+   "details": {
+    "address": "0xb195b618ea52b77cb2a58846f452f59f8dfa9390",
+    "source": "ERC-20 symbol() on-chain"
+   }
+  },
+  {
+   "id": "0xf8b29e7e9c00ce531434775f7923cc9fbca01b08",
+   "kind": "Oracle",
+   "label": "Oracle 0xf8b2\u20261b08",
+   "details": {
+    "address": "0xf8b29e7e9c00ce531434775f7923cc9fbca01b08",
+    "shape": "custom (no ChainlinkOracleV2 getters)",
+    "implementation": "0x9b4655239e91dc9e1f7599bb88fba41b4542de5b",
+    "price_raw": "992365820015220701000000",
+    "source": "price() and getters read on-chain"
+   }
+  },
+  {
+   "id": "pendle:0xb195b618ea52b77cb2a58846f452f59f8dfa9390",
+   "kind": "Pool",
+   "label": "Pendle sUSDe pool",
+   "details": {
+    "address": "0x47ad2cd1dd15739a7a035b9d3b7828d916fef77e",
+    "expiry": "2026-11-26",
+    "source": "Pendle API markets"
+   }
+  },
+  {
+   "id": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+   "kind": "Asset",
+   "label": "sUSDe",
+   "details": {
+    "address": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+    "issuer": "Ethena",
+    "source": "ERC-20 symbol() on-chain, issuer from registry.json"
+   }
+  },
+  {
+   "id": "ext:0x9d39a5de30e57443bff2a8307a4256c8797a3497:0",
+   "kind": "External",
+   "label": "Delta-hedged perp shorts on CEXs (funding-rate risk)",
+   "details": {
+    "source": "registry.json"
+   }
+  },
+  {
+   "id": "ext:0x9d39a5de30e57443bff2a8307a4256c8797a3497:1",
+   "kind": "External",
+   "label": "Off-exchange custodians (Copper, Ceffu, Cobo)",
+   "details": {
+    "source": "registry.json"
+   }
+  },
+  {
+   "id": "ext:0x9d39a5de30e57443bff2a8307a4256c8797a3497:2",
+   "kind": "External",
+   "label": "USDe mint/redeem desk (KYC'd, off-chain)",
+   "details": {
+    "source": "registry.json"
+   }
+  },
+  {
+   "id": "ext:0x9d39a5de30e57443bff2a8307a4256c8797a3497:3",
+   "kind": "External",
+   "label": "Staked ETH / BTC / stablecoin backing",
+   "details": {
+    "source": "registry.json"
+   }
+  },
+  {
+   "id": "0xae992849c5f544a32dfdfcc74c0695b73b8732f449727827af6ce3768e968382",
+   "kind": "Pool",
+   "label": "Blue PT-fxSAVE-29OCT2026/USDC",
+   "details": {
+    "market_id": "0xae992849c5f544a32dfdfcc74c0695b73b8732f449727827af6ce3768e968382",
+    "lltv": "91.5%",
+    "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
+    "source": "Morpho Blue idToMarketParams on-chain"
+   }
+  },
+  {
+   "id": "0x079c3469143804af5d0d645a878c371dbe8d038e",
+   "kind": "Asset",
+   "label": "PT-fxSAVE-29OCT2026",
+   "details": {
+    "address": "0x079c3469143804af5d0d645a878c371dbe8d038e",
+    "source": "ERC-20 symbol() on-chain"
+   }
+  },
+  {
+   "id": "0x5911530e5f62fff0a73e91ccd797d717e6d49fa9",
+   "kind": "Oracle",
+   "label": "Oracle 0x5911\u20269fa9",
+   "details": {
+    "address": "0x5911530e5f62fff0a73e91ccd797d717e6d49fa9",
+    "shape": "Morpho ChainlinkOracleV2",
+    "price_raw": "992421399353120244000000",
+    "source": "price() and getters read on-chain"
+   }
+  },
+  {
+   "id": "0x91058f5f2250d0a55d01ec9f4d77a98008fecd4d",
+   "kind": "Oracle",
+   "label": "BASE_FEED_1",
+   "details": {
+    "address": "0x91058f5f2250d0a55d01ec9f4d77a98008fecd4d",
+    "role_in_oracle": "BASE_FEED_1",
+    "source": "oracle getter, description() on-chain"
+   }
+  },
+  {
+   "id": "pendle:0x079c3469143804af5d0d645a878c371dbe8d038e",
+   "kind": "Pool",
+   "label": "Pendle fxSAVE pool",
+   "details": {
+    "address": "0x8308e53f584a7e5f0c581059d9ba971c0bec9454",
+    "expiry": "2026-10-29",
+    "source": "Pendle API markets"
+   }
+  },
+  {
+   "id": "0x7743e50f534a7f9f1791dde7dcd89f7783eefc39",
+   "kind": "Asset",
+   "label": "fxSAVE",
+   "details": {
+    "address": "0x7743e50f534a7f9f1791dde7dcd89f7783eefc39",
+    "source": "ERC-20 symbol() on-chain"
+   }
+  },
+  {
+   "id": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+   "kind": "Pool",
+   "label": "Blue PT-reUSD-10DEC2026/USDC",
+   "details": {
+    "market_id": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+    "lltv": "91.5%",
+    "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
+    "source": "Morpho Blue idToMarketParams on-chain"
+   }
+  },
+  {
+   "id": "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
+   "kind": "Pool",
+   "label": "Sentora RLUSD Main",
+   "details": {
+    "address": "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
+    "total_assets": "458,113,863 RLUSD",
+    "idle": "39,248,385 RLUSD",
+    "plain_withdrawal_capacity": "39,248,385 RLUSD",
+    "source": "Vault V2 getters on-chain"
+   }
+  },
+  {
+   "id": "0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
+   "kind": "Asset",
+   "label": "RLUSD",
+   "details": {
+    "address": "0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
+    "source": "ERC-20 symbol() on-chain"
+   }
+  },
+  {
+   "id": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
+   "kind": "Pool",
+   "label": "Adapter 0x3c6e\u2026dfff",
+   "details": {
+    "address": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
+    "adapter_type": "market",
+    "source": "adapters(i) on-chain"
+   }
+  },
+  {
+   "id": "0xffd010618ed3cb39bb2c5de0e3e58d3d2ec9f52187a180f29723c31756a939bc",
+   "kind": "Pool",
+   "label": "Blue cbBTC/RLUSD",
+   "details": {
+    "market_id": "0xffd010618ed3cb39bb2c5de0e3e58d3d2ec9f52187a180f29723c31756a939bc",
+    "lltv": "86.0%",
+    "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
+    "source": "Morpho Blue idToMarketParams on-chain"
+   }
+  },
+  {
+   "id": "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
+   "kind": "Asset",
+   "label": "cbBTC",
+   "details": {
+    "address": "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
+    "source": "ERC-20 symbol() on-chain"
+   }
+  },
+  {
+   "id": "0x8b36909dd84d310cbde90cb286d9dab285a245bd",
+   "kind": "Oracle",
+   "label": "Oracle 0x8b36\u202645bd",
+   "details": {
+    "address": "0x8b36909dd84d310cbde90cb286d9dab285a245bd",
+    "shape": "Morpho ChainlinkOracleV2",
+    "price_raw": "827825815220165156366559935681415008869804864292985",
+    "source": "price() and getters read on-chain"
+   }
+  },
+  {
+   "id": "0x2665701293fcbeb223d11a08d826563edcce423a",
+   "kind": "Oracle",
+   "label": "cbBTC / USD",
+   "details": {
+    "address": "0x2665701293fcbeb223d11a08d826563edcce423a",
+    "role_in_oracle": "BASE_FEED_1",
+    "source": "oracle getter, description() on-chain"
+   }
+  },
+  {
+   "id": "0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a",
+   "kind": "Oracle",
+   "label": "RLUSD / USD",
+   "details": {
+    "address": "0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a",
+    "role_in_oracle": "QUOTE_FEED_1",
+    "source": "oracle getter, description() on-chain"
+   }
+  },
+  {
+   "id": "0xea4bfb18df0ee6bffb7b3f0270899a8adb92ab6b684709634c8276128813cfd4",
+   "kind": "Pool",
+   "label": "Blue weETH/RLUSD",
+   "details": {
+    "market_id": "0xea4bfb18df0ee6bffb7b3f0270899a8adb92ab6b684709634c8276128813cfd4",
+    "lltv": "86.0%",
+    "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
+    "source": "Morpho Blue idToMarketParams on-chain"
+   }
+  },
+  {
+   "id": "0xcd5fe23c85820f7b72d0926fc9b05b43e359b7ee",
+   "kind": "Asset",
+   "label": "weETH",
+   "details": {
+    "address": "0xcd5fe23c85820f7b72d0926fc9b05b43e359b7ee",
+    "source": "ERC-20 symbol() on-chain"
+   }
+  },
+  {
+   "id": "0x6ab351ffde101bb24a97332f4f7162c1711f110b",
+   "kind": "Oracle",
+   "label": "Oracle 0x6ab3\u2026110b",
+   "details": {
+    "address": "0x6ab351ffde101bb24a97332f4f7162c1711f110b",
+    "shape": "Morpho ChainlinkOracleV2",
+    "price_raw": "2756512499044325931412250908480013439704",
+    "source": "price() and getters read on-chain"
+   }
+  },
+  {
+   "id": "0x5c9c449bbc9a6075a2c061df312a35fd1e05ff22",
+   "kind": "Oracle",
+   "label": "weETH / ETH",
+   "details": {
+    "address": "0x5c9c449bbc9a6075a2c061df312a35fd1e05ff22",
+    "role_in_oracle": "BASE_FEED_1",
+    "source": "oracle getter, description() on-chain"
+   }
+  },
+  {
+   "id": "0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419",
+   "kind": "Oracle",
+   "label": "ETH / USD",
+   "details": {
+    "address": "0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419",
+    "role_in_oracle": "BASE_FEED_1",
+    "source": "oracle getter, description() on-chain"
+   }
+  },
+  {
+   "id": "0x88abdf8693e663144c3544b9442e9b04520016d6ebc57aa76424c00ab1683c9d",
+   "kind": "Pool",
+   "label": "Blue wstETH/RLUSD",
+   "details": {
+    "market_id": "0x88abdf8693e663144c3544b9442e9b04520016d6ebc57aa76424c00ab1683c9d",
+    "lltv": "86.0%",
+    "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
+    "source": "Morpho Blue idToMarketParams on-chain"
+   }
+  },
+  {
+   "id": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+   "kind": "Asset",
+   "label": "wstETH",
+   "details": {
+    "address": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+    "issuer": "Lido",
+    "source": "ERC-20 symbol() on-chain, issuer from registry.json"
+   }
+  },
+  {
+   "id": "0x4e58cea93a5252547c99d04042de646b17531653",
+   "kind": "Oracle",
+   "label": "Oracle 0x4e58\u20261653",
+   "details": {
+    "address": "0x4e58cea93a5252547c99d04042de646b17531653",
+    "shape": "Morpho ChainlinkOracleV2",
+    "price_raw": "3106885474625616824829853743217649211717",
+    "source": "price() and getters read on-chain"
+   }
+  },
+  {
+   "id": "0x4f67e4d9bd67efa28236013288737d39aef48e79",
+   "kind": "Oracle",
+   "label": "Custom price feed for wstETH / ETH",
+   "details": {
+    "address": "0x4f67e4d9bd67efa28236013288737d39aef48e79",
+    "role_in_oracle": "BASE_FEED_1",
+    "source": "oracle getter, description() on-chain"
+   }
+  },
+  {
+   "id": "0xc0ae375fd761ff19b3f04de5534c0f1ec110f80e1c2ede27c42c1c43c3040394",
+   "kind": "Pool",
+   "label": "Blue syrupUSDC/RLUSD",
+   "details": {
+    "market_id": "0xc0ae375fd761ff19b3f04de5534c0f1ec110f80e1c2ede27c42c1c43c3040394",
+    "lltv": "91.5%",
+    "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
+    "source": "Morpho Blue idToMarketParams on-chain"
+   }
+  },
+  {
+   "id": "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
+   "kind": "Asset",
+   "label": "syrupUSDC",
+   "details": {
+    "address": "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
+    "source": "oracle getter, description() on-chain",
+    "role_in_oracle": "BASE_VAULT"
+   }
+  },
+  {
+   "id": "0xf766f4f1bcb0cbbf4eef5e26ff7c7f66a713c1b5",
+   "kind": "Oracle",
+   "label": "Oracle 0xf766\u2026c1b5",
+   "details": {
+    "address": "0xf766f4f1bcb0cbbf4eef5e26ff7c7f66a713c1b5",
+    "shape": "Morpho ChainlinkOracleV2",
+    "price_raw": "1187146607353399850410127077204301505366881928597",
+    "source": "price() and getters read on-chain"
+   }
+  },
+  {
+   "id": "0x8fffffd4afb6115b954bd326cbe7b4ba576818f6",
+   "kind": "Oracle",
+   "label": "USDC / USD",
+   "details": {
+    "address": "0x8fffffd4afb6115b954bd326cbe7b4ba576818f6",
+    "role_in_oracle": "BASE_FEED_1",
+    "source": "oracle getter, description() on-chain"
+   }
+  },
+  {
+   "id": "0x15bb2a6af0c909eed19fb1f2ceeead34ecbdcba626de752c6b09389ee14eec32",
+   "kind": "Pool",
+   "label": "Blue kBTC/RLUSD",
+   "details": {
+    "market_id": "0x15bb2a6af0c909eed19fb1f2ceeead34ecbdcba626de752c6b09389ee14eec32",
+    "lltv": "86.0%",
+    "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
+    "source": "Morpho Blue idToMarketParams on-chain"
+   }
+  },
+  {
+   "id": "0x73e0c0d45e048d25fc26fa3159b0aa04bfa4db98",
+   "kind": "Asset",
+   "label": "kBTC",
+   "details": {
+    "address": "0x73e0c0d45e048d25fc26fa3159b0aa04bfa4db98",
+    "source": "ERC-20 symbol() on-chain"
+   }
+  },
+  {
+   "id": "0xbcc3d9834b84b32cf540dbe948ded4b47bec5ddb",
+   "kind": "Oracle",
+   "label": "Oracle 0xbcc3\u20265ddb",
+   "details": {
+    "address": "0xbcc3d9834b84b32cf540dbe948ded4b47bec5ddb",
+    "shape": "Morpho ChainlinkOracleV2",
+    "price_raw": "827614881977296499477011505746873568781486807290239",
+    "source": "price() and getters read on-chain"
+   }
+  },
+  {
+   "id": "0xf4030086522a5beea4988f8ca5b36dbc97bee88c",
+   "kind": "Oracle",
+   "label": "BTC / USD",
+   "details": {
+    "address": "0xf4030086522a5beea4988f8ca5b36dbc97bee88c",
+    "role_in_oracle": "BASE_FEED_2",
+    "source": "oracle getter, description() on-chain"
+   }
+  },
+  {
+   "id": "0xa128dddc761075df9a9a60689f3a41a989b245aad506352c509c0c3a76a9ec6b",
+   "kind": "Pool",
+   "label": "Blue WBTC/RLUSD",
+   "details": {
+    "market_id": "0xa128dddc761075df9a9a60689f3a41a989b245aad506352c509c0c3a76a9ec6b",
+    "lltv": "86.0%",
+    "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
+    "source": "Morpho Blue idToMarketParams on-chain"
+   }
+  },
+  {
+   "id": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+   "kind": "Asset",
+   "label": "WBTC",
+   "details": {
+    "address": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+    "source": "ERC-20 symbol() on-chain"
+   }
+  },
+  {
+   "id": "0xf58725eb213161e9054c97f970dc80b2d0327e8d",
+   "kind": "Oracle",
+   "label": "Oracle 0xf587\u20267e8d",
+   "details": {
+    "address": "0xf58725eb213161e9054c97f970dc80b2d0327e8d",
+    "shape": "Morpho ChainlinkOracleV2",
+    "price_raw": "826232765124394414322884896532276289921621724322064",
+    "source": "price() and getters read on-chain"
+   }
+  },
+  {
+   "id": "0xfdfd9c85ad200c506cf9e21f1fd8dd01932fbb23",
+   "kind": "Oracle",
+   "label": "WBTC / BTC",
+   "details": {
+    "address": "0xfdfd9c85ad200c506cf9e21f1fd8dd01932fbb23",
+    "role_in_oracle": "BASE_FEED_1",
+    "source": "oracle getter, description() on-chain"
+   }
+  },
+  {
+   "id": "0x1749e02006bc6bd6a86af52d231511f6911d5e42318e028e51a28dfabc68dd47",
+   "kind": "Pool",
+   "label": "Blue PT-sUSDE-13AUG2026/RLUSD",
+   "details": {
+    "market_id": "0x1749e02006bc6bd6a86af52d231511f6911d5e42318e028e51a28dfabc68dd47",
+    "lltv": "91.5%",
+    "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
+    "source": "Morpho Blue idToMarketParams on-chain"
+   }
+  },
+  {
+   "id": "0x5a19fa369f2895dcd8d2cee62e4ceae58ef92bbb",
+   "kind": "Asset",
+   "label": "PT-sUSDE-13AUG2026",
+   "details": {
+    "address": "0x5a19fa369f2895dcd8d2cee62e4ceae58ef92bbb",
+    "source": "ERC-20 symbol() on-chain"
+   }
+  },
+  {
+   "id": "0x968eb911db90bb8ea9e4792b05c94500bc1a62d7",
+   "kind": "Oracle",
+   "label": "Oracle 0x968e\u202662d7",
+   "details": {
+    "address": "0x968eb911db90bb8ea9e4792b05c94500bc1a62d7",
+    "shape": "Morpho ChainlinkOracleV2",
+    "price_raw": "999574829353754217407217041225093047",
+    "source": "price() and getters read on-chain"
+   }
+  },
+  {
+   "id": "0xb131d953712db127308ef07fce30c2ace465bbce",
+   "kind": "Oracle",
+   "label": "Pendle Chainlink-compatible Oracle",
+   "details": {
+    "address": "0xb131d953712db127308ef07fce30c2ace465bbce",
+    "role_in_oracle": "BASE_FEED_1",
+    "source": "oracle getter, description() on-chain"
+   }
+  },
+  {
+   "id": "0xa569d910839ae8865da8f8e70fffb0cba869f961",
+   "kind": "Oracle",
+   "label": "USDe / USD",
+   "details": {
+    "address": "0xa569d910839ae8865da8f8e70fffb0cba869f961",
+    "role_in_oracle": "BASE_FEED_1",
+    "source": "oracle getter, description() on-chain"
+   }
+  },
+  {
+   "id": "pendle:0x5a19fa369f2895dcd8d2cee62e4ceae58ef92bbb",
+   "kind": "Pool",
+   "label": "Pendle sUSDe pool",
+   "details": {
+    "address": "0x177768caf9d0e036725a51d3f60d7e20f2d4d194",
+    "expiry": "2026-08-13",
+    "source": "Pendle API markets"
+   }
+  },
+  {
+   "id": "0xc3b37a18d5b15f8e5b78bcdc014ffb3f22933bde4e5f6a36dedf36db87e68585",
+   "kind": "Pool",
+   "label": "Blue WETH/RLUSD",
+   "details": {
+    "market_id": "0xc3b37a18d5b15f8e5b78bcdc014ffb3f22933bde4e5f6a36dedf36db87e68585",
+    "lltv": "86.0%",
+    "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
+    "source": "Morpho Blue idToMarketParams on-chain"
+   }
+  },
+  {
+   "id": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+   "kind": "Asset",
+   "label": "WETH",
+   "details": {
+    "address": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+    "source": "ERC-20 symbol() on-chain"
+   }
+  },
+  {
+   "id": "0x18803b5c20962244f0a99fc3b7d7e614762385eb",
+   "kind": "Oracle",
+   "label": "Oracle 0x1880\u202685eb",
+   "details": {
+    "address": "0x18803b5c20962244f0a99fc3b7d7e614762385eb",
+    "shape": "Morpho ChainlinkOracleV2",
+    "price_raw": "2494271673983172370207855427180602026755",
+    "source": "price() and getters read on-chain"
+   }
+  },
+  {
+   "id": "0x4fa31e3f8ba345227d44e1cf48559eea53a90dd5311dc006984c060f2f311d96",
+   "kind": "Pool",
+   "label": "Blue FXRP/RLUSD",
+   "details": {
+    "market_id": "0x4fa31e3f8ba345227d44e1cf48559eea53a90dd5311dc006984c060f2f311d96",
+    "lltv": "77.0%",
+    "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
+    "source": "Morpho Blue idToMarketParams on-chain"
+   }
+  },
+  {
+   "id": "0xce6170ea245dc8d1f275a710a062b70f125f0110",
+   "kind": "Asset",
+   "label": "FXRP",
+   "details": {
+    "address": "0xce6170ea245dc8d1f275a710a062b70f125f0110",
+    "source": "ERC-20 symbol() on-chain"
+   }
+  },
+  {
+   "id": "0x5ac03061500e0c97862a466a38a7e87fac4ac39d",
+   "kind": "Oracle",
+   "label": "Oracle 0x5ac0\u2026c39d",
+   "details": {
+    "address": "0x5ac03061500e0c97862a466a38a7e87fac4ac39d",
+    "shape": "Morpho ChainlinkOracleV2",
+    "price_raw": "1403825755833371665823351886258502312949115119467",
+    "source": "price() and getters read on-chain"
+   }
+  },
+  {
+   "id": "0x64775db2ac856843e1f900f6249687d6d803b22d",
+   "kind": "Oracle",
+   "label": "RedStone Price Feed for XRP",
+   "details": {
+    "address": "0x64775db2ac856843e1f900f6249687d6d803b22d",
+    "role_in_oracle": "BASE_FEED_1",
+    "source": "oracle getter, description() on-chain"
+   }
+  },
+  {
+   "id": "0xd9d2fc090bdbab1804ea960dd6669b62357787e5816f575f14ca4e6d999614bf",
+   "kind": "Pool",
+   "label": "Blue USDe/RLUSD",
+   "details": {
+    "market_id": "0xd9d2fc090bdbab1804ea960dd6669b62357787e5816f575f14ca4e6d999614bf",
+    "lltv": "91.5%",
+    "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
+    "source": "Morpho Blue idToMarketParams on-chain"
+   }
+  },
+  {
+   "id": "0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
+   "kind": "Asset",
+   "label": "USDe",
+   "details": {
+    "address": "0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
+    "issuer": "Ethena",
+    "source": "ERC-20 symbol() on-chain, issuer from registry.json"
+   }
+  },
+  {
+   "id": "0x0c13eec9b02cd9d85facc9edf17e71feafc3d8d7",
+   "kind": "Oracle",
+   "label": "Oracle 0x0c13\u2026d8d7",
+   "details": {
+    "address": "0x0c13eec9b02cd9d85facc9edf17e71feafc3d8d7",
+    "shape": "Morpho ChainlinkOracleV2",
+    "price_raw": "999574829353754217407217041225093047",
+    "source": "price() and getters read on-chain"
+   }
+  },
+  {
+   "id": "admin:0xe8c9c99ecad0686a14a00d8521c572281e938008",
+   "kind": "Admin",
+   "label": "owner 0xe8c9\u20268008",
+   "details": {
+    "address": "0xe8c9c99ecad0686a14a00d8521c572281e938008",
+    "source": "owner()/curator() on-chain; allocators and sentinels from the Morpho API, confirmed with isAllocator()/isSentinel()"
+   }
+  },
+  {
+   "id": "admin:0x9e396de3312d373b87f9bd8763fb48184b42aac0",
+   "kind": "Admin",
+   "label": "curator + allocator + sentinel 0x9e39\u2026aac0",
+   "details": {
+    "address": "0x9e396de3312d373b87f9bd8763fb48184b42aac0",
+    "source": "owner()/curator() on-chain; allocators and sentinels from the Morpho API, confirmed with isAllocator()/isSentinel()"
+   }
+  },
+  {
+   "id": "admin:0x13de0cee0b83562cbfd46682e10ffa4e3c5090e1",
+   "kind": "Admin",
+   "label": "allocator + sentinel 0x13de\u202690e1",
+   "details": {
+    "address": "0x13de0cee0b83562cbfd46682e10ffa4e3c5090e1",
+    "source": "owner()/curator() on-chain; allocators and sentinels from the Morpho API, confirmed with isAllocator()/isSentinel()"
+   }
+  },
+  {
+   "id": "admin:0xc4ba4e822c420452fe2bab93211208d3ccbd79d3",
+   "kind": "Admin",
+   "label": "allocator 0xc4ba\u202679d3",
+   "details": {
+    "address": "0xc4ba4e822c420452fe2bab93211208d3ccbd79d3",
+    "source": "owner()/curator() on-chain; allocators and sentinels from the Morpho API, confirmed with isAllocator()/isSentinel()"
+   }
+  },
+  {
+   "id": "admin:0x74d1672d0b90f6e7c322dec9d5396ff6ace61618",
+   "kind": "Admin",
+   "label": "sentinel 0x74d1\u20261618",
+   "details": {
+    "address": "0x74d1672d0b90f6e7c322dec9d5396ff6ace61618",
+    "source": "owner()/curator() on-chain; allocators and sentinels from the Morpho API, confirmed with isAllocator()/isSentinel()"
+   }
+  },
+  {
+   "id": "user:0xb03d620e49b6a21ea9d02142831c3f61c2fcbabc",
+   "kind": "Position",
+   "label": "Address 0xb03d\u2026babc",
+   "details": {
+    "address": "0xb03d620e49b6a21ea9d02142831c3f61c2fcbabc",
+    "source": "Morpho API userByAddress (positions), Morpho Blue position() on-chain (amounts)"
+   }
+  }
+ ],
+ "edges": [
+  {
+   "source": "0x002278ea242ec722813b4fe3c8eeaa07dbc331c731cc0b4248a1bf0771f933ea",
+   "target": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+   "rel": "lends",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x002278ea242ec722813b4fe3c8eeaa07dbc331c731cc0b4248a1bf0771f933ea",
+   "target": "0x22ae3d9a738471f405169af055d31c687087d4c7",
+   "rel": "takes as collateral",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xa5657b406fc4282039861c6fca64452aefec8ac0",
+   "target": "0x4be50be32db1510240d542f77c5b36ca0d0965e6",
+   "rel": "reads",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x002278ea242ec722813b4fe3c8eeaa07dbc331c731cc0b4248a1bf0771f933ea",
+   "target": "0xa5657b406fc4282039861c6fca64452aefec8ac0",
+   "rel": "priced by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "user:0xdf81987465681d0515058fe0a47a3bd174012730",
+   "target": "0x002278ea242ec722813b4fe3c8eeaa07dbc331c731cc0b4248a1bf0771f933ea",
+   "rel": "borrows from",
+   "amount": 1100624.770625,
+   "unit": "USDC",
+   "details": {
+    "collateral": "1,230,761.81 PST",
+    "health_factor": 1.0946,
+    "liquidation_at": "-8.64% oracle fall"
+   }
+  },
+  {
+   "source": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
+   "target": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+   "rel": "lends",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
+   "target": "0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "rel": "takes as collateral",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x217d6ddcdb95112c51657f6270e8c079cfdb51f0",
+   "target": "0x77ee147391eac11c92817e771860ff4aad265d89",
+   "rel": "reads",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
+   "target": "0x217d6ddcdb95112c51657f6270e8c079cfdb51f0",
+   "rel": "priced by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "target": "pendle:0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "rel": "trades in / redeems through",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "pendle:0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "target": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+   "rel": "yield source",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "user:0xdf81987465681d0515058fe0a47a3bd174012730",
+   "target": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
+   "rel": "borrows from",
+   "amount": 1204053.211466,
+   "unit": "USDT",
+   "details": {
+    "collateral": "1,413,899.81 PT-reUSD-10DEC2026",
+    "health_factor": 1.0548,
+    "liquidation_at": "-5.20% oracle fall"
+   }
+  },
+  {
+   "source": "0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b",
+   "target": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+   "rel": "lends",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b",
+   "target": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+   "rel": "takes as collateral",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x0c426d174fc88b7a25d59945ab2f7274bf7b4c79",
+   "target": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+   "rel": "converts through",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x0c426d174fc88b7a25d59945ab2f7274bf7b4c79",
+   "target": "0xaed0c38402a5d19df6e4c03f4e2dced6e29c1ee9",
+   "rel": "reads",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x0c426d174fc88b7a25d59945ab2f7274bf7b4c79",
+   "target": "0x3e7d1eab13ad0104d2750b8863b489d65364e32d",
+   "rel": "reads",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b",
+   "target": "0x0c426d174fc88b7a25d59945ab2f7274bf7b4c79",
+   "rel": "priced by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "user:0xdf81987465681d0515058fe0a47a3bd174012730",
+   "target": "0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b",
+   "rel": "borrows from",
+   "amount": 1159927.11892,
+   "unit": "USDT",
+   "details": {
+    "collateral": "1,162,712.11 sUSDS",
+    "health_factor": 1.0767,
+    "liquidation_at": "-7.12% oracle fall"
+   }
+  },
+  {
+   "source": "0x5613b170ded221c588b6e9637b910f49e5508680ceede207f44aa72e5c46cb05",
+   "target": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+   "rel": "lends",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x5613b170ded221c588b6e9637b910f49e5508680ceede207f44aa72e5c46cb05",
+   "target": "0xb195b618ea52b77cb2a58846f452f59f8dfa9390",
+   "rel": "takes as collateral",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x5613b170ded221c588b6e9637b910f49e5508680ceede207f44aa72e5c46cb05",
+   "target": "0xf8b29e7e9c00ce531434775f7923cc9fbca01b08",
+   "rel": "priced by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xb195b618ea52b77cb2a58846f452f59f8dfa9390",
+   "target": "pendle:0xb195b618ea52b77cb2a58846f452f59f8dfa9390",
+   "rel": "trades in / redeems through",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "pendle:0xb195b618ea52b77cb2a58846f452f59f8dfa9390",
+   "target": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+   "rel": "yield source",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+   "target": "ext:0x9d39a5de30e57443bff2a8307a4256c8797a3497:0",
+   "rel": "relies on",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+   "target": "ext:0x9d39a5de30e57443bff2a8307a4256c8797a3497:1",
+   "rel": "relies on",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+   "target": "ext:0x9d39a5de30e57443bff2a8307a4256c8797a3497:2",
+   "rel": "relies on",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+   "target": "ext:0x9d39a5de30e57443bff2a8307a4256c8797a3497:3",
+   "rel": "relies on",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "user:0xdf81987465681d0515058fe0a47a3bd174012730",
+   "target": "0x5613b170ded221c588b6e9637b910f49e5508680ceede207f44aa72e5c46cb05",
+   "rel": "borrows from",
+   "amount": 3414343.109054,
+   "unit": "USDC",
+   "details": {
+    "collateral": "3,961,491.35 PT-sUSDE-26NOV2026",
+    "health_factor": 1.0535,
+    "liquidation_at": "-5.08% oracle fall"
+   }
+  },
+  {
+   "source": "0xae992849c5f544a32dfdfcc74c0695b73b8732f449727827af6ce3768e968382",
+   "target": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+   "rel": "lends",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xae992849c5f544a32dfdfcc74c0695b73b8732f449727827af6ce3768e968382",
+   "target": "0x079c3469143804af5d0d645a878c371dbe8d038e",
+   "rel": "takes as collateral",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x5911530e5f62fff0a73e91ccd797d717e6d49fa9",
+   "target": "0x91058f5f2250d0a55d01ec9f4d77a98008fecd4d",
+   "rel": "reads",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xae992849c5f544a32dfdfcc74c0695b73b8732f449727827af6ce3768e968382",
+   "target": "0x5911530e5f62fff0a73e91ccd797d717e6d49fa9",
+   "rel": "priced by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x079c3469143804af5d0d645a878c371dbe8d038e",
+   "target": "pendle:0x079c3469143804af5d0d645a878c371dbe8d038e",
+   "rel": "trades in / redeems through",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "pendle:0x079c3469143804af5d0d645a878c371dbe8d038e",
+   "target": "0x7743e50f534a7f9f1791dde7dcd89f7783eefc39",
+   "rel": "yield source",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "user:0xdf81987465681d0515058fe0a47a3bd174012730",
+   "target": "0xae992849c5f544a32dfdfcc74c0695b73b8732f449727827af6ce3768e968382",
+   "rel": "borrows from",
+   "amount": 601575.098766,
+   "unit": "USDC",
+   "details": {
+    "collateral": "734,250.79 PT-fxSAVE-29OCT2026",
+    "health_factor": 1.1083,
+    "liquidation_at": "-9.77% oracle fall"
+   }
+  },
+  {
+   "source": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+   "target": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+   "rel": "lends",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+   "target": "0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "rel": "takes as collateral",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+   "target": "0x217d6ddcdb95112c51657f6270e8c079cfdb51f0",
+   "rel": "priced by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "user:0xdf81987465681d0515058fe0a47a3bd174012730",
+   "target": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+   "rel": "borrows from",
+   "amount": 3672095.521262,
+   "unit": "USDC",
+   "details": {
+    "collateral": "4,300,638.38 PT-reUSD-10DEC2026",
+    "health_factor": 1.052,
+    "liquidation_at": "-4.95% oracle fall"
+   }
+  },
+  {
+   "source": "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
+   "target": "0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
+   "rel": "denominated in",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
+   "target": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
+   "rel": "allocates through",
+   "amount": 418865477.6837879,
+   "unit": "RLUSD",
+   "details": {}
+  },
+  {
+   "source": "0xffd010618ed3cb39bb2c5de0e3e58d3d2ec9f52187a180f29723c31756a939bc",
+   "target": "0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
+   "rel": "lends",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xffd010618ed3cb39bb2c5de0e3e58d3d2ec9f52187a180f29723c31756a939bc",
+   "target": "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
+   "rel": "takes as collateral",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x8b36909dd84d310cbde90cb286d9dab285a245bd",
+   "target": "0x2665701293fcbeb223d11a08d826563edcce423a",
+   "rel": "reads",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x8b36909dd84d310cbde90cb286d9dab285a245bd",
+   "target": "0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a",
+   "rel": "reads",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xffd010618ed3cb39bb2c5de0e3e58d3d2ec9f52187a180f29723c31756a939bc",
+   "target": "0x8b36909dd84d310cbde90cb286d9dab285a245bd",
+   "rel": "priced by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
+   "target": "0xffd010618ed3cb39bb2c5de0e3e58d3d2ec9f52187a180f29723c31756a939bc",
+   "rel": "supplies",
+   "amount": 13067287.8001118,
+   "unit": "RLUSD",
+   "details": {
+    "share_of_vault": "2.9%",
+    "utilization": "88.6%"
+   }
+  },
+  {
+   "source": "0xea4bfb18df0ee6bffb7b3f0270899a8adb92ab6b684709634c8276128813cfd4",
+   "target": "0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
+   "rel": "lends",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xea4bfb18df0ee6bffb7b3f0270899a8adb92ab6b684709634c8276128813cfd4",
+   "target": "0xcd5fe23c85820f7b72d0926fc9b05b43e359b7ee",
+   "rel": "takes as collateral",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x6ab351ffde101bb24a97332f4f7162c1711f110b",
+   "target": "0x5c9c449bbc9a6075a2c061df312a35fd1e05ff22",
+   "rel": "reads",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x6ab351ffde101bb24a97332f4f7162c1711f110b",
+   "target": "0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419",
+   "rel": "reads",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x6ab351ffde101bb24a97332f4f7162c1711f110b",
+   "target": "0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a",
+   "rel": "reads",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xea4bfb18df0ee6bffb7b3f0270899a8adb92ab6b684709634c8276128813cfd4",
+   "target": "0x6ab351ffde101bb24a97332f4f7162c1711f110b",
+   "rel": "priced by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
+   "target": "0xea4bfb18df0ee6bffb7b3f0270899a8adb92ab6b684709634c8276128813cfd4",
+   "rel": "supplies",
+   "amount": 105547763.83366641,
+   "unit": "RLUSD",
+   "details": {
+    "share_of_vault": "23.0%",
+    "utilization": "84.3%"
+   }
+  },
+  {
+   "source": "0x88abdf8693e663144c3544b9442e9b04520016d6ebc57aa76424c00ab1683c9d",
+   "target": "0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
+   "rel": "lends",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x88abdf8693e663144c3544b9442e9b04520016d6ebc57aa76424c00ab1683c9d",
+   "target": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+   "rel": "takes as collateral",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x4e58cea93a5252547c99d04042de646b17531653",
+   "target": "0x4f67e4d9bd67efa28236013288737d39aef48e79",
+   "rel": "reads",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x4e58cea93a5252547c99d04042de646b17531653",
+   "target": "0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419",
+   "rel": "reads",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x4e58cea93a5252547c99d04042de646b17531653",
+   "target": "0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a",
+   "rel": "reads",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x88abdf8693e663144c3544b9442e9b04520016d6ebc57aa76424c00ab1683c9d",
+   "target": "0x4e58cea93a5252547c99d04042de646b17531653",
+   "rel": "priced by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
+   "target": "0x88abdf8693e663144c3544b9442e9b04520016d6ebc57aa76424c00ab1683c9d",
+   "rel": "supplies",
+   "amount": 1383162.3185437587,
+   "unit": "RLUSD",
+   "details": {
+    "share_of_vault": "0.3%",
+    "utilization": "91.5%"
+   }
+  },
+  {
+   "source": "0xc0ae375fd761ff19b3f04de5534c0f1ec110f80e1c2ede27c42c1c43c3040394",
+   "target": "0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
+   "rel": "lends",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xc0ae375fd761ff19b3f04de5534c0f1ec110f80e1c2ede27c42c1c43c3040394",
+   "target": "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
+   "rel": "takes as collateral",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xf766f4f1bcb0cbbf4eef5e26ff7c7f66a713c1b5",
+   "target": "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
+   "rel": "converts through",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xf766f4f1bcb0cbbf4eef5e26ff7c7f66a713c1b5",
+   "target": "0x8fffffd4afb6115b954bd326cbe7b4ba576818f6",
+   "rel": "reads",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xf766f4f1bcb0cbbf4eef5e26ff7c7f66a713c1b5",
+   "target": "0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a",
+   "rel": "reads",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xc0ae375fd761ff19b3f04de5534c0f1ec110f80e1c2ede27c42c1c43c3040394",
+   "target": "0xf766f4f1bcb0cbbf4eef5e26ff7c7f66a713c1b5",
+   "rel": "priced by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
+   "target": "0xc0ae375fd761ff19b3f04de5534c0f1ec110f80e1c2ede27c42c1c43c3040394",
+   "rel": "supplies",
+   "amount": 4745216.411795818,
+   "unit": "RLUSD",
+   "details": {
+    "share_of_vault": "1.0%",
+    "utilization": "88.4%"
+   }
+  },
+  {
+   "source": "0x15bb2a6af0c909eed19fb1f2ceeead34ecbdcba626de752c6b09389ee14eec32",
+   "target": "0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
+   "rel": "lends",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x15bb2a6af0c909eed19fb1f2ceeead34ecbdcba626de752c6b09389ee14eec32",
+   "target": "0x73e0c0d45e048d25fc26fa3159b0aa04bfa4db98",
+   "rel": "takes as collateral",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xbcc3d9834b84b32cf540dbe948ded4b47bec5ddb",
+   "target": "0xf4030086522a5beea4988f8ca5b36dbc97bee88c",
+   "rel": "reads",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xbcc3d9834b84b32cf540dbe948ded4b47bec5ddb",
+   "target": "0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a",
+   "rel": "reads",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x15bb2a6af0c909eed19fb1f2ceeead34ecbdcba626de752c6b09389ee14eec32",
+   "target": "0xbcc3d9834b84b32cf540dbe948ded4b47bec5ddb",
+   "rel": "priced by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
+   "target": "0x15bb2a6af0c909eed19fb1f2ceeead34ecbdcba626de752c6b09389ee14eec32",
+   "rel": "supplies",
+   "amount": 235131418.5598771,
+   "unit": "RLUSD",
+   "details": {
+    "share_of_vault": "51.3%",
+    "utilization": "90.5%"
+   }
+  },
+  {
+   "source": "0xa128dddc761075df9a9a60689f3a41a989b245aad506352c509c0c3a76a9ec6b",
+   "target": "0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
+   "rel": "lends",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xa128dddc761075df9a9a60689f3a41a989b245aad506352c509c0c3a76a9ec6b",
+   "target": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+   "rel": "takes as collateral",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xf58725eb213161e9054c97f970dc80b2d0327e8d",
+   "target": "0xfdfd9c85ad200c506cf9e21f1fd8dd01932fbb23",
+   "rel": "reads",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xf58725eb213161e9054c97f970dc80b2d0327e8d",
+   "target": "0xf4030086522a5beea4988f8ca5b36dbc97bee88c",
+   "rel": "reads",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xf58725eb213161e9054c97f970dc80b2d0327e8d",
+   "target": "0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a",
+   "rel": "reads",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xa128dddc761075df9a9a60689f3a41a989b245aad506352c509c0c3a76a9ec6b",
+   "target": "0xf58725eb213161e9054c97f970dc80b2d0327e8d",
+   "rel": "priced by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
+   "target": "0xa128dddc761075df9a9a60689f3a41a989b245aad506352c509c0c3a76a9ec6b",
+   "rel": "supplies",
+   "amount": 0.000409481689287843,
+   "unit": "RLUSD",
+   "details": {
+    "share_of_vault": "0.0%",
+    "utilization": "72.3%"
+   }
+  },
+  {
+   "source": "0x1749e02006bc6bd6a86af52d231511f6911d5e42318e028e51a28dfabc68dd47",
+   "target": "0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
+   "rel": "lends",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x1749e02006bc6bd6a86af52d231511f6911d5e42318e028e51a28dfabc68dd47",
+   "target": "0x5a19fa369f2895dcd8d2cee62e4ceae58ef92bbb",
+   "rel": "takes as collateral",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x968eb911db90bb8ea9e4792b05c94500bc1a62d7",
+   "target": "0xb131d953712db127308ef07fce30c2ace465bbce",
+   "rel": "reads",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x968eb911db90bb8ea9e4792b05c94500bc1a62d7",
+   "target": "0xa569d910839ae8865da8f8e70fffb0cba869f961",
+   "rel": "reads",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x968eb911db90bb8ea9e4792b05c94500bc1a62d7",
+   "target": "0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a",
+   "rel": "reads",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x1749e02006bc6bd6a86af52d231511f6911d5e42318e028e51a28dfabc68dd47",
+   "target": "0x968eb911db90bb8ea9e4792b05c94500bc1a62d7",
+   "rel": "priced by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x5a19fa369f2895dcd8d2cee62e4ceae58ef92bbb",
+   "target": "pendle:0x5a19fa369f2895dcd8d2cee62e4ceae58ef92bbb",
+   "rel": "trades in / redeems through",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "pendle:0x5a19fa369f2895dcd8d2cee62e4ceae58ef92bbb",
+   "target": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+   "rel": "yield source",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
+   "target": "0x1749e02006bc6bd6a86af52d231511f6911d5e42318e028e51a28dfabc68dd47",
+   "rel": "supplies",
+   "amount": 1e-18,
+   "unit": "RLUSD",
+   "details": {
+    "share_of_vault": "0.0%",
+    "utilization": "57.9%"
+   }
+  },
+  {
+   "source": "0xc3b37a18d5b15f8e5b78bcdc014ffb3f22933bde4e5f6a36dedf36db87e68585",
+   "target": "0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
+   "rel": "lends",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xc3b37a18d5b15f8e5b78bcdc014ffb3f22933bde4e5f6a36dedf36db87e68585",
+   "target": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+   "rel": "takes as collateral",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x18803b5c20962244f0a99fc3b7d7e614762385eb",
+   "target": "0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419",
+   "rel": "reads",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x18803b5c20962244f0a99fc3b7d7e614762385eb",
+   "target": "0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a",
+   "rel": "reads",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xc3b37a18d5b15f8e5b78bcdc014ffb3f22933bde4e5f6a36dedf36db87e68585",
+   "target": "0x18803b5c20962244f0a99fc3b7d7e614762385eb",
+   "rel": "priced by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
+   "target": "0xc3b37a18d5b15f8e5b78bcdc014ffb3f22933bde4e5f6a36dedf36db87e68585",
+   "rel": "supplies",
+   "amount": 1e-18,
+   "unit": "RLUSD",
+   "details": {
+    "share_of_vault": "0.0%",
+    "utilization": "80.1%"
+   }
+  },
+  {
+   "source": "0x4fa31e3f8ba345227d44e1cf48559eea53a90dd5311dc006984c060f2f311d96",
+   "target": "0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
+   "rel": "lends",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x4fa31e3f8ba345227d44e1cf48559eea53a90dd5311dc006984c060f2f311d96",
+   "target": "0xce6170ea245dc8d1f275a710a062b70f125f0110",
+   "rel": "takes as collateral",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x5ac03061500e0c97862a466a38a7e87fac4ac39d",
+   "target": "0x64775db2ac856843e1f900f6249687d6d803b22d",
+   "rel": "reads",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x5ac03061500e0c97862a466a38a7e87fac4ac39d",
+   "target": "0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a",
+   "rel": "reads",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x4fa31e3f8ba345227d44e1cf48559eea53a90dd5311dc006984c060f2f311d96",
+   "target": "0x5ac03061500e0c97862a466a38a7e87fac4ac39d",
+   "rel": "priced by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
+   "target": "0x4fa31e3f8ba345227d44e1cf48559eea53a90dd5311dc006984c060f2f311d96",
+   "rel": "supplies",
+   "amount": 8949101.753285129,
+   "unit": "RLUSD",
+   "details": {
+    "share_of_vault": "2.0%",
+    "utilization": "89.2%"
+   }
+  },
+  {
+   "source": "0xd9d2fc090bdbab1804ea960dd6669b62357787e5816f575f14ca4e6d999614bf",
+   "target": "0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
+   "rel": "lends",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xd9d2fc090bdbab1804ea960dd6669b62357787e5816f575f14ca4e6d999614bf",
+   "target": "0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
+   "rel": "takes as collateral",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x0c13eec9b02cd9d85facc9edf17e71feafc3d8d7",
+   "target": "0xa569d910839ae8865da8f8e70fffb0cba869f961",
+   "rel": "reads",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x0c13eec9b02cd9d85facc9edf17e71feafc3d8d7",
+   "target": "0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a",
+   "rel": "reads",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xd9d2fc090bdbab1804ea960dd6669b62357787e5816f575f14ca4e6d999614bf",
+   "target": "0x0c13eec9b02cd9d85facc9edf17e71feafc3d8d7",
+   "rel": "priced by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
+   "target": "0xd9d2fc090bdbab1804ea960dd6669b62357787e5816f575f14ca4e6d999614bf",
+   "rel": "supplies",
+   "amount": 50017068.06553976,
+   "unit": "RLUSD",
+   "details": {
+    "share_of_vault": "10.9%",
+    "utilization": "91.4%"
+   }
+  },
+  {
+   "source": "admin:0xe8c9c99ecad0686a14a00d8521c572281e938008",
+   "target": "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
+   "rel": "owns (sets curator, sentinels)",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "admin:0x9e396de3312d373b87f9bd8763fb48184b42aac0",
+   "target": "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
+   "rel": "curates (timelocked changes)",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "admin:0x9e396de3312d373b87f9bd8763fb48184b42aac0",
+   "target": "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
+   "rel": "allocates (immediate, within caps)",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "admin:0x9e396de3312d373b87f9bd8763fb48184b42aac0",
+   "target": "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
+   "rel": "can de-risk (lower caps, revoke)",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "admin:0x13de0cee0b83562cbfd46682e10ffa4e3c5090e1",
+   "target": "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
+   "rel": "allocates (immediate, within caps)",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "admin:0x13de0cee0b83562cbfd46682e10ffa4e3c5090e1",
+   "target": "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
+   "rel": "can de-risk (lower caps, revoke)",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "admin:0xc4ba4e822c420452fe2bab93211208d3ccbd79d3",
+   "target": "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
+   "rel": "allocates (immediate, within caps)",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "admin:0x74d1672d0b90f6e7c322dec9d5396ff6ace61618",
+   "target": "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
+   "rel": "can de-risk (lower caps, revoke)",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "user:0xb03d620e49b6a21ea9d02142831c3f61c2fcbabc",
+   "target": "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
+   "rel": "deposits in",
+   "amount": 149431057.53156388,
+   "unit": "RLUSD",
+   "details": {}
+  }
+ ]
+}

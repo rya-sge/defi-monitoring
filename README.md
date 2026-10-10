@@ -12,7 +12,7 @@ All data comes from keyless public sources: the publicnode Ethereum RPC, the Mor
 
 ```bash
 pip install -r requirements.txt     # Python >= 3.10
-python3 -m pytest -q tests          # 70 tests, offline
+python3 -m pytest -q tests          # 73 tests, offline
 ```
 
 ## watch: Morpho Vault V2 depositor
@@ -62,6 +62,15 @@ The Morpho API (`userByAddress`) finds the positions: Blue markets where the add
 
 Alerts go to `out/watch-user-<address>.jsonl`, and a restart resumes from `out/watch-user-<address>.cursor`. Every 300 blocks the tool looks for new positions and refreshes the exit quotes. A Blue `Borrow` on your behalf in a market not yet watched is picked up at once. Not covered: direct Blue supply, Vault V1 deposits, exit quotes for collateral other than a PT, and Morpho's opt-in pre-liquidation contracts. Authorising one of them still raises the `SetAuthorization` alert. The options behind these choices are in `docs/user-watcher-options.md`.
 
+## graph: draw the dependency graph
+
+```bash
+python3 -m riskdep graph --example                                   # writes out/graph.html and out/graph.json
+python3 -m riskdep graph --user <address> --vault <vault> --out out/graph.html
+```
+
+Builds the graph of `ANALYSIS_MONITORING.md` §1 from live data: positions, pools (markets, vaults, adapters, Pendle pools), assets, oracles and the feeds they read, and vault admins. The output is an interactive HTML page (Cytoscape.js from cdnjs) plus the same data as JSON. `docs/graph-example.html` is a rendered example.
+
 ## analyze: Pendle PT on Morpho Blue
 
 ```bash
@@ -79,9 +88,9 @@ Writes `out/report.html` and `out/report.json`.
 
 ```
 plan/        the two charrette plans (design, decisions, tracker, interview log)
-docs/        how-risk-is-computed.md · how-a-block-is-analysed.md · websocket-vs-polling.md · user-watcher-options.md
+docs/        how-risk-is-computed.md · how-a-block-is-analysed.md · websocket-vs-polling.md · user-watcher-options.md · graph-example.html/.json
 riskdep/     sources · abi · vault · poller · rules · watch (watch --vault)
-             positions · borrower · borrower_rules · watch_user (watch --user)
+             positions · borrower · borrower_rules · watch_user (watch --user) · graph
              discover · priors · propagate · simulate · decide · report (analyze)
              cli · registry.json (facts, assumptions, thresholds)
 data/        snapshot/ (analyze demo), replay/<vault>/ and replay/user-<address>/ (recorded watch ranges)
