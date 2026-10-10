@@ -92,6 +92,8 @@ class AdminWatch:
         self.contracts: dict[str, Contract] = {}
         self.markets = B.discover_markets(f, sorted(set(market_ids)), block) if market_ids else {}
         self.divergence: dict[str, float | None] = {}
+        self.llama: dict | None = None
+        self.llama_block = 0
         for m in self.markets.values():
             self._discover_market(f, m, block)
         self.read_state(f, block)
@@ -172,20 +174,33 @@ class AdminWatch:
         """D58: oracle price against DefiLlama's collateral ÷ loan price, per market."""
         ms = list(self.markets.values())
         prices = S.rpc_batch(f, [_call(m.oracle, "price()") for m in ms], block)
-        try:
-            llama = S.coin_prices(f, sorted({m.collateral_token for m in ms} | {m.loan_token for m in ms}))
-        except (S.SourceError, S.CacheMiss):
-            llama = {}
+        return self.divergence_at({m.id: _uint(raw) for m, raw in zip(ms, prices)}, self.fresh_prices(f, block, 0))
+
+    def fresh_prices(self, f: S.Fetcher, block: int, every: int) -> dict:
+        """DefiLlama's prices of the markets' tokens, re-fetched once `every` blocks have passed (0: always)."""
+        if self.llama is None or block - self.llama_block >= every:
+            ms = self.markets.values()
+            try:
+                self.llama = S.coin_prices(f, sorted({m.collateral_token for m in ms} | {m.loan_token for m in ms}))
+                self.llama_block = block
+            except (S.SourceError, S.CacheMiss):
+                self.llama = self.llama or {}
+        return self.llama
+
+    def divergence_at(self, oracle_raw: dict[str, int | None], llama: dict) -> dict[str, float | None]:
+        """Pure: oracle ÷ (collateral ÷ loan price) − 1 per market, from raw `price()` values."""
         out = {}
-        for m, raw in zip(ms, prices):
+        for mid, p in oracle_raw.items():
+            m = self.markets.get(mid)
+            if m is None:
+                continue
             pc = llama.get(f"ethereum:{m.collateral_token}", {}).get("price")
             pl = llama.get(f"ethereum:{m.loan_token}", {}).get("price")
-            p = _uint(raw)
             if not (pc and pl and p):
-                out[m.id] = None
+                out[mid] = None
                 continue
             oracle = p / 10 ** (36 + m.loan_decimals - m.collateral_decimals)
-            out[m.id] = oracle / (pc / pl) - 1
+            out[mid] = oracle / (pc / pl) - 1
         return out
 
     # --- poller
@@ -215,6 +230,15 @@ class AdminWatch:
             div = self.read_divergence(f, block)
             alerts += assess_divergence(self.divergence, div, self.markets, block)
             self.divergence = div
+        return alerts
+
+    def check_divergence(self, f: S.Fetcher, block: int, oracle_raw: dict[str, int | None]) -> list[Alert]:
+        """D97: the oracle-versus-market check between full refreshes, every `divergence_check_every_blocks`, from the
+        oracle prices the watch already read at this batch and DefiLlama's prices (shared with the drain check)."""
+        prices = self.fresh_prices(f, block, W["divergence_check_every_blocks"])
+        div = self.divergence_at({m: r for m, r in oracle_raw.items() if m in self.markets}, prices)
+        alerts = assess_divergence(self.divergence, div, self.markets, block)
+        self.divergence = {**self.divergence, **div}
         return alerts
 
     def startup(self, block: int) -> list[Alert]:

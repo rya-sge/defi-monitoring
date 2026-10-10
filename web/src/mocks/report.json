@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-10 22:37 UTC",
+  "generated": "2026-10-10 23:00 UTC",
   "data_as_of": "2026-10-10 10:30 UTC",
   "mode": "offline",
   "position": {
@@ -19,7 +19,7 @@
     "maturity": "2026-11-26T00:00:00.000Z",
     "days_to_maturity": 46.562349537037036,
     "oracle_mode": "market-tracking",
-    "oracle_ambiguous": true,
+    "oracle_ambiguous": false,
     "pt_discount": 0.006218359665001505,
     "morpho_market": "0x5613b170ded221c588b6e9637b910f49e5508680ceede207f44aa72e5c46cb05",
     "borrower": "0xdf81987465681d0515058fe0a47a3bd174012730",
@@ -33,62 +33,9 @@
     "underlying_drawdown_1y": 0.022542043409517265,
     "amm_liquidity_usd": 3819938.001241967,
     "lending_liquidity_usd": 764294.8894825589,
-    "liquidations": [
-      {
-        "drop": 0.00974156182244823,
-        "debt_usd": 2941765.460940477
-      },
-      {
-        "drop": 0.02429865039268031,
-        "debt_usd": 14081.808927150323
-      },
-      {
-        "drop": 0.02506992768360916,
-        "debt_usd": 101180.43163411015
-      },
-      {
-        "drop": 0.04754025231774417,
-        "debt_usd": 357127.9407923053
-      },
-      {
-        "drop": 0.050643376265230855,
-        "debt_usd": 3414155.976582684
-      },
-      {
-        "drop": 0.055777504633776065,
-        "debt_usd": 16113.986707863867
-      },
-      {
-        "drop": 0.07418417047985182,
-        "debt_usd": 16494.459962814868
-      },
-      {
-        "drop": 0.08845813723604656,
-        "debt_usd": 100402.21003073719
-      },
-      {
-        "drop": 0.11081448186775578,
-        "debt_usd": 10327.406806942574
-      },
-      {
-        "drop": 0.15140303407751377,
-        "debt_usd": 12022.742921941575
-      },
-      {
-        "drop": 0.2730902915992405,
-        "debt_usd": 579.1327005572954
-      },
-      {
-        "drop": 0.4547318693644561,
-        "debt_usd": 8018.9905267102495
-      },
-      {
-        "drop": 0.7011130058550987,
-        "debt_usd": 0.2713327885852303
-      }
-    ],
     "notes": [
       "Oracle behaviour is ambiguous (PT close to par): the report also shows the verdict if the oracle were fundamental.",
+      "Oracle mode market-tracking: a meta-oracle whose live source does not follow the market, but whose backup does and takes over after 16 h, within the 30-day horizon (the price inference said market-tracking, ambiguous).",
       "cross-check second RPC: ok \u2014 block 26162041 hash 0xe5e5121059\u2026 identical on https://eth.drpc.org",
       "cross-check Morpho API vs chain: ok \u2014 collateral 3,961,491.35 on-chain vs 3,961,491.35 API (0.000%); debt 3,414,343.11 vs 3,414,967.74 (0.018%)"
     ],
@@ -168,9 +115,10 @@
         "id": "oracle:0xf8b29e7e9c00ce531434775f7923cc9fbca01b08",
         "kind": "oracle",
         "label": "Oracle 0xF8b29e7E\u2026",
-        "source": "Ethereum RPC eth_call price(), eth_getCode",
-        "evidence": "custom/unverified oracle, EIP-1167 clone of 0x9b4655239e91dc9e1f7599bb88fba41b4542de5b; reads 0.9923 vs PT market 0.9934 (-0.11%), but the PT trades only 0.62% below par: a market, linear-discount or par oracle would all read about the same. Ambiguous; treated as market-tracking, the conservative case",
-        "mode": "market-tracking"
+        "source": "Ethereum RPC eth_call price(), eth_getCode; Etherscan getsourcecode",
+        "evidence": "custom oracle, EIP-1167 clone of 0x9b4655239e91dc9e1f7599bb88fba41b4542de5b; source verified on Etherscan (MetaOracleDeviationTimelock); reads 0.9923 vs PT market 0.9934 (-0.11%), but the PT trades only 0.62% below par: a market, linear-discount or par oracle would all read about the same. Ambiguous; treated as market-tracking, the conservative case",
+        "mode": "market-tracking",
+        "verified": true
       },
       {
         "id": "stable:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
@@ -315,23 +263,23 @@
       "event": "oracle",
       "node": "oracle:0xf8b29e7e9c00ce531434775f7923cc9fbca01b08",
       "layer": "Oracle misprice / misconfiguration",
-      "p_year": 0.053631284916201116,
+      "p_year": 0.026815642458100558,
       "a": 2.0,
       "b": 18.0,
-      "basis": "24 misconfigured/stale-oracle hacks / 179 Lending+CDP protocols / 5y = 2.68%/yr; \u00d7 2.0 (implementation unverified) \u2192 5.36%/yr. Severity: Counts misconfigured / stale / predictable oracle exploits only (spot-price manipulation of thin tokens does not apply to a PT oracle), over Lending + CDP protocols >= $1M. Severity: the reading drops ~10% on average, enough to liquidate a high-LTV loop with no real loss of value.",
+      "basis": "24 misconfigured/stale-oracle hacks / 179 Lending+CDP protocols / 5y = 2.68%/yr; \u00d7 1.0 (verified on Etherscan) \u2192 2.68%/yr. Severity: Counts misconfigured / stale / predictable oracle exploits only (spot-price manipulation of thin tokens does not apply to a PT oracle), over Lending + CDP protocols >= $1M. Severity: the reading drops ~10% on average, enough to liquidate a high-LTV loop with no real loss of value.",
       "recovery": 0.0
     }
   ],
   "simulation": {
     "horizon_days": 30,
     "n": 20000,
-    "expected_loss_usd": 7080.478490925223,
+    "expected_loss_usd": 6264.688340259679,
     "var95_usd": 0.0,
-    "cvar95_usd": 141609.56981850447,
-    "var99_usd": 470345.4782072409,
-    "cvar99_usd": 518872.0270563017,
-    "p_any_loss": 0.0209,
-    "p_liquidation": 0.0125,
+    "cvar95_usd": 125293.7668051936,
+    "var99_usd": 386890.06829862396,
+    "cvar99_usd": 510184.26698001736,
+    "p_any_loss": 0.0191,
+    "p_liquidation": 0.0107,
     "layers": [
       {
         "event": "issuer_depeg",
@@ -349,21 +297,6 @@
         "basis": "USDe printed ~0.65 on a single CEX order book during the 2025-10-10 liquidation cascade while on-chain pools stayed near peg, and dipped ~0.3% in Apr-2024 on negative funding. Modelled: 12%/yr chance of a depeg averaging ~8%, 75% of it recovered by the horizon."
       },
       {
-        "event": "oracle",
-        "layer": "Oracle misprice / misconfiguration",
-        "node": "oracle:0xf8b29e7e9c00ce531434775f7923cc9fbca01b08",
-        "p_horizon": 0.004520411520710144,
-        "mean_severity": 0.1,
-        "standalone_loss_usd": 334829.03235529625,
-        "contribution_usd": 1513.5650153271106,
-        "liquidation_rate": 0.7395,
-        "example_path": [
-          "oracle misreports \u22128.6%",
-          "liquidated: 97.4% of collateral seized at the oracle price"
-        ],
-        "basis": "24 misconfigured/stale-oracle hacks / 179 Lending+CDP protocols / 5y = 2.68%/yr; \u00d7 2.0 (implementation unverified) \u2192 5.36%/yr. Severity: Counts misconfigured / stale / predictable oracle exploits only (spot-price manipulation of thin tokens does not apply to a PT oracle), over Lending + CDP protocols >= $1M. Severity: the reading drops ~10% on average, enough to liquidate a high-LTV loop with no real loss of value."
-      },
-      {
         "event": "lending",
         "layer": "Morpho Blue exploit",
         "node": "lending:0x5613b170ded221c588b6e9637b910f49e5508680ceede207f44aa72e5c46cb05",
@@ -376,6 +309,21 @@
           "lending market exploit: \u22125.3% of collateral stolen"
         ],
         "basis": "tier \u2265 $100M: 34 hacks / 256 protocols / 5y = 2.66%/yr; \u00d7 category 'Lending' 1.89 (28 hacks / 139 protocols); \u00d7 age 1.0 (listed 2.7y ago) \u2192 5.03%/yr. Severity: Immutable core, formally verified; exploits of >=$100M lending protocols in the record took <1% of TVL (Aave V3 $0.9M, Venus $3.7M). Mean ~9% of collateral, deliberately above that record."
+      },
+      {
+        "event": "oracle",
+        "layer": "Oracle misprice / misconfiguration",
+        "node": "oracle:0xf8b29e7e9c00ce531434775f7923cc9fbca01b08",
+        "p_horizon": 0.002231621954265073,
+        "mean_severity": 0.1,
+        "standalone_loss_usd": 334829.03235529625,
+        "contribution_usd": 747.2118195294095,
+        "liquidation_rate": 0.7395,
+        "example_path": [
+          "oracle misreports \u22128.6%",
+          "liquidated: 97.4% of collateral seized at the oracle price"
+        ],
+        "basis": "24 misconfigured/stale-oracle hacks / 179 Lending+CDP protocols / 5y = 2.68%/yr; \u00d7 1.0 (verified on Etherscan) \u2192 2.68%/yr. Severity: Counts misconfigured / stale / predictable oracle exploits only (spot-price manipulation of thin tokens does not apply to a PT oracle), over Lending + CDP protocols >= $1M. Severity: the reading drops ~10% on average, enough to liquidate a high-LTV loop with no real loss of value."
       },
       {
         "event": "issuer_hack",
@@ -422,16 +370,16 @@
         "basis": "No fund-losing consensus failure since the Merge; finality was lost twice for ~1h on 2023-05-11/12. Modelled as a 1%/yr liveness event costing ~0.5% (stuck exit, gas spike)."
       }
     ],
-    "interaction_usd": -140.10612925516216
+    "interaction_usd": -189.54308412300543
   },
   "decision": {
     "verdict": "REDUCE",
-    "headline": "REDUCE: a full exit costs more than it saves, but the carry ($5,697) does not cover the expected loss ($7,080); in the worst 1% of outcomes it loses $518,872 on average (100% of equity); a 5.2% oracle drop liquidates it, less than the 12.2% stress.",
+    "headline": "REDUCE: a full exit costs more than it saves, but the carry ($5,697) does not cover the expected loss ($6,265); in the worst 1% of outcomes it loses $510,184 on average (98% of equity); a 5.2% oracle drop liquidates it, less than the 12.2% stress.",
     "carry_usd": 5697.150222309612,
     "exit_cost_usd": 78945.6861831538,
-    "expected_loss_usd": 7080.478490925223,
-    "net_stay_usd": -1383.3282686156108,
-    "risk_multiple_to_exit": 11.954394962705823,
+    "expected_loss_usd": 6264.688340259679,
+    "net_stay_usd": -567.5381179500664,
+    "risk_multiple_to_exit": 13.511100921255863,
     "liquidation_drop": 0.05162164059430607,
     "stress_drop": 0.12244897959183673,
     "reduction": {
@@ -439,20 +387,20 @@
       "new_health_factor": 1.1395348837209303,
       "new_liquidation_drop": 0.12244897959183676,
       "cost_usd": 1023.0596811696073,
-      "expected_loss_usd": 4608.539835476373,
-      "cvar99_usd": 435116.1350249662,
+      "expected_loss_usd": 4307.700967826159,
+      "cvar99_usd": 410778.24601295067,
       "carry_usd": 4349.930232863594,
       "source": "Pendle swap quote"
     },
     "reasons": [
-      "Over 30 days: expected loss $7,080 vs carry $5,697 (net $-1,383); leaving now costs $78,946 (1.99% price impact + fees, Pendle swap quote).",
+      "Over 30 days: expected loss $6,265 vs carry $5,697 (net $-568); leaving now costs $78,946 (1.99% price impact + fees, Pendle swap quote).",
       "Driver: sUSDe issuer (Ethena): depeg: $3,760 of expected loss (1.05% chance over the horizon, $359,761 if it happens, liquidates 76% of the time).",
-      "Driver: Oracle misprice / misconfiguration: $1,514 of expected loss (0.45% chance over the horizon, $334,829 if it happens, liquidates 74% of the time).",
+      "Driver: Morpho Blue exploit: $1,066 of expected loss (0.42% chance over the horizon, $251,746 if it happens).",
       "A 5.16% fall in the oracle price liquidates the position (HF 1.053); the stress it should survive is 12.2% (underlying's worst 1-year drawdown 2.25%).",
-      "The oracle is treated as following the PT market (not confirmed: see the oracle sensitivity line), so a temporary depeg turns into a realised loss through liquidation.",
-      "De-lever: sell $1,293,969 of PT (33%) and repay debt \u2192 HF 1.140, liquidation at \u221212.2%; costs $1,023; expected loss $7,080 \u2192 $4,609, CVaR99 $518,872 \u2192 $435,116, carry $5,697 \u2192 $4,350.",
-      "A full exit would only pay if incident probabilities were 12.0\u00d7 the estimates.",
-      "Oracle sensitivity (inference ambiguous): if the oracle were fundamental, expected loss $4,179 (vs $7,080), P(liquidation) 0.46% (vs 1.25%), verdict REDUCE \u2014 the same."
+      "The oracle is treated as following the PT market within the horizon (basis in the notes), so a temporary depeg turns into a realised loss through liquidation.",
+      "De-lever: sell $1,293,969 of PT (33%) and repay debt \u2192 HF 1.140, liquidation at \u221212.2%; costs $1,023; expected loss $6,265 \u2192 $4,308, CVaR99 $510,184 \u2192 $410,778, carry $5,697 \u2192 $4,350.",
+      "A full exit would only pay if incident probabilities were 13.5\u00d7 the estimates.",
+      "Oracle sensitivity: if the oracle were fundamental, expected loss $3,363 (vs $6,265), P(liquidation) 0.27% (vs 1.07%), verdict REDUCE \u2014 the same."
     ]
   },
   "exit_quote": {
@@ -465,8 +413,9 @@
   "oracle_sensitivity": {
     "oracle_mode": "fundamental",
     "verdict": "REDUCE",
-    "expected_loss_usd": 4178.856869838755,
-    "cvar99_usd": 362572.85260304436,
-    "p_liquidation": 0.00455
-  }
+    "expected_loss_usd": 3363.066719173212,
+    "cvar99_usd": 300214.83752869634,
+    "p_liquidation": 0.00275
+  },
+  "incident": null
 }

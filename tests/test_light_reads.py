@@ -195,3 +195,69 @@ def test_a_failure_names_the_public_url_not_the_routed_one(monkeypatch, tmp_path
     with pytest.raises(S.SourceError) as e:
         S.Fetcher("direct", tmp_path).post_json(S.RPC, BODY)
     assert "SECRET" not in str(e.value) and S.RPC in str(e.value)
+    assert "RISKDEP_RPC_URL" in str(e.value)  # a colleague whose local proxy is down is told where to look
+
+
+def test_a_routed_failure_never_prints_the_key_from_a_requests_message(monkeypatch, tmp_path):
+    """requests reports host, port and path apart, so the routed URL never appears whole and cannot be replaced."""
+
+    def down(url, json, timeout):
+        raise requests.ConnectionError(
+            "HTTPSConnectionPool(host='eth.example.com', port=443): Max retries exceeded with url: /v2/SECRET"
+        )
+
+    monkeypatch.setattr(S, "ROUTES", {S.RPC: "https://eth.example.com/v2/SECRET"})
+    monkeypatch.setattr(S.requests, "post", down)
+    monkeypatch.setattr(S.time, "sleep", lambda s: None)
+    with pytest.raises(S.SourceError) as e:
+        S.Fetcher("direct", tmp_path).post_json(S.RPC, BODY)
+    assert "SECRET" not in str(e.value) and "eth.example.com" not in str(e.value) and "ConnectionError" in str(e.value)
+
+
+THROTTLED = [{"jsonrpc": "2.0", "id": 0, "error": {"code": -32005, "message": "Rate limit exceeded"}}]
+
+
+def test_a_throttled_batch_is_resent_and_its_errors_never_recorded(monkeypatch, tmp_path):
+    """publicnode answers a burst with 429 and a -32005 error per item (probe 2026-10-10): resent, not passed on as
+    reverted calls, and a recording keeps only the good answer (plan 2026-10-10-sibling-markets, S3)."""
+    answers = iter([Resp(429, THROTTLED), Resp(429, THROTTLED), Resp(200, [{"id": 0, "result": "0x2"}])])
+    waits = []
+    monkeypatch.setattr(S.requests, "post", lambda url, json, timeout: next(answers))
+    monkeypatch.setattr(S.time, "sleep", waits.append)
+    f = S.Fetcher("refresh", tmp_path)
+    assert f.post_json(S.RPC, [BODY]) == [{"id": 0, "result": "0x2"}]
+    assert waits == [2.0, 4.0] and "-32005" not in f._key("POST", S.RPC, [BODY]).read_text()
+
+
+def test_throttling_that_does_not_stop_fails_the_request(monkeypatch, tmp_path):
+    monkeypatch.setattr(S.requests, "post", lambda url, json, timeout: Resp(429, THROTTLED))
+    monkeypatch.setattr(S.time, "sleep", lambda s: None)
+    with pytest.raises(S.SourceError, match="429"):
+        S.Fetcher("direct", tmp_path).post_json(S.RPC, [BODY])
+
+
+def test_rate_limit_errors_inside_a_200_reply_are_resent_too(monkeypatch, tmp_path):
+    """A local eRPC whose budget is spent answers HTTP 200 with a rate-limit error per item: same treatment as a 429."""
+    erpc = [{"jsonrpc": "2.0", "id": 0, "error": {"code": -32005, "message": "rate-limit exceeded"}}]
+    answers = iter([Resp(200, erpc), Resp(200, [{"id": 0, "result": "0x3"}])])
+    monkeypatch.setattr(S.requests, "post", lambda url, json, timeout: next(answers))
+    monkeypatch.setattr(S.time, "sleep", lambda s: None)
+    f = S.Fetcher("refresh", tmp_path)
+    assert f.post_json(S.RPC, [BODY]) == [{"id": 0, "result": "0x3"}]
+    assert "rate-limit" not in f._key("POST", S.RPC, [BODY]).read_text()
+
+
+def test_other_errors_with_code_32005_are_passed_on():
+    """Some nodes use -32005 for 'too many log results': resending would not help, so it is not throttling."""
+    assert not S._throttled([{"id": 0, "error": {"code": -32005, "message": "query returned more than 10000 results"}}])
+    assert S._throttled({"error": {"code": 429, "message": "slow down"}})
+
+
+def test_a_recording_keeps_the_first_answer_to_a_repeated_request(monkeypatch, tmp_path):
+    """The Pendle market list is read twice in a graph build: the replay must see the answer the run computed from."""
+    answers = iter([Resp(200, {"liquidity": 1}), Resp(200, {"liquidity": 2})])
+    monkeypatch.setattr(S.requests, "get", lambda url, timeout: next(answers))
+    f = S.Fetcher("refresh", tmp_path)
+    assert f.get_json("https://example.org/list") == {"liquidity": 1}
+    assert f.get_json("https://example.org/list") == {"liquidity": 1}
+    assert S.Fetcher("offline", tmp_path).get_json("https://example.org/list") == {"liquidity": 1}

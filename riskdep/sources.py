@@ -1,7 +1,7 @@
 """Keyless data sources behind one cached fetcher.
 
 Every request is keyed by a hash of (method, url, body) and stored under
-data/snapshot/, so a live run doubles as the offline demo snapshot.
+fixtures/snapshot/, so a live run doubles as the offline demo snapshot.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ from . import clock
 warnings.filterwarnings("ignore", message=".*doesn't match a supported version.*")
 import requests  # noqa: E402
 
-SNAPSHOT_DIR = Path(__file__).resolve().parent.parent / "data" / "snapshot"
+SNAPSHOT_DIR = Path(__file__).resolve().parent.parent / "fixtures" / "snapshot"
 
 PENDLE = "https://api-v2.pendle.finance/core"
 MORPHO = "https://blue-api.morpho.org/graphql"
@@ -26,6 +26,10 @@ LLAMA = "https://api.llama.fi"
 LLAMA_COINS = "https://coins.llama.fi"
 LLAMA_YIELDS = "https://yields.llama.fi"
 RPC = "https://ethereum-rpc.publicnode.com"
+ETHERSCAN = "https://api.etherscan.io/v2/api"  # needs a key: keys.ini [etherscan] api_key
+
+KEYS_FILE = Path(__file__).resolve().parent.parent / "keys.ini"  # git-ignored; keys.example.ini is the template
+THROTTLE_RETRIES = 6  # HTTP 429 resent after 2, 4 … 12 s: at most ~42 s of waiting before the request fails
 
 # Where a request is sent can differ from the URL it is cached under: RISKDEP_RPC_URL sends the main RPC's requests
 # to another endpoint (a local node or proxy, a paid endpoint with its key) while cache keys, snapshots and replays
@@ -41,6 +45,20 @@ class SourceError(RuntimeError):
     pass
 
 
+def _throttled(payload) -> bool:
+    """A JSON-RPC answer refused for rate, in any batch item: HTTP-style code 429, or a message saying rate limit or too
+    many requests (publicnode, eRPC, blockrazor, OnFinality on 2026-10-10). A bare -32005 is not enough: some nodes
+    use it for 'too many log results', which a resend does not cure."""
+    items = payload if isinstance(payload, list) else [payload] if isinstance(payload, dict) else []
+    for it in items:
+        err = it.get("error") if isinstance(it, dict) else None
+        if isinstance(err, dict):
+            msg = str(err.get("message", "")).lower()
+            if err.get("code") == 429 or "rate limit" in msg or "rate-limit" in msg or "too many requests" in msg:
+                return True
+    return False
+
+
 class Fetcher:
     """mode: 'offline' (cache only), 'live' (cache first, network on miss),
     'refresh' (network always, cache rewritten), 'direct' (network always, nothing cached:
@@ -53,47 +71,79 @@ class Fetcher:
         self.dir = Path(snapshot_dir)
         self.dir.mkdir(parents=True, exist_ok=True)
         self.network_calls = 0
+        self._recorded: set[Path] = set()  # refresh mode: requests already answered in this run
 
     def _key(self, method: str, url: str, body) -> Path:
         raw = json.dumps([method, url, body], sort_keys=True).encode()
         return self.dir / (hashlib.sha256(raw).hexdigest()[:24] + ".json")
 
-    def _request(self, method: str, url: str, body=None, transform=None):
+    def cached(self, method: str, url: str, body=None) -> bool:
+        return self._key(method, url, body).exists()
+
+    def _request(self, method: str, url: str, body=None, transform=None, secret: dict | None = None):
+        """`secret` (an API key) is added to the request only: never to the cache key, the stored URL or an error."""
         path = self._key(method, url, body)
-        if self.mode not in ("refresh", "direct") and path.exists():
+        if (self.mode not in ("refresh", "direct") or path in self._recorded) and path.exists():
+            # a recording keeps the first answer to a request: a second fetch in the same run (the Pendle market list,
+            # read for a PT and again for the sibling search) would overwrite it with a later one, and the replay
+            # would then disagree with what the recorded run computed from the first
             return json.loads(path.read_text())["response"]
         if self.mode == "offline":
             raise CacheMiss(
                 f"no cached response for {method} {url} {json.dumps(body)[:120] if body else ''}; rerun with --live"
             )
         target = ROUTES.get(url, url)
-        last = None
-        for attempt in range(3):
+        if secret:
+            from urllib.parse import urlencode
+
+            target += ("&" if "?" in target else "?") + urlencode(secret)
+        last, done, failures, throttled = None, False, 0, 0
+        while failures < 3 and throttled < THROTTLE_RETRIES:
             try:
                 self.network_calls += 1
                 if method == "GET":
                     r = requests.get(target, timeout=60)
                 else:
                     r = requests.post(target, json=body, timeout=60)
-                if r.status_code >= 400:
+                try:
+                    payload = r.json()
+                except ValueError:
+                    payload = None
+                if r.status_code == 429 or _throttled(payload):
+                    # throttled: publicnode answers a burst with 429, a local eRPC with 200, both with a rate-limit
+                    # error on every batch item. Wait and resend; passing that body on would read as calls that
+                    # reverted, and a recording would keep it
+                    throttled += 1
+                    last = SourceError(f"rate limited {throttled} time(s), HTTP {r.status_code}")
+                    time.sleep(2.0 * throttled)
+                    continue
+                if r.status_code >= 400 and payload is not None and "error" in json.dumps(payload)[:2000]:
                     # the free node answers some refusals (archive reads) with 403 + a JSON-RPC error body;
                     # kept apart from `body`, which a retry must send again unchanged
-                    try:
-                        err = r.json()
-                    except ValueError:
-                        err = None
-                    if err is not None and "error" in json.dumps(err)[:2000]:
-                        data = err
-                        break
+                    data, done = payload, True
+                    break
                 r.raise_for_status()
-                data = r.json()
+                if payload is None:
+                    raise ValueError("the response is not JSON")
+                data, done = payload, True
                 break
             except Exception as e:  # network, HTTP or JSON error
                 last = e
-                time.sleep(1.5 * (attempt + 1))
-        else:
-            # a routed URL may carry a key: name the public one only
-            raise SourceError(f"{method} {url} failed after 3 attempts: {str(last).replace(target, url)}")
+                failures += 1
+                time.sleep(1.5 * failures)
+        if not done:
+            # a routed URL may carry a key: name the public one only. requests' messages cut a URL into host, port
+            # and path, so replacing the whole URL is not enough: a routed failure keeps only its kind
+            msg = str(last) if target == url or isinstance(last, SourceError) else type(last).__name__
+            for v in (secret or {}).values():
+                msg = msg.replace(str(v), "***")
+            hint = (
+                " (sent through RISKDEP_RPC_URL: is the proxy running? Unset the variable to call the public RPC directly,"
+                " see docs/erpc.md)"
+                if target != url and url in ROUTES
+                else ""
+            )
+            raise SourceError(f"{method} {url} failed after {failures + throttled} attempts{hint}: {msg}")
         if transform:
             data = transform(data)
         if self.mode == "direct":
@@ -109,16 +159,51 @@ class Fetcher:
                 }
             )
         )
+        self._recorded.add(path)
         return data
 
-    def get_json(self, url: str, transform=None):
-        return self._request("GET", url, None, transform)
+    def get_json(self, url: str, transform=None, secret: dict | None = None):
+        return self._request("GET", url, None, transform, secret)
 
     def post_json(self, url: str, body, transform=None):
         return self._request("POST", url, body, transform)
 
 
 # --- thin clients -----------------------------------------------------------
+
+
+def api_key(section: str, name: str = "api_key") -> str | None:
+    """A key from keys.ini (never from the environment, never printed); None when absent or empty."""
+    import configparser
+
+    c = configparser.ConfigParser()
+    c.read(KEYS_FILE)
+    return c.get(section, name, fallback="").strip() or None
+
+
+def contract_source(f: Fetcher, address: str) -> dict | None:
+    """Etherscan `getsourcecode`, slimmed to {verified, name, proxy, implementation}; None when it cannot be known
+    (no key and no cached answer, or Etherscan refused). Only the slim answer is cached, never the key."""
+    url = f"{ETHERSCAN}?chainid=1&module=contract&action=getsourcecode&address={address.lower()}"
+    key = api_key("etherscan")
+    if not key and not (f.mode in ("offline", "live") and f.cached("GET", url)):
+        return None
+
+    def slim(d):
+        if str(d.get("status")) != "1" or not d.get("result"):
+            raise SourceError(f"Etherscan: {d.get('message')}")  # raised before caching: a refusal is not stored
+        r = d["result"][0]
+        return {
+            "verified": bool(r.get("SourceCode")),
+            "name": r.get("ContractName") or None,
+            "proxy": r.get("Proxy") not in (None, "", "0"),
+            "implementation": (r.get("Implementation") or "").lower() or None,
+        }
+
+    try:
+        return f.get_json(url, slim, {"apikey": key} if key else None)
+    except (SourceError, CacheMiss):
+        return None
 
 
 def morpho(f: Fetcher, query: str, variables: dict | None = None) -> dict:

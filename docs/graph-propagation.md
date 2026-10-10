@@ -1,6 +1,6 @@
 # The dependency graph as a propagation engine
 
-This document details point 4.4 of `comparison_team.md`: today the dependency graph is a picture, while the teammates propose to make it the **engine** that computes losses. It explains what that means, measures on the real example graph what the picture already reveals, works through one shock end to end, and describes how the engine could be built in steps. A [learn section](#learn-what-you-need-to-understand) at the end explains the concepts used.
+This document details point 4.4 of `docs/analysis/comparison_team.md`: today the dependency graph is a picture, while the teammates propose to make it the **engine** that computes losses. It explains what that means, measures on the real example graph what the picture already reveals, works through one shock end to end, and describes how the engine could be built in steps. A [learn section](#learn-what-you-need-to-understand) at the end explains the concepts used.
 
 The data is the example graph `docs/graph-example.json`: 100 nodes and 134 edges at block 26,162,421 (2026-10-10). It holds 19 actors (the demo borrower, Sentora RLUSD Main and its largest depositor, and the main lenders of the borrowed markets) and 16 Blue markets. The losses of the worked example come from the tool's `market_risk.value()` on the vault's borrowers recorded at block 26,162,932, a few hundred blocks later.
 
@@ -28,8 +28,12 @@ When one thing fails (a price feed, a collateral token, a Pendle pool, a market)
   - `market_risk.py` knows how a price fall becomes bad debt in one market;
   - the alert rules know vaults and borrows.
 - **None of them reads the graph.** A shock on a node the code was not written for (an issuer's custodian, a shared feed) produces no number.
+- **The graph now holds what the engine needs** (plan `2026-10-10-sibling-markets`):
+  - **sibling markets**, the Blue markets nobody in the graph holds that share a held market's collateral, underlying or collateral-side feed, or lend that collateral, joined through the shared node; on RockawayX USDC Yield, 10 of them with $218M of debt, among them PRIME/PYUSD ($189M) on the feed under the vault's liquidity market;
+  - an **oracle class** on every market oracle, `price-tracking` or `constant-price`, which decides how a collateral fall reaches a market (rows below);
+  - on every Blue market node, its **liquidation curve with the collateral that would be sold**, the input of the squeeze row below; and a `wraps` edge from an ERC-4626 share to its asset.
 
-This is gap R1 of `ANALYSIS_MONITORING.md`. Its visible symptom is gap R3: the graph shows that one `RLUSD / USD` feed sits under all of Sentora's markets, but nothing measures what that means.
+This is gap R1 of `docs/analysis/ANALYSIS_MONITORING.md`. Its visible symptom is gap R3: the graph shows that one `RLUSD / USD` feed sits under all of Sentora's markets, but nothing measures what that means.
 
 ## 3. What the teammates propose
 
@@ -49,7 +53,9 @@ The edges `graph.py` already produces, with the function each would carry. Most 
 | actor (vault or lender) → market, *supplies* | bad debt BD in the market | loss = share of the market's supply × BD | `market_risk` (vault side) |
 | actor (borrower) → market, *borrows from* | a fall of the market's oracle price | loss of the position: none above the liquidation distance, then liquidation (`propagate.loss`) | `propagate`, `borrower` |
 | actor (depositor) → vault, *deposits in* | vault loss L | loss = depositor's share of the vault × L | `market_risk.assess_vault_bad_debt` |
-| market → collateral asset, *takes as collateral* | collateral price falls by x | the oracle price falls by x, if the oracle follows that asset; then bad debt from the market's borrowers | `market_risk.value` |
+| market → collateral asset, *takes as collateral* | collateral price falls by x | `price-tracking` oracle: the oracle falls by x, the curve says what is liquidated and the bad debt left; `constant-price` oracle: nothing is liquidated, and once the collateral is worth less than the debt the shortfall is the lenders' (and the market can be drained, `drain.py`) | `market_risk.value`, `oracle_class` |
+| collateral asset ← market, the same edge read backwards (squeeze) | a fall of x on the collateral, in any market that takes it, held or sibling | that market's liquidations sell the curve's `collateral_liquidatable` at x into the pool, which pushes the price further; the next round starts from the new price. Needs a slippage curve per pool | curve on the market node; slippage not yet |
+| asset (ERC-4626 share) → asset, *wraps* | the underlying loses x | the share loses x once its vault records it; an oracle converting through the share follows only then | not yet |
 | market → oracle, *priced by* | oracle misreports by −x / +x / freezes | −x: like a collateral fall (liquidations, no real loss of value); +x: borrowers can borrow too much, a loss only if exploited; freeze: no liquidations, bad debt builds silently | partly (`propagate`, oracle event) |
 | oracle → feed, *reads* | feed misreports by x | a base feed: oracle price × (1 + x); a quote feed: oracle price ÷ (1 + x) | not yet |
 | oracle → vault share, *converts through* | share's exchange rate falls by x | oracle price × (1 − x) | not yet |
@@ -117,6 +123,14 @@ Steps 2 to 4 use the existing `market_risk.value()`, the same computation as poi
 
 ## 7. What could be implemented
 
+**Status (2026-10-10):** step 2's deterministic core is built: `riskdep shock`, `riskdep/engine.py`, `docs/shock-engine.md`, plan `2026-10-10-propagation-engine`. It differs from the sketch below on three points:
+- **No DebtRank weights.** Each node's effects are recomputed from its inputs until nothing moves, so the non-linear transmissions apply directly and a cycle (the squeeze) settles instead of being cut.
+- **Transmissions chosen by rules,** kept as data in `registry.json`, so propagation can depend on criteria without new code.
+- **The four failure modes come from one market model** that compares the oracle's factor with the market's.
+- **Calibrated in a second slice** (D112–D116). The sale impact comes from Pendle quote ladders with a capacity, and each oracle input is tied to the market it tracks. An underlying's depeg therefore reaches a PT's worth but not a PT_TO_ASSET oracle.
+
+Still missing: probabilities and the verdict (the Monte Carlo over failures), the run order of depositors, and `watch` and `analyze` using the engine.
+
 In three steps, each useful on its own:
 
 1. **Shared-node exposure** (S). Compute the table of section 6, step 1, from `graph.json`. Alert when one node carries more than a set share of a position, for example 50 % of a vault. This closes gap R3 and needs no engine.
@@ -134,7 +148,7 @@ In three steps, each useful on its own:
 - **Exposure is not loss.** Step 1 measures what depends on a node; the loss depends on the failure mode and severity.
 - **Non-linear functions.** DebtRank was designed with linear weights; with liquidation thresholds the order in which shocks arrive and their size matter, so the engine must apply the edge functions, not a single weight.
 - **Simultaneous shocks.** A real crisis moves several nodes at once (a depeg drains the pool and the oracle follows). The engine must accept a set of shocked nodes, not only one.
-- **Coverage of the graph.** The engine is as good as the graph. Custom oracles without the standard getters are one opaque node, and the off-chain dependencies come from a hand-kept registry.
+- **Coverage of the graph.** The engine is as good as the graph. Custom oracles without the standard getters are one opaque node, the off-chain dependencies come from a hand-kept registry, and sibling markets are Morpho Blue markets one hop from a held one: the same collateral on Euler, Aave, Silo or Fluid is not in the graph.
 - **No feedback loop yet.** Liquidations sell collateral and push its price further; that loop needs the slippage curve of point 4.5.
 
 ## Learn: what you need to understand
@@ -199,4 +213,4 @@ A risk engine must treat these as separate shocks.
 - Matthew Elliott, Benjamin Golub and Matthew O. Jackson, "Financial Networks and Contagion", *American Economic Review* 104(10), 2014.
 - Mark Newman, *Networks* (Oxford University Press): graph concepts and centrality measures.
 - Morpho's [oracle documentation](https://docs.morpho.org/developers/contracts/oracles).
-- In this repository: `ANALYSIS_MONITORING.md` §1 (the node model), `docs/graph-example.html`, `docs/vault-depositor-scenarios.md` (the same losses from the depositor's side).
+- In this repository: `docs/analysis/ANALYSIS_MONITORING.md` §1 (the node model), `docs/graph-example.html`, `docs/vault-depositor-scenarios.md` (the same losses from the depositor's side).

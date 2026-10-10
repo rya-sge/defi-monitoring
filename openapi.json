@@ -298,6 +298,92 @@
           }
         }
       }
+    },
+    "/api/vault/{address}": {
+      "get": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Get Vault",
+        "description": "A Vault V2: its Blue markets by allocation, and the liquidations of their borrowers.",
+        "operationId": "get_vault_api_vault__address__get",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Address"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Vault"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/market/{market_id}": {
+      "get": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Get Market",
+        "description": "A Blue market: its state and the liquidating fall of every borrower.",
+        "operationId": "get_market_api_market__market_id__get",
+        "parameters": [
+          {
+            "name": "market_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Market Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Market"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -689,6 +775,18 @@
           "debt_usd": {
             "type": "number",
             "title": "Debt Usd"
+          },
+          "market": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Market",
+            "description": "The borrower's market, in a vault's list."
           }
         },
         "type": "object",
@@ -697,7 +795,79 @@
           "debt_usd"
         ],
         "title": "Liquidation",
-        "description": "One borrower of the position's market: the oracle fall that liquidates it, and its debt."
+        "description": "One borrower: the oracle fall that liquidates it, and its debt (the vault's part, in a vault)."
+      },
+      "Market": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "lltv": {
+            "type": "number",
+            "title": "Lltv"
+          },
+          "collateral_price_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Collateral Price Usd"
+          },
+          "supply_usd": {
+            "type": "number",
+            "title": "Supply Usd"
+          },
+          "borrow_usd": {
+            "type": "number",
+            "title": "Borrow Usd"
+          },
+          "liquidity_usd": {
+            "type": "number",
+            "title": "Liquidity Usd"
+          },
+          "utilization": {
+            "type": "number",
+            "title": "Utilization"
+          },
+          "borrow_apy": {
+            "type": "number",
+            "title": "Borrow Apy"
+          },
+          "borrowers": {
+            "type": "integer",
+            "title": "Borrowers"
+          },
+          "liquidations": {
+            "items": {
+              "$ref": "#/components/schemas/Liquidation"
+            },
+            "type": "array",
+            "title": "Liquidations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "lltv",
+          "supply_usd",
+          "borrow_usd",
+          "liquidity_usd",
+          "utilization",
+          "borrow_apy",
+          "borrowers",
+          "liquidations"
+        ],
+        "title": "Market"
       },
       "OracleSensitivity": {
         "properties": {
@@ -1268,13 +1438,6 @@
             ],
             "title": "Lending Liquidity Usd"
           },
-          "liquidations": {
-            "items": {
-              "$ref": "#/components/schemas/Liquidation"
-            },
-            "type": "array",
-            "title": "Liquidations"
-          },
           "notes": {
             "items": {
               "type": "string"
@@ -1562,6 +1725,125 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "Vault": {
+        "properties": {
+          "address": {
+            "type": "string",
+            "title": "Address"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "asset_symbol": {
+            "type": "string",
+            "title": "Asset Symbol"
+          },
+          "total_assets_usd": {
+            "type": "number",
+            "title": "Total Assets Usd"
+          },
+          "liquidity_usd": {
+            "type": "number",
+            "title": "Liquidity Usd"
+          },
+          "markets": {
+            "items": {
+              "$ref": "#/components/schemas/VaultMarket"
+            },
+            "type": "array",
+            "title": "Markets"
+          },
+          "liquidations": {
+            "items": {
+              "$ref": "#/components/schemas/Liquidation"
+            },
+            "type": "array",
+            "title": "Liquidations",
+            "description": "Every borrower of the vault's markets, its debt weighted by the vault's share of the market."
+          }
+        },
+        "type": "object",
+        "required": [
+          "address",
+          "name",
+          "asset_symbol",
+          "total_assets_usd",
+          "liquidity_usd",
+          "markets",
+          "liquidations"
+        ],
+        "title": "Vault"
+      },
+      "VaultMarket": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "lltv": {
+            "type": "number",
+            "title": "Lltv"
+          },
+          "collateral_price_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Collateral Price Usd"
+          },
+          "supply_usd": {
+            "type": "number",
+            "title": "Supply Usd"
+          },
+          "borrow_usd": {
+            "type": "number",
+            "title": "Borrow Usd"
+          },
+          "liquidity_usd": {
+            "type": "number",
+            "title": "Liquidity Usd"
+          },
+          "utilization": {
+            "type": "number",
+            "title": "Utilization"
+          },
+          "borrow_apy": {
+            "type": "number",
+            "title": "Borrow Apy"
+          },
+          "allocation_usd": {
+            "type": "number",
+            "title": "Allocation Usd"
+          },
+          "share_of_vault": {
+            "type": "number",
+            "title": "Share Of Vault"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "lltv",
+          "supply_usd",
+          "borrow_usd",
+          "liquidity_usd",
+          "utilization",
+          "borrow_apy",
+          "allocation_usd",
+          "share_of_vault"
+        ],
+        "title": "VaultMarket"
       }
     }
   }

@@ -11,7 +11,8 @@ import type { Edge, EdgeProps, Node, NodeProps } from '@xyflow/react';
 import type { GraphEdge, GraphNode } from '../api/types';
 import { KIND_COLOR, NAME_SLOT, nodeDrawing, tokenIconUrl } from '../lib/graph';
 
-export type RiskNodeData = { node: GraphNode; amount: string[] };
+/** `ring`: a colour to ring the node with when it is not selected (the impact page's status). */
+export type RiskNodeData = { node: GraphNode; amount: string[]; ring?: string };
 export type RiskEdgeData = { edge: GraphEdge; label: string; width: number; colour: string };
 export type RiskNodeType = Node<RiskNodeData, 'risk'>;
 export type RiskEdgeType = Edge<RiskEdgeData, 'risk'>;
@@ -40,6 +41,7 @@ const halo = (colour: string) => `color-mix(in srgb, ${colour} 10%, transparent)
 
 export function RiskNode({ data, selected }: NodeProps<RiskNodeType>) {
   const { node, amount } = data;
+  const ring = selected ? KIND_COLOR[node.kind] : data.ring;
   const { shape, width, height, icon } = nodeDrawing(node);
   const colour = KIND_COLOR[node.kind];
   const iconSize = Math.round(Math.min(width, height) * 0.48);
@@ -58,11 +60,11 @@ export function RiskNode({ data, selected }: NodeProps<RiskNodeType>) {
           preserveAspectRatio="none"
           aria-hidden="true"
         >
-          {selected ? (
+          {ring ? (
             <polygon
               points={HEXAGON}
               strokeLinejoin="round"
-              style={{ fill: 'none', stroke: halo(colour) }}
+              style={{ fill: 'none', stroke: halo(ring) }}
               strokeWidth={HALO * 2}
               vectorEffect="non-scaling-stroke"
             />
@@ -70,7 +72,7 @@ export function RiskNode({ data, selected }: NodeProps<RiskNodeType>) {
           <polygon
             points={HEXAGON}
             strokeLinejoin="round"
-            style={{ fill: NODE_FILL, stroke: selected ? colour : 'none' }}
+            style={{ fill: NODE_FILL, stroke: ring ?? 'none' }}
             strokeWidth={2}
             vectorEffect="non-scaling-stroke"
           />
@@ -80,8 +82,8 @@ export function RiskNode({ data, selected }: NodeProps<RiskNodeType>) {
           className="absolute inset-0"
           style={{
             background: NODE_FILL,
-            border: selected ? `2px solid ${colour}` : undefined,
-            boxShadow: selected ? `0 0 0 ${HALO}px ${halo(colour)}` : undefined,
+            border: ring ? `2px solid ${ring}` : undefined,
+            boxShadow: ring ? `0 0 0 ${HALO}px ${halo(ring)}` : undefined,
             borderRadius: shape === 'circle' ? '50%' : shape === 'rounded' ? 20 : 6,
           }}
         />

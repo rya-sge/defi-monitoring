@@ -1,0 +1,1 @@
+{"method": "GET", "url": "https://api.etherscan.io/v2/api?chainid=1&module=contract&action=getsourcecode&address=0x4f67e4d9bd67efa28236013288737d39aef48e79", "body": null, "fetched": "2026-10-10T22:16:17Z", "response": {"verified": true, "name": "WstETHPriceFeed", "proxy": false, "implementation": null}}

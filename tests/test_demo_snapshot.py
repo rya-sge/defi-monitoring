@@ -7,7 +7,7 @@ import pytest
 from riskdep import cli, discover, pipeline, priors, simulate
 from riskdep import sources as S
 
-SNAP = Path(__file__).resolve().parent.parent / "data" / "snapshot"
+SNAP = Path(__file__).resolve().parent.parent / "fixtures" / "snapshot"
 
 
 @pytest.fixture(scope="module")

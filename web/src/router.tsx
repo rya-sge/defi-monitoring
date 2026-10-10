@@ -17,10 +17,16 @@ const rootRoute = createRootRoute({
 /* Recharts and Cytoscape are both heavy, and no page needs both. Splitting per
    route keeps the first paint off the critical path of either library. */
 
-const positionRoute = createRoute({
+const vaultRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
-  component: lazyRouteComponent(() => import('./routes/PositionPage'), 'PositionPage'),
+  component: lazyRouteComponent(() => import('./routes/VaultPage'), 'VaultPage'),
+});
+
+const marketRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/market/$marketId',
+  component: lazyRouteComponent(() => import('./routes/MarketPage'), 'MarketPage'),
 });
 
 const graphRoute = createRoute({
@@ -35,7 +41,19 @@ const watchRoute = createRoute({
   component: lazyRouteComponent(() => import('./routes/WatchPage'), 'WatchPage'),
 });
 
-const routeTree = rootRoute.addChildren([positionRoute, graphRoute, watchRoute]);
+const impactRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/impact',
+  component: lazyRouteComponent(() => import('./routes/ImpactPage'), 'ImpactPage'),
+});
+
+const routeTree = rootRoute.addChildren([
+  vaultRoute,
+  marketRoute,
+  graphRoute,
+  impactRoute,
+  watchRoute,
+]);
 
 export const router = createRouter({
   routeTree,

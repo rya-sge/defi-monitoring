@@ -17,7 +17,7 @@ from fastapi import HTTPException
 
 OUT = Path("out")
 
-# data/snapshot writes are not concurrency-safe, and the free RPC rate-limits anyway:
+# fixtures/snapshot writes are not concurrency-safe, and the free RPC rate-limits anyway:
 # one fetching request at a time.
 fetch_lock = threading.Lock()
 

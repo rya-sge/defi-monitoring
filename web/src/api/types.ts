@@ -108,8 +108,6 @@ export type Target = {
 export type OracleMode = 'market-tracking' | 'fundamental' | (string & {});
 
 /** The 34 fields of `PositionFacts` as serialised by `riskdep/report.py`. */
-export type Liquidation = { drop: number; debt_usd: number };
-
 export type ReportPosition = {
   label: string;
   collateral_units: number;
@@ -145,8 +143,6 @@ export type ReportPosition = {
   underlying_drawdown_1y: number;
   amm_liquidity_usd: number;
   lending_liquidity_usd: number;
-  /** Every borrower of the market: the oracle fall that liquidates it, and its debt. Sorted by fall. */
-  liquidations: Liquidation[];
   /** Free-text notes: oracle ambiguity, cross-check results. */
   notes: string[];
   collateral_usd: number;
@@ -286,6 +282,90 @@ export type Report = {
   exit_quote: ExitQuote;
   /** Only present when the oracle's behaviour is ambiguous. */
   oracle_sensitivity: OracleSensitivity | null;
+};
+
+/* ------------------------------------------------------------- shock trace */
+
+/** `riskdep shock`'s trace (`docs/shock-trace.md`, format `riskdep.shock-trace/1`). */
+export type ShockStatus = 'shocked' | 'loss' | 'liquidations' | 'moved' | 'reached';
+
+export type ShockStep = {
+  seq: number;
+  /** Round of the fixed-point loop, not time. */
+  wave: number;
+  edge: string;
+  source: string;
+  target: string;
+  direction: 'dependents' | 'dependencies';
+  effect: string;
+  value: unknown;
+  change: number | null;
+  unit: string;
+  display: string;
+  rule: string;
+  /** The earlier step this one revises; that one no longer counts. */
+  replaces: number | null;
+};
+
+export type ShockNodeState = {
+  status: ShockStatus;
+  headline: string;
+  model: string;
+  effects: Record<string, unknown>;
+  loss_unit?: string | null;
+  detail: Record<string, unknown>;
+  inputs?: number[];
+  first_wave?: number;
+};
+
+export type ShockTrace = {
+  format: string;
+  block: number;
+  as_of: string;
+  note: string;
+  shocks: { node: string; mode: string; size: number; label: string }[];
+  converged: boolean;
+  evaluations: number;
+  graph: { nodes: GraphNode[]; edges: (GraphEdge & { id: string })[] };
+  rules: Record<string, { apply: string; effect: string; rel?: string; basis: string }>;
+  steps: ShockStep[];
+  evaluations_log: (ShockNodeState & { seq: number; wave: number; node: string })[];
+  waves: { wave: number; evaluated: string[]; steps: number[] }[];
+  nodes: Record<string, ShockNodeState>;
+  paths: Record<string, number[]>;
+};
+
+/* ----------------------------------------------------------------- dashboard */
+
+/** One borrower: the oracle fall that liquidates it, and its debt (the vault's part, in a vault). */
+export type Liquidation = { drop: number; debt_usd: number; market?: string | null };
+
+export type MarketSummary = {
+  id: string;
+  label: string;
+  lltv: number;
+  collateral_price_usd: number | null;
+  supply_usd: number;
+  borrow_usd: number;
+  liquidity_usd: number;
+  utilization: number;
+  borrow_apy: number;
+};
+
+/** `GET /api/market/{id}`. */
+export type Market = MarketSummary & { borrowers: number; liquidations: Liquidation[] };
+
+export type VaultMarket = MarketSummary & { allocation_usd: number; share_of_vault: number };
+
+/** `GET /api/vault/{address}`. Liquidations are weighted by the vault's share of each market. */
+export type Vault = {
+  address: string;
+  name: string;
+  asset_symbol: string;
+  total_assets_usd: number;
+  liquidity_usd: number;
+  markets: VaultMarket[];
+  liquidations: Liquidation[];
 };
 
 /* ----------------------------------------------------------------- requests */

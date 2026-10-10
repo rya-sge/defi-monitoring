@@ -73,13 +73,6 @@ class Target(BaseModel):
     last_block: int | None = None
 
 
-class Liquidation(BaseModel):
-    """One borrower of the position's market: the oracle fall that liquidates it, and its debt."""
-
-    drop: float
-    debt_usd: float
-
-
 class ReportPosition(BaseModel):
     label: str
     collateral_units: float
@@ -111,7 +104,6 @@ class ReportPosition(BaseModel):
     underlying_drawdown_1y: float | None = None
     amm_liquidity_usd: float | None = None
     lending_liquidity_usd: float | None = None
-    liquidations: list[Liquidation] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
     collateral_usd: float
     equity_usd: float
@@ -230,3 +222,45 @@ class AnalyzeRequest(BaseModel):
     horizon: float = Field(default=30.0, gt=0, le=365, description="Horizon in days, capped at maturity.")
     paths: int = Field(default=20000, ge=1000, le=200000, description="Monte Carlo paths.")
     live: bool = Field(default=False, description="Fetch from the network instead of the cached snapshot.")
+
+
+class Liquidation(BaseModel):
+    """One borrower: the oracle fall that liquidates it, and its debt (the vault's part, in a vault)."""
+
+    drop: float
+    debt_usd: float
+    market: str | None = Field(default=None, description="The borrower's market, in a vault's list.")
+
+
+class MarketSummary(BaseModel):
+    id: str
+    label: str
+    lltv: float
+    collateral_price_usd: float | None = None
+    supply_usd: float
+    borrow_usd: float
+    liquidity_usd: float
+    utilization: float
+    borrow_apy: float
+
+
+class Market(MarketSummary):
+    borrowers: int
+    liquidations: list[Liquidation]
+
+
+class VaultMarket(MarketSummary):
+    allocation_usd: float
+    share_of_vault: float
+
+
+class Vault(BaseModel):
+    address: str
+    name: str
+    asset_symbol: str
+    total_assets_usd: float
+    liquidity_usd: float
+    markets: list[VaultMarket]
+    liquidations: list[Liquidation] = Field(
+        description="Every borrower of the vault's markets, its debt weighted by the vault's share of the market."
+    )

@@ -20,6 +20,8 @@ Rules for editing:
 - [`unknown_issuer`](#unknown_issuer)
 - [Top-level parameters of `analyze`](#top-level-parameters-of-analyze)
 - [`watch`](#watch)
+- [`graph`](#graph)
+- [`engine`](#engine)
 - [How to add a yield issuer](#how-to-add-a-yield-issuer)
 
 ## `chain`
@@ -56,7 +58,7 @@ Read by `discover.py`, `priors.py` and `graph.py`. A token not listed here falls
 
 ## `stables`
 
-The loan tokens' issuers, keyed by address (USDC, USDT): `symbol`, `issuer`, `basis`. Descriptive only: for a borrower, a depeg of the loan token lowers the debt, so the model has no loss channel for it. Read by `discover.py` and `graph.py`.
+The loan tokens' issuers, keyed by address (USDC, USDT): `symbol`, `issuer`, `basis`. Descriptive only: for a borrower, a depeg of the loan token lowers the debt, so the model has no loss channel for it. Read by `discover.py` and `graph.py`. `siblings.py` treats these tokens as terminal: they never link two markets as sibling markets (D77).
 
 ## `protocols`
 
@@ -78,7 +80,7 @@ The oracle-failure event of `analyze`.
 | Key | Unit | Meaning |
 |---|---|---|
 | `techniques` | list | DefiLlama hack techniques counted as oracle failures (misconfigured, stale, predictable); spot-price manipulation is excluded |
-| `unverified_factor` | multiplier | applied when the oracle's code is unverified (today 2) |
+| `unverified_factor` | multiplier | applied when the oracle's source is not verified on Etherscan, or when that cannot be checked (no key, no cached answer); a verified oracle gets 1 (D68). Today 2 |
 | `p_year_floor` | probability per year | minimum (today 1 %) |
 | `severity` | Beta | how far the oracle misreports downwards (mean 10 %) |
 
@@ -110,6 +112,8 @@ The conservative default for a yield token not in `issuers`: a 15 % yearly depeg
 | `pt_stress_extra_discount` | multiplier | during a depeg, an oracle that follows the PT market sees the depeg × (1 + this), because the PT trades below its backing as the Pendle pool drains (0.5) | `propagate.py`, `simulate.py`, `decide.py` |
 | `gas_exit_usd` | USD | gas cost added to every exit and de-lever estimate (25) | `decide.py` |
 | `tail_budget` | fraction of equity | REDUCE when CVaR 99 % exceeds this share of the equity (0.5) | `decide.py` |
+| `incident.exit_min_gain` | fraction of the loss | vault incident mode: EXIT only when leaving first cuts the depositor's loss by at least this share (0.05) | `vault_incident.py` |
+| `incident.reduce_margin` | fraction | incident mode: the partial sale puts liquidation this far beyond the incident's oracle drop (0.01) | `scenario.py` |
 
 ## `watch`
 
@@ -138,8 +142,51 @@ The thresholds of `watch --vault` and `watch --user`. Changing them changes when
 | `curve_warn_share` | fraction of the market's borrows | 0.25 | `LiquidationCurve` warning: the debt liquidatable at `curve_drop` reaches this share |
 | `mint_share_critical` | fraction of the supply | 0.05 | `Admin.Mint` critical: one transaction minting this share of a collateral or yield token |
 | `oracle_divergence_warn` | fraction | 0.03 | `OracleDivergence` warning: oracle price vs DefiLlama's collateral ÷ loan price |
+| `divergence_check_every_blocks` | blocks | 25 | `OracleDivergence` between full refreshes: the batch's oracle prices against DefiLlama prices at most this old (D97) |
+| `drain_buy_cost` | fraction | 0.005 | the cost c of buying the collateral at the drain's size, in d\* = 1 − LLTV / (1 + c); low on purpose, so the threshold is early |
+| `drain_margin` | fraction (points of discount) | 0.02 | `DrainWindow` warn: the collateral's discount to its oracle within this distance of d\*; critical at d\* |
+| `drain_check_every_blocks` | blocks | 25 | how often DefiLlama's prices are re-read for the drain threshold; oracle prices come with every state read |
+| `exit_queue_phi` | fraction of the other depositors' assets | 0.5 | the "behind φ of others" queue position of the exit-queue table; it also stands in for the contract holders in `ExitQueue` when the holder list is unavailable |
+| `exit_queue_stuck_warn` | fraction of the position | 0.5 | `ExitQueue` warn: the share of the position stuck if every contract holder withdrew first; critical when the vault also carries unrealised bad debt |
 
 The health-factor levels of `watch --user` are not here: they are a command-line option, `--hf` (default `1.10,1.05,1.02`).
+
+## `graph`
+
+The sibling-market search and the oracle classification of the `graph` command (plan `2026-10-10-sibling-markets`, D79, D83, D84). Read by `siblings.py` and `oracle_class.py`. Changing them changes which markets appear and how oracles are labelled; no alert depends on them.
+
+| Key | Unit | Default | What it controls |
+|---|---|---|---|
+| `sibling_min_tvl_usd` | USD | 1,000,000 | a market with less supplied (its TVL) is never a sibling; it is also the floor of the Morpho API `markets` query. Held markets are never filtered. Lower it to see small markets, at the cost of a longer run |
+| `sibling_max_per_seed` | markets | 10 | the most siblings kept for one held market, the largest borrow first (borrow is what liquidations sell) |
+| `sibling_basis` | text | — | why |
+| `oracle_history_rounds` | rounds | 24 | how many past rounds of a feed are read with `getRoundData` |
+| `oracle_history_min` | rounds | 6 | below this many readable past rounds, history does not decide and the next rules apply |
+| `oracle_fall_share` | fraction | 0.2 | a feed whose answer fell in at least this share of its changes is `price-tracking`; below it, `constant-price` (an accrual or exchange rate) |
+| `oracle_children_getters` | signatures | `FEED_1()`, `FEED_2()`, `innerOracle()` | getters of a composite or wrapper input; its class comes from the inputs they return, `price-tracking` if one is |
+| `oracle_getters` | list | `twapDuration()` → price-tracking when nonzero; `baseDiscountPerYear()` → constant-price when it answers | structural getters that classify an input, each with `when` (`nonzero` or `answers`), `class` and `basis` |
+| `oracle_patterns` | list | contract names (`PendleChainlinkOracle`, `PendleSparkLinearDiscountOracle`, `LossAdjustedPTFeed`, `CustomAggregator` for Midas's issuer-published NAV feeds, …) and description fragments (`FUNDAMENTAL`, `exchange rate`, `net asset value`, `discount`) | the last rule: a case-insensitive `match` in the input's `description()` or verified contract name (Etherscan, optional) gives its `class`; each entry has a `basis` |
+| `oracle_basis` | text | — | the rules in order, and the 2026-10-10 probe behind the history thresholds |
+
+**Adding a pattern.** When a graph shows an input `not classified`, read its verified source, decide whether a market move reaches its answer, and add `{"match": "<contract name or description fragment>", "class": "price-tracking" | "constant-price", "basis": "<what it computes, source, date>"}`. Prefer a structural getter in `oracle_getters` when the contract exposes one: it needs no Etherscan key.
+
+## `engine`
+
+The shock engine's propagation rules and settings (plan `2026-10-10-propagation-engine`, D104–D111). Read by `engine.py`; the rule format, every criterion and transmission, and worked examples are in `docs/shock-engine.md`.
+
+| Key | Unit | Default | What it controls |
+|---|---|---|---|
+| `eps` | fraction | 10⁻⁶ | an input that changes by less than this (relative) is not sent on again: the propagation has settled |
+| `max_evaluations` | node evaluations | 20,000 | budget of one run; when spent, the report warns that the numbers are not final |
+| `depth_usd` | USD by asset address | empty | a pool depth for the `constant_product` comparison model only |
+| `quote_sizes_x_liquidity` | multiples of a pool's liquidity | 0.05 … 5 (nine sizes) | the sizes of the two Pendle quote ladders the graph records per PT (PT → underlying, PT → loan token); the sale-impact curves come from them |
+| `quote_max_usd` | USD | 99,000,000 | the largest size quoted: Pendle refuses above 100M USD |
+| `capacity_min_ratio` | fraction of spot | 0.5 | a ladder's capacity: where the marginal price falls under this share of spot, or the amount received stops growing; a size Pendle cannot route also ends the ladder there |
+| `edge_rules` | ordered list | 32 rules | how each effect crosses each edge: `id`, `effect`, `rel`, `direction`, `when`, `apply`, `params`, `basis`. The first match wins, and no match stops the effect |
+| `node_rules` | ordered list | `blue-market`, `oracle-input`, `asset`, `default` | each node's model: a Blue market evaluates its borrowers (`slippage`, `buy_cost`); an oracle or feed drops its readings when frozen; an asset prices what is offered into its market (`impact`: `quotes` or `constant_product`, `floor`, `stress_yield` 0.5); anything else combines its inputs |
+| `basis` | text | — | why |
+
+**Changing a rule.** Prefer a `--rules` file for a study: the registry's rules are the defaults everyone gets. A change here keeps its `basis` honest and is followed by `python3 -m pytest -q tests/test_engine.py`. The drain threshold uses `watch.drain_buy_cost`.
 
 ## How to add a yield issuer
 

@@ -20,7 +20,7 @@ from .rules import Alert
 from .vault import _call
 
 W = REGISTRY["watch"]
-CURVE_DROPS = (0.02, 0.05, 0.10, 0.20)  # D50
+CURVE_DROPS = (0.02, 0.05, 0.10, 0.20, 0.30, 0.50)  # D50, widened by D98: issuer NAV cuts create bad debt past 20 %
 CHUNK = 200
 TOUCHING = ("Borrow", "Repay", "SupplyCollateral", "WithdrawCollateral", "Liquidate")
 
@@ -44,6 +44,7 @@ class CurvePoint:
     liquidatable_debt: int  # loan-token units (raw)
     positions: int
     bad_debt: int
+    collateral: int = 0  # collateral-token units (raw) of the liquidatable positions: what liquidators can sell
 
 
 @dataclass
@@ -90,21 +91,22 @@ def value(
             continue
         debt = bshares * (tba + 1) // (tbs + 10**6)
         cv = coll * price // 10**36 if price is not None else None
-        debts.append((debt, cv))
+        debts.append((debt, cv, coll))
     risk = MarketRisk(m.id, len(debts), tba, 0, 0)
     if price is None:
         return risk
-    for debt, cv in debts:
+    for debt, cv, _ in debts:
         if cv * m.lltv <= debt:
             risk.liquidatable_now += debt
         risk.unrealised_bad_debt += max(0, debt - int(cv / m.lif))
     for d in CURVE_DROPS:
         pt = CurvePoint(d, 0, 0, 0)
-        for debt, cv in debts:
+        for debt, cv, coll in debts:
             v = cv * (1 - d)
             if v * m.lltv < debt:
                 pt.liquidatable_debt += debt
                 pt.positions += 1
+                pt.collateral += coll
             pt.bad_debt += max(0, debt - int(v / m.lif))
         risk.curve.append(pt)
     return risk

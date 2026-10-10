@@ -216,6 +216,11 @@
   "gas_exit_usd": 25,
   "tail_budget": 0.5,
   "tail_budget_basis": "Recommend reducing when CVaR99, the average loss of the worst 1 % of simulated months, exceeds 50 % of equity.",
+  "incident": {
+    "reduce_margin": 0.01,
+    "exit_min_gain": 0.05,
+    "basis": "D90. Incident mode sizes a partial sale so that liquidation sits this far beyond the oracle drop the incident causes: one point of margin, so a small further move does not liquidate the reduced position. exit_min_gain (D101): for a vault depositor, leaving first is recommended only when it cuts the incident's loss by at least 5 %; a depositor that is most of the vault loses about the same either way."
+  },
   "watch": {
     "market_share_warn": 0.25,
     "utilization_warn": 0.99,
@@ -238,6 +243,448 @@
     "curve_drop": 0.05,
     "curve_warn_share": 0.25,
     "mint_share_critical": 0.05,
-    "oracle_divergence_warn": 0.03
+    "oracle_divergence_warn": 0.03,
+    "exit_queue_phi": 0.5,
+    "exit_queue_stuck_warn": 0.5,
+    "divergence_check_every_blocks": 25,
+    "divergence_basis": "D97. The oracle-versus-market check (OracleDivergence) runs with every batch's oracle prices and DefiLlama prices at most 25 blocks old (~5 min), instead of only at the 300-block refresh: a synthetic dollar fell 97 % in 17 minutes (USR, Mar 2026).",
+    "drain_buy_cost": 0.005,
+    "drain_margin": 0.02,
+    "drain_check_every_blocks": 25,
+    "drain_basis": "D70, D72. drain_buy_cost: the cost c of buying the collateral at the drain's size, in d* = 1 - LLTV / (1 + c); 0.5 % is low on purpose (a lower cost gives an earlier, more conservative threshold) and is not measured per token. drain_margin: warn when the collateral's discount to the oracle is within 2 points of d*. drain_check_every_blocks: DefiLlama's prices are re-read every 25 blocks (~5 min); oracle prices come with every state read.",
+    "exit_queue_basis": "D64, D66. exit_queue_phi: the share of the other depositors' assets assumed to leave before you in a run, Team 2's single parameter phi; 0.5 is a middle case with no data behind it. exit_queue_stuck_warn: warn when at least half of the position would be stuck if every contract holder (vault, fund, multisig) withdrew first; critical when, in addition, the vault already carries unrealised bad debt."
+  },
+  "graph": {
+    "sibling_min_tvl_usd": 1000000,
+    "sibling_max_per_seed": 10,
+    "sibling_basis": "D79. A market with less than $1M supplied (its TVL, Morpho API supplyAssetsUsd) is never a sibling, and at most 10 per held market are kept, the largest borrow first, since borrow is what liquidations sell. Raised from a $100k borrow floor on 2026-10-10 at the person's request, to keep graph runs short: the example graph (Sentora RLUSD Main and two borrowers) went from 65 siblings and 8 to 12 minutes against the free RPC. Held markets are never filtered by size.",
+    "oracle_history_rounds": 24,
+    "oracle_history_min": 6,
+    "oracle_fall_share": 0.2,
+    "oracle_children_getters": [
+      "FEED_1()",
+      "FEED_2()",
+      "innerOracle()"
+    ],
+    "oracle_getters": [
+      {
+        "getter": "twapDuration()",
+        "when": "nonzero",
+        "class": "price-tracking",
+        "basis": "Pendle PendleChainlinkOracle: a TWAP of the Pendle AMM (900 s on PT-reUSD), so a pool move reaches the price"
+      },
+      {
+        "getter": "baseDiscountPerYear()",
+        "when": "answers",
+        "class": "constant-price",
+        "basis": "Pendle linear-discount oracle: a deterministic discount to maturity, no market input"
+      }
+    ],
+    "oracle_patterns": [
+      {
+        "match": "PendleChainlinkOracle",
+        "class": "price-tracking",
+        "basis": "Pendle AMM TWAP oracle (contract name)"
+      },
+      {
+        "match": "PendleSparkLinearDiscountOracle",
+        "class": "constant-price",
+        "basis": "Pendle linear discount to maturity (contract name)"
+      },
+      {
+        "match": "NetAssetValueChainlinkAdapter",
+        "class": "constant-price",
+        "basis": "net asset value reported by the issuer (contract name)"
+      },
+      {
+        "match": "CustomAggregator",
+        "class": "constant-price",
+        "basis": "Midas custom aggregator feed: the issuer's admin publishes the NAV by transaction (contract name, e.g. MGloEuroCustomAggregatorFeed behind an upgradeable proxy; mGLOeuro read 100,000 EUR on 2026-08-04 and 2026-09-23, its only two rounds)"
+      },
+      {
+        "match": "TranchesChainlinkOracle",
+        "class": "constant-price",
+        "basis": "Idle tranche exchange rate (contract name)"
+      },
+      {
+        "match": "LossAdjustedPTFeed",
+        "class": "constant-price",
+        "basis": "PT discount lowered only by the SY's own accounting losses (exchangeRate against pyIndexStored), no market input (verified source, 2026-10-10)"
+      },
+      {
+        "match": "FUNDAMENTAL",
+        "class": "constant-price",
+        "basis": "RedStone fundamental feed: the issuer's redemption value, not a market price"
+      },
+      {
+        "match": "exchange rate",
+        "class": "constant-price",
+        "basis": "an exchange rate between a token and its underlying, not a market price"
+      },
+      {
+        "match": "net asset value",
+        "class": "constant-price",
+        "basis": "net asset value reported by the issuer"
+      },
+      {
+        "match": "discount",
+        "class": "constant-price",
+        "basis": "a discount schedule or a discounted NAV, not a market price"
+      }
+    ],
+    "oracle_basis": "D82-D84. One oracle input, first rule that applies: a base vault is an exchange rate; a composite (FEED_1/FEED_2) or wrapper (innerOracle) takes its children's class, price-tracking if one is; a structural getter of oracle_getters; at least oracle_history_min past rounds readable over the last oracle_history_rounds: price-tracking when falls are at least oracle_fall_share of the changes (probe 2026-10-10: USDC/USD, USDS/USD and ETH/USD fell 9-14 times in 24 rounds, three exchange-rate and NAV feeds never fell); no history and an answer of exactly 1.0: pegged; a case-insensitive pattern of oracle_patterns in description() or the verified contract name (Etherscan, optional); otherwise not classified."
+  },
+  "engine": {
+    "eps": 1e-06,
+    "max_evaluations": 20000,
+    "depth_usd": {},
+    "quote_sizes_x_liquidity": [
+      0.05,
+      0.15,
+      0.3,
+      0.5,
+      0.75,
+      1,
+      1.5,
+      2.5,
+      5
+    ],
+    "quote_max_usd": 99000000,
+    "edge_rules": [
+      {
+        "id": "loan-token-move",
+        "effect": "price",
+        "rel": "lends",
+        "apply": "stop",
+        "basis": "a loan token's price move changes no amount owed or supplied in that token, and the vault counts in it"
+      },
+      {
+        "id": "loan-token-value",
+        "effect": "value",
+        "rel": "lends",
+        "apply": "stop",
+        "basis": "the same for a move inherited from an underlying"
+      },
+      {
+        "id": "tracks",
+        "effect": "price",
+        "rel": "tracks",
+        "apply": "pass",
+        "params": {
+          "as": "reading"
+        },
+        "basis": "D115: a feed reads the market it tracks (a Pendle TWAP its PT's pool, a 'SYM / USD' feed that pair): a move of that market moves the reading"
+      },
+      {
+        "id": "base-feed",
+        "effect": "misreport",
+        "rel": "reads",
+        "when": {
+          "edge.role__in": [
+            "BASE_FEED_1",
+            "BASE_FEED_2"
+          ]
+        },
+        "apply": "pass",
+        "basis": "Morpho ChainlinkOracleV2: price = base vault x base feeds / (quote vault x quote feeds); a base feed reading m x moves the price by m"
+      },
+      {
+        "id": "quote-feed",
+        "effect": "misreport",
+        "rel": "reads",
+        "when": {
+          "edge.role__in": [
+            "QUOTE_FEED_1",
+            "QUOTE_FEED_2"
+          ]
+        },
+        "apply": "pass",
+        "params": {
+          "exponent": -1
+        },
+        "basis": "a quote feed divides the price: reading m x moves it by 1/m"
+      },
+      {
+        "id": "base-feed-reading",
+        "effect": "reading",
+        "rel": "reads",
+        "when": {
+          "edge.role__in": [
+            "BASE_FEED_1",
+            "BASE_FEED_2"
+          ]
+        },
+        "apply": "pass",
+        "basis": "a base feed following its market moves the oracle with it"
+      },
+      {
+        "id": "quote-feed-reading",
+        "effect": "reading",
+        "rel": "reads",
+        "when": {
+          "edge.role__in": [
+            "QUOTE_FEED_1",
+            "QUOTE_FEED_2"
+          ]
+        },
+        "apply": "stop",
+        "basis": "D116: a quote feed following the loan token rescales the oracle and the collateral's worth alike in that token: no effect in loan units"
+      },
+      {
+        "id": "frozen-base-feed",
+        "effect": "frozen",
+        "rel": "reads",
+        "when": {
+          "edge.role__in": [
+            "BASE_FEED_1",
+            "BASE_FEED_2"
+          ]
+        },
+        "apply": "pass",
+        "basis": "a frozen base feed stops the oracle following its collateral"
+      },
+      {
+        "id": "vault-rate",
+        "effect": "price",
+        "rel": "converts through",
+        "apply": "stop",
+        "basis": "the oracle applies the vault's accounting rate (convertToAssets), not the share's market price"
+      },
+      {
+        "id": "vault-rate-value",
+        "effect": "value",
+        "rel": "converts through",
+        "apply": "stop",
+        "basis": "the vault's accounting rate does not follow its asset's market either"
+      },
+      {
+        "id": "oracle-misreport",
+        "effect": "misreport",
+        "rel": "priced by",
+        "apply": "pass",
+        "basis": "a market liquidates on its oracle's reading"
+      },
+      {
+        "id": "oracle-reading",
+        "effect": "reading",
+        "rel": "priced by",
+        "apply": "pass",
+        "basis": "a market liquidates on its oracle's reading"
+      },
+      {
+        "id": "oracle-frozen",
+        "effect": "frozen",
+        "rel": "priced by",
+        "apply": "pass",
+        "basis": "a frozen oracle no longer follows its collateral"
+      },
+      {
+        "id": "collateral-tracked-by-feed",
+        "effect": "price",
+        "rel": "takes as collateral",
+        "when": {
+          "to.oracle_tracks_bound": true
+        },
+        "apply": "collateral_price",
+        "params": {
+          "follows": false
+        },
+        "basis": "D115: the oracle reads its collateral's market through a tracked feed (rule tracks), not here; the collateral's worth still moves"
+      },
+      {
+        "id": "collateral-tracking",
+        "effect": "price",
+        "rel": "takes as collateral",
+        "when": {
+          "to.oracle_class": "price-tracking"
+        },
+        "apply": "collateral_price",
+        "params": {
+          "follows": true
+        },
+        "basis": "a price-tracking oracle with no tracked input is assumed to follow its collateral's market: a fall liquidates borrowers"
+      },
+      {
+        "id": "collateral-constant",
+        "effect": "price",
+        "rel": "takes as collateral",
+        "when": {
+          "to.oracle_class": "constant-price"
+        },
+        "apply": "collateral_price",
+        "params": {
+          "follows": false
+        },
+        "basis": "a constant-price oracle ignores the market: a fall liquidates nobody and leaves insolvent debt"
+      },
+      {
+        "id": "collateral-unclassified",
+        "effect": "price",
+        "rel": "takes as collateral",
+        "apply": "collateral_price",
+        "params": {
+          "follows": false
+        },
+        "basis": "D108: an oracle not classified is treated as not following, the lender's worse case (no liquidation, a silent loss)"
+      },
+      {
+        "id": "collateral-value",
+        "effect": "value",
+        "rel": "takes as collateral",
+        "apply": "collateral_price",
+        "basis": "D115: a move inherited from an underlying changes the collateral's worth; no oracle reading its own market or its accounting rate sees it"
+      },
+      {
+        "id": "collateral-exit",
+        "effect": "exit",
+        "rel": "takes as collateral",
+        "apply": "pass",
+        "basis": "D113: liquidations can sell only what the collateral's market absorbs"
+      },
+      {
+        "id": "wrapper",
+        "effect": "price",
+        "rel": "wraps",
+        "apply": "pass",
+        "params": {
+          "as": "value"
+        },
+        "basis": "an ERC-4626 share redeems into its asset: a move of the asset's market changes the share's worth, not its own market or its rate"
+      },
+      {
+        "id": "wrapper-value",
+        "effect": "value",
+        "rel": "wraps",
+        "apply": "pass",
+        "basis": "a move inherited by the asset passes on to its share"
+      },
+      {
+        "id": "pendle-underlying",
+        "effect": "price",
+        "rel": "yield source",
+        "apply": "pass",
+        "params": {
+          "as": "value"
+        },
+        "basis": "D115: a PT is worth its underlying at maturity, so a move of the underlying's market changes the PT's worth; the pool prices PT against the underlying (PT_TO_ASSET / PT_TO_SY), so the pool price, which a Pendle oracle reads, does not move"
+      },
+      {
+        "id": "pendle-underlying-value",
+        "effect": "value",
+        "rel": "yield source",
+        "apply": "pass",
+        "basis": "a move inherited by the underlying passes on to the PT"
+      },
+      {
+        "id": "pendle-underlying-exit",
+        "effect": "exit",
+        "rel": "yield source",
+        "apply": "pass",
+        "basis": "PT liquidators sell the underlying they receive: if its market cannot absorb it, the PT's liquidations cannot complete"
+      },
+      {
+        "id": "pendle-pt",
+        "effect": "price",
+        "rel": "trades in / redeems through",
+        "apply": "pass",
+        "basis": "a move of the Pendle pool's own price is the PT's market price"
+      },
+      {
+        "id": "pendle-pt-value",
+        "effect": "value",
+        "rel": "trades in / redeems through",
+        "apply": "pass",
+        "basis": "a move inherited through the pool passes on to the PT"
+      },
+      {
+        "id": "pendle-pt-exit",
+        "effect": "exit",
+        "rel": "trades in / redeems through",
+        "apply": "pass",
+        "basis": "the underlying's exit limit passes on to the PT"
+      },
+      {
+        "id": "liquidation-sale",
+        "effect": "sale",
+        "rel": "takes as collateral",
+        "direction": "dependencies",
+        "apply": "liquidation_sale",
+        "basis": "liquidators offer the seized collateral for sale into its market"
+      },
+      {
+        "id": "pt-onward",
+        "effect": "onward",
+        "rel": "trades in / redeems through",
+        "direction": "dependencies",
+        "apply": "pass",
+        "basis": "a PT sold into its pool comes out as underlying"
+      },
+      {
+        "id": "pool-onward",
+        "effect": "onward",
+        "rel": "yield source",
+        "direction": "dependencies",
+        "apply": "pass",
+        "params": {
+          "as": "sale"
+        },
+        "basis": "liquidators sell that underlying for dollars"
+      },
+      {
+        "id": "supplier",
+        "effect": "loss",
+        "rel": "supplies",
+        "apply": "supplier_loss",
+        "basis": "a market's loss is shared by its suppliers pro rata to their supply"
+      },
+      {
+        "id": "depositor",
+        "effect": "loss",
+        "rel": "deposits in",
+        "apply": "depositor_loss",
+        "basis": "a vault's loss is shared by its depositors pro rata to their shares (D110; the run order comes with step 2)"
+      }
+    ],
+    "node_rules": [
+      {
+        "id": "blue-market",
+        "when": {
+          "node.market_id__exists": true
+        },
+        "apply": "blue_market",
+        "params": {
+          "slippage": 0.0
+        },
+        "basis": "D107: Blue liquidations, write-offs, insolvent debt and the drain; D113, D114: only what the collateral's market absorbs is sold, and offers ratchet"
+      },
+      {
+        "id": "oracle-input",
+        "when": {
+          "node.kind": "Oracle"
+        },
+        "apply": "oracle_input",
+        "basis": "a frozen oracle or feed keeps its reading"
+      },
+      {
+        "id": "asset",
+        "when": {
+          "node.kind": "Asset"
+        },
+        "apply": "asset_price",
+        "params": {
+          "impact": "quotes",
+          "floor": "pendle_maturity",
+          "stress_yield": 0.5
+        },
+        "basis": "D112, D113: an asset's own market price takes the impact of what is offered into it, from real Pendle quotes (a PT's pool; an underlying's sale for dollars), up to its capacity; a PT stops falling where a buyer holding to maturity earns stress_yield (50 % APY, judgement)"
+      },
+      {
+        "id": "default",
+        "apply": "combine",
+        "basis": "inputs combined: factors multiply, sales and losses add, exits take the smallest"
+      }
+    ],
+    "basis": "D104-D116 (plan 2026-10-10-propagation-engine). Rules are tried in order; the first edge rule whose effect, direction, rel and criteria match carries the effect, and no match stops it. --rules <file> puts a file's edge_rules and node_rules first. eps: relative change below which an input is not propagated again; max_evaluations bounds the loop. quote_sizes_x_liquidity: the sale sizes of the Pendle quote ladders the graph records per PT, as multiples of the pool's liquidity, at most quote_max_usd (Pendle refuses above 100M USD); a size Pendle cannot route (MarketProportionTooHigh) ends the ladder and sets the capacity at the last size that went through; capacity_min_ratio: a ladder's capacity is where the marginal price falls under this share of spot or the amount received stops growing (2026-10-10: PT-reUSD into reUSD loses 0.57 % at $25M, reUSD into USDC stops near $12M). depth_usd: a depth for the constant_product comparison model only.",
+    "capacity_min_ratio": 0.5
   }
 }

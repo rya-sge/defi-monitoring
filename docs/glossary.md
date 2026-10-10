@@ -23,6 +23,8 @@ Plain-language definitions of the terms used in this repository's reports, alert
 | **Collateral** | The token a borrower posts as security; it is seized if the borrower is liquidated. |
 | **Oracle** | The contract that tells a market the price of its collateral in the loan token. Liquidations follow its price, not the market price. |
 | **Price feed** | A source an oracle reads, for example a Chainlink `ETH / USD` feed. One oracle can combine several feeds. |
+| **Price-tracking oracle** | An oracle whose price falls when the collateral's market price falls (a market feed, a Pendle TWAP). A depeg liquidates borrowers, and their sales can push the price further. `analyze` calls it *market-tracking*. |
+| **Constant-price oracle** | An oracle whose price does not follow the collateral's market price: a fixed value, an exchange rate, a NAV, a linear discount. A depeg liquidates nobody; once the collateral is worth less than the debt, the lenders bear the loss. `analyze` calls it *fundamental*. |
 | **LLTV** | Liquidation loan-to-value: the share of the collateral's oracle value a borrower's debt may reach before liquidation, for example 86 % or 91.5 %. |
 | **Health factor (HF)** | Collateral × oracle price × LLTV ÷ debt. Above 1 the position is safe; at 1 or below anyone can liquidate it. |
 | **Liquidation distance** | The fall in the oracle price that would bring the health factor to 1: 1 − 1/HF. An HF of 1.05 means a 4.8 % fall liquidates. |
@@ -103,6 +105,11 @@ Plain-language definitions of the terms used in this repository's reports, alert
 | **Carry** | What the position earns over the horizon: the collateral's yield minus the interest on the debt. |
 | **Exit cost** | What leaving would cost now: price impact and fees of selling the collateral, plus gas. |
 | **Price impact** | How much worse a large sale's price is than the current price, because it consumes the pool's liquidity. |
+| **Drain threshold (d\*)** | The discount of a collateral below its oracle price from which borrowing against it, with no intent to repay, pays: d\* = 1 − LLTV / (1 + buying cost). Past it, a market's free liquidity can be borrowed in one block (`docs/drain-threshold.md`). |
+| **Public Allocator** | A Morpho contract that lets anyone move a vault's assets between its markets, within caps its allocators set. Useful for borrowers in normal times; in a drain, it can bring the vault's healthy liquidity within reach. |
+| **Run** | Depositors withdrawing all at once because they expect others to, while the vault can pay only what it has not lent. The first out are paid at par; the rest wait, and carry any loss not yet written off. |
+| **Queue position** | In a run, the other depositors' assets that leave before you. What you recover at par and what you lose depend on it (`docs/exit-queue.md`). |
+| **Stuck** | The part of a vault position that cannot leave now, because the vault's liquidity is exhausted or lent out; it comes back only as borrowers repay or are liquidated. |
 | **STAY / REDUCE / EXIT** | The verdict of `analyze`: exit when the expected loss exceeds carry plus exit cost; reduce when the carry does not cover the expected loss, the tail is too heavy, or liquidation is closer than a stress drop; stay otherwise. |
 
 ## The dependency graph
@@ -115,6 +122,20 @@ Plain-language definitions of the terms used in this repository's reports, alert
 | **Admin** | A node that decides for a vault without its own capital at stake: owner, curator, allocator, sentinel. |
 | **External** | An off-chain dependency of a yield source, such as custodians or exchanges, listed in `registry.json`. |
 | **Edge** | A dependency between two nodes, derived from an on-chain attribute (a market's oracle, a vault's adapter), with the amount it carries where one exists. |
+| **Held market (seed)** | A Blue market an actor of the graph holds: one of a vault's markets, or one the address borrows from. The sibling search starts from these. |
+| **Sibling market** | A Blue market nobody in the graph holds that can move a held market's collateral price or shares its price inputs: same collateral, same underlying, a shared collateral-side feed or vault, or lending that collateral. It joins the held market through the shared node, never directly. |
+| **Wraps** | The edge from an ERC-4626 share to the token it redeems into (siUSD → iUSD): a loss of the underlying reaches the share. |
+| **Shock** | A failure applied to a node by `riskdep shock`: an oracle or feed reading low or high, a frozen one, or a collateral whose market price moves. |
+| **Effect** | What a shock leaves on a node as it propagates: a misreport factor, a freeze, a price factor, a sale, a loss. |
+| **Edge rule** | One entry of `registry.json` → `engine.edge_rules`: when an effect crosses an edge matching its criteria, the transmission it names decides what reaches the next node. The first match wins. |
+| **Transmission** | The function an edge rule applies (`pass`, `collateral_price`, `supplier_loss`, …); a node model (`blue_market`, `asset_price`) does the same for a node. |
+| **Insolvent debt** | Debt the collateral no longer covers at its market price while nobody liquidates it, because the oracle did not move or liquidating does not pay: the lenders' loss once the borrower walks away. |
+| **Squeeze** | Liquidations selling collateral into its pool, which lowers its price and liquidates more, in every market that takes it. |
+| **PT floor** | The price below which a PT's buyers to maturity step in: where it yields the engine's stress yield (50 % APY) until it redeems at par. |
+| **Tracks** | The edge from an oracle input to the market it reads: a Pendle TWAP to its PT's pool, a "SYM / USD" feed to that asset. A move of that market moves the reading; nothing else does. |
+| **Price and value (shock engine)** | An asset's `price` is its own market (its pool, its pair); its `value` is a move inherited from an underlying (a PT when reUSD depegs). An oracle reading the asset's own market or its accounting rate does not see a value move. |
+| **Capacity** | How much a market can absorb before its quotes stop: past it, liquidators cannot sell the collateral, and the liquidations that need that sale do not complete. |
+| **Wave (shock trace)** | One round of the shock engine's loop: wave 0 evaluates the shocked nodes, wave n + 1 the nodes wave n changed, until nothing moves. A round, not a moment: an early wave can overshoot the settled value (`docs/shock-trace.md`). |
 
 ## Blockchain data and the watcher
 

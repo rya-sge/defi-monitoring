@@ -1,7 +1,17 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useSearch } from '@tanstack/react-router';
 import { api } from './client';
-import type { AnalyzeRequest, GraphQuery, GraphResponse, Health, Report, Target } from './types';
+import type {
+  AnalyzeRequest,
+  GraphQuery,
+  GraphResponse,
+  Health,
+  Report,
+  ShockTrace,
+  Target,
+  Market,
+  Vault,
+} from './types';
 
 export const queryKeys = {
   health: ['health'] as const,
@@ -35,9 +45,34 @@ export function useGraph(query: GraphQuery = {}) {
   });
 }
 
+export function useShockTrace() {
+  return useQuery<ShockTrace>({
+    queryKey: ['shock-trace'],
+    queryFn: () => api.shockTrace(),
+    staleTime: Infinity,
+  });
+}
+
 export function useAnalyze() {
   return useMutation<Report, Error, AnalyzeRequest>({
     mutationFn: (body) => api.analyze(body),
+  });
+}
+
+export function useVault(address: string | undefined) {
+  return useQuery<Vault>({
+    queryKey: ['vault', address],
+    queryFn: ({ signal }) => api.vault(address!, signal),
+    enabled: !!address,
+    staleTime: 60_000,
+  });
+}
+
+export function useMarket(id: string) {
+  return useQuery<Market>({
+    queryKey: ['market', id],
+    queryFn: ({ signal }) => api.market(id, signal),
+    staleTime: 60_000,
   });
 }
 

@@ -1,6 +1,6 @@
 # A vault depositor's loss under a scenario
 
-This document details point 4.3 of `comparison_team.md`: today no mode of the tool answers "how much do I lose if X happens?" for someone who **deposits** in a Morpho vault, which is the track's actual use case. It explains how such a loss arises, computes it on a real vault from data the tool already collects, and describes the `analyze --vault` mode that would report it. A [learn section](#learn-what-you-need-to-understand) at the end explains the concepts used.
+This document details point 4.3 of `docs/analysis/comparison_team.md`: today no mode of the tool answers "how much do I lose if X happens?" for someone who **deposits** in a Morpho vault, which is the track's actual use case. It explains how such a loss arises, computes it on a real vault from data the tool already collects, and describes the `analyze --vault` mode that would report it. A [learn section](#learn-what-you-need-to-understand) at the end explains the concepts used.
 
 Every number comes from **Sentora RLUSD Main**, the largest Morpho Vault V2 on Ethereum, rebuilt offline from the recorded replay at block 26,162,932 (2026-10-10). The depositor is the vault's largest holder (`0xb03d…babc`). The computation uses the tool's own function `market_risk.value()` on the 154 borrowers of the vault's 7 active markets.
 
@@ -145,7 +145,7 @@ The breakeven assumes the depositor withdraws everything it can now (85.6M), whi
 5. **Tests**: the formulas on synthetic positions, and the Sentora numbers on the recorded replay.
 
 **Extensions**, once the basic mode exists:
-- **The run model** proposed by Team 2: the exit capacity left for the depositor as a function of how many other depositors leave first, using the vault's holder concentration (the Morpho API lists holders).
+- **The run model** proposed by Team 2: the exit capacity left for the depositor as a function of how many other depositors leave first, using the vault's holder concentration (the Morpho API lists holders). **Built** in both watches, with the unrealised bad debt and uniform falls as loss cases: see `docs/exit-queue.md`. `analyze --vault` would feed it the named scenarios of section 5.
 - **Realistic liquidations**: discount the collateral liquidators sell with a slippage curve (point 4.5), and loop the price impact into more liquidations (the cascade).
 - **The same table in the what-if page** of point 4.7.
 
@@ -156,7 +156,7 @@ The breakeven assumes the depositor withdraws everything it can now (85.6M), whi
 - **One snapshot.** The borrowers and their positions are those of the recorded block; positions change every day.
 - **Collateral correlation is set by hand.** Combined scenarios (BTC, ETH and XRP together) are listed explicitly rather than drawn from a joint distribution.
 - **The yield is today's.** The breakeven uses the current net yield over the horizon.
-- **The run is not modelled.** Exit capacity is today's; in a crisis it is shared with other depositors.
+- **The run is not modelled here.** Exit capacity is today's; in a crisis it is shared with other depositors. The watches now model it (`docs/exit-queue.md`).
 
 ## Learn: what you need to understand
 

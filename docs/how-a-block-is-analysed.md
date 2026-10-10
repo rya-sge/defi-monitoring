@@ -1,6 +1,6 @@
 # How the watcher analyses a new block
 
-This document follows what `python3 -m riskdep watch` does from the moment a new Ethereum block exists to the moment an alert is printed. The worked example is a real transaction on the Morpho Vault V2 **Sentora RLUSD Main** (`0x6dc5…e6bf`), taken from the recorded range in `data/replay/`. Design decisions are cited by their id in `plan/2026-10-10-morpho-vault-v2-watcher.plan.md`.
+This document follows what `python3 -m riskdep watch` does from the moment a new Ethereum block exists to the moment an alert is printed. The worked example is a real transaction on the Morpho Vault V2 **Sentora RLUSD Main** (`0x6dc5…e6bf`), taken from the recorded range in `fixtures/replay/`. Design decisions are cited by their id in `plan/2026-10-10-morpho-vault-v2-watcher.plan.md`.
 
 ## Contents
 

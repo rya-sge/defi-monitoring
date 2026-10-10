@@ -1,4 +1,4 @@
-import { Bell, Gauge, Network } from 'lucide-react';
+import { Bell, Gauge, Network, Zap } from 'lucide-react';
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { useGraph, useHealth, useSelectedTarget, useTargets } from '../api/hooks';
 import { USE_MOCKS } from '../api/client';
@@ -19,8 +19,9 @@ import {
 } from './ui/sidebar';
 
 const NAV = [
-  { to: '/', label: 'Position', icon: Gauge, exact: true },
+  { to: '/', label: 'Vault', icon: Gauge, exact: true },
   { to: '/graph', label: 'Dependency graph', icon: Network, exact: false },
+  { to: '/impact', label: 'Impact', icon: Zap, exact: false },
   { to: '/watch', label: 'Alerts', icon: Bell, exact: false },
 ] as const;
 

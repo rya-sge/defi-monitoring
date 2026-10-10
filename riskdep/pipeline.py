@@ -14,11 +14,12 @@ from __future__ import annotations
 import copy
 from dataclasses import dataclass, field
 
-from . import crosscheck, decide, discover, priors, simulate
+from . import crosscheck, decide, discover, priors, scenario, simulate
 from . import sources as S
 from .decide import Decision
 from .discover import Position
 from .priors import Prior
+from .scenario import IncidentResult
 from .simulate import SimResult
 
 DEMO_MARKET = "0x5613b170ded221c588b6e9637b910f49e5508680ceede207f44aa72e5c46cb05"
@@ -34,6 +35,7 @@ class AnalyzeResult:
     quote: dict
     checks: list[crosscheck.Check] = field(default_factory=list)
     oracle_alt: dict | None = None
+    incident: IncidentResult | None = None
 
 
 def analyze(
@@ -45,16 +47,31 @@ def analyze(
     pt_amount: float | None = None,
     horizon: float = 30.0,
     paths: int = 20000,
+    shocks: dict[str, float] | None = None,
 ) -> AnalyzeResult:
-    """Analyse one position. With no market and no pendle_market, analyse the demo position."""
-    if pendle_market:
+    """Analyse one position. With no market and no pendle_market, analyse the demo position.
+
+    `shocks` (from `scenario.parse_shocks`) adds incident mode: a known incident's impact and verdict."""
+    if market:
+        pos = discover.discover_morpho_position(f, market, user)
+    elif pendle_market:
         if pt_amount is None:
             raise ValueError("pendle_market needs pt_amount")
         pos = discover.discover_pt_holding(f, pendle_market, pt_amount)
-    elif market:
-        pos = discover.discover_morpho_position(f, market, user)
     else:
         pos = discover.discover_morpho_position(f, DEMO_MARKET, DEMO_USER)
+
+    # D96: the oracle mode from the oracle's structure when it decides, instead of the price inference
+    oracle = next((n.split(":", 1)[1] for n, a in pos.graph.nodes(data=True) if a.get("kind") == "oracle"), None)
+    profile = scenario.oracle_profile(f, oracle) if oracle else None
+    decided = scenario.ex_ante_mode(profile, max(1.0, min(horizon, pos.days_to_maturity or horizon)))
+    if decided:
+        mode0, why = decided
+        if mode0 != pos.oracle_mode or pos.oracle_ambiguous:
+            was = pos.oracle_mode + (", ambiguous" if pos.oracle_ambiguous else "")
+            pos.notes.append(f"Oracle mode {mode0}: {why} (the price inference said {was}).")
+        pos.oracle_mode, pos.oracle_ambiguous = mode0, False
+        pos.graph.nodes[f"oracle:{oracle}"]["mode"] = mode0
 
     checks = [crosscheck.second_rpc(f)]
     if pos.morpho_market:
@@ -107,11 +124,25 @@ def analyze(
             + (" — the same." if same else " — the verdict depends on the oracle; check its source before acting.")
         )
 
+    incident = None
+    if shocks:
+        recovery = next((p.recovery for p in prs if p.event == "issuer_depeg"), 0.0)
+        incident = scenario.assess(
+            pos, shocks, recovery, quote, profile, quote_for=lambda q, fr: discover.partial_exit_quote(f, q, fr)
+        )
+
     # a failed cross-check leads the reasons: the numbers below it are suspect
     bad = [c for c in checks if c.ok is False]
     if bad:
         dec.reasons.insert(0, "DATA CHECK FAILED — " + "; ".join(c.detail for c in bad))
 
     return AnalyzeResult(
-        position=pos, priors=prs, simulation=sim, decision=dec, quote=quote, checks=checks, oracle_alt=alt
+        position=pos,
+        priors=prs,
+        simulation=sim,
+        decision=dec,
+        quote=quote,
+        checks=checks,
+        oracle_alt=alt,
+        incident=incident,
     )

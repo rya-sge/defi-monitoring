@@ -11,7 +11,14 @@ from riskdep.poller import Poller
 
 RDIR = REPLAY_DIR / DEMO_VAULT
 META = json.loads((RDIR / "start.json").read_text())
-DOCS = Path(__file__).resolve().parents[1] / "docs" / "external" / "docs.morpho.org-developers-docs" / "contracts"
+DOCS = (
+    Path(__file__).resolve().parents[1]
+    / "docs"
+    / "external"
+    / "morpho"
+    / "docs.morpho.org-developers-docs"
+    / "contracts"
+)
 
 
 def test_discovery_matches_real_assets():
@@ -67,3 +74,13 @@ def test_selectors_match_the_morpho_docs():
         docs.update(dict(re.findall(r"\| `(\w+)` \| `0x([0-9a-f]{8})` \|", (DOCS / name).read_text())))
     for sig in TIMELOCKED:
         assert docs[sig.split("(")[0]] == selector(sig), sig
+
+
+def test_belem_vault_replay(tmp_path, capsys):
+    """The sponsor's vault: 86 % in an issuer-NAV market that is also the liquidity market; one depositor."""
+    belem = "0xd6d4b804014ef27836dbe9f8f6bf6c71251548ec"
+    assert main(["watch", "--vault", belem, "--replay", "--out", str(tmp_path)]) == 0
+    out = capsys.readouterr().out
+    assert "mGLOeuro [liquidity]" in out and "99.46% of the vault" in out
+    events = [json.loads(x)["event"] for x in (tmp_path / f"watch-{belem}.jsonl").read_text().splitlines()]
+    assert "ExitQueue" in events and "AdminSurface" in events

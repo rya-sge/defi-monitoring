@@ -5,10 +5,14 @@ import type {
   GraphResponse,
   Health,
   Report,
+  ShockTrace,
   Target,
+  Vault,
+  Market,
   WatchQuery,
 } from './types';
 import graphFixture from '../mocks/graph.json';
+import shockTraceFixture from '../mocks/shock-trace.json';
 import reportFixture from '../mocks/report.json';
 
 /** `VITE_USE_MOCKS` defaults to true: the frontend runs with no backend at all. */
@@ -17,10 +21,15 @@ export const USE_MOCKS = import.meta.env.VITE_USE_MOCKS !== 'false';
 const MOCK_LATENCY_MS = 250;
 
 const MOCK_GRAPH = graphFixture as unknown as GraphResponse;
+const MOCK_SHOCK_TRACE = shockTraceFixture as unknown as ShockTrace;
 const MOCK_REPORT = reportFixture as unknown as Report;
 
 function delay<T>(value: T, ms = MOCK_LATENCY_MS): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(value), ms));
+}
+
+function fixture<T>(value: T | undefined, what: string): Promise<T> {
+  return value ? delay(value) : Promise.reject(new ApiError(404, `no fixture for ${what}`));
 }
 
 export class ApiError extends Error {
@@ -76,6 +85,31 @@ export const api = {
   graph(query: GraphQuery = {}, signal?: AbortSignal): Promise<GraphResponse> {
     if (USE_MOCKS) return delay(MOCK_GRAPH);
     return get<GraphResponse>(`/api/graph${queryString({ ...query })}`, signal);
+  },
+
+  /**
+   * A shock trace. No endpoint serves one yet: in both modes this is the committed example
+   * (`docs/shock-trace-example.json`: RockawayX USDC Yield, the Ojo PT feed reading 10 % low).
+   */
+  shockTrace(): Promise<ShockTrace> {
+    return delay(MOCK_SHOCK_TRACE);
+  },
+
+  async vault(address: string, signal?: AbortSignal): Promise<Vault> {
+    if (USE_MOCKS) {
+      // Every Vault V2 of the fixture graph, recorded; loaded on demand, it is the largest fixture.
+      const vaults = (await import('../mocks/vaults.json')).default as Record<string, Vault>;
+      return fixture(vaults[address], `vault ${address}`);
+    }
+    return get<Vault>(`/api/vault/${address}`, signal);
+  },
+
+  async market(id: string, signal?: AbortSignal): Promise<Market> {
+    if (USE_MOCKS) {
+      const markets = (await import('../mocks/markets.json')).default as Record<string, Market>;
+      return fixture(markets[id], `market ${id}`);
+    }
+    return get<Market>(`/api/market/${id}`, signal);
   },
 
   report(signal?: AbortSignal): Promise<Report> {

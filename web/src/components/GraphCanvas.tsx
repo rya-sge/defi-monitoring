@@ -35,6 +35,10 @@ export type GraphCanvasProps = {
   /** The selection drives the focus: its whole upstream and downstream flow stays lit. */
   selection: GraphSelection;
   onSelect: (selection: GraphSelection) => void;
+  /** Lit when nothing is selected or searched: the impact page's reached nodes and steps. */
+  focus?: Lit;
+  /** Per node: a ring colour, and amount lines that replace the node's own. */
+  overlay?: Record<string, { ring: string; amount: string[] }>;
 };
 
 const nodeTypes = { risk: RiskNode };
@@ -43,7 +47,7 @@ const FADED = 0.08;
 const edgeId = (index: number) => `e${index}`;
 
 /** Lit nodes and edges, or null when nothing is focused. */
-type Lit = { nodes: Set<string>; edges: Set<string> } | null;
+export type Lit = { nodes: Set<string>; edges: Set<string> } | null;
 
 /** The whole flow through the selection: upstream of its start, downstream of its end. */
 function flowLit(selection: GraphSelection, edges: GraphEdge[]): Lit {
@@ -136,6 +140,8 @@ export function GraphCanvas({
   search,
   selection,
   onSelect,
+  focus = null,
+  overlay,
 }: GraphCanvasProps) {
   const [initial] = useState(() => initialNodes(nodes, edges));
   const [rfNodes, , onNodesChange] = useNodesState(initial);
@@ -174,19 +180,20 @@ export function GraphCanvas({
   );
 
   const lit = useMemo(
-    () => flowLit(selection, edges) ?? searchLit(search, nodes, edges),
-    [selection, search, nodes, edges],
+    () => flowLit(selection, edges) ?? searchLit(search, nodes, edges) ?? focus,
+    [selection, search, nodes, edges, focus],
   );
 
   const shownNodes = useMemo(
     () =>
       rfNodes.map((n) => ({
         ...n,
+        data: overlay?.[n.id] ? { ...n.data, ...overlay[n.id] } : n.data,
         hidden: !visibleKinds.has(n.data.node.kind),
         selected: selection?.type === 'node' && selection.node.id === n.id,
         style: { opacity: lit && !lit.nodes.has(n.id) ? FADED : 1 },
       })),
-    [rfNodes, visibleKinds, lit, selection],
+    [rfNodes, visibleKinds, lit, selection, overlay],
   );
 
   const shownEdges = useMemo(
