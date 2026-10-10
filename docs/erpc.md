@@ -127,4 +127,4 @@ To add or remove one:
 1. Edit `erpc.yaml`.
 2. Run `erpc validate erpc.yaml`; it must report no error.
 3. Run a live `graph` through it.
-4. Update the upstream table in `PROVIDERS.md` in the same commit.
+4. Update the upstream table in `docs/analysis/PROVIDERS.md` in the same commit.

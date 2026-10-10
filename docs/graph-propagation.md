@@ -1,6 +1,6 @@
 # The dependency graph as a propagation engine
 
-This document details point 4.4 of `comparison_team.md`: today the dependency graph is a picture, while the teammates propose to make it the **engine** that computes losses. It explains what that means, measures on the real example graph what the picture already reveals, works through one shock end to end, and describes how the engine could be built in steps. A [learn section](#learn-what-you-need-to-understand) at the end explains the concepts used.
+This document details point 4.4 of `docs/analysis/comparison_team.md`: today the dependency graph is a picture, while the teammates propose to make it the **engine** that computes losses. It explains what that means, measures on the real example graph what the picture already reveals, works through one shock end to end, and describes how the engine could be built in steps. A [learn section](#learn-what-you-need-to-understand) at the end explains the concepts used.
 
 The data is the example graph `docs/graph-example.json`: 100 nodes and 134 edges at block 26,162,421 (2026-10-10). It holds 19 actors (the demo borrower, Sentora RLUSD Main and its largest depositor, and the main lenders of the borrowed markets) and 16 Blue markets. The losses of the worked example come from the tool's `market_risk.value()` on the vault's borrowers recorded at block 26,162,932, a few hundred blocks later.
 
@@ -33,7 +33,7 @@ When one thing fails (a price feed, a collateral token, a Pendle pool, a market)
   - an **oracle class** on every market oracle, `price-tracking` or `constant-price`, which decides how a collateral fall reaches a market (rows below);
   - on every Blue market node, its **liquidation curve with the collateral that would be sold**, the input of the squeeze row below; and a `wraps` edge from an ERC-4626 share to its asset.
 
-This is gap R1 of `ANALYSIS_MONITORING.md`. Its visible symptom is gap R3: the graph shows that one `RLUSD / USD` feed sits under all of Sentora's markets, but nothing measures what that means.
+This is gap R1 of `docs/analysis/ANALYSIS_MONITORING.md`. Its visible symptom is gap R3: the graph shows that one `RLUSD / USD` feed sits under all of Sentora's markets, but nothing measures what that means.
 
 ## 3. What the teammates propose
 
@@ -205,4 +205,4 @@ A risk engine must treat these as separate shocks.
 - Matthew Elliott, Benjamin Golub and Matthew O. Jackson, "Financial Networks and Contagion", *American Economic Review* 104(10), 2014.
 - Mark Newman, *Networks* (Oxford University Press): graph concepts and centrality measures.
 - Morpho's [oracle documentation](https://docs.morpho.org/developers/contracts/oracles).
-- In this repository: `ANALYSIS_MONITORING.md` §1 (the node model), `docs/graph-example.html`, `docs/vault-depositor-scenarios.md` (the same losses from the depositor's side).
+- In this repository: `docs/analysis/ANALYSIS_MONITORING.md` §1 (the node model), `docs/graph-example.html`, `docs/vault-depositor-scenarios.md` (the same losses from the depositor's side).

@@ -128,7 +128,7 @@ Huma alone backs about $82M across the RockawayX vaults, 28 % of the firm's tota
   - A drop in market price never reaches the oracle, so nothing gets liquidated during a depeg.
   - The loss arrives when the reported rate falls, all at once and larger than the margin. At an 86 % LLTV, a rate cut of more than about 14 % turns straight into bad debt.
   - So for a lender the right model is "probability of a markdown × size", not a liquidation cascade.
-  - `oracle_class.py` should class all of these as constant-price or issuer-reported. Its probe has not been run on these oracles yet.
+  - `oracle_class.py` should class all of these as constant-price or issuer-reported. *(2026-10-11: run on the Belem vault, §5.1; Midas's feed needed a new registry pattern, `CustomAggregator`. The other vaults are not probed yet.)*
 - **The loan asset is assumed to be worth $1 in some markets.** Four oracles have no USDC/USD quote feed: PST, fxSAVE, PT-reUSD and mGLOeuro. In the Belem vault, EURCV is priced through EUR/USD, so a EURCV depeg goes unseen as well.
 - **PT feeds.** These come from Ojo, and from three unnamed feeds on PT-fxSAVE, PT-strUSD and PT-trUSD. Whether each is a linear discount, a TWAP or the minimum of the two needs the getter probe. The PT-trUSD market's 94.5 % LLTV leaves only a 5.5 % margin.
 - **Blue-chip markets** (WBTC, cbBTC, wstETH, cbETH, WETH) use standard Chainlink feeds. `riskdep` already models them, and they are 2 % of the book.
@@ -148,12 +148,41 @@ Huma alone backs about $82M across the RockawayX vaults, 28 % of the firm's tota
 - the loan asset EURCV is priced by an FX feed, with a constant-price assumption;
 - the blue-chip remainder is well covered already.
 
-The commands below have not yet been run on these addresses:
+The commands below were run on 2026-10-11; the results are in §5.1:
 
 ```bash
 uv run python -m riskdep graph --vault 0xD6d4b804014EF27836dBe9f8f6Bf6c71251548Ec --record
 uv run python -m riskdep watch --vault 0xD6d4b804014EF27836dBe9f8f6Bf6c71251548Ec --blocks 1000 --record
 ```
+
+### 5.1 The Belem vault, recorded and checked (2026-10-11)
+
+Both commands were run, and the recordings are in `fixtures/replay/graph-0xd6d4…48ec/` (graph, block 26,164,854) and `fixtures/replay/0xd6d4…48ec/` (watch, blocks 26,163,909 to 26,164,908). Tests: `test_belem_held_markets_and_the_midas_nav_feed` (`tests/test_graph.py`) and `test_belem_vault_replay` (`tests/test_watch_replay.py`).
+
+**The vault.** 4,710,686 EURCV, nothing idle, one `MorphoMarketV1AdapterV2` adapter:
+
+| Market | LLTV | Vault's allocation | Share | Utilisation | Vault's share of supply | Oracle class |
+|---|---|---|---|---|---|---|
+| mGLOeuro/EURCV (the liquidity market) | 77 % | 4,040,272 | 85.8 % | 91.0 % | 100 % | constant-price (issuer NAV) |
+| WBTC/EURCV | 86 % | 455,555 | 9.7 % | 89.1 % | 10 % | price-tracking |
+| cbBTC/EURCV | 86 % | 116,441 | 2.5 % | 89.5 % | 1 % | price-tracking |
+| wstETH/EURCV | 86 % | 97,960 | 2.1 % | 89.7 % | 6 % | price-tracking |
+| steakEURCV/EURCV, oTFYe/EURCV | 91.5 %, 77 % | 2, 1 | 0 % | — | — | constant-price |
+
+**What the recording confirms from §1–§4:**
+- 86 % of the vault is in mGLOeuro/EURCV, at 91 % utilisation, and the vault is that market's only lender.
+- The loan asset EURCV is never priced itself: the oracles read EUR / USD, so a EURCV depeg is not seen.
+- The blue-chip markets use standard Chainlink feeds and are classed price-tracking.
+
+**What it adds:**
+- **The mGLOeuro oracle is the issuer's own NAV.** Its feed `0x8b7b…9609` is Midas's `MGloEuroCustomAggregatorFeed` behind a `TransparentUpgradeableProxy`. It answers 100,000 EUR per mGLOeuro and has two rounds in its history, 2026-08-04 and 2026-09-23, both at 100,000. `oracle_class` first returned `not classified`: too few rounds for the history rule, and no pattern for the name. The registry now has a `CustomAggregator` pattern, classed constant-price, and the replay classes it so.
+- **The issuer controls both the token and its price.** The mGLOeuro token `0x2f8b…7702` and its NAV feed are both upgradeable, with the same admin, `0xbf25…0aac`.
+- **mGLOeuro/EURCV is also the vault's liquidity market**: deposits go there, and a plain withdrawal can only draw on its free liquidity, 361,743 EURCV.
+- **One depositor holds 99.46 % of the vault**, 4,685,206 EURCV out of 4 holders. It can withdraw 1,031,701 now (361,743 plain, 669,958 through `forceDeallocate`, at no penalty), and 3,653,504 is stuck even first in line (`ExitQueue` warn, 78 % stuck).
+- **The two mGLOeuro borrowers** borrow 3.68M EURCV against 52.58 mGLOeuro, worth 5.26M EUR at the NAV: about 70 % of collateral, against a 77 % LLTV. A NAV cut of about 9 % or more makes them liquidatable; bad debt starts only past a cut of about 25 %, where the collateral divided by the liquidation incentive (1.074) no longer covers the debt. The watch's curve stops at a 20 % fall, so it shows no bad debt for this market.
+- **Governance:** seven risk-increasing changes have no timelock (fees, fee recipients, `setIsAllocator`, `setForceDeallocatePenalty`, the adapter's skim recipient); adding an adapter or raising a cap takes 3 days; the gates are abdicated.
+
+**For the next step** (incident mode for vaults): the incident that matters here is "Midas marks mGLOeuro's NAV down by x %". Its impact is the bad debt of a 100 %-lender market, nearly all of it on one depositor, with 78 % of that depositor's position unable to leave.
 
 ## 6. Registry additions this needs
 

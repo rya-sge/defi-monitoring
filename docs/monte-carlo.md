@@ -237,7 +237,7 @@ Because both reruns use seed 7, they draw the same random numbers as the main ru
 - **Seed.** `seed=7` is fixed, so the same snapshot gives the same numbers on any machine and any day (the offline demo also fixes "now", `clock.py`). The demo's tests can compare figures exactly.
 - **Sampling error of the expected loss.** The standard error is $\hat\sigma/\sqrt N$. The losses are mostly zero with a few large values, so $\hat\sigma$ is large compared with the mean. On the demo, the standard error is 380 USD on an expected loss of 6,265 USD, about 6 %: a 95 % interval of roughly 5,500 to 7,000 USD. The verdict's comparison of carry (5,697) with expected loss sits inside that interval, which is one more reason the verdict also rests on the tail and the stress drop. `--paths` raises $N$; the error falls as $1/\sqrt N$.
 - **The tail rests on few paths.** CVaR 99 % is the mean of 200 paths. A rare event, such as a 0.1 % layer, appears in about 20 paths out of 20,000; its relative error is about $\sqrt{(1-p)/(Np)}$, around 22 %. The attribution's 4,000 draws per layer are independent of that, because each draw forces the layer to fail.
-- **What the error does not cover.** These are sampling errors around the model's own expectation. They say nothing about whether the priors are right, which is the larger uncertainty (`GAP.md` K14).
+- **What the error does not cover.** These are sampling errors around the model's own expectation. They say nothing about whether the priors are right, which is the larger uncertainty (`docs/analysis/GAP.md` K14).
 
 ## 10. What the simulation assumes
 
@@ -252,7 +252,7 @@ Because both reruns use seed 7, they draw the same random numbers as the main ru
 | One position | `run` takes one `Position` | two positions sharing a layer are not combined | K21, M6 |
 | One horizon, no timing | a loss per path, no time axis | how fast the loss arrives is not an output | K22 |
 
-`GAP.md` discusses each of these against incidents and outside methods. Most point the same way: more risk than reported.
+`docs/analysis/GAP.md` discusses each of these against incidents and outside methods. Most point the same way: more risk than reported.
 
 ## 11. Where the simulation is used, and where it is not
 
@@ -266,12 +266,12 @@ The watches answer "what is true now, and what would a given fall do?"; the simu
 
 ## 12. Planned changes
 
-From `NEXT_STEP_V2.md` and `NEXT_TASK.md`:
+From `docs/analysis/NEXT_STEP_V2.md` and `docs/analysis/NEXT_TASK.md`:
 
 | Change | What it does to the simulation | Step |
 |---|---|---|
-| Incident mode, **done** | `analyze --shock` runs `propagate.loss` once with a given shock, before the simulation, to answer "this component is hit" without probabilities | A1, `NEXT_TASK.md` task 1 |
-| Conditional simulation | the observed incident forced in every path; its evolution and spread drawn (`ANALYSIS_CURRENT.md` §6) | `NEXT_TASK.md` task 3 |
+| Incident mode, **done** | `analyze --shock` runs `propagate.loss` once with a given shock, before the simulation, to answer "this component is hit" without probabilities | A1, `docs/analysis/NEXT_TASK.md` task 1 |
+| Conditional simulation | the observed incident forced in every path; its evolution and spread drawn (`docs/analysis/ANALYSIS_CURRENT.md` §6) | `docs/analysis/NEXT_TASK.md` task 3 |
 | The book | `simulate.run_book`: several positions in one simulation, each shared (event, node) drawn **once** per path for every position that holds it | A3, task 2 |
 | Breakeven probability | $p^\star = (E + K)/L_s$ per scenario, the probability at which the decision flips, reported next to the simulated verdict | A3, task 2 |
 | Borrow rate and implied yield | new random paths per simulated month: utilisation through the AdaptiveCurveIRM, and an implied-yield move priced into the PT | B1, B2 |
@@ -366,7 +366,7 @@ The watches answer conditional questions at fixed drops: "if the collateral fell
 
 Two positions backed by the same issuer, or priced by the same feed, fail together. Run separately, each draws its own depeg, so their joint failure looks as rare as the product of two probabilities.
 
-`simulate.run_book` (`NEXT_TASK.md` task 2) draws each shared (event, node) once per path and applies it to every position that holds it. The book's tail then includes the months where the shared layer fails, and the expected loss can be read as a share of the book.
+`simulate.run_book` (`docs/analysis/NEXT_TASK.md` task 2) draws each shared (event, node) once per path and applies it to every position that holds it. The book's tail then includes the months where the shared layer fails, and the expected loss can be read as a share of the book.
 
 ## References
 
@@ -385,8 +385,8 @@ Two positions backed by the same issuer, or priced by the same feed, fail togeth
 
 - `docs/how-risk-is-computed.md`: the whole model, with the demo's numbers.
 - `docs/scenarios-and-breakeven.md`: the breakeven probability, scenarios against base rates.
-- `GAP.md`: the model's gaps K1–K25, many of them about the simulation's assumptions.
-- `NEXT_STEP_V2.md`, `NEXT_TASK.md`: the planned changes.
+- `docs/analysis/GAP.md`: the model's gaps K1–K25, many of them about the simulation's assumptions.
+- `docs/analysis/NEXT_STEP_V2.md`, `docs/analysis/NEXT_TASK.md`: the planned changes.
 - `plan/2026-10-10-defi-risk-dependency.plan.md`: decisions D1–D17 (D12: issuer hack → depeg) and D68.
 
 ### Method

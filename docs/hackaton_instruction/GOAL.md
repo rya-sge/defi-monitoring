@@ -1,6 +1,6 @@
 # Goal: the DeFi Risk Dependency Challenge
 
-This file states what the project has to build, from the challenge brief (the original, a one-page PDF by Belem Capital for the EPFL Hackathon 2026, is `docs/hackaton_instruction/Hackathon_DeFi-Risk-Dependency-Challenge_EN_v1.pdf`; it is git-ignored, so only local checkouts have it). Every design choice in this repository answers to it; where the implementation stands against it is in `ANALYSIS_MONITORING.md` (gaps), `NEXT_STEP.md` (what comes next) and `comparison_team.md` (choices against the teammates' proposals).
+This file states what the project has to build, from the challenge brief (the original, a one-page PDF by Belem Capital for the EPFL Hackathon 2026, is `docs/hackaton_instruction/Hackathon_DeFi-Risk-Dependency-Challenge_EN_v1.pdf`; it is git-ignored, so only local checkouts have it). Every design choice in this repository answers to it; where the implementation stands against it is in `docs/analysis/ANALYSIS_MONITORING.md` (gaps), `docs/analysis/NEXT_STEP.md` (what comes next) and `docs/analysis/comparison_team.md` (choices against the teammates' proposals).
 
 ## The challenge
 
@@ -35,7 +35,7 @@ A **working prototype**, not an architecture or a slide deck. It operates on **r
 
 | Criterion | Main answer | Documents |
 |---|---|---|
-| Dependency discovery | `analyze` discovers a Pendle PT position's layers; both watches discover a vault's or an address's markets, their borrowers and lenders, and the admin surface (oracles, feeds, tokens, issuers); `graph` draws it | `ARCHITECTURE.md`, `docs/graph-propagation.md` |
+| Dependency discovery | `analyze` discovers a Pendle PT position's layers; both watches discover a vault's or an address's markets, their borrowers and lenders, and the admin surface (oracles, feeds, tokens, issuers); `graph` draws it | `docs/analysis/ARCHITECTURE.md`, `docs/graph-propagation.md` |
 | Impact estimation | incident priors and a Monte Carlo through the stack (`analyze`); unrealised bad debt, liquidation curves, the exit queue and the drain threshold (watches) | `docs/how-risk-is-computed.md`, `docs/vault-depositor-scenarios.md`, `docs/exit-queue.md`, `docs/drain-threshold.md` |
 | Decision usefulness | STAY / REDUCE / EXIT with carry, exit cost from a real quote, and a de-lever size; block-by-block alerts with a runbook | `docs/scenarios-and-breakeven.md`, `docs/alert-runbook.md` |
-| Working demo on real data | live runs on public sources (`PROVIDERS.md`); offline demo and replays recorded from mainnet (`fixtures/`) | `README.md` |
+| Working demo on real data | live runs on public sources (`docs/analysis/PROVIDERS.md`); offline demo and replays recorded from mainnet (`fixtures/`) | `README.md` |
