@@ -220,6 +220,6 @@ An Ethereum address either has code (a contract) or not (a wallet controlled by 
 ### Further reading
 
 - Douglas W. Diamond and Philip H. Dybvig, "Bank Runs, Deposit Insurance, and Liquidity", *Journal of Political Economy* 91(3), 1983.
-- Morpho's documentation: [assets flow and withdrawal limits](https://docs.morpho.org/developers/earn/tutorials/assets-flow) (local copy under `docs/external/docs.morpho.org-developers-docs/earn/`).
+- Morpho's documentation: [assets flow and withdrawal limits](https://docs.morpho.org/developers/earn/tutorials/assets-flow) (local copy under `docs/external/morpho/docs.morpho.org-developers-docs/earn/`).
 - EIP-7702, "Set Code for EOAs": <https://eips.ethereum.org/EIPS/eip-7702>.
 - In this repository: `teammate/team2.md` (the original model), `docs/vault-depositor-scenarios.md` (losses under named shocks), `docs/alert-runbook.md` (exit routes).

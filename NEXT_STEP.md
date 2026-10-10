@@ -122,7 +122,7 @@ Each step below gives its goal, what it delivers, its size (**S** about a day, *
 
 **Needs from you.** Nothing blocking. Confirm which of the three matters to you, so it can be done first.
 
-**Already available.** The Vault V1.1 source and events (`morpho-org/metamorpho-v1.1`, read at a pinned commit), the `MorphoVaultV1Adapter` and `MidnightAdapter` sources in `docs/external/morpho/lib/vault-v2`, and Morpho's Midnight documentation in `docs/external/docs.morpho.org-developers-docs/midnight`.
+**Already available.** The Vault V1.1 source and events (`docs/external/morpho/lib/metamorpho-v1.1`, submodule at `3b17547e`), the `MorphoVaultV1Adapter` and `MidnightAdapter` sources in `docs/external/morpho/lib/vault-v2`, and Morpho's Midnight documentation in `docs/external/morpho/docs.morpho.org-developers-docs/midnight`.
 
 ## 5. Tests on a forked chain
 
@@ -234,12 +234,13 @@ Each step below gives its goal, what it delivers, its size (**S** about a day, *
 
 | Material | Where | Used for |
 |---|---|---|
-| Morpho developer documentation | `docs/external/docs.morpho.org-developers-docs` | contracts, Bundles, addresses on every chain, Midnight, exit routes |
+| Morpho developer documentation | `docs/external/morpho/docs.morpho.org-developers-docs` | contracts, Bundles, addresses on every chain, Midnight, exit routes |
 | Etherscan API documentation | `docs/external/docs.etherscan.io-api-reference-docs` | V2 endpoints (`getsourcecode`, `getabi`, …), step 3 |
 | Etherscan API key | `keys.ini`, section `[etherscan]` (git-ignored) | verified sources and ABIs, step 3; tested 2026-10-10 |
 | Morpho Blue source at `8e26ca6a` | `docs/external/morpho/lib/morpho-blue` | events, liquidation and shares maths, authorisation rules |
 | Vault V2 source at `d992cb84` | `docs/external/morpho/lib/vault-v2` | vault, adapters (market, V1, Midnight), timelocks, gates |
-| Vault V1.1 events | `morpho-org/metamorpho-v1.1` at `3b17547e`, read online | step 4 |
+| Vault V1.1 source at `3b17547e` | `docs/external/morpho/lib/metamorpho-v1.1` | queues, caps, `lostAssets`, events; step 4 |
+| Morpho oracles source at `9d2a0b66` | `docs/external/morpho/lib/morpho-blue-oracles` | `MorphoChainlinkOracleV2` price formula and feeds; steps 3 and 8 |
 | Foundry 1.5.0 | `forge`, `anvil`, `cast` installed | step 5 |
 | DeFi hack corpus | the `search-crypto-hack` skill | step 8 |
 | Public data | publicnode RPC, Morpho, Pendle and DefiLlama APIs | everything today |

@@ -9,3 +9,6 @@ data
 .ruff_cache/
 # secrets: keys.ini holds real API keys and is never committed; keys.example.ini (no values) stays tracked
 keys.ini
+# third-party docs kept locally only: the Chainlink Data Feeds and Morpho developer documentation (listed in CLAUDE.md, docs/external/)
+docs/external/chainlink/docs.chain.link-data-feeds-docs/
+docs/external/morpho/docs.morpho.org-developers-docs/
