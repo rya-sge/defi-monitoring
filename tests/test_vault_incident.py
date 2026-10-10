@@ -101,3 +101,53 @@ def test_book_reaches_wrapped_trusd_offline(tmp_path):
     assert hit == {"RockawayX Tori Ecosystem", "RockawayX USDC Yield"} and r["loss_usd"] > 1_000_000
     assert cli.main(["analyze", "--book", book, "--shock", "token=USDC:0.30", "--out", str(tmp_path)]) == 0
     assert json.loads((tmp_path / "book-incident.json").read_text())["loss_usd"] == 0  # a loan asset ends a chain
+
+
+def test_parse_shocks_both_kinds():
+    assert VI.parse_shocks(["token=PST:0.3", "borrower=mGLOeuro:0.5", "borrower=all:0:3"]) == [
+        ("token", "pst", 0.3, 0),
+        ("borrower", "mgloeuro", 0.5, 1),
+        ("borrower", "all", 0.0, 3),
+    ]
+    for bad in ("borrower=x", "borrower=:0.5", "borrower=x:1.5", "borrower=x:0.5:0", "borrower=x:a", "user=x:0.5"):
+        with pytest.raises(ValueError):
+            VI.parse_shocks([bad])
+    assert VI.describe(("borrower", "all", 0.5, 2)) == (
+        "the 2 largest borrowers of every market default, collateral recovered at 50%"
+    )
+    assert VI.describe(("pst", 0.3), {"pst": "PST"}) == "PST −30%"
+
+
+def test_borrower_default_takes_the_largest():
+    price = 10**36
+    pos = {"a": (100 * M, 80 * M * 10**6), "b": (50 * M, 10 * M * 10**6)}  # debts 80 and 10
+    totals = (90 * M, 90 * M * 10**6)
+    debt, bad, who = VI.borrower_default(pos, totals, price, 0.5, 1)
+    assert who == ["a"] and debt == pytest.approx(80 * M, rel=1e-9) and bad == pytest.approx(30 * M, rel=1e-9)
+    _, bad2, who2 = VI.borrower_default(pos, totals, price, 0.0, 5)
+    assert set(who2) == {"a", "b"} and bad2 == pytest.approx(90 * M, rel=1e-9)  # nothing recovered
+
+
+def test_belem_borrower_default_offline(tmp_path, capsys):
+    """mGLOeuro/EURCV is owed by one borrower: its default at 50 % recovery costs about a fifth of the vault."""
+    args = ["analyze", "--vault", BELEM, "--shock", "borrower=mGLOeuro:0.5", "--out", str(tmp_path)]
+    assert cli.main(args) == 0
+    r = json.loads((tmp_path / f"vault-incident-{BELEM}.json").read_text())
+    (h,) = r["hits"]
+    assert h["event"] == "default" and len(h["defaulters"]) == 1 and h["top1_share"] > 0.99
+    assert 1.0e6 < r["vault_loss"] < 1.1e6 and h["exit_route"] == "none"
+    out = capsys.readouterr().out
+    assert "the largest borrower of mGLOeuro defaults" in out and "no due date" in out
+    both = ["analyze", "--vault", BELEM, "--shock", "token=mGLOeuro:0.3", "--shock", "borrower=mGLOeuro:0.5"]
+    assert cli.main([*both, "--out", str(tmp_path)]) == 0
+    r2 = json.loads((tmp_path / f"vault-incident-{BELEM}.json").read_text())
+    assert r2["vault_loss"] > r["vault_loss"]  # the default is valued at the marked-down price, once
+
+
+def test_no_liquidator_branch_on_thin_exit_liquidity(tmp_path):
+    fx = "0x2ca22cb25558fa2018ecb1ce4ed8af92ee7ea423"
+    assert cli.main(["analyze", "--vault", fx, "--shock", "token=fxSAVE:0.3", "--out", str(tmp_path)]) == 0
+    r = json.loads((tmp_path / f"vault-incident-{fx}.json").read_text())
+    h = next(h for h in r["hits"] if not h["via"])
+    assert h["exit_route"] == "thin" and h["liquidatable_debt"] > 0
+    assert 0 < h["no_liquidator_shortfall"] < h["vault_loss"]  # no liquidation incentive paid, but liquidity locked

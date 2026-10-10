@@ -13,8 +13,9 @@ depositor or an analyst can define their own:
       ]
     }
 
-The incident (`token=<collateral>:<fall>`, as for one vault) is applied in every vault that holds the collateral; the
-book adds the losses in USD, so vaults lending different assets can share a book, and says where the issuer sits.
+The incident (`token=<collateral>:<fall>` or `borrower=<target>:<recovery>[:<n>]`, as for one vault) is applied in
+every vault it reaches; the book adds the losses in USD, so vaults lending different assets can share a book, and says
+where the issuer or the borrower sits.
 """
 
 from __future__ import annotations
@@ -23,7 +24,7 @@ import json
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-from .vault_incident import VaultIncident
+from .vault_incident import VaultIncident, describe
 
 WEIGHTINGS = ("vault", "depositor")
 
@@ -58,7 +59,7 @@ class VaultLine:
 class BookIncident:
     name: str
     weighting: str
-    shocks: list[tuple[str, float]]
+    shocks: list[str]  # each shock in words
     lines: list[VaultLine]
     value_usd: float
     loss_usd: float
@@ -67,7 +68,7 @@ class BookIncident:
     notes: list[str] = field(default_factory=list)
 
     def text(self) -> list[str]:
-        shock = ", ".join(f"{t} −{v:.0%}" for t, v in self.shocks)
+        shock = "; ".join(self.shocks)
         out = [f"BOOK  {self.name}  ·  incident: {shock}  ·  weighting: {self.weighting}", f"  {self.headline}"]
         out.append(f"    {'vault':<44} {'in the book':>14} {'in hit mkts':>14} {'loss':>12} {'loss %':>7}  verdict")
         for ln in sorted(self.lines, key=lambda x: (-x.loss_usd, -x.exposure_usd)):
@@ -152,23 +153,25 @@ def line(inc: VaultIncident, label: str | None, weighting: str) -> VaultLine:
     )
 
 
-def aggregate(book: Book, shocks: list[tuple[str, float]], incidents: list[VaultIncident]) -> BookIncident:
-    """D107, pure: add the vaults up, and write the headline."""
+def aggregate(book: Book, shocks: list[tuple], incidents: list[VaultIncident]) -> BookIncident:
+    """D107, pure: add the vaults up, and write the headline. `shocks` as `vault_incident.parse_shocks` gives them."""
     labels = {v.address: v.label for v in book.vaults}
     names = {k.lower(): k for i in incidents for k in i.shocks}  # the symbol as the vaults' markets name it
-    shocks = [(names.get(tok, tok), v) for tok, v in shocks]
+    for i in incidents:
+        names.update(i.labels)
+    shocks = [describe(s, names) for s in shocks]
     lines = [line(i, labels.get(i.vault), book.weighting) for i in incidents]
     value = sum(ln.value_usd for ln in lines)
     loss = sum(ln.loss_usd for ln in lines)
     exposure = sum(ln.exposure_usd for ln in lines)
     hit = [ln for ln in lines if ln.hit_markets]
-    shock = ", ".join(f"{t} −{v:.0%}" for t, v in shocks)
+    shock = "; ".join(shocks)
     if not hit:
-        headline = f"{shock}: no vault of the book holds this collateral (above one token): no impact."
+        headline = f"{shock}: no vault of the book is reached (above one token allocated): no impact."
     elif loss <= 0:
         headline = (
             f"{shock}: no bad debt; {exposure:,.0f} USD ({exposure / value:.1%} of the book) sits in {len(hit)} "
-            f"vault(s) holding it, and the collateral still covers the debt."
+            f"vault(s) reached, and the collateral still covers the debt."
         )
     else:
         worst = max(hit, key=lambda x: x.loss_usd)
@@ -186,7 +189,9 @@ def aggregate(book: Book, shocks: list[tuple[str, float]], incidents: list[Vault
     if any(not ln.priced for ln in lines):
         notes.append("an asset's USD price was not available: its vault is counted at 1 USD per unit")
     if len(hit) > 1:
-        notes.append(f"the collateral is shared by {len(hit)} vaults of the book: one issuer event reaches all of them")
+        notes.append(
+            f"the incident reaches {len(hit)} vaults of the book at once: their losses add up, they do not offset"
+        )
     notes.append("each vault is read at its own recorded or live block; the vaults' blocks can differ by minutes")
     return BookIncident(book.name, book.weighting, shocks, lines, value, loss, exposure, headline, notes)
 

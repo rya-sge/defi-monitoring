@@ -46,6 +46,7 @@ Steps of the two earlier versions that are now done, with their plans:
 | Vault depositor's loss under an incident (most of v2 D1) | `analyze --vault --shock token=…`; curves widened to −30 and −50 % | `2026-10-11-vault-incident` |
 | A book (part of v2 A3) | `analyze --book` / several `--vault`, user-defined, in USD, with a headline; `--record` for any vault | `2026-10-11-vault-book` |
 | Wrapped collateral in vault incidents (A1) | a token reaches the markets whose collateral wraps it; hidden shortfall when the oracle does not follow | `2026-10-11-wrapped-collateral` |
+| Borrower concentration and default; no-liquidator branch (part of B6, K27; `ROCK-VAULT-DEP.md` §11 item 3) | top-1 and top-3 shares, `BorrowerConcentration`; `--shock borrower=<target>:<recovery>[:<n>]` on any vault or book; `exit_liquidity` per token in the registry and the loss if nobody liquidates | `2026-10-11-borrower-concentration` |
 | CI (part of v1 step 10) | lint and tests on every push | — |
 
 **No longer relevant:** v1 step 2 as written ("`analyze` for any collateral") is replaced, for vaults, by the vault incident mode, which takes any collateral; for a borrower it continues as part of A2 below. The v1 → v2 carry-over table and the "phase A first" ordering are superseded by this file.
@@ -71,7 +72,7 @@ Steps of the two earlier versions that are now done, with their plans:
 | B3 | Horizon to maturity, stressed exit cost | K12 | S | Pendle quotes at several sizes |
 | B4 | Oracle structure, rest: drain priority, split constant-price, pool-move event | K7, K8 | M | `oracle_class.py` |
 | B5 | Priors: decayed window, survivorship, double count, two-part depeg, off-chain prior, protocol multiplier, the RockawayX issuers | K1–K5, K17, K18 | M | `priors.py`, `registry.json` |
-| B6 | Liquidation cascade with slippage; liquidity returned by liquidations | K9 | M | curves of held and sibling markets |
+| B6 | Liquidation cascade with slippage; liquidity returned by liquidations (the no-liquidator branch is done) | K9, K27 | M | curves of held and sibling markets, `exit_liquidity` |
 | B7 | Tail-aware verdict, sampling error shown | K13, K14 | S–M | `simulate.py`, `decide.py` |
 | B8 | Market-price revaluation of loans; the drain as a loss channel | K16 | S–M | `market_risk.py`, `drain.py` |
 | C1 | Discovery depth in `analyze`; watch the siblings; other venues | K19, R5, R6 | M | `admin.py`, `siblings.py` |
@@ -79,6 +80,7 @@ Steps of the two earlier versions that are now done, with their plans:
 | C3 | TVL concentration | K25 | S | `graph` market nodes |
 | C4 | External venues (perp, CEX) | K24 | M–L | registry |
 | C5 | Other chains, Vault V1, direct supply | C5, C3, C4 | M–L | `metamorpho-v1.1` submodule |
+| C6 | The rest of `ROCK-VAULT-DEP.md` §11: exit-gate standing risk, finer oracle classes with feed admin and age, bridges as graph nodes, issuer/oracle/bridge registry entries, PT expiry | K23, K19 | M | `admin.py`, `oracle_class.py`, `graph.py`, registry |
 | D1 | Validate on your own positions | — | — | your addresses |
 | D2 | Push alerts | D4, D5 | S | a channel |
 | D3 | Tests on a forked chain | T1 | M | an archive RPC |
@@ -190,7 +192,7 @@ Done: classification in `graph`, incident mode and the ex-ante simulation; the m
 
 ### B6. Liquidation cascade and returned liquidity (K9)
 
-**How:** a pure loop: at a fall d, the curves of every market holding the collateral (held and sibling, `graph`) give the collateral liquidated; its price impact (Pendle quotes for PTs, k·√Q otherwise) gives an extra fall, until stable. For vaults: the debt liquidators repay comes back as free liquidity in the market, which changes what can leave; for issuer-priced collateral, a liquidation needs a buyer of the issuer's token (D103), so a "no liquidator" branch keeps the liquidity locked. **Size:** M.
+**How:** a pure loop: at a fall d, the curves of every market holding the collateral (held and sibling, `graph`) give the collateral liquidated; its price impact (Pendle quotes for PTs, k·√Q otherwise) gives an extra fall, until stable. For vaults: the debt liquidators repay comes back as free liquidity in the market, which changes what can leave; for issuer-priced collateral, a liquidation needs a buyer of the issuer's token (D103). *Done:* the "no liquidator" branch (D115: the loss and the locked liquidity, from the registry's `exit_liquidity`) and the borrower default (D114). *Left:* the cascade, the returned liquidity, and the exit-liquidity price impact used as the cascade's slippage. **Size:** M.
 
 ### B7. Tail-aware verdict and sampling error (K13, K14)
 
@@ -207,6 +209,13 @@ The demo's CVaR 99 % is 98 % of equity, and its carry sits inside the expected l
 - **C3. TVL concentration (K25).** The protocol's share of its category's TVL; a collateral's share held in Morpho markets (from `graph`'s market nodes) and against its pool's depth. **S.**
 - **C4. External venues (K24).** A typed venue node (perp or CEX, custody, withdrawal delay), a prior and a funding-rate scenario; RockawayX's other venues (Kamino, Upshift, Ember, Midas, Accountable) as issuer or venue nodes. **M–L.**
 - **C5. Other chains, Vault V1, direct supply (C5, C3, C4).** The chain as a parameter (RockawayX Midas USDC Prime is on Base; `chainId: 1` is hard-coded in the Morpho API queries); a Vault V1 reader from `docs/external/morpho/lib/metamorpho-v1.1`; the vault rules applied to a direct Blue supply; Solana out of scope before the event. **M–L.**
+
+- **C6. The rest of `ROCK-VAULT-DEP.md` §11** (item 3, borrower concentration, is done). Each is generic: it applies to any vault, not only RockawayX's.
+  - **Exit-gate standing risk** (`admin.py`, `watch`): a standing finding, at start and on change, for any vault whose `setSendSharesGate` or `setReceiveAssetsGate` timelock is 0: the curator can block exits with no notice. Today only the gate events alert. **S.**
+  - **Finer oracle classes, feed admin and age** (`oracle_class.py`, `admin.py`, with C2): split `constant-price` into `linear-discount PT`, `on-chain NAV`, `issuer-published` (custom aggregator) and `dummy/constant`, each with its own timing in incident mode; warn on an upgradeable feed under a multisig with no timelock (RedStone's 2/3), and on a feed older than its heartbeat (mGLOeuro, 17.5 days). **S–M.**
+  - **Bridges as graph nodes** (`graph.py`, registry): a cross-chain token's bridge (CCIP for PST, LayerZero for etrUSD) as an admin or protocol node with its owner and delay, so a bridge incident is a shock target like an issuer. **M.**
+  - **Registry entries** (with B5): the issuers of `ROCK-VAULT.md` §6, and RedStone, Ojo, Chainlink exchange-rate feeds and CCIP as oracle and bridge entries with priors and basis. **S–M.**
+  - **PT expiry** (`vault_incident.py`, `graph.py`): at maturity a PT's oracle converges to its underlying, so the market's collateral class and timing change (PT-fxSAVE expires 2026-10-29); show the days to expiry, and treat the collateral as the underlying past it. **S.**
 
 ## 8. Phase D: operations
 

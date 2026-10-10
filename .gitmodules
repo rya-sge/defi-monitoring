@@ -25,3 +25,6 @@
 [submodule "docs/external/infini-protocol/DefiLlama-Adapters"]
 	path = docs/external/infini-protocol/DefiLlama-Adapters
 	url = https://github.com/InfiniFi-Labs/DefiLlama-Adapters
+[submodule "docs/external/fx-protocol/fx-protocol-contracts"]
+	path = docs/external/fx-protocol/fx-protocol-contracts
+	url = https://github.com/AladdinDAO/fx-protocol-contracts

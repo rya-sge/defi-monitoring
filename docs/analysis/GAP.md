@@ -77,7 +77,7 @@ Of the scope items the brief names, feed quality, vaults in external venues, TVL
 | K24 | Vaults or hedges in an external venue (perp, CEX) not covered | missing | named in the brief's scope; Belem runs market-neutral | medium | M–L | open (C4) |
 | K25 | Concentration of TVL (protocol share of chain, position share of pool and supply) not measured | missing | named in the brief's scope | medium | S | open; collateral held per Blue market available from `graph` (C3) |
 | K26 | A vault incident matches a token only as the markets' direct collateral, not through what wraps it (a PT, an ERC-4626 share, a vault of vaults) | under-states reach | trUSD and wYLDS match no RockawayX market, although PT-trUSD, etrUSD and wYLDS-based markets depend on them | medium | S–M | done: plan `2026-10-11-wrapped-collateral`; etrUSD (no `asset()`) stays opaque |
-| K27 | A vault incident assumes liquidations happen; issuer-priced collateral needs a buyer of the issuer's token, and the liquidity liquidations return is not modelled | unknown direction | Belem: 3.68M of mGLOeuro-backed debt liquidatable at a 10 % NAV cut, with one market as the vault's only liquidity source | medium | M | open (B6) |
+| K27 | A vault incident assumes liquidations happen; issuer-priced collateral needs a buyer of the issuer's token, and the liquidity liquidations return is not modelled | unknown direction | Belem: 3.68M of mGLOeuro-backed debt liquidatable at a 10 % NAV cut, with one market as the vault's only liquidity source | medium | M | partial: the no-liquidator branch, exit liquidity per token in the registry, borrower concentration and default (plan `2026-10-11-borrower-concentration`); missing: the liquidity liquidations return (B6) |
 
 ## 3. Probabilities
 
@@ -385,7 +385,8 @@ A vault incident values every borrower at the shocked oracle price and counts th
 - **If no liquidator acts,** the bad debt stays unrealised, the share price stays at par, and the market's liquidity stays locked; on Belem the hit market is also the vault's only liquidity source.
 - **If liquidators act,** the debt they repay comes back as free liquidity, which changes what depositors can withdraw. Neither branch is modelled.
 
-**Fix:** a "no liquidator" branch and the liquidity returned by liquidations, in the cascade of `NEXT_STEP.md` B6, and as a draw in the conditional Monte Carlo (A4).
+- *(partial 2026-10-11, plan `2026-10-11-borrower-concentration`: each hit market shows its collateral's exit liquidity (`exit_liquidity` in the registry, measured once from KyberSwap quotes) and, when thin or absent, the loss if nobody liquidates; the concentration of its borrowers; and `--shock borrower=<target>:<recovery>[:<n>]` prices the default of the largest borrowers, on any vault or book. `BorrowerConcentration` warns in the vault watch. Belem's mGLOeuro market is owed by one borrower: its default at 50 % recovery costs 1.05M EURCV, 22 % of the vault.)*
+- **Fix, rest:** the liquidity returned by liquidations, in the cascade of `NEXT_STEP.md` B6, and the no-liquidator branch as a draw in the conditional Monte Carlo (A4); exit liquidity measured live rather than recorded.
 
 ## 9. Against the challenge brief
 

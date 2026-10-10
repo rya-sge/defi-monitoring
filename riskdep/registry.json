@@ -240,6 +240,9 @@
     "lender_withdraw_min_share": 0.05,
     "unrealised_bad_debt_warn": 0.0001,
     "unrealised_bad_debt_critical": 0.001,
+    "concentration_top1_warn": 0.5,
+    "concentration_min_borrowers": 5,
+    "concentration_basis": "D113. BorrowerConcentration warns when one borrower holds at least half a market's debt, or the market has fewer than 5 borrowers, for markets holding at least utilization_min_share of a vault. In most RockawayX RWA markets one or two loopers hold the debt (ROCK-VAULT-DEP.md §6): the vault then depends on them repaying more than on liquidations.",
     "curve_drop": 0.05,
     "curve_warn_share": 0.25,
     "mint_share_critical": 0.05,
@@ -333,5 +336,77 @@
       }
     ],
     "oracle_basis": "D82-D84. One oracle input, first rule that applies: a base vault is an exchange rate; a composite (FEED_1/FEED_2) or wrapper (innerOracle) takes its children's class, price-tracking if one is; a structural getter of oracle_getters; at least oracle_history_min past rounds readable over the last oracle_history_rounds: price-tracking when falls are at least oracle_fall_share of the changes (probe 2026-10-10: USDC/USD, USDS/USD and ETH/USD fell 9-14 times in 24 rounds, three exchange-rate and NAV feeds never fell); no history and an answer of exactly 1.0: pegged; a case-insensitive pattern of oracle_patterns in description() or the verified contract name (Etherscan, optional); otherwise not classified."
+  },
+  "exit_liquidity": {
+    "basis": "KyberSwap aggregator quotes of a sale into USDC on Ethereum, measured 2026-10-11 (docs/analysis/ROCK-VAULT-DEP.md §7). route: none = no route at 0.1M USD, thin = price impact above thin_impact at 1M USD, deep = otherwise. impact: the price impact at each sale size in USD (null: no route). A liquidator who cannot sell the collateral does not liquidate (D115). Re-measure before relying on it; add any token by address.",
+    "thin_impact": 0.05,
+    "tokens": {
+      "0x22ae3d9a738471f405169af055d31c687087d4c7": {
+        "symbol": "PST",
+        "route": "deep",
+        "impact": {
+          "100000": 0.0,
+          "1000000": 0.0,
+          "5000000": null
+        },
+        "note": "deep to 1M, no route at 5M"
+      },
+      "0x997e2efbce91d170b00ea402e35a66c887ee1da9": {
+        "symbol": "AUTO",
+        "route": "none",
+        "impact": {
+          "100000": null,
+          "1000000": null,
+          "5000000": null
+        }
+      },
+      "0x2f8bae126b8d416c009b82ccd60e4f9cabbd7702": {
+        "symbol": "mGLOeuro",
+        "route": "none",
+        "impact": {
+          "100000": null,
+          "1000000": null,
+          "5000000": null
+        },
+        "note": "issuer redemption only"
+      },
+      "0x7743e50f534a7f9f1791dde7dcd89f7783eefc39": {
+        "symbol": "fxSAVE",
+        "route": "thin",
+        "impact": {
+          "100000": -0.005,
+          "1000000": -0.27,
+          "5000000": -0.83
+        }
+      },
+      "0x6f20ae2c98c2d34e6a57f3411f2c5af92e32592d": {
+        "symbol": "etrUSD",
+        "route": "thin",
+        "impact": {
+          "100000": -0.55,
+          "1000000": -0.92,
+          "5000000": -0.99
+        }
+      },
+      "0x280839980a7ed0d7717f64125fe241012e5f5815": {
+        "symbol": "strUSD",
+        "route": "deep",
+        "impact": {
+          "100000": -0.002,
+          "1000000": -0.011,
+          "5000000": -0.69
+        },
+        "note": "deep to 1M, thin at 5M"
+      },
+      "0x19ebb35279a16207ec4ba82799cc64715065f7f6": {
+        "symbol": "PRIME",
+        "route": "deep",
+        "impact": {
+          "100000": 0.0,
+          "1000000": 0.0,
+          "5000000": -0.001
+        }
+      }
+    }
   }
 }

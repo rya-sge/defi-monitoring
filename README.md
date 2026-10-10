@@ -45,7 +45,7 @@ At start it reads the vault's structure on-chain (vault → adapters → Blue ma
 | Level | What triggers it |
 |---|---|
 | critical | an upgrade of a contract a held market depends on (oracle, feed, collateral or loan token, Pendle SY); a pause of a collateral token; one transaction minting ≥ 5 % of a collateral or yield token's supply; unrealised bad debt in a held market from 0.1 % of the vault (borrowers underwater, not yet liquidated; warn from 0.01 %); a pending change with no notice (`Submit` for a risk-increasing function whose timelock is 0); bad debt in a held market (`Liquidate.badDebtAssets`, your share computed), a loss recorded by an adapter but not yet accrued (`totalAssets()` below the stored `_totalAssets`), vault total assets falling (`AccrueInterest`), the adapter writing off shares (`BurnShares`); at least half of your position stuck behind the vault's contract holders in a run while the vault carries unrealised bad debt; a market's collateral at or past its drain threshold (`DrainWindow`) |
-| warn | an oracle ≥ 3 % away from DefiLlama's price; a change of proxy admin, owner or Chainlink aggregator of a dependency; a steep liquidation curve: a 5 % oracle fall would make ≥ 25 % of a held market's debt liquidatable (markets holding ≥ 10 % of the vault); risk-increasing functions that can change with no notice (timelock 0, not abdicated), listed at start; a timelocked change submitted (`Submit`, decoded, with its execution date and timelock) or made live (`Accept`), new adapter, cap raised, fee or gate change, shorter timelock, `ForceDeallocate`, new liquidity adapter, a market crossing 25 % of the vault, ≥ 99 % utilisation on a market holding ≥ 10 %, an oracle moving ≥ 5 %, you no longer able to exit in full with a plain withdrawal, a gate blocking your exit, a block range that could not be read; at least half of your position stuck if the vault's contract holders withdrew before you (`ExitQueue`); a market's collateral within 2 points of its drain threshold (`DrainWindow`) |
+| warn | an oracle ≥ 3 % away from DefiLlama's price; a change of proxy admin, owner or Chainlink aggregator of a dependency; a steep liquidation curve: a 5 % oracle fall would make ≥ 25 % of a held market's debt liquidatable (markets holding ≥ 10 % of the vault); risk-increasing functions that can change with no notice (timelock 0, not abdicated), listed at start; a timelocked change submitted (`Submit`, decoded, with its execution date and timelock) or made live (`Accept`), new adapter, cap raised, fee or gate change, shorter timelock, `ForceDeallocate`, new liquidity adapter, a market crossing 25 % of the vault, ≥ 99 % utilisation on a market holding ≥ 10 %, an oracle moving ≥ 5 %, you no longer able to exit in full with a plain withdrawal, a gate blocking your exit, a block range that could not be read; at least half of your position stuck if the vault's contract holders withdrew before you (`ExitQueue`); a market's collateral within 2 points of its drain threshold (`DrainWindow`); one borrower holding ≥ 50 % of a market's debt, or fewer than 5 borrowers, in a market holding ≥ 10 % of the vault (`BorrowerConcentration`) |
 | info | allocation moves, caps lowered, cancelled changes, liquidations without bad debt, your own and large (≥ 1 %) deposits and withdrawals |
 
 Thresholds live in `riskdep/registry.json` (`watch`), documented in `docs/registry-reference.md`. What to do about each alert: `docs/alert-runbook.md`. Terms: `docs/glossary.md`.
@@ -130,7 +130,16 @@ The incident is a fall of a collateral's oracle price, such as an issuer marking
 - the debt liquidatable and the bad debt, per market;
 - the vault's loss, and the depositor's loss if it stays and if it leaves first, with what can leave now;
 - how fast the incident lands: at once on publication for an issuer NAV oracle;
+- how concentrated each hit market is (the largest borrower's and the three largest's share of its debt);
+- the collateral's exit liquidity (from the registry's `exit_liquidity`) and, when it is thin or absent, the loss if nobody liquidates;
 - a verdict.
+
+**A borrower's default** (`--shock borrower=<collateral symbol or address, market id, or all>:<recovery>[:<n>]`): in each matching market, the n largest borrowers (1 by default) stop repaying and their collateral is recovered at that fraction of its oracle value. It works on any vault or book, and combines with a markdown (`--shock token=mGLOeuro:0.30 --shock borrower=mGLOeuro:0.5`) without counting a position twice:
+
+```bash
+python3 -m riskdep analyze --vault 0xd6d4b804014ef27836dbe9f8f6bf6c71251548ec --shock borrower=mGLOeuro:0.5   # 1.05M EURCV, 22 % of the vault
+python3 -m riskdep analyze --book examples/rockawayx-ethereum.json --shock borrower=all:0.5                  # every market's largest borrower
+```
 
 Offline it reads the vault's recording; the RockawayX vaults, Belem RWA EURCV among them, are recorded. Output: the terminal and `out/vault-incident-<vault>.json`. Plan: `plan/2026-10-11-vault-incident.plan.md`.
 

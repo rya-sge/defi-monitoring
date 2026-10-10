@@ -38,7 +38,7 @@ def main(argv: list[str] | None = None) -> int:
     a.add_argument(
         "--vault",
         action="append",
-        help="incident mode for a Vault V2 (with --shock token=<collateral>:<fall>; --user for the depositor); "
+        help="incident mode for a Vault V2 (with --shock token=… or borrower=…; --user for the depositor); "
         "repeat it for an ad hoc book of vaults",
     )
     a.add_argument(
@@ -56,7 +56,9 @@ def main(argv: list[str] | None = None) -> int:
         action="append",
         metavar="EVENT=SEVERITY",
         help="incident mode: a known incident, e.g. oracle=0.10 or issuer_depeg=0.08 (repeatable); events: "
-        + ", ".join(scenario.EVENTS),
+        + ", ".join(scenario.EVENTS)
+        + "; with --vault or --book: token=<collateral>:<fall> (a markdown) or "
+        "borrower=<collateral, market id or all>:<recovery>[:<n>] (the n largest borrowers default)",
     )
     a.add_argument("--out", default=str(Path(__file__).resolve().parent.parent / "out"))
 
@@ -374,13 +376,14 @@ def _vault_incident(ap, args) -> int:
     """`analyze --vault` / `--book`: a known incident on a collateral, for one vault or a book of vaults
     (plans 2026-10-11-vault-incident and 2026-10-11-vault-book)."""
     try:
-        token_shocks = vault_incident.parse_token_shocks(args.shock)
+        token_shocks = vault_incident.parse_shocks(args.shock)
         book = vault_book.load(Path(args.book)) if args.book else vault_book.from_addresses(args.vault, args.user)
     except ValueError as e:
         ap.error(str(e))
     if not token_shocks:
         ap.error(
-            "--vault and --book need --shock token=<collateral address or symbol>:<fall>, e.g. token=mGLOeuro:0.30"
+            "--vault and --book need --shock token=<collateral address or symbol>:<fall>, e.g. token=mGLOeuro:0.30, "
+            "or --shock borrower=<collateral, market id or all>:<recovery>[:<n>], e.g. borrower=mGLOeuro:0.5"
         )
     incidents = []
     try:

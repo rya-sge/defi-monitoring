@@ -21,6 +21,7 @@ Rules for editing:
 - [Top-level parameters of `analyze`](#top-level-parameters-of-analyze)
 - [`watch`](#watch)
 - [`graph`](#graph)
+- [`exit_liquidity`](#exit_liquidity)
 - [How to add a yield issuer](#how-to-add-a-yield-issuer)
 
 ## `chain`
@@ -146,6 +147,9 @@ The thresholds of `watch --vault` and `watch --user`. Changing them changes when
 | `drain_margin` | fraction (points of discount) | 0.02 | `DrainWindow` warn: the collateral's discount to its oracle within this distance of d\*; critical at d\* |
 | `drain_check_every_blocks` | blocks | 25 | how often DefiLlama's prices are re-read for the drain threshold; oracle prices come with every state read |
 | `exit_queue_phi` | fraction of the other depositors' assets | 0.5 | the "behind φ of others" queue position of the exit-queue table; it also stands in for the contract holders in `ExitQueue` when the holder list is unavailable |
+| `concentration_top1_warn` | fraction of the market's debt | 0.5 | `BorrowerConcentration` warn: the largest borrower of a vault market holds at least this share (D113) |
+| `concentration_min_borrowers` | count | 5 | `BorrowerConcentration` warn: a vault market with fewer borrowers |
+| `concentration_basis` | text | — | why |
 | `exit_queue_stuck_warn` | fraction of the position | 0.5 | `ExitQueue` warn: the share of the position stuck if every contract holder withdrew first; critical when the vault also carries unrealised bad debt |
 
 The health-factor levels of `watch --user` are not here: they are a command-line option, `--hf` (default `1.10,1.05,1.02`).
@@ -168,6 +172,18 @@ The sibling-market search and the oracle classification of the `graph` command (
 | `oracle_basis` | text | — | the rules in order, and the 2026-10-10 probe behind the history thresholds |
 
 **Adding a pattern.** When a graph shows an input `not classified`, read its verified source, decide whether a market move reaches its answer, and add `{"match": "<contract name or description fragment>", "class": "price-tracking" | "constant-price", "basis": "<what it computes, source, date>"}`. Prefer a structural getter in `oracle_getters` when the contract exposes one: it needs no Etherscan key.
+
+## `exit_liquidity`
+
+How easily a collateral token can be sold on DEXs, per token address (plan `2026-10-11-borrower-concentration`, D115). Read by `vault_incident.py`: a markdown hit on a market whose collateral has `route` `none` or `thin` reports the loss if nobody liquidates, and the liquidity left locked; a hit token without an entry is named in a note. Measured once, by hand, so it ages: re-measure before relying on it.
+
+| Key | Unit | Default | What it controls |
+|---|---|---|---|
+| `basis` | text | — | the source (KyberSwap quotes into USDC on Ethereum, 2026-10-11, `docs/analysis/ROCK-VAULT-DEP.md` §7) and the route rule |
+| `thin_impact` | fraction | 0.05 | above this price impact at 1M USD, the route is `thin` |
+| `tokens.<address>` | object | PST, AUTO, mGLOeuro, fxSAVE, etrUSD, strUSD, PRIME | `symbol`; `route` (`none`: no route at 0.1M USD; `thin`; `deep`); `impact` by sale size in USD (negative = loss; `null`: no route); optional `note` |
+
+**Adding a token.** Quote a sale of the token into the vault's asset at 0.1M, 1M and 5M USD on an aggregator, and add `"<address in lower case>": {"symbol": …, "route": …, "impact": {…}, "note": "<date, source>"}`.
 
 ## How to add a yield issuer
 

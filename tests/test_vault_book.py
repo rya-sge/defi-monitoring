@@ -79,3 +79,11 @@ def test_ad_hoc_book_from_vault_flags(tmp_path):
 def test_unrecorded_vault_is_refused(tmp_path):
     with pytest.raises(SystemExit):
         cli.main(["analyze", "--vault", "0x" + "1" * 40, "--shock", "token=x:0.3", "--out", str(tmp_path)])
+
+
+def test_book_borrower_default_reaches_every_vault(tmp_path, capsys):
+    args = ["analyze", "--book", str(BOOK), "--shock", "borrower=all:0.5", "--out", str(tmp_path)]
+    assert cli.main(args) == 0
+    r = json.loads((tmp_path / "book-incident.json").read_text())
+    assert all(ln["hit_markets"] for ln in r["lines"]) and r["loss_usd"] > 10e6
+    assert r["shocks"] == ["the largest borrower of every market defaults, collateral recovered at 50%"]
