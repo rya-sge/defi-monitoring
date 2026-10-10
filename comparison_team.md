@@ -138,6 +138,120 @@ This document compares the two teammate notes in `teammate/` with what `riskdep`
 | Transport | ChatGPT: WebSocket | Polling | Argued in `docs/websocket-vs-polling.md`; the hybrid is planned. Latency is 25–40 s. |
 | UI | Both: interactive (sliders, click a node, pick a shock) | Static reports | Weak for the demo (15 % of the score). |
 
+### 4.1 Language: Python instead of TypeScript
+
+**What was proposed.** Team 1's Claude thread argues for TypeScript end to end: viem for reads and multicall, `@morpho-org/blue-sdk-viem` for live market and position data, and `@morpho-org/morpho-sdk` for Vault V2, so that accrual, LTV and health maths come from Morpho's own code; one language from reading to the UI. Team 1's ChatGPT thread argued the opposite: Python for simulation, graphs and backtesting, TypeScript only if an indexer such as Ponder brings a measurable gain.
+
+**What the implementation does.** Python, with the maths re-implemented where needed:
+- Blue's shares-to-assets conversion (virtual shares and assets);
+- the liquidation incentive factor, the health factor, the bad debt of a position;
+- the Vault V2 cap identifiers and the withdrawal limits.
+
+Two pieces are deliberately *not* re-implemented: the vault's accrual (it reads `totalAssets()`, which the contract computes) and the interest rate (it calls the market's IRM `borrowRateView` on-chain).
+
+**What it costs.** Every re-implemented formula can drift from Morpho's. Today the safeguards are the cross-checks against the Morpho API (health factor within 0.02 % on the demo, vault total assets) and the tests.
+
+**What could be implemented.**
+- **SDK parity check** (S): a small Node script using `@morpho-org/blue-sdk-viem` that computes health factor, debt and withdrawal limits for the recorded positions, compared with `riskdep`'s numbers in a test. It keeps Python while borrowing the SDK as a reference.
+- **TypeScript only at the edge** (M, if a React UI is built): the UI consumes `report.json` and `graph.json`, which are already a stable data contract, so no rewrite of the engine is needed.
+
+### 4.2 Probabilities: base rates and Monte Carlo instead of a breakeven probability
+
+**What was proposed.** Team 2 warns that probabilities are "the weakest part of any such model" and proposes the **breakeven probability** p\* = exit cost ÷ L(severe case): exit if you believe the severe case is more likely than p\*. Team 1's Claude thread asks for named scenarios first and Monte Carlo later; its ChatGPT thread lists the trade-off: deterministic is explainable, Monte Carlo gives distributions but rests on hard-to-calibrate assumptions.
+
+**What the implementation does.** `analyze` estimates a yearly probability per layer from DefiLlama's hack record (by protocol size and category) and from registry entries for depegs, runs 20,000 simulated months, and decides from the expected loss, the CVaR 99 % and the exit cost. Its line "exit would only pay if incident probabilities were N× the estimates" (`risk_multiple_to_exit`) is a global version of Team 2's idea: how wrong the probabilities must be to change the decision.
+
+**What it costs.** The verdict inherits the weakness of base rates (gap M1), and a reader cannot see the loss of one specific scenario.
+
+**What could be implemented.**
+- **A scenario table in the `analyze` report** (S): for named shocks (yield-token depeg of 5, 10 and 20 %, oracle misprice of −10 %, Pendle exploit of 30 %, …), the deterministic loss L(s) is one call to the existing pure function `propagate.loss()`. Next to each: whether it liquidates, and p\*(s) = exit cost ÷ L(s). The Monte Carlo stays, and the two views answer both notes.
+- **Scenarios as the default verdict basis** (S, a decision to take as a team): decide from "the worst named scenario you believe above p\*" and keep the Monte Carlo as context.
+
+### 4.3 Scope of `analyze`: one borrower, not a vault depositor
+
+**What was proposed.** Team 2 frames the use case as the track's: a fund *depositing* in vaults, with the loss aggregated over every market the vault allocates to (Σ over markets of the vault's share of supply × bad debt), and an exit cost that comes from withdrawal liquidity, not from a swap.
+
+**What the implementation does.** `analyze` evaluates one Pendle PT position used as Morpho Blue collateral, from the borrower's side. The depositor's side is covered by `watch`: exposure, exit capacity, unrealised bad debt now, and each market's liquidation curve. No mode answers "how much do I lose if X happens?" for a depositor.
+
+**What it costs.** It is the largest gap against the track's "impact" criterion (30 % of the score).
+
+**What could be implemented.** Most of the pieces exist:
+- **`analyze --vault <address> [--user <address>]`** (M):
+  - for a scenario (a price drop on one collateral asset, on every market using it, or on one oracle feed), apply the drop in `market_risk.value()`, which already returns each market's bad debt at a given fall;
+  - multiply by the vault's share of each market's supply (`market_risk.vault_supply_shares`), sum over markets, and divide by the depositor's share of the vault;
+  - report the loss next to the exit capacity now (`VaultState.withdrawable` and `force_withdrawable`), and p\* = exit cost ÷ loss.
+- **Limits to state in its output:** liquidations are assumed to clear at the oracle price with the liquidation bonus, so there is no slippage and no cascade (see 4.5 and the cascade loop in §5); the vault's version decides who bears the loss (a Vault V2 realises it for every holder at the next accrual).
+
+### 4.4 The graph: a rendering, not the engine
+
+**What was proposed.** Team 2 makes the graph the engine. Each edge type carries a **transmission function** (how a shock on the child becomes a loss on the parent): `allocates_to` passes the vault's share of a market's bad debt; `collateral` is zero until the LLTV buffer is used up, then non-linear; `priced_by` depends on the failure mode (overpricing, underpricing, freeze). Shocks spread with **DebtRank** (Battiston et al., 2012): each node passes a shock once (which handles cycles), paths below ε of the position are pruned, and terminal nodes stop the spread. Adding a protocol then means producing edges of existing types. Team 1 asks for the same in other words: look-through exposure and blast radius.
+
+**What the implementation does.** `graph.py` builds typed nodes and edges carrying amounts, from live data, and draws them. The alerts and the `analyze` model work on their own structures; `propagate.py` is a hand-written layer model for one PT position (gap R1).
+
+**What it costs.** The "adding a protocol is one adapter" claim cannot be demonstrated, and shared dependencies (one `RLUSD / USD` feed under all 10 Sentora markets) are drawn but not measured (gap R3).
+
+**What could be implemented.**
+- **Shared-node exposure from `graph.json`** (S): for each node, the sum of the amounts on the paths from each actor to it, with an alert when one node carries more than a set share of a position. It works on the existing JSON, without a propagation engine.
+- **A propagation engine over `graph.json`** (L, built in steps):
+  - transmission functions for the three edge types that carry most of the risk: `supplies` (share of the market's bad debt, from `market_risk.value()`), `takes as collateral` (the shock as a price fall), `reads` and `converts through` (a feed or vault-share shock becomes an oracle price shock);
+  - DebtRank-style spreading with ε pruning;
+  - a function "shock this node with this failure mode, return the loss per actor". It would then serve 4.3 and 4.7.
+
+### 4.5 Liquidity: Pendle quotes instead of a generic aggregator
+
+**What was proposed.** Team 2 asks a DEX aggregator (KyberSwap, Odos, 1inch are named) for quotes at several sizes and fits a slippage curve, with square-root price impact as a defensible shape. The same curve serves twice: for how well liquidations clear, and for one's own exit cost. It works for any asset without code per DEX.
+
+**What the implementation does.** Real quotes from Pendle's API, for the full position and for a partial de-lever, used in the exit cost and the de-lever cost. Other collateral is "not quoted"; liquidators' selling is not modelled.
+
+**What it costs.** `analyze` cannot price an exit for non-PT collateral, and the bad-debt numbers of `market_risk` assume liquidations clear without price impact.
+
+**What could be implemented.**
+- **A quote source module** (M): probe which aggregators answer without a key (to be verified: none has been tested yet), query 3 or 4 sizes per token, fit impact(q) = k·√q, and cache the curve per token for a few minutes. Fallback to "not quoted" when no source answers.
+- **Use it twice** (S once the module exists): in `decide.exit_cost_usd` for any collateral (next step 2), and in `market_risk.value()` to discount the collateral liquidators sell, which makes the bad debt at each fall more realistic and opens the cascade loop listed in §5.
+
+### 4.6 Transport: polling instead of a WebSocket
+
+**What was proposed.** Team 1's ChatGPT thread: a WebSocket RPC subscribed to new blocks and logs, event-driven engines, eventually one's own node for detection in seconds.
+
+**What the implementation does.** Polling every 12 seconds, 2 blocks behind the head, with a saved cursor. The reasons are in `docs/websocket-vs-polling.md`: a WebSocket loses whatever is pushed while it is disconnected and needs the same `eth_getLogs` to fill the gap, while polling never misses a block. The latency is 25 to 40 seconds.
+
+**What it costs.** For a borrower close to liquidation, 25 to 40 seconds can be too late; for the depositor signals (timelocked changes, unrealised bad debt) it is not.
+
+**What could be implemented.**
+- **Hybrid trigger** (S): subscribe to `newHeads` over the free WebSocket endpoint (verified working) and call the existing `next_batch()` on each head, with the 12-second poll as fallback. The cursor logic stays the source of truth, so nothing can be missed. It removes the wait for the next poll (up to 12 seconds), so the latency becomes about 26 seconds, set by the 2 confirmations, instead of 25 to 40.
+- **Zero confirmations** (M): process the head block immediately and roll back alerts on logs flagged `removed` by a reorg. The latency drops to a few seconds, at the cost of alerts that a reorg can retract.
+- **Pending transactions** (M): `newPendingTransactions`, filtered on the watched contracts and simulated with `eth_simulateV1` (both verified on the free node), labelled "pending, not final". It does not see transactions sent through private relays.
+
+### 4.7 Interface: static reports instead of an interactive tool
+
+**What was proposed.** Team 1's Claude thread: React Flow with a layered layout, shock sliders computed in the browser, a static site deployable on GitHub Pages. Team 2's demo screen: click a node, pick a failure mode and a severity, and see the loss, the exit cost, p\*, the recommendation and the contributing paths. Team 1's ChatGPT thread: Streamlit with Cytoscape.
+
+**What the implementation does.** A static HTML report for `analyze` and an interactive dependency graph (Cytoscape.js: click a node, filter by type, search). Nothing recomputes a loss in the page.
+
+**What it costs.** The demo counts for 15 % of the score, and a what-if screen is the most direct way to show discovery, impact and decision together.
+
+**What could be implemented.**
+- **A what-if page on top of `graph.html`** (M), static and without a backend, as Team 1 proposed:
+  - `graph.json` gains, per market, the borrower distribution in compact form: collateral value and debt per position, or bucketed by health factor;
+  - in the page, picking a node (a collateral asset, an oracle feed) and a failure mode with a severity slider recomputes each market's bad debt with the same formula as `market_risk.value()`, then the loss per actor through the supply shares already on the edges;
+  - the side panel shows the loss, the exit capacity, p\* and the paths that carry the loss.
+- It reuses 4.3's computation in JavaScript, and becomes more accurate once 4.4's engine and 4.5's slippage curve exist.
+
+### 4.8 What to implement first
+
+| Item | Section | Size | Depends on |
+|---|---|---|---|
+| Scenario table and p\* in `analyze` | 4.2 | S | — |
+| Shared-node exposure from `graph.json` | 4.4 | S | — |
+| Hybrid WebSocket trigger | 4.6 | S | — |
+| `analyze --vault`: depositor loss under a scenario | 4.3 | M | — |
+| What-if page (sliders, click a node) | 4.7 | M | 4.3 |
+| Generic quote source and slippage curve | 4.5 | M | a keyless aggregator, or an API key |
+| SDK parity check | 4.1 | S | Node and Morpho's SDK |
+| Propagation engine over the graph (DebtRank) | 4.4 | L | 4.5 for realistic liquidations |
+
+For the track's scoring grid, the order that moves the most points is 4.3 (impact for the actual use case), then 4.2 (a decision that does not rest on base rates alone), then 4.7 (the demo).
+
 ## 5. Teammate ideas not implemented yet
 
 Ranked by value for the track and by effort, given the existing code.
