@@ -67,7 +67,7 @@ morpho/
 
 **Blue liquidation, LIF, bad debt**
 - `lib/morpho-blue/src/Morpho.sol:527-538`: healthy iff `collateral × price / 1e36 × LLTV ≥ borrowed` (borrow rounded up).
-- `Morpho.sol:366-369`: `LIF = min(1.15, 1 / (1 − 0.3 × (1 − LLTV)))` (constants in `libraries/ConstantsLib.sol:5-14`); LLTV 86 % → 1.0438, 91.5 % → 1.026, cap 1.15 reached at LLTV ≤ ~56.5 %. `borrow/concepts/liquidation.md:45-66` rounds 86 % to "≈ 1.05".
+- `Morpho.sol:366-369`: `LIF = min(1.15, 1 / (1 − 0.3 × (1 − LLTV)))` (constants in `lib/morpho-blue/src/libraries/ConstantsLib.sol:5-14`); LLTV 86 % → 1.0438, 91.5 % → 1.026, cap 1.15 reached at LLTV ≤ ~56.5 %. `borrow/concepts/liquidation.md:45-66` rounds 86 % to "≈ 1.05".
 - `Morpho.sol:390-402`: bad debt is written off only when a liquidation leaves collateral = 0; it is deducted from `totalSupplyAssets` (lenders' loss) and reported in the `Liquidate` event. Until then it stays in the share price (the "unrealised bad debt" of `market_risk.py` and `exit_queue.py`).
 
 **IRM (AdaptiveCurveIRM)**
@@ -75,13 +75,13 @@ morpho/
 
 **Oracles, scaling, no staleness check**
 - `lib/morpho-blue-oracles/src/morpho-chainlink/MorphoChainlinkOracleV2.sol:151-156`: `price = SCALE_FACTOR × baseVault.convertToAssets(sample) × baseFeed1 × baseFeed2 / (quoteVault… × quoteFeed1 × quoteFeed2)`; `SCALE_FACTOR` (lines 132–138) brings the result to 1e36 adjusted for decimals. Immutable, no admin.
-- `libraries/ChainlinkDataFeedLib.sol:13-26`: a zero feed returns 1; "Staleness is not checked", min/max bounds not checked, only `answer >= 0`. `libraries/VaultLib.sol:13-16`: vault conversion is `convertToAssets` (exchange-rate, not market).
+- `lib/morpho-blue-oracles/src/morpho-chainlink/libraries/ChainlinkDataFeedLib.sol:13-26`: a zero feed returns 1; "Staleness is not checked", min/max bounds not checked, only `answer >= 0`. `lib/morpho-blue-oracles/src/morpho-chainlink/libraries/VaultLib.sol:13-16`: vault conversion is `convertToAssets` (exchange-rate, not market).
 - `wsteth-exchange-rate-adapter/WstEthStEthExchangeRateChainlinkAdapter.sol:26`: a Chainlink-shaped exchange rate (constant-price class in `oracle_class.py`).
 - `docs.morpho.org-developers-docs/contracts/oracles.md:79-87` (assumptions) and `ecosystem/oracles.md` (Pendle PT, LST rates, f(x) adapters).
 
 **Vault V1.1: lostAssets, queues**
 - `lib/metamorpho-v1.1/src/MetaMorphoV1_1.sol:923-937`: if real assets drop below `lastTotalAssets − lostAssets`, `lostAssets` grows; losses are tracked, not socialised away silently (`lostAssets` storage at line 109).
-- `libraries/ConstantsLib.sol:10-16`: `MAX_TIMELOCK` 2 weeks, `POST_INITIALIZATION_MIN_TIMELOCK` 1 day, `MAX_QUEUE_LENGTH` 30; queues set at `MetaMorphoV1_1.sol:336` (`setSupplyQueue`) and `351` (`updateWithdrawQueue`), `reallocate` at 394.
+- `lib/metamorpho-v1.1/src/libraries/ConstantsLib.sol:10-16`: `MAX_TIMELOCK` 2 weeks, `POST_INITIALIZATION_MIN_TIMELOCK` 1 day, `MAX_QUEUE_LENGTH` 30; queues set at `MetaMorphoV1_1.sol:336` (`setSupplyQueue`) and `351` (`updateWithdrawQueue`), `reallocate` at 394.
 
 **Public Allocator**
 - `lib/vault-v2/src/periphery/blue-public-allocator/BluePublicAllocator.sol:13-23`: must be a vault allocator; only `MorphoMarketV1AdapterV2` adapters; per-call penalty paid by the caller as a donation to the vault; vault caps still enforced; anyone can front-run to make it revert; can drain the liquidity market. Ethereum address `0x00b8e150…1e27` (`contracts/addresses.md:401`), as in `drain.py:28`.

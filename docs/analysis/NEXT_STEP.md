@@ -46,6 +46,7 @@ Steps of the two earlier versions that are now done, with their plans:
 | Vault depositor's loss under an incident (most of v2 D1) | `analyze --vault --shock token=…`; curves widened to −30 and −50 % | `2026-10-11-vault-incident` |
 | A book (part of v2 A3) | `analyze --book` / several `--vault`, user-defined, in USD, with a headline; `--record` for any vault | `2026-10-11-vault-book` |
 | Wrapped collateral in vault incidents (A1) | a token reaches the markets whose collateral wraps it; hidden shortfall when the oracle does not follow | `2026-10-11-wrapped-collateral` |
+| Pharos, keyless (part of B5, C1, K19) | grades on hit collateral and graph assets; a token shock follows Pharos's off-chain backing; common-mode groups as notes and graph nodes (`docs/risk-assessment/outside-providers.md`) | `2026-10-11-pharos` |
 | Borrower concentration and default; no-liquidator branch (part of B6, K27; `ROCK-VAULT-DEP.md` §11 item 3) | top-1 and top-3 shares, `BorrowerConcentration`; `--shock borrower=<target>:<recovery>[:<n>]` on any vault or book; `exit_liquidity` per token in the registry and the loss if nobody liquidates | `2026-10-11-borrower-concentration` |
 | CI (part of v1 step 10) | lint and tests on every push | — |
 
@@ -63,7 +64,7 @@ Steps of the two earlier versions that are now done, with their plans:
 | # | Step | Gaps | Size | Builds on |
 |---|---|---|---|---|
 | ~~**A1**~~ | ~~Look-through of wrapped collateral in vault incidents~~ **done** (plan `2026-10-11-wrapped-collateral`) | D108, K26 | S–M | `siblings.underlyings` |
-| **A2** | Breakeven probability p\* for a position, a vault and a book; mixed books with borrow and PT pockets | K21, M6 | M | `vault_book.py`, `scenario.py`, `decide.py` |
+| **A2** | Breakeven probability p\* for a position, a vault and a book; mixed books with borrow and PT pockets; Nexus Mutual (keyless) as an outside probability next to p\* and a "stay and insure" option (`docs/risk-assessment/outside-providers.md` §2) | K21, M6 | M | `vault_book.py`, `scenario.py`, `decide.py` |
 | **A3** | Detection → impact for vaults: an issuer NAV update triggers the vault incident; other alert types carry an impact | K20, K22 | S–M | `vault_incident.py`, the watches |
 | **A4** | Conditional Monte Carlo around a known incident | K6, K14 | M | `simulate.py`, `scenario.py`, `vault_incident.py` |
 | **A5** | HTML for vault and book incidents | demo | S | `report.py` |

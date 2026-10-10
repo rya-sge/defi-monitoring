@@ -146,6 +146,8 @@ def main(argv: list[str] | None = None) -> int:
         except S.SourceError as e:
             print(f"data source error: {e}", file=sys.stderr)
             return 3
+        ph = _pharos(argparse.Namespace(record=args.record, refresh=False, live=not (args.replay or args.record)))
+        graded = GR.annotate_pharos(g, ph) if ph else 0
         if args.record:
             meta = {"users": users, "vaults": vaults, "block": block, "siblings": siblings}
             (rdir / "meta.json").write_text(json.dumps(meta, indent=1))
@@ -155,6 +157,7 @@ def main(argv: list[str] | None = None) -> int:
         for n in g.nodes.values():
             kinds[n["kind"]] = kinds.get(n["kind"], 0) + 1
         print(f"{len(g.nodes)} nodes ({', '.join(f'{v} {k}' for k, v in kinds.items())}), {len(g.edges)} edges")
+        print(f"Pharos {ph.as_of}: {graded} asset(s) graded" if ph else "Pharos: not checked")
         print(f"html: {hp}\njson: {jp}")
         return 0
 
@@ -372,6 +375,15 @@ def _vault_source(vault: str, args) -> tuple[S.Fetcher, int, bool]:
     )
 
 
+def _pharos(args):
+    """D122: Pharos's dependency graph, keyless and optional. Offline: the recording under fixtures/replay/pharos/;
+    `--record` and `--refresh` re-read and save it; `--live` reads it without saving. None when it cannot be read."""
+    from . import pharos
+
+    mode = "refresh" if args.record or args.refresh else "direct" if args.live else "offline"
+    return pharos.load(S.Fetcher(mode, REPLAY_DIR / "pharos") if mode != "direct" else S.Fetcher("direct"))
+
+
 def _vault_incident(ap, args) -> int:
     """`analyze --vault` / `--book`: a known incident on a collateral, for one vault or a book of vaults
     (plans 2026-10-11-vault-incident and 2026-10-11-vault-book)."""
@@ -386,11 +398,14 @@ def _vault_incident(ap, args) -> int:
             "or --shock borrower=<collateral, market id or all>:<recovery>[:<n>], e.g. borrower=mGLOeuro:0.5"
         )
     incidents = []
+    ph = _pharos(args)
     try:
         for v in book.vaults:
             f, block, all_oracles = _vault_source(v.address, args)
             incidents.append(
-                vault_incident.run(f, v.address, block, v.depositor or args.user, token_shocks, profile_all=all_oracles)
+                vault_incident.run(
+                    f, v.address, block, v.depositor or args.user, token_shocks, profile_all=all_oracles, pharos=ph
+                )
             )
     except FileNotFoundError as e:
         ap.error(str(e))

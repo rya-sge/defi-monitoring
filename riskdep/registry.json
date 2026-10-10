@@ -408,5 +408,68 @@
         }
       }
     }
+  },
+  "pharos": {
+    "basis": "Pharos (pharos.watch, TokenBrice, MIT) public dependency graph, keyless, methodology v10.16 / model v9 as read on 2026-10-11. Grades are Pharos's judgement, not probabilities: shown, never used as a number in a loss. Backing weights are Pharos's reserve shares (live-reserve or curated-reserve provenance). docs/risk-assessment/outside-providers.md",
+    "ids": {
+      "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48": {
+        "id": "usdc-circle",
+        "symbol": "USDC"
+      },
+      "0xdac17f958d2ee523a2206206994597c13d831ec7": {
+        "id": "usdt-tether",
+        "symbol": "USDT"
+      },
+      "0x5f7827fdeb7c20b443265fc2f40845b715385ff2": {
+        "id": "eurcv-societe-generale-forge",
+        "symbol": "EURCV"
+      },
+      "0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f": {
+        "id": "steakeurcv-steakhouse",
+        "symbol": "steakEURCV"
+      },
+      "0xd0580192e98ea6ceb9c7b6191ed2e27560911697": {
+        "id": "trusd-tori",
+        "symbol": "trUSD"
+      },
+      "0x280839980a7ed0d7717f64125fe241012e5f5815": {
+        "id": "strusd-tori",
+        "symbol": "strUSD"
+      },
+      "0x085780639cc2cacd35e474e71f4d000e2405d8f6": {
+        "id": "fxusd-f-x-protocol",
+        "symbol": "fxUSD"
+      },
+      "0x7743e50f534a7f9f1791dde7dcd89f7783eefc39": {
+        "id": "fxsave-f-x-protocol",
+        "symbol": "fxSAVE"
+      },
+      "0x48f9e38f3070ad8945dfeae3fa70987722e3d89c": {
+        "id": "iusd-infinifi",
+        "symbol": "iUSD"
+      },
+      "0x5086bf358635b81d8c47c66d1c8b9e567db70c72": {
+        "id": "reusd-re-protocol",
+        "symbol": "reUSD"
+      },
+      "0x4c9edd5852cd905f086c759e8383e09bff1e68b3": {
+        "id": "usde-ethena",
+        "symbol": "USDe"
+      },
+      "0x9d39a5de30e57443bff2a8307a4256c8797a3497": {
+        "id": "susde-ethena",
+        "symbol": "sUSDe"
+      }
+    },
+    "ids_basis": "each address's symbol() read on-chain on 2026-10-11 and matched to the Pharos id by name and issuer; iUSD and reUSD are ambiguous by symbol (three iUSD, two reUSD ids)",
+    "min_exposure": 0.01,
+    "common_mode_kinds": [
+      "mint-control",
+      "upgrade-control",
+      "reserve-issuer",
+      "redemption-rail"
+    ],
+    "max_group_members": 12,
+    "groups_basis": "chain, DEX and wide bridge groups (Ethereum: 202 coins, LayerZero: 33) say nothing about one issuer; a group of at most 12 coins sharing a mint key, an upgrade admin, a reserve issuer or a redemption rail does"
   }
 }

@@ -134,6 +134,8 @@ The incident is a fall of a collateral's oracle price, such as an issuer marking
 - the collateral's exit liquidity (from the registry's `exit_liquidity`) and, when it is thin or absent, the loss if nobody liquidates;
 - a verdict.
 
+**Pharos** (keyless, optional): each hit market shows its collateral's grade from Pharos, a token shock also follows Pharos's off-chain backing (fxSAVE backs 16.4 % of infiniFi's iUSD, so an fxSAVE cut reaches siUSD markets, at 16.4 % of the fall), and the notes name the collateral sharing a mint key, upgrade admin or reserve issuer with the shocked token. `graph` draws the same backing and groups. Offline it reads `fixtures/replay/pharos/`; `--record` re-reads it. See `docs/risk-assessment/outside-providers.md`.
+
 **A borrower's default** (`--shock borrower=<collateral symbol or address, market id, or all>:<recovery>[:<n>]`): in each matching market, the n largest borrowers (1 by default) stop repaying and their collateral is recovered at that fraction of its oracle value. It works on any vault or book, and combines with a markdown (`--shock token=mGLOeuro:0.30 --shock borrower=mGLOeuro:0.5`) without counting a position twice:
 
 ```bash

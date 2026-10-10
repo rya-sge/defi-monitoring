@@ -159,6 +159,7 @@ Every source is public and needs no API key. The exact endpoints, queries and me
 | Morpho API `blue-api.morpho.org/graphql` | finding things the chain cannot list cheaply: a user's positions, a market's borrowers and top suppliers, a vault's allocators, sentinels and holders, a default depositor, every market above a TVL floor (sibling search) | `positions`, `borrower`, `market_risk`, `exit_queue`, `graph`, `siblings`, `vault` |
 | Pendle API `api-v2.pendle.finance/core` | PT markets, implied yield, real swap quotes for exit costs, a PT's underlying | `discover`, `watch_user`, `siblings` |
 | DefiLlama `api.llama.fi`, `coins.llama.fi` | protocol list and hack record (incident base rates), token prices and one-year price history, the independent price oracles are compared with | `priors`, `discover`, `admin` |
+| Pharos `api.pharos.watch` (optional, keyless) | issuer grades, off-chain backing and common-mode groups of stablecoins; shown next to our numbers, and the backing as a path an incident follows (`docs/risk-assessment/outside-providers.md`) | `pharos`, `vault_incident`, `graph` |
 | Etherscan `api.etherscan.io/v2/api`, key in `keys.ini` (optional) | whether the `analyze` oracle's source is verified; the contract name of an oracle input no other rule classifies; without the key, "not checked" / "not classified" | `discover`, `oracle_class` (via `sources.contract_source`) |
 
 **Trust model.**
@@ -279,6 +280,9 @@ The design decisions are numbered across nine plans, in the order the increments
 | `plan/2026-10-10-incident-mode.plan.md` | incident mode: a known incident's impact, time to impact and verdict; alert impacts in `watch --user` | D89–D95 |
 | `plan/2026-10-11-vault-incident.plan.md` | incident mode for a vault depositor; curve widened to −30 and −50 % | D98–D103 |
 | `plan/2026-10-11-vault-book.plan.md` | a book of vaults under one incident; recording any vault | D104–D109 |
+| `plan/2026-10-11-wrapped-collateral.plan.md` | a token shock reaches the markets whose collateral wraps it | D110–D111 |
+| `plan/2026-10-11-borrower-concentration.plan.md` | borrower concentration and default; exit liquidity; the no-liquidator branch | D112–D116 |
+| `plan/2026-10-11-pharos.plan.md` | Pharos, keyless: grades, off-chain backing, common-mode groups | D117–D122 |
 
 A change that departs from a decision is recorded in that plan's table.
 

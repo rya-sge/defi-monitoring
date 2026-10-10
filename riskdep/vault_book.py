@@ -192,6 +192,14 @@ def aggregate(book: Book, shocks: list[tuple], incidents: list[VaultIncident]) -
         notes.append(
             f"the incident reaches {len(hit)} vaults of the book at once: their losses add up, they do not offset"
         )
+    mates = list(dict.fromkeys(m for i in incidents for m in i.common_mode))
+    if mates:
+        notes.append("Pharos common-mode groups across the book: " + "; ".join(mates))
+    graded = list(dict.fromkeys(h.grade for i in incidents for h in i.hits if h.grade))
+    if graded:
+        notes.append(f"issuer grades of the hit collateral (Pharos {incidents[0].pharos}): " + ", ".join(graded))
+    if incidents and all(i.pharos is None for i in incidents):
+        notes.append("Pharos: not checked")
     notes.append("each vault is read at its own recorded or live block; the vaults' blocks can differ by minutes")
     return BookIncident(book.name, book.weighting, shocks, lines, value, loss, exposure, headline, notes)
 

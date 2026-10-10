@@ -1,6 +1,8 @@
 # External sources: Pharos, Credora, Nexus Mutual
 
-This document reviews three outside providers of risk data, whose documentation is saved in `../newDocs/`. For each one: what it is, how its data can be reached (public, keyed, paid), what was checked live on 2026-10-10, and how it could improve `riskdep`'s risk computation. The gap ids `K<n>` refer to `GAP.md`; the others (C, M, R, G) to `ANALYSIS_MONITORING.md`.
+> **Status 2026-10-11.** Pharos's keyless dependency graph is in use (plan `2026-10-11-pharos`): grades, off-chain backing in incidents, common-mode groups. Nexus Mutual is next. How each is used now: `docs/risk-assessment/outside-providers.md`; this document stays the survey.
+
+This document reviews three outside providers of risk data, whose documentation is saved in `docs/external/risk-assessment/` (git-ignored, local only). For each one: what it is, how its data can be reached (public, keyed, paid), what was checked live on 2026-10-10, and how it could improve `riskdep`'s risk computation. The gap ids `K<n>` refer to `GAP.md`; the others (C, M, R, G) to `ANALYSIS_MONITORING.md`.
 
 ## Contents
 
@@ -264,7 +266,7 @@ The 0.13 % is a parameter of the method, applied to every Morpho market Credora 
 - **Keys:** a `[pharos]` and a `[credora]` section, with names and no values, in `keys.example.ini`; the values in `keys.ini` only. Nexus needs none.
 - **Tests stay offline:** cache the responses under `fixtures/snapshot/` once, so tests and the demo run without the network.
 - **New thresholds and mappings** (grade → multiplier, cover price → bound) go in `registry.json` with their basis, and in `docs/registry-reference.md`.
-- **The docs themselves:** `../newDocs/` sits outside the repository. Move the three folders under `docs/external/` (git-ignored, like the Morpho and Etherscan docs) and list them in `CLAUDE.md` and `AGENTS.md`.
+- **The docs themselves:** done. The three folders are in `docs/external/risk-assessment/`, git-ignored and listed in `CLAUDE.md` and `AGENTS.md`.
 
 ### Order
 
@@ -287,7 +289,7 @@ The goal: each risk number in `analyze` comes from **our own computation and the
 |---|---|---|---|
 | **Now, no key** | Nexus Mutual `/v2/products`, `/v2/capacity` | Annual cover price per protocol and per depeg, capacity | checked, works |
 | **Now, no key** | Pharos `/api/safety-grades`, `/api/dependency-graph/v1`, `/api/dependency-scenarios/v1` | Issuer grades, look-through edges, common-mode groups, modelled contagion | checked, works |
-| **Now, no key** | Credora public method docs | Morpho protocol PD 0.13 % (method parameter, undated); smart-contract and maturity tiers; oracle classes | in `../newDocs/` |
+| **Now, no key** | Credora public method docs | Morpho protocol PD 0.13 % (method parameter, undated); smart-contract and maturity tiers; oracle classes | in `docs/external/risk-assessment/` |
 | **Supporter key, $10 donation** | Pharos keyed endpoints | DEWS stress score, depeg events, depeg duration, DEX liquidity, redemption backstops, daily snapshots | to obtain; recommended |
 | **Whitelist form, not guaranteed** | Credora GraphQL | Live rating and PSL for Morpho markets and vaults | to request; the plan works without it |
 | **Already held** | Etherscan (`keys.ini`) | Verified oracle sources | in use (D68) |
@@ -395,7 +397,7 @@ Steps 1–3 need no key, and together they turn §5's comparison into a number t
 
 ## 8. Resources
 
-### Local documentation (`../newDocs/`)
+### Local documentation (`docs/external/risk-assessment/`)
 
 | Folder | Files used |
 |---|---|

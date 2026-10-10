@@ -24,6 +24,7 @@ from pathlib import Path
 from . import exit_queue as EQ
 from . import market_risk as MR
 from . import oracle_class as OC
+from . import pharos as PH
 from . import scenario
 from . import sources as S
 from .discover import REGISTRY
@@ -55,6 +56,8 @@ class MarketHit:
     no_liquidator_shortfall: float = 0.0  # D115: the loss if nobody liquidates (liquidity then stays locked)
     top1_share: float = 0.0  # D112: the largest borrower's share of the market's debt, before the incident
     top3_share: float = 0.0
+    grade: str | None = None  # D120: the Pharos grade of the collateral, or of the first graded token it wraps
+    pharos_exposure: float = 0.0  # D119: > 0 when the market is reached through Pharos's off-chain backing edges
 
 
 @dataclass
@@ -80,6 +83,8 @@ class VaultIncident:
     asset_usd: float | None = None  # its USD price (DefiLlama), to add vaults in different assets into one book
     events: list[str] = field(default_factory=list)  # each shock in words, in the order given
     labels: dict[str, str] = field(default_factory=dict)  # each shock's target as given → as the markets name it
+    pharos: str | None = None  # D122: the Pharos publication date used, None when Pharos was not read
+    common_mode: list[str] = field(default_factory=list)  # D121: collateral failing with the shocked token (Pharos)
 
     def lines(self) -> list[str]:
         s = self.symbol
@@ -107,6 +112,8 @@ class VaultIncident:
                     f"    exit liquidity for the collateral: {h.exit_route}; liquidators may not act: if nobody "
                     f"liquidates, the loss is {h.no_liquidator_shortfall:,.0f} and the market's liquidity stays locked"
                 )
+            if h.grade:
+                out.append(f"    issuer grade (Pharos {self.pharos}): {h.grade}")
             if h.via:
                 out.append(
                     f"    reached through what its collateral wraps: {h.via}"
@@ -242,6 +249,39 @@ def match_token(collateral: str, chain: list[str], symbols: dict[str, str], tok:
     return None
 
 
+def pharos_reach(
+    snap: PH.Snapshot, collateral: str, chain: list[str], symbols: dict[str, str], tok: str
+) -> tuple[tuple[str, str] | None, float]:
+    """D119, pure: does the shocked token reach this collateral through Pharos's off-chain backing? For the outermost
+    token of the collateral's on-chain path that Pharos knows, the share of its backing that is the shocked token.
+    Returns ((via, the shocked token's name), share), or (None, 0) below `pharos.min_exposure`."""
+    target = PH.resolve(snap, tok)
+    if target is None:
+        return None, 0.0
+    path = [collateral] + chain
+    for i, t in enumerate(path):
+        pid = PH.resolve(snap, t, symbols.get(t))
+        if pid is None or pid == target:
+            continue
+        share, ppath = PH.exposure(snap, pid, target)
+        if share < PH.P["min_exposure"]:
+            continue
+        name = PH.name(target)
+        onchain = " → ".join(symbols.get(x, x[:10]) for x in path[: i + 1])
+        via = f"{onchain} ⇒ Pharos: {' → '.join(ppath)} ({share:.1%} of its backing)"
+        return (via, name), share
+    return None, 0.0
+
+
+def graded(snap: PH.Snapshot, collateral: str, chain: list[str], symbols: dict[str, str]) -> str | None:
+    """D120, pure: 'fxSAVE F 36' for the collateral or the first token of its path Pharos grades."""
+    for t in [collateral] + chain:
+        g = snap.grade(PH.resolve(snap, t, symbols.get(t)))
+        if g:
+            return f"{symbols.get(t, t[:10])} {g}"
+    return None
+
+
 def nav_timing(profile: scenario.OracleProfile | None) -> str:
     """D100: how fast a fall of the collateral's oracle price reaches the market."""
     if profile is None or profile.kind == OC.NOT_CLASSIFIED:
@@ -364,10 +404,12 @@ def run(
     depositor: str | None,
     token_shocks: list[tuple],
     profile_all: bool = False,
+    pharos: PH.Snapshot | None = None,
 ) -> VaultIncident:
     """Read the vault and every borrower of its markets at `block`, then apply the incident (D98). `token_shocks` is
     `parse_shocks`' list (token markdowns and borrower defaults, D114) or `parse_token_shocks`' pairs. `profile_all`
-    reads every market's oracle, not only the hit ones, so a recording serves any later shock (D105)."""
+    reads every market's oracle, not only the hit ones, so a recording serves any later shock (D105). `pharos`, when
+    given, adds grades, the off-chain backing a token shock also reaches, and common-mode groups (D117–D122)."""
     shocks = normalise(token_shocks)
     view = discover_vault(f, vault, block)
     dep = depositor.lower() if depositor else largest_depositor(f, vault)
@@ -384,6 +426,7 @@ def run(
     drops: dict[str, float] = {}
     vias: dict[str, str] = {}
     names: dict[str, str] = {}
+    pexps: dict[str, float] = {}  # market → share of its collateral's backing the shocked token is (Pharos, D119)
     defaults: dict[str, tuple[float, int]] = {}  # market → (recovery, n), the harshest when several apply
     for kind, tok, v, n in shocks:
         for mid, mp in params.items():
@@ -391,15 +434,24 @@ def run(
                 found = ("", "every market" if tok == "all" else mp.collateral_symbol)
             else:
                 found = match_token(mp.collateral_token, chains.get(mp.collateral_token, []), symbols, tok)
+            pexp = 0.0
+            if found is None and kind == "token" and pharos is not None:
+                found, pexp = pharos_reach(
+                    pharos, mp.collateral_token, chains.get(mp.collateral_token, []), symbols, tok
+                )
             if found is None:
                 continue
-            names[tok] = found[1]
+            if pexp:
+                names.setdefault(tok, found[1])  # an on-chain match names the token better
+            else:
+                names[tok] = found[1]
             if kind == "borrower":
                 r0, n0 = defaults.get(mid, (1.0, 0))
                 defaults[mid] = (min(r0, v), max(n0, n))
                 vias.setdefault(mid, found[0])
-            elif v > drops.get(mid, 0.0):
-                drops[mid], vias[mid] = v, found[0]
+            elif v * (pexp or 1.0) > drops.get(mid, 0.0):
+                drops[mid], vias[mid] = v * (pexp or 1.0), found[0]
+                pexps[mid] = pexp
 
     profiles = (
         {mid: scenario.oracle_profile(f, params[mid].oracle, "latest") for mid in risk.markets} if profile_all else {}
@@ -447,6 +499,11 @@ def run(
         conc = MR.value(risk.tracker.positions.get(mid, {}), totals, price, risk.markets[mid])
         h.top1_share, h.top3_share = conc.top1_share, conc.top3_share
         h.exit_route = exit_route(params[mid].collateral_token)
+        h.pharos_exposure = pexps.get(mid, 0.0)
+        if pharos is not None:
+            h.grade = graded(
+                pharos, params[mid].collateral_token, chains.get(params[mid].collateral_token, []), symbols
+            )
         if d and price is not None and h.liquidatable_debt > 0:
             # D115: nobody liquidates (no exit route): the lenders carry debt − collateral value, and wait
             h.no_liquidator_shortfall = (
@@ -482,6 +539,30 @@ def run(
         notes.append(
             "the hit market is the vault's liquidity market: plain withdrawals draw on its free liquidity only"
         )
+    mates: list[str] = []
+    if pharos is None:
+        notes.append("Pharos: not checked (no grades, off-chain backing or common-mode groups)")
+    else:
+        among = {}
+        for c in params.values():
+            for tkn in [c.collateral_token] + chains.get(c.collateral_token, []):
+                pid = PH.resolve(pharos, tkn, symbols.get(tkn))
+                if pid:
+                    among.setdefault(pid, symbols.get(tkn, pid))
+        for kind, tok, _, _ in shocks:
+            pid = PH.resolve(pharos, tok) if kind == "token" else None
+            for m in PH.common_mode(pharos, pid, among) if pid else []:
+                mates.append(f"{names.get(tok, PH.name(pid))} with {m}")
+        if mates:
+            notes.append(
+                "Pharos common-mode groups: " + "; ".join(mates) + ": one failure of that key, admin or issuer "
+                "reaches both, so a second shock on them is not independent"
+            )
+        if any(h.pharos_exposure for h in hits):
+            notes.append(
+                "some markets are reached through Pharos's off-chain backing (reserve shares): their fall is the "
+                "shock × that share, on the assumption that a loss in the reserve passes to the token pro rata"
+            )
     if dep and st.total_supply:
         notes.append(f"the depositor holds {st.depositor_shares / st.total_supply:.2%} of the vault")
     return VaultIncident(
@@ -506,6 +587,8 @@ def run(
         asset_usd(f, view.asset),
         [describe(s, names) for s in shocks if s[1] in names],
         names,
+        pharos.as_of if pharos is not None else None,
+        mates,
     )
 
 

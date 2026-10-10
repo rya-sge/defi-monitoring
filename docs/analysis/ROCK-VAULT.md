@@ -119,7 +119,7 @@ Huma alone backs about $82M across the RockawayX vaults, 28 % of the firm's tota
 | Re reUSD | quota-share reinsurance (US), ≥ 50 % on-chain buffer partly in USDe/sUSDe (Ethena), Pendle PT pool | cat losses above the equity and mezzanine tranches; Ethena depeg; PT pool or Ojo feed |
 | Hastra PRIME / AUTO | Figure home-equity loans on Provenance, wYLDS, bridged from Solana | loan defaults, bridge failure |
 | Midas mGLOeuro | Fasanara receivables fund, Midas issuance contracts | fund NAV markdown; EUR redemption |
-| infiniFi siUSD | Aave, Pendle, Fluid, Ethena (fractional reserve); liUSD takes losses first | strategy loss beyond the liUSD tranche; bank-run on reserves |
+| infiniFi siUSD | fractional reserve, now mostly off-chain credit farms (FalconX, Fasanara, New Silver; Aave paused); safety buffer then liUSD take losses first, then siUSD | strategy loss beyond the liUSD tranche; bank-run on reserves |
 | SG-Forge EURCV (loan asset) | Société Générale-Forge, EUR/USD feed | EURCV depeg: the oracles price EURCV as 1 EUR |
 
 ## 4. What the oracles mean for the analysis
@@ -227,7 +227,7 @@ etrUSD, a vault of Tori vaults, answers no `asset()` and stays opaque.
 Each entry needs its basis, as `registry.json` requires: issuer category, TVL, age, audits, the Pharos or Nexus estimate where one exists (`EXTERNAL_SOURCE.md` §7), and the redemption route. In order of exposure:
 
 1. **Huma PST** `0x22aE3D9a…d4c7`. Category: private credit. Single-originator concentration.
-2. **f(x) fxSAVE** `0x7743e50F…fc39` (underlying fxUSD `0x65c9a641…`).
+2. **f(x) fxSAVE** `0x7743e50F…fc39` (its asset is the fxSP stability-pool share `0x65c9a641…`, `FxUSDBasePool`; fxUSD itself is `0x0857…d8f6`).
 3. **Tori**:
    - trUSD `0xd0580192…1697`;
    - strUSD `0x28083998…5815`;
