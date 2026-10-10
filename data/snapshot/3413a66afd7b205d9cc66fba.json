@@ -1,0 +1,1 @@
+{"method": "POST", "url": "https://ethereum-rpc.publicnode.com", "body": {"jsonrpc": "2.0", "id": 1, "method": "eth_call", "params": [{"to": "0x217d6DdCDB95112C51657F6270e8C079CFDB51f0", "data": "0xf50a4718"}, "latest"]}, "fetched": "2026-10-10T10:34:43Z", "response": {"jsonrpc": "2.0", "id": 1, "result": "0x00000000000000000000000077ee147391eac11c92817e771860ff4aad265d89"}}

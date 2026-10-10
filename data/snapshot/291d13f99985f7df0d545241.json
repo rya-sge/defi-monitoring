@@ -1,0 +1,1 @@
+{"method": "GET", "url": "https://coins.llama.fi/prices/current/ethereum:0x9d39a5de30e57443bff2a8307a4256c8797a3497", "body": null, "fetched": "2026-10-10T10:30:12Z", "response": {"coins": {"ethereum:0x9d39a5de30e57443bff2a8307a4256c8797a3497": {"decimals": 18, "symbol": "sUSDe", "price": 1.2515039875519076, "timestamp": 1791627744, "confidence": 1}}}}

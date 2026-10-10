@@ -1,0 +1,232 @@
+{
+  "_doc": "Hand-kept facts and assumptions. Every number used in the report traces to an entry here or to live data. Addresses are Ethereum mainnet, lowercase.",
+  "chain": {
+    "ethereum": {
+      "label": "Ethereum mainnet (settlement)",
+      "p_year": 0.01,
+      "severity": {
+        "a": 1.0,
+        "b": 199.0
+      },
+      "basis": "No fund-losing consensus failure since the Merge; finality was lost twice for ~1h on 2023-05-11/12. Modelled as a 1%/yr liveness event costing ~0.5% (stuck exit, gas spike)."
+    }
+  },
+  "issuers": {
+    "0x9d39a5de30e57443bff2a8307a4256c8797a3497": {
+      "symbol": "sUSDe",
+      "issuer": "Ethena",
+      "llama_slug": "ethena-usde",
+      "category": "Basis Trading",
+      "kind": "synthetic-dollar",
+      "dependencies": [
+        "Delta-hedged perp shorts on CEXs (funding-rate risk)",
+        "Off-exchange custodians (Copper, Ceffu, Cobo)",
+        "USDe mint/redeem desk (KYC'd, off-chain)",
+        "Staked ETH / BTC / stablecoin backing"
+      ],
+      "depeg": {
+        "p_year": 0.12,
+        "severity": {
+          "a": 1.6,
+          "b": 18.0
+        },
+        "recovery": 0.75,
+        "basis": "USDe printed ~0.65 on a single CEX order book during the 2025-10-10 liquidation cascade while on-chain pools stayed near peg, and dipped ~0.3% in Apr-2024 on negative funding. Modelled: 12%/yr chance of a depeg averaging ~8%, 75% of it recovered by the horizon."
+      },
+      "hack": {
+        "severity": {
+          "a": 1.2,
+          "b": 3.0
+        },
+        "basis": "Loss of a custodian or CEX holding hedges; Ethena's reserve fund covers the first slice. Mean ~29% of backing."
+      }
+    },
+    "0x4c9edd5852cd905f086c759e8383e09bff1e68b3": {
+      "symbol": "USDe",
+      "issuer": "Ethena",
+      "llama_slug": "ethena-usde",
+      "category": "Basis Trading",
+      "kind": "synthetic-dollar",
+      "dependencies": [
+        "Delta-hedged perp shorts on CEXs",
+        "Off-exchange custodians"
+      ],
+      "depeg": {
+        "p_year": 0.12,
+        "severity": {
+          "a": 1.6,
+          "b": 18.0
+        },
+        "recovery": 0.75,
+        "basis": "As sUSDe."
+      },
+      "hack": {
+        "severity": {
+          "a": 1.2,
+          "b": 3.0
+        },
+        "basis": "As sUSDe."
+      }
+    },
+    "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0": {
+      "symbol": "wstETH",
+      "issuer": "Lido",
+      "llama_slug": "lido",
+      "category": "Liquid Staking",
+      "kind": "liquid-staking",
+      "dependencies": [
+        "Ethereum validator set run by Lido node operators",
+        "Withdrawal queue",
+        "Lido DAO upgrade keys"
+      ],
+      "depeg": {
+        "p_year": 0.08,
+        "severity": {
+          "a": 1.5,
+          "b": 30.0
+        },
+        "recovery": 0.85,
+        "basis": "stETH/ETH traded ~0.94 in Jun-2022 (3AC/Celsius forced selling); withdrawals since Shapella cap the gap."
+      },
+      "hack": {
+        "severity": {
+          "a": 1.0,
+          "b": 8.0
+        },
+        "basis": "Mass slashing or key compromise; mean ~11%."
+      }
+    },
+    "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd": {
+      "symbol": "sUSDS",
+      "issuer": "Sky",
+      "llama_slug": "sky-lending",
+      "category": "CDP",
+      "kind": "cdp-stablecoin",
+      "dependencies": [
+        "Sky vaults (ETH, RWA, USDC via PSM)",
+        "Sky governance / oracle security module"
+      ],
+      "depeg": {
+        "p_year": 0.05,
+        "severity": {
+          "a": 1.5,
+          "b": 40.0
+        },
+        "recovery": 0.85,
+        "basis": "DAI briefly ~0.90 during the Mar-2023 USDC depeg (PSM exposure)."
+      },
+      "hack": {
+        "severity": {
+          "a": 1.0,
+          "b": 6.0
+        },
+        "basis": "Governance or oracle attack on the CDP system."
+      }
+    }
+  },
+  "stables": {
+    "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48": {
+      "symbol": "USDC",
+      "issuer": "Circle",
+      "basis": "Fiat-backed; depegged to ~0.88 on 2023-03-11 (SVB). For a borrower, a loan-asset depeg lowers the debt: no loss channel."
+    },
+    "0xdac17f958d2ee523a2206206994597c13d831ec7": {
+      "symbol": "USDT",
+      "issuer": "Tether",
+      "basis": "Fiat/treasury-backed. For a borrower, a loan-asset depeg lowers the debt: no loss channel."
+    }
+  },
+  "protocols": {
+    "pendle": {
+      "label": "Pendle V2 (AMM, SY/PT/YT contracts)",
+      "llama_slug": "pendle-v2",
+      "category": "Yield",
+      "severity": {
+        "a": 0.8,
+        "b": 5.0
+      },
+      "basis": "A core-contract or SY-adapter exploit reaches PT holders directly. Mean ~14%: Pendle paused and protected ~$105M during the 2024-09 Penpie exploit (Penpie, a protocol built on Pendle, lost ~$27M)."
+    },
+    "morpho-blue": {
+      "label": "Morpho Blue (isolated market)",
+      "llama_slug": "morpho-blue",
+      "category": "Lending",
+      "severity": {
+        "a": 0.6,
+        "b": 6.0
+      },
+      "basis": "Immutable core, formally verified; exploits of >=$100M lending protocols in the record took <1% of TVL (Aave V3 $0.9M, Venus $3.7M). Mean ~9% of collateral, deliberately above that record."
+    }
+  },
+  "oracle": {
+    "p_year_floor": 0.01,
+    "techniques": [
+      "Oracle Misconfiguration",
+      "Stale Oracle Price",
+      "Predictable Oracle Update"
+    ],
+    "unverified_factor": 2.0,
+    "severity": {
+      "a": 2.0,
+      "b": 18.0
+    },
+    "basis": "Counts misconfigured / stale / predictable oracle exploits only (spot-price manipulation of thin tokens does not apply to a PT oracle), over Lending + CDP protocols >= $1M. Severity: the reading drops ~10% on average, enough to liquidate a high-LTV loop with no real loss of value."
+  },
+  "frequency": {
+    "years": 5,
+    "min_tvl_usd": 1000000,
+    "floor": 0.005,
+    "cap": 0.15,
+    "tiers_usd": [
+      10000000,
+      100000000
+    ],
+    "category_multiplier_clip": [
+      0.5,
+      2.0
+    ],
+    "age_factor": {
+      "lt_1y": 2.0,
+      "1y_3y": 1.0,
+      "gt_3y": 0.7
+    },
+    "basis": "Exploit frequency = hacks over the last 5 years of protocols in the same current-TVL tier (<$10M, $10M-$100M, >=$100M), all categories pooled, / (protocols in that tier x 5); x the category's rate relative to all categories (clipped 0.5-2); x an age factor. Survivorship: hacked protocols that died are missing from the denominator's tier, which biases small tiers up, not the >=$100M tier."
+  },
+  "unknown_issuer": {
+    "depeg": {
+      "p_year": 0.15,
+      "severity": {
+        "a": 1.5,
+        "b": 10.0
+      },
+      "recovery": 0.6,
+      "basis": "Unidentified yield source: conservative default."
+    },
+    "hack": {
+      "severity": {
+        "a": 1.0,
+        "b": 2.0
+      },
+      "basis": "Unidentified yield source: conservative default."
+    },
+    "category": "Yield"
+  },
+  "pt_stress_extra_discount": 0.5,
+  "pt_stress_basis": "During an underlying depeg, PT trades below its redemption value as LPs withdraw from the Pendle pool: market-tracking oracles see the depeg amplified by 1.5x.",
+  "gas_exit_usd": 25,
+  "tail_budget": 0.5,
+  "tail_budget_basis": "Recommend reducing when CVaR95 exceeds 50% of equity.",
+  "watch": {
+    "market_share_warn": 0.25,
+    "utilization_warn": 0.99,
+    "utilization_min_share": 0.1,
+    "oracle_move_warn": 0.05,
+    "large_flow_info": 0.01,
+    "poll_seconds": 12,
+    "confirmations": 2,
+    "max_range": 500,
+    "state_window_blocks": 64,
+    "basis": "D26. Shares are of the vault's total assets; the oracle move is between two consecutive state reads; large_flow_info: a deposit or withdrawal by someone else above 1% of total assets.",
+    "crosscheck_every_blocks": 300
+  }
+}

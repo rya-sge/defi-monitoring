@@ -1,0 +1,5 @@
+{
+  "as_of": 1791628213,
+  "iso": "2026-10-10T10:30:13Z",
+  "_doc": "Time the analyze snapshot was taken. Offline runs use it as 'now' (riskdep/clock.py) so date-keyed requests and days-to-maturity match the snapshot. Rewritten by `analyze --refresh`."
+}

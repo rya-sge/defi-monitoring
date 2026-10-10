@@ -1,0 +1,1 @@
+{"method": "GET", "url": "https://coins.llama.fi/prices/current/ethereum:0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0", "body": null, "fetched": "2026-10-10T10:34:38Z", "response": {"coins": {"ethereum:0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0": {"decimals": 18, "symbol": "wstETH", "price": 3105.9842492919674, "timestamp": 1791627775, "confidence": 0.99}}}}
