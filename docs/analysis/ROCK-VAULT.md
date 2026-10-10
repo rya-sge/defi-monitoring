@@ -213,7 +213,14 @@ The seven Ethereum vaults are in `examples/rockawayx-ethereum.json` and recorded
 - **Tori reaches two vaults through two tokens** (strUSD and etrUSD); together a 30 % cut on both would cost about 1.9M.
 - **Leaving first lowers the loss in most hit vaults**, because they have many depositors; Belem is the exception, with one depositor at 99.46 %.
 
-**Limit (D108):** a token is matched as the markets' direct collateral. trUSD and wYLDS match nothing, although PT-trUSD, etrUSD and wYLDS-based markets depend on them; a look-through of wrapped collateral is the next step.
+**Wrapped collateral (D108, then D110–D111).** The table above matches a token as the markets' direct collateral. Since plan `2026-10-11-wrapped-collateral`, a token also reaches the markets whose collateral wraps it:
+
+| Token cut by 30 % | Vaults reached | In those markets | Book loss | Through |
+|---|---|---|---|---|
+| trUSD (Tori) | Tori Ecosystem, USDC Yield | 17.01M | 1.61M (1.63 %) | strUSD, PT-strUSD, PT-trUSD (oracles constant-price: hidden shortfall) |
+| wYLDS (Hastra) | Confidential RWA USDC, USDC Yield, NUVA Ecosystem | 3.40M | 0.09M (0.09 %) | PRIME, AUTO, nvPRIME |
+
+etrUSD, a vault of Tori vaults, answers no `asset()` and stays opaque.
 
 ## 6. Registry additions this needs
 

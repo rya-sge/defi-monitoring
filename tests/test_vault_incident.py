@@ -1,6 +1,7 @@
 """Incident mode for a vault depositor (plan 2026-10-11-vault-incident): parsing, the pure parts, the Belem vault."""
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -66,3 +67,37 @@ def test_vault_mode_needs_a_token_shock(tmp_path):
         cli.main(["analyze", "--vault", BELEM, "--out", str(tmp_path)])
     with pytest.raises(SystemExit):
         cli.main(["analyze", "--vault", BELEM, "--shock", "oracle=0.1", "--out", str(tmp_path)])
+
+
+# --- wrapped collateral (D110, D111)
+
+
+def test_match_token_direct_and_through_wrappers():
+    sym = {"0xpt": "PT-trUSD", "0xstr": "strUSD", "0xtr": "trUSD"}
+    assert VI.match_token("0xpt", ["0xstr", "0xtr"], sym, "0xpt") == ("", "PT-trUSD")
+    assert VI.match_token("0xpt", ["0xstr", "0xtr"], sym, "trusd") == ("PT-trUSD → strUSD → trUSD", "trUSD")
+    assert VI.match_token("0xpt", ["0xstr", "0xtr"], sym, "usdc") is None
+
+
+def test_unseen_wrapped_markdown_is_a_hidden_shortfall():
+    info = MarketInfo("m", 0.86, 18, "USDC", "X/USDC")
+    price = 10**36
+    pos = {"a": (100 * M, 80 * 10**6 * 10**12)}  # 100 collateral, debt 80
+    totals = (80 * M, 80 * 10**6 * 10**12 + 10**6)
+    nav = scenario.OracleProfile(OC.CONSTANT_PRICE, "nav")
+    hidden = VI.market_hit("m", info, pos, totals, price, 0.30, 1.0, nav, via="X → Y")
+    assert not hidden.seen and hidden.liquidatable_debt == 0
+    assert hidden.bad_debt == pytest.approx(10, rel=1e-3)  # 80 − 100 × 0.7
+    market = scenario.OracleProfile(OC.PRICE_TRACKING, "feed")
+    seen = VI.market_hit("m", info, pos, totals, price, 0.30, 1.0, market, via="X → Y")
+    assert seen.seen and seen.liquidatable_debt > 0  # a market oracle follows the markdown
+
+
+def test_book_reaches_wrapped_trusd_offline(tmp_path):
+    book = str(Path(__file__).resolve().parent.parent / "examples" / "rockawayx-ethereum.json")
+    assert cli.main(["analyze", "--book", book, "--shock", "token=trUSD:0.30", "--out", str(tmp_path)]) == 0
+    r = json.loads((tmp_path / "book-incident.json").read_text())
+    hit = {ln["name"] for ln in r["lines"] if ln["hit_markets"]}
+    assert hit == {"RockawayX Tori Ecosystem", "RockawayX USDC Yield"} and r["loss_usd"] > 1_000_000
+    assert cli.main(["analyze", "--book", book, "--shock", "token=USDC:0.30", "--out", str(tmp_path)]) == 0
+    assert json.loads((tmp_path / "book-incident.json").read_text())["loss_usd"] == 0  # a loan asset ends a chain

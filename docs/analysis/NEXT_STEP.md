@@ -45,6 +45,7 @@ Steps of the two earlier versions that are now done, with their plans:
 | Oracle mode from structure (part of v2 B4) | the ex-ante simulation reads the oracle's structure before the price inference | D96 |
 | Vault depositor's loss under an incident (most of v2 D1) | `analyze --vault --shock token=…`; curves widened to −30 and −50 % | `2026-10-11-vault-incident` |
 | A book (part of v2 A3) | `analyze --book` / several `--vault`, user-defined, in USD, with a headline; `--record` for any vault | `2026-10-11-vault-book` |
+| Wrapped collateral in vault incidents (A1) | a token reaches the markets whose collateral wraps it; hidden shortfall when the oracle does not follow | `2026-10-11-wrapped-collateral` |
 | CI (part of v1 step 10) | lint and tests on every push | — |
 
 **No longer relevant:** v1 step 2 as written ("`analyze` for any collateral") is replaced, for vaults, by the vault incident mode, which takes any collateral; for a borrower it continues as part of A2 below. The v1 → v2 carry-over table and the "phase A first" ordering are superseded by this file.
@@ -60,7 +61,7 @@ Steps of the two earlier versions that are now done, with their plans:
 
 | # | Step | Gaps | Size | Builds on |
 |---|---|---|---|---|
-| **A1** | Look-through of wrapped collateral in vault incidents | D108, K19 | S–M | `siblings.underlyings`, `wraps` edges |
+| ~~**A1**~~ | ~~Look-through of wrapped collateral in vault incidents~~ **done** (plan `2026-10-11-wrapped-collateral`) | D108, K26 | S–M | `siblings.underlyings` |
 | **A2** | Breakeven probability p\* for a position, a vault and a book; mixed books with borrow and PT pockets | K21, M6 | M | `vault_book.py`, `scenario.py`, `decide.py` |
 | **A3** | Detection → impact for vaults: an issuer NAV update triggers the vault incident; other alert types carry an impact | K20, K22 | S–M | `vault_incident.py`, the watches |
 | **A4** | Conditional Monte Carlo around a known incident | K6, K14 | M | `simulate.py`, `scenario.py`, `vault_incident.py` |
@@ -89,7 +90,9 @@ If time allows one phase, do **A**. If two, **A then B1, B5 and B6**: the PT loo
 
 ## 5. Phase A: complete the brief's chain
 
-### A1. Look-through of wrapped collateral (D108)
+### A1. Look-through of wrapped collateral (D108) — done
+
+**Status: done on 2026-10-11** (plan `2026-10-11-wrapped-collateral`, D110–D111). A token now reaches the markets whose collateral wraps it, with the path shown; a market whose oracle does not track a market counts a hidden shortfall. `token=trUSD:0.30` reaches two RockawayX vaults (1.61M USD). Left: etrUSD, a vault of vaults that answers no `asset()`, stays opaque; an issuer NAV oracle that reprices from its underlying is not detected as such.
 
 **Why.** A vault incident matches a token only as the markets' direct collateral. A trUSD or wYLDS markdown finds no market in the RockawayX book, although PT-trUSD, PT-strUSD, etrUSD and wYLDS-based markets depend on those tokens (`ROCK-VAULT.md` §5.2).
 

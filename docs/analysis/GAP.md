@@ -76,7 +76,7 @@ Of the scope items the brief names, feed quality, vaults in external venues, TVL
 | K23 | Feed quality (heartbeat, staleness, sources, shared feed) not measured | missing | named in the brief's scope | medium | S–M | open; the feeds' round history is read for classification only (C2) |
 | K24 | Vaults or hedges in an external venue (perp, CEX) not covered | missing | named in the brief's scope; Belem runs market-neutral | medium | M–L | open (C4) |
 | K25 | Concentration of TVL (protocol share of chain, position share of pool and supply) not measured | missing | named in the brief's scope | medium | S | open; collateral held per Blue market available from `graph` (C3) |
-| K26 | A vault incident matches a token only as the markets' direct collateral, not through what wraps it (a PT, an ERC-4626 share, a vault of vaults) | under-states reach | trUSD and wYLDS match no RockawayX market, although PT-trUSD, etrUSD and wYLDS-based markets depend on them | medium | S–M | open (A1) |
+| K26 | A vault incident matches a token only as the markets' direct collateral, not through what wraps it (a PT, an ERC-4626 share, a vault of vaults) | under-states reach | trUSD and wYLDS match no RockawayX market, although PT-trUSD, etrUSD and wYLDS-based markets depend on them | medium | S–M | done: plan `2026-10-11-wrapped-collateral`; etrUSD (no `asset()`) stays opaque |
 | K27 | A vault incident assumes liquidations happen; issuer-priced collateral needs a buyer of the issuer's token, and the liquidity liquidations return is not modelled | unknown direction | Belem: 3.68M of mGLOeuro-backed debt liquidatable at a 10 % NAV cut, with one market as the vault's only liquidity source | medium | M | open (B6) |
 
 ## 3. Probabilities
@@ -375,6 +375,7 @@ A V2 vault holding V1.1 shares through `MorphoVaultV1Adapter` inherits the V1.1 
 
 A vault incident (`--shock token=<collateral>:<fall>`) hits the markets whose collateral **is** that token. A markdown of a token reaches more markets than that: those whose collateral wraps it. In the RockawayX book, `token=trUSD:0.30` and `token=wYLDS:0.30` hit nothing, although PT-trUSD, PT-strUSD, etrUSD (a vault of Tori vaults) and wYLDS-based markets depend on them (`ROCK-VAULT.md` §5.2).
 
+- *(done 2026-10-11, plan `2026-10-11-wrapped-collateral`: `token=trUSD:0.30` now reaches the PT-trUSD, PT-strUSD and strUSD markets of two vaults, 1.61M USD; a market whose oracle does not track a market counts a hidden shortfall, D111.)*
 - **Fix:** resolve each market's collateral to what it wraps, through a PT's SY and yield token, an ERC-4626 share's `asset()` and a vault of vaults' underlying (`siblings.underlyings` and the `wraps` edges already resolve the first two), and pass the fall through, according to the oracle's class (`NEXT_STEP.md` A1).
 
 ### K27. Liquidations of issuer-priced collateral are assumed (found 2026-10-11)

@@ -9,9 +9,10 @@ data
 .ruff_cache/
 # secrets: keys.ini holds real API keys and is never committed; keys.example.ini (no values) stays tracked
 keys.ini
-# third-party docs kept locally only: the Chainlink Data Feeds and Morpho developer documentation (listed in CLAUDE.md, docs/external/)
+# third-party docs kept locally only: the Chainlink Data Feeds, Morpho developer and Tori documentation (listed in CLAUDE.md, docs/external/)
 docs/external/chainlink/docs.chain.link-data-feeds-docs/
 docs/external/morpho/docs.morpho.org-developers-docs/
+docs/external/tori/docs.tori.finance-docs/
 
 # challenge brief kept locally only (referenced in CLAUDE.md); the directory itself is not ignored
 docs/hackaton_instruction/Hackathon_DeFi-Risk-Dependency-Challenge_EN_v1.pdf

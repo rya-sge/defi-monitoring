@@ -29,6 +29,8 @@ from . import sources as S
 from .discover import REGISTRY
 from .vault import discover_vault, largest_depositor, read_state
 
+TERMINAL = frozenset(REGISTRY["stables"])
+
 
 @dataclass
 class MarketHit:
@@ -44,6 +46,8 @@ class MarketHit:
     oracle_class: str
     timing: str
     vault_exposure: float = 0.0  # the vault's assets in this market: what the incident puts at risk
+    via: str = ""  # D110: empty for the collateral itself; else the wrapping path, e.g. "PT-trUSD → trUSD"
+    seen: bool = True  # D111: False when the oracle does not follow a markdown of what the collateral wraps
 
 
 @dataclass
@@ -70,9 +74,7 @@ class VaultIncident:
 
     def lines(self) -> list[str]:
         s = self.symbol
-        shock = (
-            ", ".join(f"{h.label.split('/')[0]} −{h.drop:.0%}" for h in self.hits) or "no market of the vault holds it"
-        )
+        shock = ", ".join(f"{k} −{v:.0%}" for k, v in self.shocks.items()) or "no market of the vault holds it"
         out = [f"INCIDENT  {shock}  ·  {self.name} ({self.vault}), block {self.block}"]
         for h in self.hits:
             out.append(
@@ -80,6 +82,16 @@ class VaultIncident:
                 f"({h.borrowers} borrowers); bad debt {h.bad_debt:,.0f}; the vault supplies {h.vault_share:.0%} → "
                 f"its loss {h.vault_loss:,.0f}"
             )
+            if h.via:
+                out.append(
+                    f"    reached through what its collateral wraps: {h.via}"
+                    + (
+                        ""
+                        if h.seen
+                        else "; the oracle does not follow it: no liquidation, the lenders' shortfall "
+                        "if the markdown persists is counted as the loss (hidden)"
+                    )
+                )
             out.append(f"    oracle {h.oracle_class}; how fast: {h.timing}")
         out.append(
             f"  vault loss {self.vault_loss:,.0f} {s} ({self.vault_loss / self.vault_total:.2%} of {self.vault_total:,.0f})"
@@ -125,6 +137,17 @@ def parse_token_shocks(items: list[str] | None) -> list[tuple[str, float]]:
     return out
 
 
+def match_token(collateral: str, chain: list[str], symbols: dict[str, str], tok: str) -> tuple[str, str] | None:
+    """D110, pure: does the shocked token `tok` (an address or a symbol, lower case) reach this collateral? Returns
+    (via, the token's symbol): via is empty for the collateral itself, else the path "PT-trUSD → strUSD → trUSD"."""
+    path = [collateral] + chain
+    for i, t in enumerate(path):
+        if tok in (t, symbols.get(t, "").lower()):
+            via = " → ".join(symbols.get(x, x[:10]) for x in path[: i + 1]) if i else ""
+            return via, symbols.get(t, t)
+    return None
+
+
 def nav_timing(profile: scenario.OracleProfile | None) -> str:
     """D100: how fast a fall of the collateral's oracle price reaches the market."""
     if profile is None or profile.kind == OC.NOT_CLASSIFIED:
@@ -139,6 +162,18 @@ def nav_timing(profile: scenario.OracleProfile | None) -> str:
     return "through a meta-oracle: " + scenario.time_to_impact(profile, {"issuer_depeg": 0.5}).text
 
 
+def hidden_shortfall(positions: dict[str, tuple[int, int]], totals: tuple[int, int], price: int, drop: float) -> int:
+    """D111, pure: Σ max(0, debt − collateral value × (1 − drop)), raw loan units: what lenders lose if the collateral
+    is worth `drop` less while the oracle, which does not follow, liquidates nobody."""
+    tba, tbs = totals
+    out = 0
+    for coll, bshares in positions.values():
+        if bshares:
+            debt = bshares * (tba + 1) // (tbs + 10**6)
+            out += max(0, debt - int(coll * price // 10**36 * (1 - drop)))
+    return out
+
+
 def market_hit(
     mid: str,
     info: MR.MarketInfo,
@@ -149,25 +184,38 @@ def market_hit(
     vault_share: float,
     profile: scenario.OracleProfile | None,
     exposure: float = 0.0,
+    via: str = "",
 ) -> MarketHit:
-    """D99, pure: one market's liquidations and bad debt at the shocked oracle price, and the vault's part."""
-    shocked = int(price * (1 - drop)) if price is not None else None
-    r = MR.value(positions, totals, shocked, info)
+    """D99, pure: one market's liquidations and bad debt at the shocked oracle price, and the vault's part. D111: when
+    the market is reached through what its collateral wraps (`via`) and its oracle does not track a market, the oracle
+    does not move; the loss is the hidden shortfall, with nothing liquidated."""
+    seen = not via or (profile is not None and profile.kind == OC.PRICE_TRACKING)
     unit = 10**info.loan_decimals
-    bad = r.unrealised_bad_debt / unit
+    if seen:
+        shocked = int(price * (1 - drop)) if price is not None else None
+        r = MR.value(positions, totals, shocked, info)
+        liquidatable, bad = r.liquidatable_now / unit, r.unrealised_bad_debt / unit
+    else:
+        r = MR.value(positions, totals, price, info)
+        liquidatable = 0.0
+        bad = hidden_shortfall(positions, totals, price, drop) / unit if price is not None else 0.0
     return MarketHit(
         mid,
         info.label,
         drop,
         r.borrowers,
         r.total_borrow / unit,
-        r.liquidatable_now / unit,
+        liquidatable,
         bad,
         vault_share,
         bad * vault_share,
         profile.kind if profile else OC.NOT_CLASSIFIED,
-        nav_timing(profile),
+        nav_timing(profile)
+        if seen
+        else "the oracle does not move; the loss lands when the collateral is repriced or sold",
         exposure,
+        via,
+        seen,
     )
 
 
@@ -232,13 +280,21 @@ def run(
     shares = MR.vault_supply_shares(st, risk.markets)
     unit = 10**view.decimals
 
-    # resolve each shocked token, given by address or by symbol, to the collateral addresses of the vault's markets
+    # resolve each shocked token, given by address or by symbol, to the markets whose collateral is it or wraps it
     params = {mp.id: mp for a in view.adapters for mp in a.markets.values()}
+    chains, symbols = collateral_chains(f, {mp.collateral_token for mp in params.values()}, block)
+    for mp in params.values():
+        symbols.setdefault(mp.collateral_token, mp.collateral_symbol)
     drops: dict[str, float] = {}
+    vias: dict[str, str] = {}
+    names: dict[str, str] = {}
     for tok, v in token_shocks:
         for mid, mp in params.items():
-            if tok in (mp.collateral_token.lower(), mp.collateral_symbol.lower()):
-                drops[mid] = max(drops.get(mid, 0.0), v)
+            found = match_token(mp.collateral_token, chains.get(mp.collateral_token, []), symbols, tok)
+            if found is None or v <= drops.get(mid, 0.0):
+                continue
+            drops[mid], vias[mid] = v, found[0]
+            names[tok] = found[1]
 
     profiles = (
         {mid: scenario.oracle_profile(f, params[mid].oracle, "latest") for mid in risk.markets} if profile_all else {}
@@ -258,6 +314,7 @@ def run(
             shares.get(mid, 0.0),
             profile,
             st.markets[mid].vault_assets / unit,
+            vias.get(mid, ""),
         )
         hits.append(h)
         loss_raw += int(h.vault_loss * unit)
@@ -287,7 +344,7 @@ def run(
         view.asset_symbol,
         block,
         dep,
-        {params[m].collateral_symbol: d for m, d in drops.items()},
+        {names.get(tok, tok): v for tok, v in token_shocks if tok in names},
         hits,
         st.total_assets / unit,
         loss_raw / unit,
@@ -302,6 +359,42 @@ def run(
         view.asset,
         asset_usd(f, view.asset),
     )
+
+
+def collateral_chains(
+    f: S.Fetcher, tokens: set[str], block, depth: int = 4
+) -> tuple[dict[str, list[str]], dict[str, str]]:
+    """D110: what each collateral wraps, level by level: a PT's Pendle underlying, an ERC-4626 share's asset()
+    (`siblings.underlyings`); and the symbols of every token met. A vault of vaults that answers neither stays opaque.
+    The registry's stablecoins (USDC, USDT) end a chain, as in `siblings.family`: they are the loan assets."""
+    from .siblings import underlyings
+    from .vault import _symbol
+
+    step: dict[str, str] = {}
+    level = {t.lower() for t in tokens}
+    for _ in range(depth):
+        try:
+            found = underlyings(f, level, block)
+        except (S.SourceError, S.CacheMiss):
+            break
+        step.update({t: u for t, (u, _how) in found.items()})
+        level = {u for u, _how in found.values() if u not in step and u not in tokens and u not in TERMINAL}
+        if not level:
+            break
+    chains: dict[str, list[str]] = {}
+    for t in tokens:
+        chain, x = [], t.lower()
+        while x in step and step[x] not in chain and step[x] not in TERMINAL and len(chain) < depth:
+            x = step[x]
+            chain.append(x)
+        chains[t.lower()] = chain
+    symbols: dict[str, str] = {}
+    for t in {x for c in chains.values() for x in c}:
+        try:
+            symbols[t] = _symbol(f, t, block)
+        except (S.SourceError, S.CacheMiss):
+            symbols[t] = t[:10]
+    return chains, symbols
 
 
 def asset_usd(f: S.Fetcher, asset: str) -> float | None:
