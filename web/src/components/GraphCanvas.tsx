@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import { MarkerType, Panel, ReactFlow, useNodesState, useReactFlow } from '@xyflow/react';
 import type { XYPosition } from '@xyflow/react';
 import { Maximize, Minus, Plus } from 'lucide-react';
@@ -18,7 +19,7 @@ import {
   nodeRole,
   reach,
 } from '../lib/graph';
-import type { Lit } from '../lib/graph';
+import type { LayoutFlow, Lit } from '../lib/graph';
 import { RiskEdge, RiskNode } from './GraphElements';
 import type { RiskEdgeType, RiskNodeType } from './GraphElements';
 
@@ -59,6 +60,10 @@ export type GraphCanvasProps = {
   positions?: Map<string, XYPosition>;
   /** Draw edges without arrowheads (a symmetric relation). */
   undirected?: boolean;
+  /** How edges attach: top to bottom (default), left to right, or centre to centre. */
+  flow?: LayoutFlow;
+  /** Drawn inside the canvas, e.g. a `<Panel>` of controls. */
+  children?: ReactNode;
 };
 
 const nodeTypes = { risk: RiskNode };
@@ -192,6 +197,8 @@ export function GraphCanvas({
   more,
   positions,
   undirected = false,
+  flow = 'TB',
+  children,
 }: GraphCanvasProps) {
   const [initial] = useState(() => initialNodes(nodes, edges, positions));
   const [rfNodes, setNodes, onNodesChange] = useNodesState(initial);
@@ -219,6 +226,7 @@ export function GraphCanvas({
           type: 'risk',
           source: edge.source,
           target: edge.target,
+          ...(flow === 'LR' ? { sourceHandle: 'r', targetHandle: 'l' } : {}),
           // Sized in screen units, so a thick edge does not get a giant arrowhead.
           markerEnd: undirected
             ? undefined
@@ -233,13 +241,14 @@ export function GraphCanvas({
             edge,
             width: edgeWidth(edge.amount),
             colour,
+            floating: flow === 'free',
             label: [edgeLabel(edge.amount, edge.unit), hf != null ? `HF ${detailValue(hf)}` : '']
               .filter(Boolean)
               .join(' · '),
           },
         };
       }),
-    [edges, undirected],
+    [edges, undirected, flow],
   );
 
   const lit = useMemo(
@@ -322,6 +331,7 @@ export function GraphCanvas({
       onPaneClick={() => onSelect(null)}
     >
       <ZoomControls />
+      {children}
     </ReactFlow>
   );
 }

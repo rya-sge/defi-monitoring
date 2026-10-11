@@ -6,7 +6,7 @@ from typing import Any
 
 from fastapi import APIRouter, Body, HTTPException
 
-from ... import pipeline, report
+from ... import pipeline, report, scenario
 from ... import sources as S
 from ..artifacts import fetch_lock, read_artifact
 from ..schemas import AnalyzeRequest, Report
@@ -24,8 +24,11 @@ def get_report() -> Any:
 def post_analyze(req: AnalyzeRequest = Body(default_factory=AnalyzeRequest)) -> Any:
     """Run one analysis and return its report. Nothing is written to `out/`."""
     with fetch_lock:
-        f = S.Fetcher("live" if req.live else "offline")
+        mode = "live" if req.live else "offline"
+        f = S.Fetcher(mode)
         try:
+            items, venue = pipeline.venue_shocks(req.shocks, mode, "position")
+            shocks = scenario.parse_shocks(items)
             res = pipeline.analyze(
                 f,
                 market=req.market,
@@ -34,6 +37,8 @@ def post_analyze(req: AnalyzeRequest = Body(default_factory=AnalyzeRequest)) -> 
                 pt_amount=req.pt_amount,
                 horizon=req.horizon,
                 paths=req.paths,
+                shocks=shocks,
+                venue=venue,
             )
         except ValueError as e:
             raise HTTPException(status_code=422, detail=str(e)) from e
@@ -49,7 +54,8 @@ def post_analyze(req: AnalyzeRequest = Body(default_factory=AnalyzeRequest)) -> 
         res.simulation,
         res.decision,
         res.quote,
-        "live" if req.live else "offline",
+        mode,
         res.oracle_alt,
+        res.incident,
         discovery=res.discovery,
     )

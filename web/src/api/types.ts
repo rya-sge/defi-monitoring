@@ -282,6 +282,109 @@ export type Report = {
   exit_quote: ExitQuote;
   /** Only present when the oracle's behaviour is ambiguous. */
   oracle_sensitivity: OracleSensitivity | null;
+  /** With `shocks`: the known incident and the verdict given it. */
+  incident?: PositionIncident | null;
+  /** The layers the borrower's recorded graph adds (plan 2026-10-11-depth). */
+  discovery?: ReportDiscovery | null;
+};
+
+/** One rung of the market's liquidation curve: what a fall of the oracle liquidates. */
+export type MarketCurvePoint = {
+  oracle_fall: number;
+  liquidatable_debt: number;
+  positions: number;
+  bad_debt: number;
+  collateral_liquidatable: number;
+};
+
+export type DiscoveryAdmin = {
+  address: string;
+  role: string;
+  upgradeable?: boolean;
+  admin?: string | null;
+  timelock_h: number | null;
+  text: string;
+};
+
+export type DiscoverySibling = {
+  label: string;
+  linked_by: string;
+  borrow: number;
+  unit: string;
+  liquidatable_at_fall: number;
+  bad_debt_at_fall: number;
+  oracle_class: string | null;
+};
+
+/** `report.discovery`; every key may be absent on an older report. */
+export type ReportDiscovery = {
+  market?: string;
+  market_curve?: MarketCurvePoint[];
+  oracle?: string;
+  oracle_shared?: string | null;
+  oracle_profile?: string | null;
+  supply?: string[];
+  feeds?: Record<string, unknown>[];
+  admin?: DiscoveryAdmin[];
+  siblings?: DiscoverySibling[];
+  sibling_fall?: number;
+  grades?: Record<string, string>;
+  backing?: { token: string; backed_by: string; share: number }[];
+  protocols?: Record<string, { concentration: string; concentrated: boolean }>;
+  position_share?: string[];
+  venues?: string[];
+  graph_block?: number;
+  lines?: string[];
+};
+
+/** `report.incident`: a known incident on the PT position (`analyze --shock`). */
+export type PositionIncident = {
+  shocks: Record<string, number>;
+  loss_usd: number;
+  loss_share_of_equity: number;
+  liquidated: boolean;
+  oracle_drop: number;
+  path: string[];
+  timing: { seconds: number | null; never: boolean; text: string };
+  exit_cost_usd: number;
+  exit_source: string;
+  verdict: Verdict;
+  reason: string;
+  reduction: {
+    sell_usd: number;
+    share: number;
+    cost_usd: number;
+    loss_after_usd: number;
+    liquidated_after: boolean;
+    source: string;
+  } | null;
+  notes: string[];
+  after_switch: {
+    after: string;
+    loss_usd: number;
+    loss_share_of_equity: number;
+    liquidated: boolean;
+    path: string[];
+  } | null;
+  pool_move: {
+    sold_usd: number;
+    pool_liquidity_usd: number;
+    pool_fall: number;
+    liquidation_fall: number;
+    liquidating_sale_usd: number | null;
+    beyond_pool: boolean;
+    max_sale_usd: number;
+    text: string;
+  } | null;
+  stressed_exit: {
+    ahead_usd: number;
+    slippage_now: number;
+    sellable_usd: number;
+    cost_usd: number | null;
+    slippage_after: number;
+    full_exit: boolean;
+    text: string;
+  } | null;
 };
 
 /* ------------------------------------------------------------- shock trace */
@@ -521,6 +624,8 @@ export type AnalyzeRequest = {
   horizon?: number;
   paths?: number;
   live?: boolean;
+  /** As `analyze --shock`: `issuer_depeg=0.08`, `pool_move=1.5`, `venue=Binance:0.5`. */
+  shocks?: string[];
 };
 
 export type GraphQuery = {
@@ -537,11 +642,18 @@ export type WatchQuery = {
 
 /* --------------------------------------------------------------- incidents */
 
-export type BookVault = { address: string; label: string | null; depositor: string | null };
+export type BookVault = {
+  address: string;
+  label: string | null;
+  depositor: string | null;
+  /** A borrow pocket's address is a Morpho market id, not a vault. */
+  kind?: 'vault' | 'borrow';
+  amount?: number | null;
+};
 export type BookSummary = {
   name: string;
   title: string;
-  weighting: 'vault' | 'depositor';
+  weighting: 'vault' | 'depositor' | 'pocket';
   vaults: BookVault[];
 };
 export type IncidentRequest = {
@@ -549,7 +661,21 @@ export type IncidentRequest = {
   vaults?: string[];
   shocks: string[];
   horizon: number;
+  /** The loss of staying given the incident; needs a token= (or venue=) shock. */
+  conditional?: boolean;
   live?: boolean;
+};
+/** Given the incident: the loss of staying against leaving, in USD. */
+export type Conditional = {
+  paths: number;
+  stay_mean: number;
+  stay_p50: number;
+  stay_p95: number;
+  stay_p99: number;
+  leave_mean: number;
+  p_stay_worse: number;
+  no_liquidator_share: number;
+  text: string;
 };
 export type MarketHit = {
   market_id: string;
@@ -577,6 +703,11 @@ export type MarketHit = {
   pharos_exposure: number;
   source: 'incident' | 'engine';
   engine: string;
+  /** Slippage against the oracle selling what the liquidations seize (KyberSwap). */
+  exit_impact?: number | null;
+  exit_capacity?: number | null;
+  exit_source?: string;
+  exit_text?: string;
 };
 export type VaultIncident = {
   vault: string;
@@ -610,6 +741,10 @@ export type VaultIncident = {
   p_star: number | null;
   p_star_year: number | null;
   outside: string[];
+  liquidity?: [number, number, number];
+  exit_cost_rate?: number | null;
+  conditional?: Conditional | null;
+  zama?: string[];
 };
 export type VaultLine = {
   vault: string;
@@ -624,11 +759,13 @@ export type VaultLine = {
   p_star_year: number | null;
   exit_cost_usd: number;
   saved_usd: number;
+  /** Why the verdict, in one clause. */
+  reason: string;
 };
 export type IncidentResponse = {
   book: {
     name: string;
-    weighting: 'vault' | 'depositor';
+    weighting: 'vault' | 'depositor' | 'pocket';
     shocks: string[];
     lines: VaultLine[];
     value_usd: number;
@@ -639,6 +776,7 @@ export type IncidentResponse = {
     p_star: number | null;
     p_star_year: number | null;
     horizon_days: number;
+    conditional: Conditional | null;
   };
   vaults: VaultIncident[];
 };

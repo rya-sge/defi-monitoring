@@ -1,12 +1,11 @@
 import { useMemo, useState } from 'react';
-import { useShockTrace } from '../api/hooks';
-import { GRAPH_NODE_KINDS } from '../api/types';
-import type { ShockStatus, ShockTrace } from '../api/types';
-import { GraphCanvas } from '../components/GraphCanvas';
-import type { GraphSelection } from '../components/GraphCanvas';
-import { ErrorState, Loading } from '../components/States';
-import { edgeId } from '../lib/graph';
-import { usd, detailValue, num, percent } from '../lib/format';
+import { useQuery } from '@tanstack/react-query';
+import { GRAPH_NODE_KINDS } from '../../api/types';
+import type { ShockStatus, ShockTrace } from '../../api/types';
+import { GraphCanvas } from '../GraphCanvas';
+import type { GraphSelection } from '../GraphCanvas';
+import { edgeId, runLayout } from '../../lib/graph';
+import { usd, detailValue, num, percent } from '../../lib/format';
 import {
   Table,
   TableBody,
@@ -15,13 +14,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tip } from './IncidentParts';
 
-/**
- * The impact of a shock (`riskdep shock`'s trace, `docs/model/shock-trace.md`): a summary and
- * the graph. The data is the committed example trace.
- */
+/** A shock trace (`riskdep shock`, `docs/model/shock-trace.md`): its summary and its graph. */
 
 /** Severity colour of a reached node's ring; the status is always written out too. */
 const STATUS_RING: Record<ShockStatus, string> = {
@@ -45,39 +41,7 @@ const MARKET_COLUMNS = [
 
 const n = (value: unknown) => (typeof value === 'number' ? value : 0);
 
-export function ImpactPage() {
-  const { data, isPending, error } = useShockTrace();
-  if (isPending) return <Loading what="the shock trace" />;
-  if (error) return <ErrorState what="the shock trace" error={error} />;
-
-  const label = (id: string) => data.graph.nodes.find((node) => node.id === id)?.label ?? id;
-
-  return (
-    <div className="flex h-full flex-col px-5.5 pt-5.5">
-      <header className="mb-3.5">
-        <h1>Impact</h1>
-        <p className="text-muted-foreground">
-          {data.shocks.map((shock) => shock.label).join(' + ')} · block {data.block} ·{' '}
-          {data.converged ? 'converged' : 'not converged: numbers are not final'} · example trace
-        </p>
-      </header>
-      <Tabs defaultValue="summary" className="min-h-0 flex-1">
-        <TabsList>
-          <TabsTrigger value="summary">Summary</TabsTrigger>
-          <TabsTrigger value="graph">Graph</TabsTrigger>
-        </TabsList>
-        <TabsContent value="summary" className="overflow-auto pb-9">
-          <Summary trace={data} label={label} />
-        </TabsContent>
-        <TabsContent value="graph" className="relative min-h-[60vh]">
-          <ImpactGraph trace={data} label={label} />
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
-}
-
-type ViewProps = { trace: ShockTrace; label: (id: string) => string };
+export type TraceViewProps = { trace: ShockTrace; label: (id: string) => string };
 
 /** Reached nodes, ordered by the wave they were first reached in. */
 function reached(trace: ShockTrace) {
@@ -94,7 +58,7 @@ function finalSteps(trace: ShockTrace) {
 
 /* ---------------------------------------------------------------- summary */
 
-function Summary({ trace, label }: ViewProps) {
+export function TraceSummary({ trace, label }: TraceViewProps) {
   const entries = reached(trace);
   const markets = entries.filter(
     ([, state]) => state.model === 'blue_market' && state.status !== 'moved',
@@ -109,7 +73,8 @@ function Summary({ trace, label }: ViewProps) {
       <ul className="grid gap-1">
         {losers.map(([id, state]) => (
           <li key={id} className="text-lg">
-            <b>{label(id)}</b> {state.headline}
+            <b>{label(id)}</b>{' '}
+            <Tip label={finalLoss(trace, id) ?? state.status} tip={state.headline} />
           </li>
         ))}
       </ul>
@@ -178,7 +143,7 @@ function Summary({ trace, label }: ViewProps) {
 
 /* ------------------------------------------------------------------ graph */
 
-function ImpactGraph({ trace, label }: ViewProps) {
+export function TraceGraph({ trace, label }: TraceViewProps) {
   const [selection, setSelection] = useState<GraphSelection>(null);
   const { nodes, edges, focus, overlay } = useMemo(() => {
     const overlay = Object.fromEntries(
@@ -202,12 +167,23 @@ function ImpactGraph({ trace, label }: ViewProps) {
     return { nodes, edges: kept.map(({ edge }) => edge), focus, overlay };
   }, [trace]);
 
+  // The same ELK stress layout as the dependency page; ELK is async.
+  const positions = useQuery({
+    queryKey: ['trace-layout', nodes, edges],
+    queryFn: () => runLayout('elk-stress', nodes, edges),
+    staleTime: Infinity,
+    gcTime: 0,
+  });
+
   const selected = selection?.type === 'node' ? selection.node.id : null;
   const state = selected ? trace.nodes[selected] : null;
 
+  if (!positions.data) return null;
   return (
     <>
       <GraphCanvas
+        positions={positions.data}
+        flow="free"
         nodes={nodes}
         edges={edges}
         visibleKinds={ALL_KINDS}
@@ -221,7 +197,11 @@ function ImpactGraph({ trace, label }: ViewProps) {
         <aside className="absolute top-3.5 right-3.5 w-[320px] rounded-lg border bg-background p-5.5 shadow-sm">
           <p className="mb-1 font-semibold">{label(selected)}</p>
           <p className="text-muted-foreground">
-            {state ? `${state.status}: ${state.headline}` : 'not reached by the shock'}
+            {state ? (
+              <Tip label={finalLoss(trace, selected) ?? state.status} tip={state.headline} />
+            ) : (
+              'Not reached'
+            )}
           </p>
         </aside>
       ) : null}

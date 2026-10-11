@@ -1,5 +1,14 @@
 import { FormattedText } from './FormattedText';
-import { Bell, Gauge, Network, Scale, ShieldAlert, Waypoints, Zap } from 'lucide-react';
+import {
+  Archive,
+  BookOpen,
+  ChevronRight,
+  FlaskConical,
+  Gauge,
+  Network,
+  Share2,
+} from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import { Link, Outlet, useNavigate, useRouterState, useSearch } from '@tanstack/react-router';
 import { useBooks, useGraph, useHealth, useSelectedTarget, useTargets } from '../api/hooks';
 import { INCIDENT } from '../mocks/incident';
@@ -16,19 +25,33 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarProvider,
   SidebarTrigger,
 } from './ui/sidebar';
 
 const NAV = [
-  { to: '/', label: 'Vault', icon: Gauge, exact: true },
-  { to: '/vault-risks', label: 'Vault risks', icon: ShieldAlert, exact: false },
+  { to: '/', label: 'Book', icon: BookOpen, exact: true },
+  { to: '/vault', label: 'Vault', icon: Gauge, exact: false },
+  { to: '/scenario', label: 'Scenario lab', icon: FlaskConical, exact: false },
+  { to: '/contagion', label: 'Contagion', icon: Share2, exact: false },
   { to: '/graph', label: 'Dependency graph', icon: Network, exact: false },
-  { to: '/cross', label: 'Cross-market', icon: Waypoints, exact: false },
-  { to: '/incident', label: 'Incident', icon: Scale, exact: false },
-  { to: '/impact', label: 'Impact', icon: Zap, exact: false },
-  { to: '/watch', label: 'Alerts', icon: Bell, exact: false },
 ] as const;
+
+const OLD_NAV = [
+  { to: '/old/vault', label: 'Vault' },
+  { to: '/old/vault-risks', label: 'Vault risks' },
+  { to: '/old/graph', label: 'Dependency graph' },
+  { to: '/old/cross', label: 'Cross-market' },
+  { to: '/old/incident', label: 'Incident' },
+  { to: '/old/impact', label: 'Impact' },
+  { to: '/old/watch', label: 'Alerts' },
+] as const;
+
+// Pages with a selector of their own (a book, an episode) hide the top bar's vault selector.
+const OWN_SELECTOR = ['/', '/track-record'];
 
 export function AppShell() {
   const { data: health, error } = useHealth();
@@ -57,6 +80,30 @@ export function AppShell() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+              <Collapsible asChild defaultOpen={pathname.startsWith('/old/')} className="group/old">
+                <SidebarMenuItem>
+                  <CollapsibleTrigger asChild>
+                    <SidebarMenuButton className="h-10">
+                      <Archive />
+                      <span>Old</span>
+                      <ChevronRight className="ml-auto transition-transform group-data-[state=open]/old:rotate-90" />
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <SidebarMenuSub>
+                      {OLD_NAV.map(({ to, label }) => (
+                        <SidebarMenuSubItem key={to}>
+                          <SidebarMenuSubButton asChild isActive={pathname === to}>
+                            <Link to={to} search={(prev) => prev} className="no-underline">
+                              {label}
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      ))}
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
+                </SidebarMenuItem>
+              </Collapsible>
             </SidebarMenu>
           </SidebarGroup>
         </SidebarContent>
@@ -77,7 +124,11 @@ export function AppShell() {
         <div className="flex items-center gap-2 px-5.5 py-2 text-[0.85rem] text-muted-foreground">
           {/* Below md the sidebar is a sheet: this is the only way to open it there. */}
           <SidebarTrigger className="md:hidden" />
-          {pathname === '/incident' ? <IncidentVaultSelect /> : <TargetSelect />}
+          {pathname === '/old/incident' ? (
+            <IncidentVaultSelect />
+          ) : OWN_SELECTOR.includes(pathname) ? null : (
+            <TargetSelect />
+          )}
         </div>
         <div className="min-h-0 flex-1 overflow-auto">
           <Outlet />

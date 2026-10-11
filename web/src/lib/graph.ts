@@ -175,27 +175,245 @@ export function nodeAmount(node: GraphNode, edges: GraphEdge[]): string[] {
   }
 }
 
-/** dagre, top to bottom; returns each node's top-left corner (D62). */
-export function layoutGraph(nodes: GraphNode[], edges: GraphEdge[]): Map<string, XYPosition> {
+/** The box a node is laid out in: its drawing, widened and lengthened by its name's slot. */
+function layoutBox(node: GraphNode) {
+  const { width, height } = nodeDrawing(node);
+  return { width: Math.max(width, NAME_SLOT.width), height: height + NAME_SLOT.height };
+}
+
+/** A box's centre → the node's top-left corner (the name sits under the drawing). */
+function topLeft(node: GraphNode, x: number, y: number): XYPosition {
+  return { x: x - nodeDrawing(node).width / 2, y: y - layoutBox(node).height / 2 };
+}
+
+export type LayoutName =
+  'dagre-tb' | 'dagre-lr' | 'lanes' | 'radial' | 'elk-layered' | 'elk-stress';
+
+/** How edges attach under a layout: top to bottom, left to right, or centre to centre. */
+export type LayoutFlow = 'TB' | 'LR' | 'free';
+
+export const LAYOUTS: { value: LayoutName; label: string; flow: LayoutFlow }[] = [
+  { value: 'dagre-tb', label: 'Layered, top down', flow: 'TB' },
+  { value: 'dagre-lr', label: 'Layered, left to right', flow: 'LR' },
+  { value: 'lanes', label: 'Lanes by role', flow: 'LR' },
+  { value: 'radial', label: 'Radial from the vault', flow: 'free' },
+  { value: 'elk-layered', label: 'ELK layered', flow: 'TB' },
+  { value: 'elk-stress', label: 'ELK stress', flow: 'free' },
+];
+
+export const layoutFlow = (name: LayoutName): LayoutFlow =>
+  LAYOUTS.find((l) => l.value === name)?.flow ?? 'TB';
+
+/** dagre, top to bottom unless `rankdir` says otherwise; returns each node's top-left corner (D62). */
+export function layoutGraph(
+  nodes: GraphNode[],
+  edges: GraphEdge[],
+  rankdir: 'TB' | 'LR' = 'TB',
+): Map<string, XYPosition> {
   const g = new dagre.graphlib.Graph();
-  g.setGraph({ rankdir: 'TB', ranksep: 50, nodesep: 16 });
+  g.setGraph(
+    rankdir === 'TB' ? { rankdir, ranksep: 50, nodesep: 16 } : { rankdir, ranksep: 90, nodesep: 8 },
+  );
   g.setDefaultEdgeLabel(() => ({}));
-  for (const node of nodes) {
-    const { width, height } = nodeDrawing(node);
-    g.setNode(node.id, {
-      width: Math.max(width, NAME_SLOT.width),
-      height: height + NAME_SLOT.height,
-    });
-  }
+  for (const node of nodes) g.setNode(node.id, layoutBox(node));
   for (const edge of edges) g.setEdge(edge.source, edge.target);
   dagre.layout(g);
   return new Map(
     nodes.map((node) => {
       const { x, y } = g.node(node.id);
-      const { width, height } = nodeDrawing(node);
-      return [node.id, { x: x - width / 2, y: y - (height + NAME_SLOT.height) / 2 }];
+      return [node.id, topLeft(node, x, y)];
     }),
   );
+}
+
+/** The column of each role in the lanes layout: who holds, what is held, what prices it, who stands behind. */
+const LANE: Record<NodeRole, number> = {
+  admin: 0,
+  user: 1,
+  vault: 1,
+  market: 2,
+  pendle: 2,
+  asset: 3,
+  oracle: 4,
+  feed: 5,
+  external: 6,
+};
+
+/**
+ * Fixed columns by role, each ordered by the mean row of its neighbours (barycenter), swept
+ * right then left a few times to undo crossings. Stable: the same graph always lands the same.
+ */
+export function layoutLanes(nodes: GraphNode[], edges: GraphEdge[]): Map<string, XYPosition> {
+  const lane = new Map(nodes.map((n) => [n.id, LANE[nodeRole(n)]]));
+  const columns: GraphNode[][] = Array.from({ length: 7 }, () => []);
+  for (const n of nodes) columns[lane.get(n.id)!].push(n);
+  const nonEmpty = columns.filter((c) => c.length);
+  const neighbours = new Map<string, string[]>(nodes.map((n) => [n.id, []]));
+  for (const e of edges) {
+    neighbours.get(e.source)?.push(e.target);
+    neighbours.get(e.target)?.push(e.source);
+  }
+  const row = new Map<string, number>();
+  const rank = () =>
+    nonEmpty.forEach((c) => c.forEach((n, i) => row.set(n.id, i / Math.max(1, c.length - 1))));
+  rank();
+  const sweep = (column: GraphNode[], side: number) => {
+    const bary = (n: GraphNode) => {
+      const near = neighbours
+        .get(n.id)!
+        .filter((id) => Math.sign(lane.get(id)! - lane.get(n.id)!) === side);
+      const pool = near.length ? near : neighbours.get(n.id)!;
+      return pool.length
+        ? pool.reduce((s, id) => s + row.get(id)!, 0) / pool.length
+        : row.get(n.id)!;
+    };
+    const keyed = new Map(column.map((n) => [n.id, bary(n)]));
+    column.sort((a, b) => keyed.get(a.id)! - keyed.get(b.id)! || a.label.localeCompare(b.label));
+    column.forEach((n, i) => row.set(n.id, i / Math.max(1, column.length - 1)));
+  };
+  for (let i = 0; i < 6; i++) {
+    nonEmpty.slice(1).forEach((c) => sweep(c, -1));
+    nonEmpty
+      .slice(0, -1)
+      .reverse()
+      .forEach((c) => sweep(c, 1));
+  }
+  const GAP_X = 110;
+  const GAP_Y = 10;
+  const heights = nonEmpty.map((c) => c.reduce((s, n) => s + layoutBox(n).height + GAP_Y, 0));
+  const tallest = Math.max(...heights);
+  const out = new Map<string, XYPosition>();
+  let x = 0;
+  nonEmpty.forEach((column, i) => {
+    const width = Math.max(...column.map((n) => layoutBox(n).width));
+    let y = (tallest - heights[i]) / 2;
+    for (const n of column) {
+      const h = layoutBox(n).height;
+      out.set(n.id, topLeft(n, x + width / 2, y + h / 2));
+      y += h + GAP_Y;
+    }
+    x += width + GAP_X;
+  });
+  return out;
+}
+
+/**
+ * Rings by distance from `root` (edges either way); each ring keeps its nodes next to their
+ * parent's angle, spaced so no two names overlap. Unreachable nodes go on an outer ring.
+ */
+export function layoutRadial(
+  nodes: GraphNode[],
+  edges: GraphEdge[],
+  root?: string,
+): Map<string, XYPosition> {
+  const ids = new Set(nodes.map((n) => n.id));
+  const start =
+    root && ids.has(root) ? root : (nodes.find((n) => nodeRole(n) === 'vault') ?? nodes[0])?.id;
+  const depth = new Map<string, number>();
+  const parent = new Map<string, string>();
+  if (start) {
+    depth.set(start, 0);
+    const queue = [start];
+    for (let id = queue.shift(); id !== undefined; id = queue.shift())
+      for (const next of adjacent(id, edges))
+        if (ids.has(next) && !depth.has(next)) {
+          depth.set(next, depth.get(id)! + 1);
+          parent.set(next, id);
+          queue.push(next);
+        }
+  }
+  const outer = Math.max(0, ...depth.values()) + 1;
+  const rings: GraphNode[][] = Array.from({ length: outer + 1 }, () => []);
+  for (const n of nodes) rings[depth.get(n.id) ?? outer].push(n);
+  const angle = new Map<string, number>();
+  const out = new Map<string, XYPosition>();
+  let radius = 0;
+  rings.forEach((ring, d) => {
+    if (!ring.length) return;
+    if (d === 0) {
+      ring.forEach((n) => {
+        angle.set(n.id, 0);
+        out.set(n.id, topLeft(n, 0, 0));
+      });
+      return;
+    }
+    const want = (n: GraphNode) => angle.get(parent.get(n.id) ?? '') ?? 0;
+    ring.sort((a, b) => want(a) - want(b) || a.label.localeCompare(b.label));
+    const circumference = ring.reduce((s, n) => s + layoutBox(n).width + 12, 0);
+    radius = Math.max(radius + 230, circumference / (2 * Math.PI));
+    // Centre the ring's arc on its parents' mean angle, so a subtree faces where it hangs.
+    const offset = ring.reduce((s, n) => s + want(n), 0) / ring.length - Math.PI;
+    let at = 0;
+    for (const n of ring) {
+      const share = (layoutBox(n).width + 12) / circumference;
+      const a = offset + 2 * Math.PI * (at + share / 2);
+      at += share;
+      angle.set(n.id, a);
+      out.set(n.id, topLeft(n, radius * Math.cos(a), radius * Math.sin(a)));
+    }
+  });
+  return out;
+}
+
+/** ELK (elkjs, loaded on first use): `layered` with orthogonal routing, or `stress`. */
+export async function layoutElk(
+  nodes: GraphNode[],
+  edges: GraphEdge[],
+  algorithm: 'layered' | 'stress',
+): Promise<Map<string, XYPosition>> {
+  const { default: ELK } = await import('elkjs/lib/elk.bundled.js');
+  const options: Record<string, string> =
+    algorithm === 'layered'
+      ? {
+          'elk.algorithm': 'layered',
+          'elk.direction': 'DOWN',
+          'elk.edgeRouting': 'ORTHOGONAL',
+          'elk.layered.spacing.nodeNodeBetweenLayers': '50',
+          'elk.spacing.nodeNode': '16',
+          'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
+          'elk.layered.nodePlacement.strategy': 'BRANDES_KOEPF',
+        }
+      : { 'elk.algorithm': 'stress', 'elk.stress.desiredEdgeLength': '220' };
+  const ids = new Set(nodes.map((n) => n.id));
+  const laid = await new ELK().layout({
+    id: 'root',
+    layoutOptions: options,
+    children: nodes.map((n) => ({ id: n.id, ...layoutBox(n) })),
+    edges: edges
+      .filter((e) => ids.has(e.source) && ids.has(e.target) && e.source !== e.target)
+      .map((e, i) => ({ id: `e${i}`, sources: [e.source], targets: [e.target] })),
+  });
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  return new Map(
+    (laid.children ?? []).map((c) => {
+      const n = byId.get(c.id)!;
+      const box = layoutBox(n);
+      return [c.id, topLeft(n, (c.x ?? 0) + box.width / 2, (c.y ?? 0) + box.height / 2)];
+    }),
+  );
+}
+
+/** Every layout behind one call; `root` centres the radial one. */
+export function runLayout(
+  name: LayoutName,
+  nodes: GraphNode[],
+  edges: GraphEdge[],
+  root?: string,
+): Promise<Map<string, XYPosition>> {
+  switch (name) {
+    case 'dagre-lr':
+      return Promise.resolve(layoutGraph(nodes, edges, 'LR'));
+    case 'lanes':
+      return Promise.resolve(layoutLanes(nodes, edges));
+    case 'radial':
+      return Promise.resolve(layoutRadial(nodes, edges, root));
+    case 'elk-layered':
+      return layoutElk(nodes, edges, 'layered');
+    case 'elk-stress':
+      return layoutElk(nodes, edges, 'stress');
+    default:
+      return Promise.resolve(layoutGraph(nodes, edges));
+  }
 }
 
 /** A watch target ("0x…" vault, "user-0x…") → the id of its node in the graph. */
@@ -419,4 +637,29 @@ export function pointsOfFailure(
   return [...exposed]
     .map(([id, amount]) => ({ id, amount, unit }))
     .sort((a, b) => b.amount - a.amount);
+}
+
+export type WeakLink = { id: string; level: 'critical' | 'warn'; reason: string };
+
+/**
+ * The graph's weak links, read off the node details alone: what is already failing (critical)
+ * and what would make a failure worse or harder to see (warn). Critical first.
+ */
+export function weakLinks(nodes: GraphNode[]): WeakLink[] {
+  const out: WeakLink[] = [];
+  for (const n of nodes) {
+    const d = n.details;
+    const add = (level: WeakLink['level'], reason: string) => out.push({ id: n.id, level, reason });
+    if (n.kind === 'Pool' && typeof d.unrealised_bad_debt === 'number' && d.unrealised_bad_debt > 0)
+      add('critical', 'Unrealised bad debt');
+    if (n.kind === 'Oracle' && d.stale === true) add('critical', 'Stale feed');
+    if (n.kind === 'Pool' && d.oracle_class === 'constant-price')
+      add('warn', 'Constant-price oracle');
+    if (n.kind === 'Oracle' && typeof d.shared_text === 'string' && d.shared_text)
+      add('warn', 'Shared by other markets');
+    if (/^[DF]/.test(detailValue(d.pharos_grade)))
+      add('warn', `Pharos ${detailValue(d.pharos_grade)}`);
+    if (n.kind === 'External' && d.concentrated === true) add('warn', 'Concentrated TVL');
+  }
+  return out.sort((a, b) => Number(a.level === 'warn') - Number(b.level === 'warn'));
 }

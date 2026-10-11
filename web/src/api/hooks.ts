@@ -11,6 +11,8 @@ import type {
   Health,
   Report,
   ShockRequest,
+  ShockSweep,
+  ShockSweepRequest,
   ShockTarget,
   ShockTrace,
   Target,
@@ -84,6 +86,16 @@ export function useShockTargets(vault: string | undefined) {
     queryFn: ({ signal }) => api.shockTargets(vault!, signal),
     enabled: !!vault,
     staleTime: Infinity,
+  });
+}
+
+export function useShockSweep(body: ShockSweepRequest, enabled = true) {
+  return useQuery<ShockSweep>({
+    queryKey: ['shock-sweep', body],
+    queryFn: ({ signal }) => api.shockSweep(body, signal),
+    enabled,
+    staleTime: Infinity,
+    retry: false,
   });
 }
 

@@ -10,6 +10,8 @@ export type Shared = {
   node: GraphNode;
   /** vault id → what it supplies into the markets that lead to this node, in loan units. */
   exposure: Map<string, number>;
+  /** vault id → market id → what the vault supplies into that market, for the markets that lead here. */
+  markets: Map<string, Map<string, number>>;
 };
 
 export type CrossView = {
@@ -40,22 +42,32 @@ export function crossView(graph: GraphResponse, includeLoanTokens = false): Cros
     byId.get(id)?.kind === 'Actor' || (!includeLoanTokens && loanTokens.has(id));
 
   const users = new Map<string, Map<string, number>>();
+  const viaMarkets = new Map<string, Map<string, Map<string, number>>>();
   for (const vault of vaults) {
-    const supplies = edges.filter((e) => e.source === vault.id && e.rel === 'supplies');
+    const supplies = edges
+      .filter((e) => e.source === vault.id && e.rel === 'supplies')
+      .map((s) => ({ s, below: reach(s.target, edges) }));
     for (const id of reach(vault.id, edges)) {
       if (id === vault.id || ignored(id)) continue;
-      const exposure = supplies
-        .filter((s) => s.target === id || reach(s.target, edges).has(id))
-        .reduce((sum, s) => sum + (s.amount ?? 0), 0);
+      const leading = supplies.filter(({ s, below }) => s.target === id || below.has(id));
+      const perMarket = new Map<string, number>();
+      for (const { s } of leading)
+        perMarket.set(s.target, (perMarket.get(s.target) ?? 0) + (s.amount ?? 0));
       const perVault = users.get(id) ?? new Map<string, number>();
-      perVault.set(vault.id, exposure);
+      perVault.set(
+        vault.id,
+        [...perMarket.values()].reduce((a, b) => a + b, 0),
+      );
       users.set(id, perVault);
+      const markets = viaMarkets.get(id) ?? new Map<string, Map<string, number>>();
+      markets.set(vault.id, perMarket);
+      viaMarkets.set(id, markets);
     }
   }
 
   const shared: Shared[] = [...users]
     .filter(([, perVault]) => perVault.size > 1)
-    .map(([id, exposure]) => ({ node: byId.get(id)!, exposure }))
+    .map(([id, exposure]) => ({ node: byId.get(id)!, exposure, markets: viaMarkets.get(id)! }))
     .sort((a, b) => b.exposure.size - a.exposure.size || totalExposure(b) - totalExposure(a));
 
   const privateNodes = new Map(

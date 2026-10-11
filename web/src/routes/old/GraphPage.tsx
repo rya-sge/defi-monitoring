@@ -1,16 +1,16 @@
 import { useMemo, useState } from 'react';
 import { X } from 'lucide-react';
-import { useGraph, useSelectedTarget } from '../api/hooks';
-import { GRAPH_NODE_KINDS } from '../api/types';
-import type { GraphNodeKind } from '../api/types';
-import { ExpandAll, GraphCanvas, KindFilter } from '../components/GraphCanvas';
-import type { FlowNeighbour, GraphSelection } from '../components/GraphCanvas';
-import { DetailsTable } from '../components/DetailsTable';
-import { ErrorState, Loading } from '../components/States';
-import { KIND_COLOR, RISK_KEYS, edgeLabel, scopeToTarget } from '../lib/graph';
-import { useReveal } from '../lib/useReveal';
-import { useTwinGroups } from '../lib/useTwinGroups';
-import { detailValue } from '../lib/format';
+import { useGraph, useSelectedTarget } from '../../api/hooks';
+import { GRAPH_NODE_KINDS } from '../../api/types';
+import type { GraphNodeKind } from '../../api/types';
+import { ExpandAll, GraphCanvas, KindFilter } from '../../components/GraphCanvas';
+import type { FlowNeighbour, GraphSelection } from '../../components/GraphCanvas';
+import { DetailsTable } from '../../components/DetailsTable';
+import { ErrorState, Loading } from '../../components/States';
+import { KIND_COLOR, RISK_KEYS, edgeLabel, scopeToTarget } from '../../lib/graph';
+import { useReveal } from '../../lib/useReveal';
+import { useTwinGroups } from '../../lib/useTwinGroups';
+import { detailValue } from '../../lib/format';
 import { Button } from '@/components/ui/button';
 
 const PANEL_H3 = 'mt-5.5 mb-1 text-[0.82rem] font-bold text-muted-foreground';

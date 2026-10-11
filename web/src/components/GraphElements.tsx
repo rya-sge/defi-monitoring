@@ -6,6 +6,8 @@ import {
   Handle,
   Position,
   getBezierPath,
+  getStraightPath,
+  useInternalNode,
   useStore,
 } from '@xyflow/react';
 import type { Edge, EdgeProps, Node, NodeProps } from '@xyflow/react';
@@ -23,7 +25,14 @@ export type RiskNodeData = {
   /** Neighbours not in view: a click on the node shows them. */
   more?: number;
 };
-export type RiskEdgeData = { edge: GraphEdge; label: string; width: number; colour: string };
+/** `floating`: drawn centre to centre, for layouts with no main direction (radial, stress). */
+export type RiskEdgeData = {
+  edge: GraphEdge;
+  label: string;
+  width: number;
+  colour: string;
+  floating?: boolean;
+};
 export type RiskNodeType = Node<RiskNodeData, 'risk'>;
 export type RiskEdgeType = Edge<RiskEdgeData, 'risk'>;
 
@@ -245,6 +254,8 @@ export function RiskNode({ data, selected }: NodeProps<RiskNodeType>) {
         <FormattedText>{node.label}</FormattedText>
       </div>
 
+      {/* Top and bottom first: an edge naming no handle takes them. Left and right serve the
+          left-to-right layouts, by id. */}
       <Handle
         type="target"
         position={Position.Top}
@@ -257,8 +268,43 @@ export function RiskNode({ data, selected }: NodeProps<RiskNodeType>) {
         isConnectable={false}
         className={HIDDEN_HANDLE}
       />
+      <Handle
+        id="l"
+        type="target"
+        position={Position.Left}
+        isConnectable={false}
+        className={HIDDEN_HANDLE}
+      />
+      <Handle
+        id="r"
+        type="source"
+        position={Position.Right}
+        isConnectable={false}
+        className={HIDDEN_HANDLE}
+      />
     </div>
   );
+}
+
+type Internal = NonNullable<ReturnType<typeof useInternalNode>>;
+
+/** Centre to centre, cut where the line leaves each node's box, so the arrowhead shows. */
+function floatingEnds(from: Internal, to: Internal) {
+  const centre = (n: Internal) => ({
+    x: n.internals.positionAbsolute.x + (n.measured.width ?? 0) / 2,
+    y: n.internals.positionAbsolute.y + (n.measured.height ?? 0) / 2,
+    r: Math.min(n.measured.width ?? 0, n.measured.height ?? 0) / 2,
+  });
+  const a = centre(from);
+  const b = centre(to);
+  const length = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+  const [ux, uy] = [(b.x - a.x) / length, (b.y - a.y) / length];
+  return {
+    sourceX: a.x + ux * a.r,
+    sourceY: a.y + uy * a.r,
+    targetX: b.x - ux * b.r,
+    targetY: b.y - uy * b.r,
+  };
 }
 
 export function RiskEdge({
@@ -273,15 +319,15 @@ export function RiskEdge({
   targetY,
   sourcePosition,
   targetPosition,
+  source,
+  target,
 }: EdgeProps<RiskEdgeType>) {
-  const [path, labelX, labelY] = getBezierPath({
-    sourceX,
-    sourceY,
-    targetX,
-    targetY,
-    sourcePosition,
-    targetPosition,
-  });
+  const from = useInternalNode(source);
+  const to = useInternalNode(target);
+  const [path, labelX, labelY] =
+    data?.floating && from && to
+      ? getStraightPath(floatingEnds(from, to))
+      : getBezierPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition });
   const scale = useLabelScale();
 
   return (

@@ -1,8 +1,6 @@
-/** Demo event metadata; the incident API supplies impact, not detection timestamps. */
+/** The old Incident page's scenario: one of the recorded fixtures. */
 export const INCIDENT = {
   title: 'PST impairment',
-  occurredMinutesAgo: 19,
-  detectedMinutesAgo: 16,
   example: 'rockawayx-ethereum',
   shocks: ['token=PST:0.3'],
   horizon: 30,

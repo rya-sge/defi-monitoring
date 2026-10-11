@@ -1,15 +1,12 @@
-import { FormattedText } from '../components/FormattedText';
-import { useEffect, useMemo, useState } from 'react';
-import { useSelectedTarget } from '../api/hooks';
-import { subscribeWatch } from '../api/stream';
-import type { StreamStatus } from '../api/stream';
-import { USE_MOCKS } from '../api/client';
-import { ALERT_LEVELS } from '../api/types';
-import type { Alert, AlertLevel, WatchTick } from '../api/types';
-import { blockNumber, etherscanUrl, shortHash, signedUsd } from '../lib/format';
-import { DetailsTable } from '../components/DetailsTable';
-import { Button } from '@/components/ui/button';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { useMemo, useState } from 'react';
+import { useSelectedTarget } from '../../api/hooks';
+import { USE_MOCKS } from '../../api/client';
+import { ALERT_LEVELS } from '../../api/types';
+import type { AlertLevel } from '../../api/types';
+import { blockNumber } from '../../lib/format';
+import { AlertRow } from '../../components/alerts/AlertRow';
+import { keyOf, LEVEL_TEXT, STATUS_CLASS, STATUS_LABEL } from '../../components/alerts/alertStyles';
+import { useWatchStream } from '../../components/alerts/useWatchStream';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -19,27 +16,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from 'cn';
-
-const LEVEL_TEXT: Record<AlertLevel, string> = {
-  info: 'text-info',
-  warn: 'text-warn',
-  critical: 'text-critical',
-};
-
-const STATUS_LABEL: Record<StreamStatus, string> = {
-  connecting: 'connecting…',
-  open: 'live',
-  closed: 'stream ended',
-  error: 'reconnecting…',
-};
-
-// "live" is the normal state; colour stays for what is wrong.
-const STATUS_CLASS: Record<StreamStatus, string> = {
-  connecting: 'text-muted-foreground',
-  open: 'text-foreground',
-  closed: 'text-muted-foreground',
-  error: 'text-warn',
-};
 
 export function WatchPage() {
   const [minLevel, setMinLevel] = useState<AlertLevel>('info');
@@ -76,23 +52,8 @@ function WatchStream({
   minLevel: AlertLevel;
   onMinLevelChange: (level: AlertLevel) => void;
 }) {
-  const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [ticks, setTicks] = useState<WatchTick[]>([]);
-  const [status, setStatus] = useState<StreamStatus>('connecting');
+  const { alerts, ticks, status } = useWatchStream(target, minLevel);
   const [expanded, setExpanded] = useState<string | null>(null);
-
-  useEffect(
-    () =>
-      subscribeWatch(
-        { target, min_level: minLevel },
-        {
-          onAlert: (alert) => setAlerts((previous) => [alert, ...previous]),
-          onTick: (tick) => setTicks((previous) => [tick, ...previous].slice(0, 3)),
-          onStatus: setStatus,
-        },
-      ),
-    [target, minLevel],
-  );
 
   const counts = useMemo(() => {
     const result: Record<AlertLevel, number> = { info: 0, warn: 0, critical: 0 };
@@ -170,63 +131,5 @@ function WatchStream({
         </ul>
       )}
     </>
-  );
-}
-
-/** Alerts carry no id; a state alert can repeat, so the index keeps rows apart. */
-const keyOf = (alert: Alert, index: number) => `${alert.block}-${alert.event}-${index}`;
-
-function AlertRow({
-  alert,
-  expanded,
-  onToggle,
-}: {
-  alert: Alert;
-  expanded: boolean;
-  onToggle: () => void;
-}) {
-  const txUrl = alert.tx ? etherscanUrl(alert.tx) : null;
-  const hasData = Object.keys(alert.data).length > 0;
-
-  return (
-    // Rows, not cards: one hairline keeps two alerts from reading as one.
-    <li className="grid gap-1 border-b border-border/50 py-3.5">
-      <div className="flex flex-wrap items-baseline gap-3.5 text-[0.8rem] text-muted-foreground">
-        <span className={cn('font-bold', LEVEL_TEXT[alert.level])}>{alert.level}</span>
-        <span>block {blockNumber(alert.block)}</span>
-        <span className="mono">
-          {txUrl && alert.tx ? (
-            <a href={txUrl} target="_blank" rel="noreferrer noopener">
-              {shortHash(alert.tx)}
-            </a>
-          ) : (
-            'no tx'
-          )}
-        </span>
-        <span className="mono">{alert.event}</span>
-        {alert.depositor_impact != null ? (
-          <span
-            className={`ml-auto font-semibold tabular-nums ${alert.depositor_impact < 0 ? 'text-critical' : 'text-ok'}`}
-            title="Impact on your deposit, in the vault's asset"
-          >
-            <FormattedText>{signedUsd(alert.depositor_impact)}</FormattedText>
-          </span>
-        ) : null}
-      </div>
-      <div className="max-w-measure font-bold">{alert.title}</div>
-      <div className="max-w-measure text-[0.92rem] text-muted-foreground">{alert.detail}</div>
-      {hasData ? (
-        <Collapsible open={expanded} onOpenChange={onToggle}>
-          <CollapsibleTrigger asChild>
-            <Button type="button" variant="outline" size="sm">
-              {expanded ? 'Hide data' : 'Show data'}
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="mt-2 max-w-[640px]">
-            <DetailsTable details={alert.data} />
-          </CollapsibleContent>
-        </Collapsible>
-      ) : null}
-    </li>
   );
 }

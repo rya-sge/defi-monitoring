@@ -18,4 +18,4 @@ repos:
         additional_dependencies: ["prettier@3.9.9"]
         entry: prettier --write --ignore-unknown
         files: ^web/
-        exclude: ^web/(pnpm-lock\.yaml|src/mocks/(graphs?|report|shock-trace|shock|backtests|vaults|markets|books|incidents)\.json)$
+        exclude: ^web/(pnpm-lock\.yaml|src/mocks/(graphs?|report|shock-trace|shock|backtests|vaults|markets|books|incidents|position-incidents)\.json)$

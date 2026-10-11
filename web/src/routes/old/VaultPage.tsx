@@ -1,16 +1,16 @@
-import { FormattedText } from '../components/FormattedText';
-import { CHART_COLORS } from '../lib/charts';
+import { FormattedText } from '../../components/FormattedText';
+import { CHART_COLORS } from '../../lib/charts';
 import { useMemo } from 'react';
 import { Link } from '@tanstack/react-router';
-import { useSelectedTarget, useVault } from '../api/hooks';
-import type { Vault } from '../api/types';
-import { Empty, ErrorState, Loading } from '../components/States';
-import { LiquidationChart } from '../components/LiquidationChart';
-import { VaultLossChart } from '../components/VaultCharts';
+import { useSelectedTarget, useVault } from '../../api/hooks';
+import type { Vault } from '../../api/types';
+import { Empty, ErrorState, Loading } from '../../components/States';
+import { LiquidationChart } from '../../components/LiquidationChart';
+import { VaultLossChart } from '../../components/VaultCharts';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Stat } from '../components/Stat';
-import { usd, percent } from '../lib/format';
+import { Stat } from '../../components/Stat';
+import { usd, percent } from '../../lib/format';
 import {
   Table,
   TableBody,

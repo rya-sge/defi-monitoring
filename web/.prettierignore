@@ -11,3 +11,4 @@ src/mocks/incidents.json
 pnpm-lock.yaml
 src/mocks/shock.json
 src/mocks/backtests.json
+src/mocks/position-incidents.json

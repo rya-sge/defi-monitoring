@@ -20,6 +20,7 @@ import type {
   BookSummary,
   IncidentRequest,
   IncidentResponse,
+  PositionIncident,
 } from './types';
 import graphFixture from '../mocks/graph.json';
 import shockTraceFixture from '../mocks/shock-trace.json';
@@ -113,7 +114,8 @@ export const api = {
 
   async incident(body: IncidentRequest, signal?: AbortSignal): Promise<IncidentResponse> {
     if (USE_MOCKS) {
-      const cases = (await import('../mocks/incidents.json')).default as {
+      // JSON infers tuples (`liquidity`, `sibling_losses`) as arrays: hence the `unknown` step
+      const cases = (await import('../mocks/incidents.json')).default as unknown as {
         request: IncidentRequest;
         response: IncidentResponse;
       }[];
@@ -225,8 +227,23 @@ export const api = {
     return get<Report>('/api/report', signal);
   },
 
-  analyze(body: AnalyzeRequest, signal?: AbortSignal): Promise<Report> {
-    if (USE_MOCKS) return delay(MOCK_REPORT, 900);
+  async analyze(body: AnalyzeRequest, signal?: AbortSignal): Promise<Report> {
+    if (USE_MOCKS) {
+      // The demo report, with the incident recorded offline for each shock of the fixture.
+      const shock = body.shocks?.[0];
+      if (!shock) return delay(MOCK_REPORT, 900);
+      const incidents = (await import('../mocks/position-incidents.json')).default as Record<
+        string,
+        PositionIncident
+      >;
+      const incident = incidents[shock];
+      if (!incident)
+        throw new ApiError(
+          404,
+          `No fixture for ${shock}. Try ${Object.keys(incidents).join(', ')}, or the API with VITE_USE_MOCKS=false.`,
+        );
+      return delay({ ...MOCK_REPORT, incident }, 900);
+    }
     return post<Report>('/api/analyze', body, signal);
   },
 

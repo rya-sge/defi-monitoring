@@ -87,6 +87,12 @@ def test_analyze_runs_on_the_snapshot_without_touching_out(client, tmp_path):
     assert not list(tmp_path.iterdir())
 
 
+def test_analyze_serves_an_incident_from_its_shocks(client):
+    body = client.post("/api/analyze", json={"paths": 2000, "shocks": ["issuer_depeg=0.08"]}).json()
+    assert body["incident"]["verdict"] in {"STAY", "REDUCE", "EXIT"}
+    assert client.post("/api/analyze", json={"shocks": ["nonsense=0.1"]}).status_code == 422
+
+
 def test_analyze_rejects_an_out_of_range_horizon(client):
     assert client.post("/api/analyze", json={"horizon": 0}).status_code == 422
 

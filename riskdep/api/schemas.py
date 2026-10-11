@@ -217,6 +217,10 @@ class Report(BaseModel):
         description="The layers the borrower's recorded dependency graph adds: oracle inputs and who can change "
         "them, sibling markets, the collateral's backing and grade, the protocols' share of DeFi (plan 2026-10-11-depth).",
     )
+    incident: dict[str, Any] | None = Field(
+        default=None,
+        description="With `shocks`: the known incident's impact, time to impact, stressed exit and verdict given it.",
+    )
 
 
 class AnalyzeRequest(BaseModel):
@@ -227,6 +231,12 @@ class AnalyzeRequest(BaseModel):
     horizon: float = Field(default=30.0, gt=0, le=365, description="Horizon in days, capped at maturity.")
     paths: int = Field(default=20000, ge=1000, le=200000, description="Monte Carlo paths.")
     live: bool = Field(default=False, description="Fetch from the network instead of the cached snapshot.")
+    shocks: list[str] = Field(
+        default_factory=list,
+        description="As `analyze --shock`: `<event>=<severity>` (e.g. `issuer_depeg=0.08`, `pool_move=1.5`, a sale as a "
+        "multiple of the pool's liquidity) or `venue=<exchange>:<loss>` (Ethena). Adds the incident to the report.",
+        examples=[["pool_move=1.5"]],
+    )
 
 
 class Liquidation(BaseModel):

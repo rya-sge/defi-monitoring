@@ -320,7 +320,7 @@ uv run python -c "import json,riskdep.api as a; print(json.dumps(a.app.openapi()
 | `GET /api/vault/{address}` | a Vault V2 read live from the Morpho API: its markets by allocation, their borrowers' liquidations and concentration; from the vault's recordings when there are, each market's oracle class and feed freshness and the vault's exit liquidity and holders |
 | `GET /api/market/{market_id}` | a Blue market read live from the Morpho API: its state and every borrower's liquidating fall |
 | `GET /api/report` | the last `analyze` report written to `out/` |
-| `POST /api/analyze` | run `analyze` (market, user, horizon, paths, live) and return the report; writes nothing |
+| `POST /api/analyze` | run `analyze` (market, user, horizon, paths, shocks, live) and return the report, with the incident when shocks are given; writes nothing |
 | `GET /api/books` | the books of vaults shipped in `examples/` |
 | `POST /api/incident` | a known incident (`shocks` as `analyze --shock`, e.g. `token=PST:0.30`) on `vaults`, an inline `book` or an `example` book: the book's loss, headline and breakeven, and each vault's detail, as `analyze --vault` / `--book` computes them; offline from the recordings unless `live`; writes nothing |
 | `GET /api/shock/graphs` | the dependency graphs recorded under `fixtures/replay/graph-*`, which a shock runs on offline |
@@ -333,7 +333,7 @@ uv run python -c "import json,riskdep.api as a; print(json.dumps(a.app.openapi()
 | `GET /api/targets` | one entry per `out/watch-*.jsonl`: the watch targets with alerts |
 | `GET /api/alerts?target=&since=&level=&limit=` | alerts after a block cursor; pass the returned `cursor` back as `since` |
 
-**Limits.** No wallet or transaction. Incident displays a fixed demo event with recorded impact; its timestamps are illustrative, not live detection. The Vault, Graph and Alerts pages follow the vault selector of the top bar, one vault at a time: it lists every vault of the last graph and the watched addresses, starts on the first watch target, and only watched targets have alerts. `POST /api/analyze` is typed and wired in the client but no page offers it. Dark mode follows the system; the `data-theme` override the palette supports has no toggle yet (the graph reads the colour tokens live, so one would need no re-init). Alerts arrive by polling `/api/alerts` every 3 s with a block cursor, not over a socket; a failed poll is surfaced and retried on the next tick. No frontend tests; CI does build `web/` and checks its formatting (`pnpm lint && pnpm build`).
+**Limits.** No wallet or transaction. Incident displays a fixed demo event with recorded impact; its timestamps are illustrative, not live detection. The Vault, Graph and Alerts pages follow the vault selector of the top bar, one vault at a time: it lists every vault of the last graph and the watched addresses, starts on the first watch target, and only watched targets have alerts. Dark mode follows the system; the `data-theme` override the palette supports has no toggle yet (the graph reads the colour tokens live, so one would need no re-init). Alerts arrive by polling `/api/alerts` every 3 s with a block cursor, not over a socket; a failed poll is surfaced and retried on the next tick. No frontend tests; CI does build `web/` and checks its formatting (`pnpm lint && pnpm build`).
 
 ## Layout
 

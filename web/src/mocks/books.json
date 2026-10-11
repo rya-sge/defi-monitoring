@@ -1,5 +1,159 @@
 [
   {
+    "name": "brief-mixed-book",
+    "title": "The brief's book, mixed: nine Vault V2 pockets and the brief's own PT loop on Morpho, 1M USD each",
+    "weighting": "pocket",
+    "vaults": [
+      {
+        "address": "0x5613b170ded221c588b6e9637b910f49e5508680ceede207f44aa72e5c46cb05",
+        "label": "PT-sUSDe loop on Morpho (the brief's example)",
+        "depositor": "0xdf81987465681D0515058fe0A47A3bD174012730",
+        "amount": 1000000.0,
+        "kind": "borrow"
+      },
+      {
+        "address": "0xd6d4b804014ef27836dbe9f8f6bf6c71251548ec",
+        "label": "Belem RWA EURCV",
+        "depositor": null,
+        "amount": 1000000.0,
+        "kind": "vault"
+      },
+      {
+        "address": "0xc207d3f66537d7f66456808379a0e560cf20da36",
+        "label": "RockawayX Confidential RWA USDC",
+        "depositor": null,
+        "amount": 1000000.0,
+        "kind": "vault"
+      },
+      {
+        "address": "0x2ca22cb25558fa2018ecb1ce4ed8af92ee7ea423",
+        "label": "RockawayX f(x) Protocol Ecosystem USDC",
+        "depositor": null,
+        "amount": 1000000.0,
+        "kind": "vault"
+      },
+      {
+        "address": "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
+        "label": "RockawayX USDC Yield",
+        "depositor": null,
+        "amount": 1000000.0,
+        "kind": "vault"
+      },
+      {
+        "address": "0x3bd9adae6643ddcddd02746b8b60075e56df9478",
+        "label": "RockawayX Tori Ecosystem",
+        "depositor": null,
+        "amount": 1000000.0,
+        "kind": "vault"
+      },
+      {
+        "address": "0x8ac91877b93330f52b2979a31a4879506021475c",
+        "label": "Huma USDC Main",
+        "depositor": null,
+        "amount": 1000000.0,
+        "kind": "vault"
+      },
+      {
+        "address": "0x8c106eedad96553e64287a5a6839c3cc78afa3d0",
+        "label": "Gauntlet USDC Prime",
+        "depositor": null,
+        "amount": 1000000.0,
+        "kind": "vault"
+      },
+      {
+        "address": "0xbeef088055857739c12cd3765f20b7679def0f51",
+        "label": "Steakhouse Prime USDC",
+        "depositor": null,
+        "amount": 1000000.0,
+        "kind": "vault"
+      },
+      {
+        "address": "0xb0c424116172b55cbb6dd3136f5989f7959e5b91",
+        "label": "Spark Blue Chip USDT Vault",
+        "depositor": null,
+        "amount": 1000000.0,
+        "kind": "vault"
+      }
+    ]
+  },
+  {
+    "name": "brief-ten-pockets",
+    "title": "The brief's book: ten pockets of 1M USD, one Vault V2 each",
+    "weighting": "pocket",
+    "vaults": [
+      {
+        "address": "0xd6d4b804014ef27836dbe9f8f6bf6c71251548ec",
+        "label": "Belem RWA EURCV",
+        "depositor": null,
+        "amount": 1000000.0,
+        "kind": "vault"
+      },
+      {
+        "address": "0xc207d3f66537d7f66456808379a0e560cf20da36",
+        "label": "RockawayX Confidential RWA USDC",
+        "depositor": null,
+        "amount": 1000000.0,
+        "kind": "vault"
+      },
+      {
+        "address": "0x2ca22cb25558fa2018ecb1ce4ed8af92ee7ea423",
+        "label": "RockawayX f(x) Protocol Ecosystem USDC",
+        "depositor": null,
+        "amount": 1000000.0,
+        "kind": "vault"
+      },
+      {
+        "address": "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
+        "label": "RockawayX USDC Yield",
+        "depositor": null,
+        "amount": 1000000.0,
+        "kind": "vault"
+      },
+      {
+        "address": "0x3bd9adae6643ddcddd02746b8b60075e56df9478",
+        "label": "RockawayX Tori Ecosystem",
+        "depositor": null,
+        "amount": 1000000.0,
+        "kind": "vault"
+      },
+      {
+        "address": "0x8ac91877b93330f52b2979a31a4879506021475c",
+        "label": "Huma USDC Main",
+        "depositor": null,
+        "amount": 1000000.0,
+        "kind": "vault"
+      },
+      {
+        "address": "0x93e0f9d502eefce8d34924ab3478c7ea0cbc5a2e",
+        "label": "RockawayX NUVA Ecosystem",
+        "depositor": null,
+        "amount": 1000000.0,
+        "kind": "vault"
+      },
+      {
+        "address": "0x8c106eedad96553e64287a5a6839c3cc78afa3d0",
+        "label": "Gauntlet USDC Prime",
+        "depositor": null,
+        "amount": 1000000.0,
+        "kind": "vault"
+      },
+      {
+        "address": "0xbeef088055857739c12cd3765f20b7679def0f51",
+        "label": "Steakhouse Prime USDC",
+        "depositor": null,
+        "amount": 1000000.0,
+        "kind": "vault"
+      },
+      {
+        "address": "0xb0c424116172b55cbb6dd3136f5989f7959e5b91",
+        "label": "Spark Blue Chip USDT Vault",
+        "depositor": null,
+        "amount": 1000000.0,
+        "kind": "vault"
+      }
+    ]
+  },
+  {
     "name": "rockawayx-ethereum",
     "title": "RockawayX, Morpho Vault V2 on Ethereum",
     "weighting": "vault",
@@ -7,37 +161,51 @@
       {
         "address": "0xc207d3f66537d7f66456808379a0e560cf20da36",
         "label": "RockawayX Confidential RWA USDC",
-        "depositor": null
+        "depositor": null,
+        "amount": null,
+        "kind": "vault"
       },
       {
         "address": "0x2ca22cb25558fa2018ecb1ce4ed8af92ee7ea423",
         "label": "RockawayX f(x) Protocol Ecosystem USDC",
-        "depositor": null
+        "depositor": null,
+        "amount": null,
+        "kind": "vault"
       },
       {
         "address": "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
         "label": "RockawayX USDC Yield",
-        "depositor": null
+        "depositor": null,
+        "amount": null,
+        "kind": "vault"
       },
       {
         "address": "0x3bd9adae6643ddcddd02746b8b60075e56df9478",
         "label": "RockawayX Tori Ecosystem",
-        "depositor": null
+        "depositor": null,
+        "amount": null,
+        "kind": "vault"
       },
       {
         "address": "0x8ac91877b93330f52b2979a31a4879506021475c",
         "label": "Huma USDC Main",
-        "depositor": null
+        "depositor": null,
+        "amount": null,
+        "kind": "vault"
       },
       {
         "address": "0xd6d4b804014ef27836dbe9f8f6bf6c71251548ec",
         "label": "Belem RWA EURCV",
-        "depositor": null
+        "depositor": null,
+        "amount": null,
+        "kind": "vault"
       },
       {
         "address": "0x93e0f9d502eefce8d34924ab3478c7ea0cbc5a2e",
         "label": "RockawayX NUVA Ecosystem",
-        "depositor": null
+        "depositor": null,
+        "amount": null,
+        "kind": "vault"
       }
     ]
   }
