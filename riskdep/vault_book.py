@@ -304,7 +304,7 @@ def borrow_line(
     )
 
 
-def value_at_risk(book: BookIncident, incidents: list[VaultIncident]) -> dict:
+def value_at_risk(book: BookIncident, incidents: list[VaultIncident], incident: str | None = None) -> dict:
     """D227, pure: what the incident puts at risk, gathered from figures already computed: the money in the hit
     markets, the expected loss if it happens and its worst pocket, the worst cases given the incident (when the
     conditional draw ran), the cost of leaving the hit pockets against what it saves, and the losses beyond the book:
@@ -328,17 +328,18 @@ def value_at_risk(book: BookIncident, incidents: list[VaultIncident]) -> dict:
     # saves are the followed depositor's: say whose figures each line gives
     whole = book.weighting == "vault"
     them = " for the depositors followed" if whole else ""
+    event = incident or "; ".join(book.shocks)
     lines = [
-        "  VALUE AT RISK",
+        f"  VALUE AT RISK, given: {event}",
         f"    at risk: {book.exposure_usd:,.0f} USD in the hit markets, {len(hit)} of {len(book.lines)} pocket(s) hit",
-        f"    expected loss if it happens: {book.loss_usd:,.0f} USD ({share:.2%} of the book"
+        f"    loss if it happens, at that size: {book.loss_usd:,.0f} USD ({share:.2%} of the book"
         + ("; the vaults whole, all their depositors)" if whole else ")")
         + (f"; worst pocket: {worst.name} ({worst.loss_usd:,.0f})" if worst and worst.loss_usd > 0 else ""),
         (
-            f"    worst cases given the incident{them}: 95 % {c['stay_p95']:,.0f}, 99 % {c['stay_p99']:,.0f} USD "
-            f"(its size and the liquidators drawn over {c['paths']:,} paths)"
+            f"    worst cases if it happens{them}, its size and the liquidators drawn over {c['paths']:,} paths: "
+            f"95 % {c['stay_p95']:,.0f}, 99 % {c['stay_p99']:,.0f} USD"
             if c
-            else "    worst cases given the incident: run with --conditional to draw them"
+            else "    worst cases if it happens: run with --conditional to draw its size and the liquidators"
         ),
         f"    leaving the hit pockets now{them}: costs {leave:,.0f} USD for sure, saves {saved:,.0f} if it happens",
     ]
@@ -348,6 +349,7 @@ def value_at_risk(book: BookIncident, incidents: list[VaultIncident]) -> dict:
             + ", ".join(f"{v:,.0f} {u}" for u, v in sorted(per_unit.items(), key=lambda x: -x[1]))
         )
     return {
+        "incident": event,
         "exposure_usd": book.exposure_usd,
         "loss_usd": book.loss_usd,
         "loss_share": share,

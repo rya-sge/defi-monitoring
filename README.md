@@ -34,7 +34,7 @@ What to read in the output:
 | `if the incident is not certain: … it pays if the incident's probability over 30 days is above 7.92%` | the breakeven: exiting is certain and costly, staying is uncertain |
 | `outside view: Nexus f(x) Protocol cover …` | an outside price to compare that probability with |
 | `Leaving Belem RWA EURCV costs 110,000 USD for sure, against 53,445 saved if the incident comes: stay.` | the brief's ten-pocket example, made explicit |
-| `VALUE AT RISK` … `at risk:`, `expected loss if it happens:`, `worst cases given the incident:`, `leaving the hit pockets now:`, `beyond the book:` | the total at risk in one block: the money in the hit markets, the loss, its worst cases, the cost of leaving, and the losses outside the book (also `book.value_at_risk` in `POST /api/incident`) |
+| `VALUE AT RISK, given: …` `at risk:`, `loss if it happens, at that size:`, `worst cases if it happens…:`, `leaving the hit pockets now:`, `beyond the book:` | the total at risk in one block: the money in the hit markets, the loss, its worst cases, the cost of leaving, and the losses outside the book (also `book.value_at_risk` in `POST /api/incident`) |
 | `given the incident, drawn: staying loses 52,067 USD on average (median 11,164, 95 % 246,211, 99 % 352,195); leaving now costs 110,000 …; staying is worse in 18% of 10,000 paths` | "exiting is expensive and certain, staying is cheap and uncertain": the uncertain side as a distribution (`--conditional`) |
 
 **Is the number defensible: a backtest.** `uv run python -m riskdep backtest` replays the PT-reUSD liquidations of 2026-08-25 (a Pendle yield spike moved a min(TWAP, linear) oracle; `GAP.md` K8). It reads the state 60 blocks before them, applies the oracle's observed fall, and compares the prediction with the 33 `Liquidate` events:
@@ -47,6 +47,8 @@ What to read in the output:
 **The venues behind USDe.** The brief's PT sits on sUSDe, a claim on USDe, whose backing Ethena publishes keyless: 4.77B, 79.5 % not on an exchange, the rest as margin for its hedges (Binance 13.4 %, OKX 4.2 %, Bybit 2.3 %…), a 62.1M reserve fund that absorbs a loss first. `graph` and the PT report draw them; `--shock venue=Binance:0.5` (also with `--vault`, `--book` and over the API) loses half the margin there: 319M, 62M absorbed, USDe and sUSDe −5.39 %, and the PT loop is liquidated once its meta-oracle switches (EXIT, 16 h to act). Plan: `plan/2026-10-11-venues.plan.md`.
 
 **Sky behind USDS and sUSDS.** Read on-chain through Sky's ChainLog, keyless: 11.69B of debt, 44.7 % in the peg module (4.42B USDC), 30.9 % Spark's allocation, 14.6 % Bloom's…; a net surplus of −51.7M, so a loss goes to debt auctions minting SKY (about 450M) before USDS holders. `analyze --vault|--book --shock sky=spark:0.2`: 722M lost, USDS and sUSDS −2.36 %. Plan: `plan/2026-10-11-sky.plan.md`.
+
+**After the incident.** Once an incident has happened, `analyze --vault V --since <block> [--at <block>] --shock token=…` (and `POST /api/incident/after`) reads the vault at both blocks and splits the incident: what has **landed** (the share price's fall, the liquidations meanwhile), what is **still at risk** (bad debt not yet written off, and the part the oracle has not passed on yet, so a fall it already took is not counted twice), and the verdict on that part only, against the certain cost of leaving. On the PT-reUSD episode of 2026-08-25, for RockawayX USDC Yield: 16 liquidations repaid 35.19M, nothing written off, nothing pending. Plan: `plan/2026-10-11-after.plan.md`.
 
 **Shared feeds and concentration.** `graph` flags every oracle and feed read by more than one market (on Belem, EUR/USD prices 5 markets, 3 of them the vault's) and every collateral's share of its supply posted in Morpho (mGLOeuro 88.8 %, AUTO 99.8 %); the PT report adds the position's share of its market (half) and the market's PT against its Pendle pool's (8.2×). Plan: `plan/2026-10-11-shared-and-supply.plan.md`.
 
@@ -325,6 +327,7 @@ uv run python -c "import json,riskdep.api as a; print(json.dumps(a.app.openapi()
 | `GET /api/report` | the last `analyze` report written to `out/` |
 | `POST /api/analyze` | run `analyze` (market, user, horizon, paths, live) and return the report; writes nothing |
 | `GET /api/books` | the books of vaults shipped in `examples/` |
+| `POST /api/incident/after` | a vault after an incident that began at block `since`: landed, unrealised, pending, and the verdict on what is still at risk (`analyze --vault V --since`) |
 | `POST /api/incident` | a known incident (`shocks` as `analyze --shock`, e.g. `token=PST:0.30`) on `vaults`, an inline `book` or an `example` book: the book's loss, headline and breakeven, and each vault's detail, as `analyze --vault` / `--book` computes them; offline from the recordings unless `live`; writes nothing |
 | `GET /api/shock/graphs` | the dependency graphs recorded under `fixtures/replay/graph-*`, which a shock runs on offline |
 | `GET /api/shock/targets?vault=&user=` | the oracles, feeds and assets of that graph that can be shocked, with the markets they price (`shock --list`) |

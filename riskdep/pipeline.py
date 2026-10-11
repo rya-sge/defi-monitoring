@@ -384,6 +384,19 @@ def sky_snapshot(mode: str = "offline"):
     return sky.load(f, block)
 
 
+def incident_words(info: dict) -> str:
+    """D227: a venue or Sky incident in a few words, with the markdown it becomes."""
+    parts = []
+    for x in info["losses"]:
+        share = x["lost_usd"] / x["exposed_usd"] if x["exposed_usd"] else 0.0
+        if "venue" in x:
+            parts.append(f"{x['venue']} loses {share:.0%} of USDe's backing there")
+        else:
+            parts.append(f"Sky's {x['source']} loses {share:.0%}")
+    tokens = "USDe and sUSDe" if any("venue" in x for x in info["losses"]) else "USDS, DAI and sUSDS"
+    return f"{'; '.join(parts)} → {tokens} −{info['markdown']:.2%}"
+
+
 def venue_shocks(items: list[str] | None, mode: str, target: str) -> tuple[list[str], dict | None]:
     """D220: `venue=<exchange>:<loss>` replaced by the USDe markdown it leaves once the reserve fund absorbed what it
     can: `issuer_depeg=<markdown>` for `analyze` (`target` "position"), `token=` markdowns of USDe and sUSDe for a
@@ -530,8 +543,53 @@ def incident(
             inc.notes.insert(0, venue["text"])
     if conditional:
         conditional_distribution(book, parsed, incidents, result, run_all, borrows, run_borrows)
-    result.value_at_risk = vault_book.value_at_risk(result, incidents)  # D227, after the draw it reports
+    # D227, after the draw it reports; a venue or Sky incident is named by what it is, with the markdown it becomes
+    event = incident_words(venue) if venue else None
+    result.value_at_risk = vault_book.value_at_risk(result, incidents, event)
     return VaultIncidentResult(book, incidents, result)
+
+
+def after_incident(
+    vault: str,
+    since: int,
+    at: int | None,
+    shocks: list[str],
+    user: str | None = None,
+    mode: str = "offline",
+    exit_cost: float | None = None,
+    horizon: float = 30.0,
+):
+    """D230: a vault after an incident that began at block `since`: landed, unrealised, pending, and the verdict on
+    what is still at risk (`after.run`). Offline from `fixtures/replay/after-<vault>-<since>-<at>/`, or, when `at` is
+    `since`, from the vault's incident recording at that block; `record` reads through the archive route and saves;
+    `live` reads now. Raises ValueError (bad shocks), FileNotFoundError (no recording), `sources.CacheMiss`."""
+    from . import after
+
+    shocks, _ = venue_shocks(shocks, mode, "vault")
+    parsed = vault_incident.parse_shocks(shocks)
+    if any(k != "token" for k, *_ in parsed):
+        raise ValueError("after an incident, give the markdown as token=<collateral>:<fall> (a default has no price)")
+    v = vault.lower()
+    if mode == "offline":
+        inc = REPLAY_DIR / f"incident-{v}"
+        if at is None or at == since:
+            if not (inc / "meta.json").exists():
+                raise FileNotFoundError(f"no recording of {vault}: record it with --since {since} --record")
+            block = json.loads((inc / "meta.json").read_text())["block"]
+            if since != block:
+                raise FileNotFoundError(
+                    f"no recording of {vault} at block {since} (its incident recording is at {block})"
+                )
+            return after.run(S.Fetcher("offline", inc), v, since, since, user, parsed, exit_cost, horizon)
+        rdir = REPLAY_DIR / f"after-{v}-{since}-{at}"
+        if not rdir.exists():
+            raise FileNotFoundError(f"no recording in {rdir.name}: run once with --record")
+        return after.run(S.Fetcher("offline", rdir), v, since, at, user, parsed, exit_cost, horizon)
+    direct = S.Fetcher("direct")
+    at = at or int(S.rpc(direct, "eth_blockNumber", []), 16) - discover.REGISTRY["watch"]["confirmations"]
+    f = S.Fetcher("refresh", REPLAY_DIR / f"after-{v}-{since}-{at}") if mode == "record" else direct
+    with S.routed_rpc(S.archive_url()):  # the block `since` is past what the free RPCs serve
+        return after.run(f, v, since, at, user, parsed, exit_cost, horizon)
 
 
 def borrow_pocket(v, parsed, weighting: str, horizon: float, mode: str, exit_cost: float | None, venue=None):

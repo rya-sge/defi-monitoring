@@ -241,6 +241,48 @@
         }
       }
     },
+    "/api/incident/after": {
+      "post": {
+        "tags": [
+          "incident"
+        ],
+        "summary": "Post Incident After",
+        "description": "A vault after an incident that began at block `since`: what has landed, what is still at risk (unrealised, and\npending until the oracle passes it on) and the verdict on that part only. Offline from a recording unless `live`.",
+        "operationId": "post_incident_after_api_incident_after_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AfterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AfterResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/shock/graphs": {
       "get": {
         "tags": [
@@ -715,6 +757,296 @@
   },
   "components": {
     "schemas": {
+      "AfterMarket": {
+        "properties": {
+          "market_id": {
+            "type": "string",
+            "title": "Market Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "oracle_seen": {
+            "type": "number",
+            "title": "Oracle Seen",
+            "description": "The oracle's fall since `since`, as read."
+          },
+          "pending_drop": {
+            "type": "number",
+            "title": "Pending Drop",
+            "description": "The fall still to come before the oracle reaches the incident's price."
+          },
+          "unrealised": {
+            "type": "number",
+            "title": "Unrealised",
+            "description": "Bad debt now, not yet written off, the whole market, loan units."
+          },
+          "at_full": {
+            "type": "number",
+            "title": "At Full"
+          },
+          "pending": {
+            "type": "number",
+            "title": "Pending",
+            "description": "Bad debt still to come once the oracle passes the incident on."
+          },
+          "vault_share": {
+            "type": "number",
+            "title": "Vault Share"
+          },
+          "liquidations": {
+            "type": "integer",
+            "title": "Liquidations",
+            "default": 0
+          },
+          "repaid": {
+            "type": "number",
+            "title": "Repaid",
+            "default": 0.0
+          },
+          "written_off": {
+            "type": "number",
+            "title": "Written Off",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "market_id",
+          "label",
+          "oracle_seen",
+          "pending_drop",
+          "unrealised",
+          "at_full",
+          "pending",
+          "vault_share"
+        ],
+        "title": "AfterMarket"
+      },
+      "AfterRequest": {
+        "properties": {
+          "vault": {
+            "type": "string",
+            "title": "Vault",
+            "description": "Vault V2 address."
+          },
+          "since": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Since",
+            "description": "The block the incident began at."
+          },
+          "at": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "At",
+            "description": "The block to read now; default the head (live)."
+          },
+          "shocks": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Shocks",
+            "description": "The incident in full, as `analyze --shock`: `token=<collateral>:<fall>`, `venue=\u2026` or `sky=\u2026`; the part the oracle already took is not applied again.",
+            "examples": [
+              [
+                "token=PT-reUSD-10DEC2026:0.10"
+              ]
+            ]
+          },
+          "user": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User",
+            "description": "Depositor address; default the largest."
+          },
+          "horizon": {
+            "type": "number",
+            "maximum": 365.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Horizon",
+            "description": "Days of yield given up by leaving.",
+            "default": 30.0
+          },
+          "exit_cost": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMaximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exit Cost",
+            "description": "Cost of leaving as a share of what leaves."
+          },
+          "live": {
+            "type": "boolean",
+            "title": "Live",
+            "description": "Read the chain (an archive RPC for `since`) instead of recordings.",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "vault",
+          "since",
+          "shocks"
+        ],
+        "title": "AfterRequest",
+        "description": "A vault after an incident that began at block `since` (`analyze --vault V --since BLOCK`)."
+      },
+      "AfterResponse": {
+        "properties": {
+          "vault": {
+            "type": "string",
+            "title": "Vault"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "since": {
+            "type": "integer",
+            "title": "Since"
+          },
+          "at": {
+            "type": "integer",
+            "title": "At"
+          },
+          "depositor": {
+            "type": "string",
+            "title": "Depositor"
+          },
+          "unit_symbol": {
+            "type": "string",
+            "title": "Unit Symbol"
+          },
+          "share_price_since": {
+            "type": "number",
+            "title": "Share Price Since"
+          },
+          "share_price_at": {
+            "type": "number",
+            "title": "Share Price At"
+          },
+          "landed": {
+            "type": "number",
+            "title": "Landed",
+            "description": "The depositor's loss since, on what it still holds: sunk."
+          },
+          "landed_vault": {
+            "type": "number",
+            "title": "Landed Vault"
+          },
+          "unrealised": {
+            "type": "number",
+            "title": "Unrealised",
+            "description": "The vault's part of the bad debt not yet written off."
+          },
+          "pending": {
+            "type": "number",
+            "title": "Pending",
+            "description": "The vault's part of the loss the oracle has not passed on yet."
+          },
+          "at_risk": {
+            "type": "number",
+            "title": "At Risk",
+            "description": "unrealised + pending: what leaving may still avoid."
+          },
+          "stay": {
+            "type": "number",
+            "title": "Stay"
+          },
+          "leave": {
+            "type": "number",
+            "title": "Leave"
+          },
+          "par": {
+            "type": "number",
+            "title": "Par"
+          },
+          "stuck": {
+            "type": "number",
+            "title": "Stuck"
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "STAY",
+              "REDUCE",
+              "EXIT"
+            ],
+            "title": "Verdict"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "exit_cost": {
+            "type": "number",
+            "title": "Exit Cost"
+          },
+          "markets": {
+            "items": {
+              "$ref": "#/components/schemas/AfterMarket"
+            },
+            "type": "array",
+            "title": "Markets"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "vault",
+          "name",
+          "since",
+          "at",
+          "depositor",
+          "unit_symbol",
+          "share_price_since",
+          "share_price_at",
+          "landed",
+          "landed_vault",
+          "unrealised",
+          "pending",
+          "at_risk",
+          "stay",
+          "leave",
+          "par",
+          "stuck",
+          "verdict",
+          "reason",
+          "exit_cost",
+          "markets"
+        ],
+        "title": "AfterResponse",
+        "description": "What has landed, what is still at risk, and the verdict on that part only (D228\u2013D231)."
+      },
       "Alert": {
         "properties": {
           "level": {
@@ -3338,6 +3670,11 @@
       },
       "ValueAtRisk": {
         "properties": {
+          "incident": {
+            "type": "string",
+            "title": "Incident",
+            "description": "The incident the figures are given for, in words."
+          },
           "exposure_usd": {
             "type": "number",
             "title": "Exposure Usd",
@@ -3346,7 +3683,7 @@
           "loss_usd": {
             "type": "number",
             "title": "Loss Usd",
-            "description": "Expected loss if the incident happens."
+            "description": "Loss if the incident happens, at the size given (no probability)."
           },
           "loss_share": {
             "type": "number",
@@ -3440,6 +3777,7 @@
         },
         "type": "object",
         "required": [
+          "incident",
           "exposure_usd",
           "loss_usd",
           "loss_share",

@@ -106,7 +106,11 @@ The oracle's class decides when a depeg becomes a liquidation. The demo's oracle
 
 ## 5. A venue failure (D219–D220)
 
-`venue=<exchange>:<loss>` says that an exchange loses a share of the backing it holds (an exchange failure, a seizure, a frozen withdrawal). The computation:
+`venue=<exchange>:<loss>` says that an exchange loses a share of the backing delegated to it as margin.
+
+**This is a stress bound, not Ethena's expected case.** Ethena's documentation (`docs/external/ethena/…/protocol-overview/risks/exchange-failure-risk.md`) states that the backing is never deposited at an exchange: it stays with the off-exchange settlement provider, so an exchange failure costs the profit and loss not yet settled, at most one daily settlement cycle, and the hedge is reopened elsewhere. The venue figure from the dashboard is the margin delegated to that exchange; losing a share of it means the settlement arrangement did not hold (the provider cannot recover the margin, or part of it is frozen in the estate). Read a `venue=` result as what such a failure could cost, not as what an exchange bankruptcy is expected to cost.
+
+The computation:
 
 ```
 lost       = backing at the venue × loss

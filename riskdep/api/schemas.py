@@ -324,6 +324,65 @@ class IncidentRequest(BaseModel):
     live: bool = Field(default=False, description="Read the chain instead of the recordings (nothing is saved).")
 
 
+class AfterRequest(BaseModel):
+    """A vault after an incident that began at block `since` (`analyze --vault V --since BLOCK`)."""
+
+    vault: str = Field(description="Vault V2 address.")
+    since: int = Field(gt=0, description="The block the incident began at.")
+    at: int | None = Field(default=None, gt=0, description="The block to read now; default the head (live).")
+    shocks: list[str] = Field(
+        min_length=1,
+        description="The incident in full, as `analyze --shock`: `token=<collateral>:<fall>`, `venue=…` or `sky=…`; "
+        "the part the oracle already took is not applied again.",
+        examples=[["token=PT-reUSD-10DEC2026:0.10"]],
+    )
+    user: str | None = Field(default=None, description="Depositor address; default the largest.")
+    horizon: float = Field(default=30.0, gt=0, le=365, description="Days of yield given up by leaving.")
+    exit_cost: float | None = Field(default=None, ge=0, lt=1, description="Cost of leaving as a share of what leaves.")
+    live: bool = Field(default=False, description="Read the chain (an archive RPC for `since`) instead of recordings.")
+
+
+class AfterMarket(BaseModel):
+    market_id: str
+    label: str
+    oracle_seen: float = Field(description="The oracle's fall since `since`, as read.")
+    pending_drop: float = Field(description="The fall still to come before the oracle reaches the incident's price.")
+    unrealised: float = Field(description="Bad debt now, not yet written off, the whole market, loan units.")
+    at_full: float
+    pending: float = Field(description="Bad debt still to come once the oracle passes the incident on.")
+    vault_share: float
+    liquidations: int = 0
+    repaid: float = 0.0
+    written_off: float = 0.0
+
+
+class AfterResponse(BaseModel):
+    """What has landed, what is still at risk, and the verdict on that part only (D228–D231)."""
+
+    vault: str
+    name: str
+    since: int
+    at: int
+    depositor: str
+    unit_symbol: str
+    share_price_since: float
+    share_price_at: float
+    landed: float = Field(description="The depositor's loss since, on what it still holds: sunk.")
+    landed_vault: float
+    unrealised: float = Field(description="The vault's part of the bad debt not yet written off.")
+    pending: float = Field(description="The vault's part of the loss the oracle has not passed on yet.")
+    at_risk: float = Field(description="unrealised + pending: what leaving may still avoid.")
+    stay: float
+    leave: float
+    par: float
+    stuck: float
+    verdict: Verdict
+    reason: str
+    exit_cost: float
+    markets: list[AfterMarket]
+    notes: list[str] = Field(default_factory=list)
+
+
 class BookSummary(BaseModel):
     name: str
     title: str
@@ -348,8 +407,9 @@ class Conditional(BaseModel):
 class ValueAtRisk(BaseModel):
     """What the incident puts at risk, in one block (D227): the figures are the book's, gathered."""
 
+    incident: str = Field(description="The incident the figures are given for, in words.")
     exposure_usd: float = Field(description="Money in the markets the incident hits.")
-    loss_usd: float = Field(description="Expected loss if the incident happens.")
+    loss_usd: float = Field(description="Loss if the incident happens, at the size given (no probability).")
     loss_share: float = Field(description="That loss over the book's value.")
     pockets_hit: int
     pockets: int
