@@ -142,6 +142,9 @@ def analyze(
     incident = None
     if shocks:
         recovery = next((p.recovery for p in prs if p.event == "issuer_depeg"), 0.0)
+        moved = None
+        if "pool_move" in shocks:
+            shocks, moved = pool_move_shocks(f, pos, shocks)
         incident = scenario.assess(
             pos,
             shocks,
@@ -151,6 +154,9 @@ def analyze(
             quote_for=lambda q, fr: discover.partial_exit_quote(f, q, fr),
             horizon_days=horizon,
         )
+        if moved:
+            incident.pool_move = moved
+            incident.notes.insert(0, moved["text"])
 
     # a failed cross-check leads the reasons: the numbers below it are suspect
     bad = [c for c in checks if c.ok is False]
@@ -178,6 +184,32 @@ def analyze(
         incident=incident,
         discovery=depth,
     )
+
+
+def pool_move_shocks(f: S.Fetcher, pos, shocks: dict[str, float]) -> tuple[dict[str, float], dict]:
+    """D204: a sale into the PT's Pendle pool, measured on a ladder of real pool-only quotes (no aggregator: the
+    oracle's TWAP reads the pool), turned into the implied-yield rise the `pt_yield` channel prices."""
+    if not pos.pendle_market or not pos.amm_liquidity_usd:
+        raise ValueError("pool_move needs a Pendle PT position with a known pool liquidity")
+    x = shocks["pool_move"]
+    sizes = sorted({*discover.ladder_sizes(pos.amm_liquidity_usd), round(x * pos.amm_liquidity_usd, -3)})
+    usd_per_unit = pos.collateral_usd / pos.collateral_units if pos.collateral_units else 0.0
+    ladder, refused = discover.quote_ladder(
+        f,
+        pos.pendle_market,
+        pos.collateral_address,
+        pos.underlying_address,
+        pos.collateral_decimals,
+        usd_per_unit,
+        False,
+        sizes,
+    )
+    curve, _ = discover.marginal_curve(ladder, 0.0)
+    rise, moved = scenario.pool_move(pos, curve, sizes[len(ladder)] if refused else None, x)
+    rest = {k: v for k, v in shocks.items() if k != "pool_move"}
+    rest["pt_yield"] = rest.get("pt_yield", 0.0) + rise
+    moved["implied_yield_rise"] = rise
+    return rest, moved
 
 
 def position_depth(pos, profile=None) -> dict:

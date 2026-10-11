@@ -83,28 +83,46 @@ show_watch() {
       done
 }
 
-start_watch() {  # start_watch <vault> <log> <name>
+start_watch() {  # start_watch <vault> <log>: in the background; prints its pid
   (cd "$ROOT" && exec uv run python -m riskdep watch --vault "$1" --step 1 --poll 2 --out "$OUT" >"$2" 2>&1) &
-  PIDS+=($!)
-  local pid=$!
-  for _ in $(seq 1 240); do
-    grep -q 'cross-check Morpho API' "$2" && break
-    kill -0 "$pid" 2>/dev/null || { cat "$2" >&2; fail "riskdep watch stopped on $3"; }
-    sleep 1
-  done
-  show_watch "$2" "$3" &
-  PIDS+=($!)
-  say "watching $3"
+  echo $!
 }
 
-caption "riskdep — RockawayX vaults under attack, on a mainnet fork"
-say "building the demo contracts and forking Ethereum mainnet at block $BLOCK…"
-(cd "$HERE" && forge build >/dev/null 2>&1) || fail "forge build failed in scripts/fork/"
-start_fork
+# Both watches start together; each reads its vault's whole state through the fork (borrowers, curves, exit queue,
+# admin surface), which is what takes time. Show each step as it finishes, so the screen does not sit empty.
+start_watches() {
+  local t0=$SECONDS p1 p2
+  p1="$(start_watch "$VAULT_TORI" "$LOG_TORI")"; p2="$(start_watch "$VAULT_HUMA" "$LOG_HUMA")"
+  PIDS+=("$p1" "$p2")
+  declare -A shown=()
+  local pair log name step ready
+  while :; do
+    ready=0
+    for pair in "Tori:$LOG_TORI:$p1" "Huma:$LOG_HUMA:$p2"; do
+      IFS=: read -r name log pid <<<"$pair"
+      for step in "total assets" "liquidation curves" "drain threshold" "exit queue" "admin surface" "cross-check Morpho API"; do
+        if [[ -z "${shown[$name$step]:-}" ]] && grep -q "^  $step" "$log" 2>/dev/null; then
+          shown[$name$step]=1
+          printf '\033[2m  %3ss  %-5s %s\033[0m\n' "$((SECONDS - t0))" "$name" "${step/cross-check Morpho API/ready}"
+        fi
+      done
+      [[ -n "${shown[${name}cross-check Morpho API]:-}" ]] && ready=$((ready + 1))
+      kill -0 "$pid" 2>/dev/null || { cat "$log" >&2; fail "riskdep watch stopped on $name"; }
+    done
+    [[ $ready -eq 2 ]] && break
+    (( SECONDS - t0 > 300 )) && fail "the watches are not ready after 5 min; see $OUT/watch-*.log"
+    sleep 1
+  done
+  show_watch "$LOG_TORI" "RockawayX Tori Ecosystem" &
+  PIDS+=($!)
+  show_watch "$LOG_HUMA" "Huma USDC Main" &
+  PIDS+=($!)
+  say "watching RockawayX Tori Ecosystem and Huma USDC Main (ready in $((SECONDS - t0)) s)"
+}
 
 say "starting riskdep watch on two RockawayX vaults (one block per batch, polling every 2 s)…"
-start_watch "$VAULT_TORI" "$LOG_TORI" "RockawayX Tori Ecosystem"
-start_watch "$VAULT_HUMA" "$LOG_HUMA" "Huma USDC Main"
+say "(each one reads its vault's full state through the fork first: about a minute; start before you present)"
+start_watches
 
 if [[ -n "$TELEGRAM" ]]; then
   # after the watches' start-up: the channel gets the crisis, not the standing findings (notify starts at the files' end)
