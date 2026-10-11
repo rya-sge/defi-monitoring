@@ -25,6 +25,8 @@ Needs Foundry (`anvil`, `cast`, `forge`), `uv`, network access (the fork's upstr
 
 ## Before presenting
 
+- Stop a run with **Ctrl-C**, which stops its fork and watches. **Ctrl-Z only pauses it**: the paused fork keeps port 8545 and the next run stops with "port 8545 is taken" (`jobs`, then `fg` and Ctrl-C).
+
 - Run `--no-telegram` once on the venue's network: the fork's upstream and the Morpho API must answer.
 - Run `uv run python -m riskdep notify --test` once: `api.telegram.org` must be reachable.
 - The channel only shows what happens after the watches start; clear it before the session if a rehearsal posted to it.

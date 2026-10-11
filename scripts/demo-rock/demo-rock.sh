@@ -8,6 +8,8 @@
 #   scripts/demo-rock/demo-rock.sh --no-telegram    the same, nothing sent to Telegram (rehearsal)
 #   scripts/demo-rock/demo-rock.sh --block N        fork at block N (default 26165572, where the facts were checked)
 #
+# Stop it with Ctrl-C (it then stops its fork and watches); Ctrl-Z only pauses it and keeps the port taken.
+#
 # Needs Foundry, uv and network access (fork upstream, Morpho API); Telegram needs keys.ini [alerts].
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")/../fork" && pwd)"  # lib.sh and the alt-*.sh scripts expect HERE = scripts/fork
@@ -57,11 +59,18 @@ PY
   fail "no upstream answered; set keys.ini [rpc] url or [alchemy] alchemy_ethereum_endpoint"
 }
 start_fork() {
-  cast chain-id --rpc-url "$R" >/dev/null 2>&1 && fail "something already answers on $R (another demo?); stop it first"
+  # the port, not an RPC answer: an anvil suspended with Ctrl-Z holds the port and answers nothing
+  if (exec 3<>"/dev/tcp/127.0.0.1/${R##*:}") 2>/dev/null; then
+    fail "port ${R##*:} is taken (another demo, or one paused with Ctrl-Z: 'jobs', then 'fg' and Ctrl-C); stop it first"
+  fi
   anvil --fork-url "$(upstream)" --fork-block-number "$BLOCK" --chain-id 1 --port "${R##*:}" --auto-impersonate \
     --retries 20 --fork-retry-backoff 1000 >"$OUT/anvil.log" 2>&1 &
   ANVIL_PID=$!
-  for _ in $(seq 1 60); do cast chain-id --rpc-url "$R" >/dev/null 2>&1 && break; sleep 1; done
+  for _ in $(seq 1 60); do
+    cast chain-id --rpc-url "$R" >/dev/null 2>&1 && break
+    kill -0 "$ANVIL_PID" 2>/dev/null || { tail -3 "$OUT/anvil.log" >&2; fail "anvil stopped at start"; }
+    sleep 1
+  done
   require_fork
   say "fork at block $(cast block-number --rpc-url "$R")"
 }
@@ -126,7 +135,7 @@ say "building the demo contracts and forking Ethereum mainnet at block $BLOCK…
 start_fork
 
 say "starting riskdep watch on two RockawayX vaults (one block per batch, polling every 2 s)…"
-say "(each one reads its vault's full state through the fork first: about a minute; start before you present)"
+say "(each one first reads its vault's full state through the fork: seconds once anvil has cached it, longer the first time)"
 start_watches
 
 if [[ -n "$TELEGRAM" ]]; then

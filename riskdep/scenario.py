@@ -82,6 +82,7 @@ class IncidentResult:
     notes: list[str] = field(default_factory=list)
     after_switch: dict | None = None  # a meta-oracle: the impact once it switches to the source that follows the market
     pool_move: dict | None = None  # D204: the sale into the PT's pool, the price it leaves, the sale that liquidates
+    stressed_exit: dict | None = None  # D206: the exit cost after the incident's own liquidations sell first
 
     def lines(self) -> list[str]:
         shock = ", ".join(f"{k} {v:.1%}" for k, v in self.shocks.items())
@@ -91,6 +92,7 @@ class IncidentResult:
             f"({self.loss_share_of_equity:.1%} of equity)",
             f"  how fast: {self.timing.text}",
             f"  exit now: ${self.exit_cost_usd:,.0f} ({self.exit_source})",
+            *([f"  {self.stressed_exit['text']}"] if self.stressed_exit else []),
             f"  verdict given the incident: {self.verdict}: {self.reason}",
         ]
         if self.after_switch:
@@ -292,6 +294,63 @@ def pt_fall(pos: Position, shocks: dict[str, float]) -> float:
     return 1 - ((1 + pos.implied_apy) / (1 + pos.implied_apy + s)) ** years if s and years > 0 else 0.0
 
 
+def sold_ahead(curve: list[dict], fall: float, own_drop: float | None, own_debt: float, lltv: float) -> float:
+    """D206, pure: what the incident's liquidations sell before the position can, in the loan token: the other
+    borrowers' debt liquidatable at `fall` (the market curve's last point at or below it) times the LIF."""
+    pts = [p for p in curve or [] if p["oracle_fall"] <= fall + 1e-9]
+    if not pts:
+        return 0.0
+    last = max(pts, key=lambda p: p["oracle_fall"])
+    debt = last["liquidatable_debt"] - (own_debt if own_drop is not None and own_drop <= last["oracle_fall"] else 0.0)
+    return max(0.0, debt) * morpho_lif(lltv)
+
+
+def slice_loss(out: dict[float, int], small: float, ahead: float, x: float) -> float | None:
+    """D206, pure: the share of `x` (USD at today's price) lost selling it after `ahead` was sold, from quotes `out`
+    (USD sold → amount out) at `small`, `ahead`, `x` and `ahead + x`; None when a size was not quoted."""
+    if any(s not in out for s in (small, ahead + x)) or (ahead and ahead not in out) or not out[small]:
+        return None
+    rate = out[small] / small
+    return 1 - (out[ahead + x] - (out[ahead] if ahead else 0)) / (x * rate)
+
+
+def stressed_exit(cost_now: float, out: dict[float, int], small: float, ahead: float, x: float, refused: bool) -> dict:
+    """D206, pure: the exit cost once the incident's liquidations sold `ahead` first, as today's cost plus the extra
+    slippage of selling the position's `x` after them, both read off one quote ladder (USD sold → amount out). When
+    Pendle stops routing before `ahead + x`, only the part it still routes can leave: `cost_usd` is then None."""
+    now = slice_loss(out, small, 0.0, x)
+    routed = max((s for s in out if s >= ahead), default=0.0) if (ahead in out) else 0.0
+    sellable = min(x, max(0.0, routed - ahead))
+    base = {"ahead_usd": ahead, "slippage_now": now, "sellable_usd": sellable}
+    if now is not None and sellable >= x:
+        then = slice_loss(out, small, ahead, x)
+        cost = cost_now + max(0.0, then - now) * x
+        return {
+            **base,
+            "cost_usd": cost,
+            "slippage_after": then,
+            "full_exit": True,
+            "text": f"exit after the incident's liquidations sell {ahead:,.0f} first: ${cost:,.0f} "
+            f"(slippage {now:.2%} today, {then:.2%} after them)",
+        }
+    part = slice_loss(out, small, ahead, sellable) if sellable > 0 else None
+    return {
+        **base,
+        "cost_usd": None,
+        "slippage_after": part,
+        "full_exit": False,
+        "text": f"after the incident's liquidations sell {ahead:,.0f} first, Pendle routes "
+        + (
+            f"only {sellable:,.0f} more ({sellable / x:.0%} of the position, slippage {part:.2%}): a full exit is not "
+            "available, the rest waits for the pool to recover or for maturity"
+            if sellable > 0 and part is not None
+            else "no more of the position: a full exit through Pendle is not available"
+            if refused
+            else "a size that was not quoted"
+        ),
+    }
+
+
 def pool_fall(curve: list[list[float]], sold_usd: float) -> float:
     """D204, pure: the pool's PT price fall after a sale of `sold_usd`, from `discover.marginal_curve` (the marginal
     price after each step, relative to spot); past the ladder's end, its last point."""
@@ -366,6 +425,7 @@ def assess(
     profile: OracleProfile | None,
     quote_for=None,
     horizon_days: float = 30.0,
+    stressed=None,
 ) -> IncidentResult:
     """The impact of a given incident on an `analyze` position, its timing and the verdict (D89, D90)."""
     mode = oracle_mode_for(profile, pos.oracle_mode)
@@ -407,6 +467,21 @@ def assess(
         staying = sw
     oracle_drop = 1 - staying.oracle_value_usd / pos.collateral_usd if pos.collateral_usd else 0.0
     exit_cost = decide.exit_cost_usd(pos, quote)
+    timing = time_to_impact(profile, shocks)
+    stress = stressed(oracle_drop, exit_cost) if stressed else None
+    if stress:
+        # D206: an impact sooner than the exit window lets the liquidations sell first, so their price is the exit's
+        soon = timing.seconds is None or timing.seconds < INCIDENT["exit_window_s"]
+        stress["counted"] = soon and stress["cost_usd"] is not None
+        if stress["counted"]:
+            exit_cost = stress["cost_usd"]
+        stress["text"] += (
+            ": counted, the incident lands before a holder can leave"
+            if stress["counted"]
+            else "; the incident lands at once, so the verdict's exit and sale assume leaving before the liquidations"
+            if soon
+            else f"; leaving within {(timing.seconds or 0) / 3600:g} h comes before them, at today's quote"
+        )
     reduction, red_cost, red_loss = None, None, None
     if staying.liquidated and pos.lltv:
         target = min(0.95, oracle_drop + INCIDENT["reduce_margin"])
@@ -453,13 +528,13 @@ def assess(
     verdict, reason = decide.verdict_given(staying.loss_usd, exit_cost, red_cost, red_loss)
     if after_switch:
         reason += f", counted after the oracle switch, which leaves {after_switch['after']} to act"
-    timing = time_to_impact(profile, shocks)
     notes = []
     if verdict != "STAY" and timing.seconds == 0:
         notes.append("the impact is immediate: leaving only helps if it is done before the liquidation lands")
-    if quote.get("source"):
+    if quote.get("source") and not (stress and stress.get("counted")):
         notes.append(
-            "the exit cost is today's quote; in the incident the pool may be thinner (docs/analysis/GAP.md K12)"
+            "the exit cost is today's quote"
+            + ("" if stress else "; in the incident the pool may be thinner (docs/analysis/GAP.md K12)")
         )
     if profile and mode != pos.oracle_mode:
         notes.append(f"oracle mode from its class ({profile.kind}), not from the price inference ({pos.oracle_mode})")
@@ -472,12 +547,15 @@ def assess(
         b.path,
         timing,
         exit_cost,
-        quote.get("source", "?"),
+        "Pendle swap quotes after the incident's liquidations"
+        if stress and stress["counted"]
+        else quote.get("source", "?"),
         verdict,
         reason,
         reduction,
         notes,
         after_switch,
+        stressed_exit=stress,
     )
 
 

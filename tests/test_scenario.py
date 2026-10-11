@@ -191,3 +191,33 @@ def test_demo_pool_move_cannot_reach_the_liquidation(tmp_path, capsys):
     assert m["pool_fall"] == pytest.approx(0.00064, abs=1e-4) and m["liquidating_sale_usd"] is None
     assert m["refused_above_usd"] == pytest.approx(5_730_000) and not inc["liquidated"] and inc["verdict"] == "STAY"
     assert "short of the 5.16% that liquidates the position" in capsys.readouterr().out
+
+
+# --- the stressed exit cost (D206)
+
+
+def test_sold_ahead_and_stressed_exit_pure():
+    curve = [
+        {"oracle_fall": 0.02, "liquidatable_debt": 100.0},
+        {"oracle_fall": 0.05, "liquidatable_debt": 300.0},
+    ]
+    lif = 1 / (0.3 * 0.915 + 0.7)
+    assert scenario.sold_ahead(curve, 0.01, 0.04, 200.0, 0.915) == 0  # nothing liquidated yet
+    assert scenario.sold_ahead(curve, 0.03, 0.04, 200.0, 0.915) == pytest.approx(100 * lif)  # the position is not
+    assert scenario.sold_ahead(curve, 0.06, 0.04, 200.0, 0.915) == pytest.approx(100 * lif)  # its own debt is left out
+    # a pool losing 1 % per 100 sold: 1 % after 100, 2 % on the slice from 100 to 200
+    out = {1.0: 1, 100.0: 99, 200.0: 197}
+    full = scenario.stressed_exit(5.0, out, 1.0, 100.0, 100.0, False)
+    assert full["full_exit"] and full["cost_usd"] == pytest.approx(5 + 0.01 * 100)
+    part = scenario.stressed_exit(5.0, {1.0: 1, 100.0: 99, 150.0: 147}, 1.0, 100.0, 100.0, True)
+    assert not part["full_exit"] and part["cost_usd"] is None and part["sellable_usd"] == 50
+
+
+def test_demo_exit_after_the_liquidations(tmp_path, capsys):
+    """A 10 % oracle fall liquidates 3.64M of the market's other borrowers first: Pendle then routes only a tenth of
+    the position, so the verdict's exit assumes leaving before them."""
+    assert cli.main(["analyze", "--demo", "--shock", "oracle=0.10", "--out", str(tmp_path)]) == 0
+    s = json.loads((tmp_path / "report.json").read_text())["incident"]["stressed_exit"]
+    assert s["ahead_usd"] == pytest.approx(3_641_000) and not s["full_exit"] and not s["counted"]
+    assert 0 < s["sellable_usd"] < 0.15 * 3_962_000 and s["slippage_after"] > 0.2
+    assert "a full exit is not available" in capsys.readouterr().out

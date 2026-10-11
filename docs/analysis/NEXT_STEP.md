@@ -67,7 +67,7 @@ Sizes: **S** about a day, **M** a few days, **L** more.
 | B4 | ~~Oracle structure, the rest~~ **done**: the pool move (plan `2026-10-11-pool-move`), constant-price split by kind and drain by class through the engine (plan `2026-10-11-oracle-kinds`) | K7, K8 | M | `oracle_class.py`, `engine.py` |
 | B5 | *Secondary: the priors feed only `analyze --demo`'s ex-ante view; no known-incident answer uses them.* Priors: decayed window, survivorship, two-part depeg, protocol multiplier, the RockawayX issuers; calibrate the conditional draw | K1–K5, K17, K18 | M | `priors.py`, `registry.json` |
 | B6 | Liquidity returned by liquidations; the squeeze at a past date (the pool's curve from its reserves) | K9, K27 | M | `engine.py`, `backtest.py` |
-| B3 | Stressed exit cost (the hold-to-maturity path is done, plan `2026-10-11-alerts-and-verdict`) | K12 | S | Pendle quotes at several sizes |
+| B3 | ~~Stressed exit cost~~ **done** (plan `2026-10-11-stressed-exit`: the exit after the incident's own liquidations; the hold-to-maturity path in `2026-10-11-alerts-and-verdict`) | K12 | S | Pendle quotes at several sizes |
 | B1+, B2+ | The rate and yield channels as Monte Carlo layers, with Pendle's and Morpho's history | K10, K11 | S | `simulate.py` |
 | B8 | Loans at the market price; the drain as a loss channel | K16 | S–M | `market_risk.py`, `drain.py` |
 | C2+ | ~~`FeedStale` in the watches~~ **done**; left: one feed under several markets | K23 | S | `feeds.py` |
@@ -101,7 +101,7 @@ If time is short before the judging: **B6** (the Pendle pool at a past block, so
 - **B4. The pool-move event (K8).** *Done for the PT position* (plan `2026-10-11-pool-move`: `--shock pool_move=<x>`, real pool quotes, the liquidating sale); the pool at a past block is B6. The backtest replays a known oracle fall; the fall itself came from a trade into a thin Pendle pool moving a TWAP. A `pool_move` event: a trade's impact from Pendle quotes, through the oracle's TWAP window, into the engine. Also: split constant-price (exchange rate, linear discount, issuer-published); `drain.py` by class. *Done* (plan `2026-10-11-oracle-kinds`): four kinds; a markdown reaches only the kinds that move; the engine drains where the oracle keeps reading.
 - **B5. Priors (K1–K5, K17, K18).** Weight hacks by age and tier them by their TVL at the hack date; a two-part depeg for synthetic dollars; a bounded protocol multiplier (admin powers, Nexus prices); registry entries for the RockawayX issuers; calibrate `conditional` on past markdowns (Pharos depeg events, the hack corpus).
 - **B6. Returned liquidity and the squeeze at a past date (K9, K27).** The debt liquidators repay comes back as free liquidity, which changes what can leave; the Pendle pool's curve rebuilt from its reserves at a block, so the backtest can include the squeeze.
-- **B3. Stressed exit cost (K12).** The exit quote at a stressed pool depth (the hold-to-maturity path is done).
+- **B3. Stressed exit cost (K12).** *Done* (plan `2026-10-11-stressed-exit`): the exit priced after the incident's own liquidations sell first, from real quotes; when Pendle stops routing, the part that can still leave. Left: other holders' sales, vault pockets.
 - **B9+. A second episode.** USDe −8 % on 2025-10-10, through the same `backtest` (an episode is registry data).
 - **B1+, B2+.** The rate and yield channels drawn in the ex-ante Monte Carlo.
 - **B8. Loans at the market price (K16).** A second valuation at DefiLlama's price for markets whose oracle does not follow; the drain as a loss channel.

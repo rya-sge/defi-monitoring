@@ -91,6 +91,7 @@ def position_depth(graph: dict, market_id: str, tokens: list[str], admin: list[d
                 }
     return {
         "market": label,
+        "market_curve": held["details"].get("liquidation_curve") or [],  # D206: what the incident liquidates
         "oracle": nodes[oracle]["details"].get("oracle_class") if oracle in nodes else None,
         "feeds": feeds,
         "admin": admin or [],

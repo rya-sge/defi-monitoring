@@ -218,6 +218,8 @@
   "tail_budget_basis": "Recommend reducing when CVaR99, the average loss of the worst 1 % of simulated months, exceeds 50 % of equity.",
   "incident": {
     "reduce_margin": 0.01,
+    "exit_window_s": 3600,
+    "exit_window_basis": "D206: when the incident reaches the oracle sooner than this, the liquidations it causes sell the collateral before a holder can (liquidation bots act in the block of the oracle update), so the verdict counts the exit cost after their sales; with more time, today's quote is counted and the stressed figure is shown next to it.",
     "exit_min_gain": 0.05,
     "basis": "D90. Incident mode sizes a partial sale so that liquidation sits this far beyond the oracle drop the incident causes: one point of margin, so a small further move does not liquidate the reduced position. exit_min_gain (D101): for a vault depositor, leaving first is recommended only when it cuts the incident's loss by at least 5 %; a depositor that is most of the vault loses about the same either way.",
     "breakeven_basis": "D142-D144: exiting now forgoes the vault's net yield (Morpho API avgNetApy, rewards included) on what can leave, over --horizon days; it saves the difference between the loss if the depositor stays and if it leaves first. p* = carry forgone / loss saved, over the horizon; yearly = 1 - (1 - p*)^(365 / horizon)."
