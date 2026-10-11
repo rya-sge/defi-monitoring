@@ -43,6 +43,7 @@ Sizes: **S** about a day, **M** a few days, **L** more.
 | One incident, one number (A0) | vault and book incidents run through the engine on recorded graphs | `2026-10-11-one-number` |
 | Breakeven p\*, Nexus (most of A2) | p\* per vault and for the book, "act first on" by lowest p\*; Nexus cover prices as an outside view | `2026-10-11-breakeven` |
 | Incidents over HTTP (part of A5) | `POST /api/incident`, `GET /api/books` | `2026-10-11-incident-api` |
+| Shocks and backtests over HTTP (part of A5) | `POST /api/shock`, `/api/shock/graphs`, `/api/shock/targets`, `/api/shock/sweep`, `GET /api/backtests`, `/api/backtest/{episode}`; `web/` client wrappers with fixtures | — |
 | The judge path (`IMPROVEMENT.md` 1.1–2.2) | the brief's ten pockets (`pocket` weighting, `--exit-cost`); README path; a reason on every verdict; the expected loss's sampling interval | `2026-10-11-judge-path` |
 | Fork crisis demo (D3; part of C6) | `scripts/fork/`: the Belem crisis on an anvil fork, alternative crises; `RISKDEP_FORK`; the timelock queue, the feed band and the exit gates in `admin.py`; `test_fork_replay.py` | `2026-10-11-fork-demo` |
 | Feed quality, TVL concentration (most of C2, C3) | each feed's freshness against its own rhythm; each protocol's share of DeFi and of its category | `2026-10-11-feed-quality` |
@@ -70,13 +71,13 @@ Sizes: **S** about a day, **M** a few days, **L** more.
 | B3 | ~~Stressed exit cost~~ **done** (plan `2026-10-11-stressed-exit`: the exit after the incident's own liquidations; the hold-to-maturity path in `2026-10-11-alerts-and-verdict`) | K12 | S | Pendle quotes at several sizes |
 | B1+, B2+ | The rate and yield channels as Monte Carlo layers, with Pendle's and Morpho's history | K10, K11 | S | `simulate.py` |
 | B8 | Loans at the market price; the drain as a loss channel | K16 | S–M | `market_risk.py`, `drain.py` |
-| C2+ | ~~`FeedStale` in the watches~~ **done**; left: one feed under several markets | K23 | S | `feeds.py` |
-| C3+ | A collateral's share of its supply held in Morpho | K25 | S | `graph.py` |
+| C2+ | ~~`FeedStale` in the watches; one feed under several markets~~ **done** (plan `2026-10-11-shared-and-supply`) | K23 | S | `feeds.py` |
+| C3+ | ~~A collateral's share of its supply held in Morpho~~ **done** (plan `2026-10-11-shared-and-supply`) | K25 | S | `graph.py` |
 | C6 | Bridges as graph nodes, issuer and oracle registry entries, PT expiry in incidents | K19, K23 | M | `graph.py`, registry |
-| C4, C5 | External venues; Vault V1, other chains | K24, C5 | M–L | registry, `metamorpho-v1.1` |
+| C4, C5 | ~~External venues~~ **done for USDe** (plan `2026-10-11-venues`); left: non-Morpho Vault V2 adapters; Vault V1, other chains | K24, C5 | M–L | registry, `metamorpho-v1.1` |
 | D | Validate on your positions; Slack/Discord/email alerts; infrastructure; execution | — | — | — |
 
-If time is short before the judging: B6's rest (the engine's squeeze on the rebuilt pool). B6's pool at a past block is done: the backtest's oracle fall traces to a 5.4M PT sale, and from that sale alone the model predicts the same liquidated borrowers. B4 and A6's conditional draw for a borrow are done (PT holdings without a borrow are left). C1 is done. `IMPROVEMENT.md` advises against more documentation and against phase D.
+Exit liquidity is now quoted live on KyberSwap (plan `2026-10-11-exit-liquidity`). If time is short before the judging: the demo pass; then B6's rest (the engine's squeeze on the rebuilt pool). B6's pool at a past block is done: the backtest's oracle fall traces to a 5.4M PT sale, and from that sale alone the model predicts the same liquidated borrowers. B4 and A6's conditional draw for a borrow are done (PT holdings without a borrow are left). C1 is done. `IMPROVEMENT.md` advises against more documentation and against phase D.
 
 ## 4. Phase A: the brief's chain, the rest
 
@@ -94,7 +95,7 @@ If time is short before the judging: B6's rest (the engine's squeeze on the rebu
 
 ### A5. The web page for incidents
 
-`POST /api/incident` serves the vault and book incident (losses, verdict, p\*, the conditional distribution); the Impact page still replays a committed trace. A page for the five-minute path. The front end's.
+`POST /api/incident` serves the vault and book incident (losses, verdict, p\*, the conditional distribution); `POST /api/shock` serves the engine's trace (`api.shockTrace()` calls it outside mock mode, on the committed example by default) and `GET /api/backtest/{episode}` the backtests; no page offers a shock picker or a backtest view yet. A page for the five-minute path. The front end's.
 
 ## 5. Phase B: the numbers, the rest
 
@@ -112,7 +113,7 @@ If time is short before the judging: B6's rest (the engine's squeeze on the rebu
 - **C2+. `FeedStale` (K23).** The freshness rule as a watch alert, with a runbook row; one feed under several markets. After the fork demo's `admin.py`. **S.**
 - **C3+. Supply share (K25).** A collateral's share of its supply held in Morpho markets (`totalSupply` at the recorded block). **S.**
 - **C6. The rest of `ROCK-VAULT-DEP.md` §11.** Done by the fork demo: the exit-gate standing finding, the feed band, the timelock queue. Left: bridges as graph nodes (CCIP for PST, LayerZero for etrUSD); registry entries for issuers, RedStone, Ojo, CCIP; PT expiry in incidents (`alt-fxsave-expiry.sh` scripts it on the fork). **M.**
-- **C4. External venues (K24).** A venue node (perp or CEX) with custody, withdrawal delay and a prior. **M–L.**
+- **C4. External venues (K24).** *Done for USDe* (plan `2026-10-11-venues`): the exchanges and custodians behind it, the reserve fund, `venue=<exchange>:<loss>`, the funding stress. Left: Vault V2 adapters into non-Morpho venues. **M–L.**
 - **C5. Vault V1, other chains.** A Vault V1 reader; the chain as a parameter. **M–L.**
 
 ## 7. Phase D: operations

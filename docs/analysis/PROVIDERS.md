@@ -14,6 +14,8 @@ Every external service the project calls, what it is used for, and what is known
 - [Etherscan](#etherscan)
 - [Pharos](#pharos)
 - [Nexus Mutual](#nexus-mutual)
+- [KyberSwap](#kyberswap)
+- [Ethena](#ethena)
 - [Scripts loaded by the HTML outputs](#scripts-loaded-by-the-html-outputs)
 - [Defined but unused](#defined-but-unused)
 - [Trust model](#trust-model)
@@ -34,6 +36,8 @@ Every external service the project calls, what it is used for, and what is known
 | DefiLlama Coins | `https://coins.llama.fi` | REST API | no | token prices, price history | `riskdep/sources.py` (`LLAMA_COINS`) |
 | Nexus Mutual | `https://api.nexusmutual.io/v2` | REST API | no | cover prices and capacity per product: an outside probability next to the breakeven p\* (optional) | `riskdep/nexus.py` (`API`) |
 | Pharos | `https://api.pharos.watch` | REST API | no | issuer grades, off-chain backing, common-mode groups of stablecoins (optional) | `riskdep/pharos.py` (`URL`) |
+| Ethena | `https://app.ethena.fi/api` | REST API (transparency dashboard) | no | USDe's backing by venue and asset, the reserve fund, the yields (optional) | `riskdep/ethena.py` (`API`) |
+| KyberSwap | `https://aggregator-api.kyberswap.com/ethereum/api/v1/routes` | REST API (DEX aggregator) | no | exit liquidity of a hit collateral into its loan token, in vault incidents | `riskdep/exit_liquidity.py` (`KYBER`) |
 | Etherscan | `https://api.etherscan.io/v2/api` | REST API | yes, `keys.ini` `[etherscan]` | whether an oracle's source is verified; an unclassified oracle input's contract name | `riskdep/sources.py` (`ETHERSCAN`) |
 | Telegram Bot API | `https://api.telegram.org/bot<token>/sendMessage` | REST API (outbound push) | yes, `keys.ini` `[alerts]` | posts watch alerts to a private channel (`notify`, optional) | `riskdep/notify.py` (`API`) |
 | jsDelivr | `https://cdn.jsdelivr.net` | CDN (browser) | no | Mermaid in the `analyze` report | `riskdep/report.py` |
@@ -49,7 +53,7 @@ Every request to the data providers goes through the cached fetcher of `riskdep/
 | Method | Used for | Code |
 |---|---|---|
 | `eth_blockNumber` | the chain head, for the watch loop and the cross-checks | `poller.py`, `watch.py`, `watch_user.py`, `crosscheck.py`, `cli.py` |
-| `eth_call` (single and JSON-RPC batches) | contract reads at a fixed block: a Pendle market's `readState(router)` and `readTokens()`, its SY's `exchangeRate()`, its YT's `pyIndexStored()` and its PT's `decimals()` (`pendle_amm.py`, D209); Morpho Blue markets and positions, Vault V2 state, adapters, oracles and feeds, token metadata, rate models, the Vault V2 Public Allocator's settings (`0x00b8…1e27`); for the oracle class, each input's `latestRoundData`, the last 24 `getRoundData`, `FEED_1`/`FEED_2`/`innerOracle`, `twapDuration`, `baseDiscountPerYear`, and, for `graph` only and in a call of its own, `market()` of an input with a `twapDuration` (the Pendle pool it reads); for sibling markets, `asset()` of every candidate collateral | `sources.rpc_call`, `sources.rpc_batch` and every reader |
+| `eth_call` (single and JSON-RPC batches) | contract reads at a fixed block: each collateral's `totalSupply()` and `decimals()` in `graph` (D216); a Pendle market's `readState(router)` and `readTokens()`, its SY's `exchangeRate()`, its YT's `pyIndexStored()` and its PT's `decimals()` (`pendle_amm.py`, D209); Morpho Blue markets and positions, Vault V2 state, adapters, oracles and feeds, token metadata, rate models, the Vault V2 Public Allocator's settings (`0x00b8…1e27`); for the oracle class, each input's `latestRoundData`, the last 24 `getRoundData`, `FEED_1`/`FEED_2`/`innerOracle`, `twapDuration`, `baseDiscountPerYear`, and, for `graph` only and in a call of its own, `market()` of an input with a `twapDuration` (the Pendle pool it reads); for sibling markets, `asset()` of every candidate collateral | `sources.rpc_call`, `sources.rpc_batch` and every reader |
 | `eth_getLogs` | the events of new blocks: vaults and adapters, Morpho Blue on the watched market ids, authorisations, admin events, mints | `poller.py` |
 | `eth_getStorageAt` | proxy slots (EIP-1967, ZeppelinOS) of the admin surface | `admin.py` (via `sources.rpc_batch_methods`) |
 | `eth_getCode` | minimal-proxy (EIP-1167) detection; whether a vault holder is a contract or a wallet (EIP-7702 delegations count as wallets) | `admin.py`, `discover.py`, `graph.py`, `exit_queue.py` |
@@ -184,6 +188,24 @@ Anvil fetches the state it needs from an upstream at the fork block, which must 
 | `/capacity` | each product's yearly price range (`minAnnualPrice`, `maxAnnualPrice`) and its capacity in USDC | `nexus.load`, `vault_incident.py` |
 
 **Recording.** `fixtures/replay/nexus/`, read 2026-10-11. **Limits.** None published; a price of 0 means the product is not sold.
+
+## KyberSwap
+
+**`https://aggregator-api.kyberswap.com/ethereum/api/v1/routes`**, REST, keyless (plan `2026-10-11-exit-liquidity`, D212–D214). `?tokenIn=<collateral>&tokenOut=<loan token>&amountIn=<raw>` at each size of `exit_liquidity.sizes`; only `routeSummary.amountOut`, `code` and `message` are kept. A refusal (HTTP 400: `4008` route not found, `4011` token not found) is cached like an answer. Optional: no quote leaves the registry's hand-measured route in place.
+
+**Recording.** Under each vault's `fixtures/replay/incident-<vault>/`, read 2026-10-11. **Limits.** None published for light use; the optional `x-client-id` header is not sent.
+
+## Ethena
+
+**`https://app.ethena.fi/api`**, REST, keyless: the backend of Ethena's transparency dashboard (plan `2026-10-11-venues`, D218). The documented `public.api.ethena.fi` serves minting and redeeming only.
+
+| Path | Used for | Code |
+|---|---|---|
+| `/positions/current/collateral` | the backing by asset and by venue (each exchange, `Unallocated`) | `ethena.load` |
+| `/solvency/reserve-fund` | the reserve fund's value (hourly since 2024; only the last point is kept) | `ethena.load` |
+| `/yields/protocol-and-staking-yield` | the protocol's and sUSDe's 30-day average yields | `ethena.load` |
+
+**Recording.** `fixtures/replay/ethena/`, read 2026-10-11. **Limits.** None published; an undocumented dashboard backend, so its shape may change: a failure leaves the venue layer out.
 
 ## Telegram Bot API
 

@@ -335,6 +335,114 @@ export type ShockTrace = {
   paths: Record<string, number[]>;
 };
 
+/** `POST /api/shock`: the shocks are `<node>:<mode>[:<size>]`, applied together. */
+export type ShockRequest = {
+  vault?: string[];
+  user?: string[];
+  shocks: string[];
+  siblings?: boolean;
+  live?: boolean;
+};
+
+/** `GET /api/shock/graphs`: a recorded graph a shock runs on offline. */
+export type ShockGraph = {
+  target: string;
+  vaults: string[];
+  users: string[];
+  block: number;
+  siblings: boolean;
+};
+
+/** `GET /api/shock/targets`: a node that can be shocked, and the markets whose price it enters. */
+export type ShockTarget = {
+  node: string;
+  label: string;
+  kind: string;
+  oracle_class: string | null;
+  held: number;
+  siblings: number;
+  markets: string[];
+};
+
+export type ShockMode = 'reads-low' | 'reads-high' | 'frozen' | 'price';
+
+export type ShockSweepRequest = {
+  vault?: string[];
+  user?: string[];
+  mode: ShockMode;
+  /** e.g. `10%`; omitted for `frozen`. */
+  size?: string;
+  top?: number;
+  live?: boolean;
+};
+
+/** `POST /api/shock/sweep`: the same failure on every oracle and feed, ranked by the vaults' loss. */
+export type ShockSweep = {
+  block: number;
+  mode: ShockMode;
+  size: number | null;
+  ranking: {
+    node: string;
+    label: string;
+    kind: string;
+    vault_loss: number;
+    markets_hit: number;
+    worst_market: string | null;
+    worst_market_loss: number;
+  }[];
+};
+
+/* ---------------------------------------------------------------- backtest */
+
+/** `GET /api/backtests`. */
+export type BacktestSummary = {
+  episode: string;
+  title: string;
+  markets: number;
+  recorded: boolean;
+};
+
+/** One market of a backtest: each figure predicted, then realised. */
+export type MarketBacktest = {
+  market_id: string;
+  label: string;
+  loan_symbol: string;
+  oracle_fall: number;
+  borrowers: number;
+  predicted_positions: number;
+  predicted_debt: number;
+  predicted_bonus: number;
+  predicted_bad_debt: number;
+  realised_positions: number;
+  realised_events: number;
+  realised_repaid: number;
+  realised_bonus: number;
+  realised_bad_debt: number;
+  /** Liquidated, not predicted. */
+  missed: string[];
+  /** Predicted, not liquidated. */
+  extra: string[];
+  extra_later: string[];
+  extra_defended: string[];
+  left_debt: number;
+  left_dust: number;
+  from_sale: Record<string, unknown> | null;
+};
+
+/** `GET /api/backtest/{episode}`: a past incident replayed. */
+export type Backtest = {
+  episode: string;
+  title: string;
+  before_block: number;
+  /** First and last liquidation block. */
+  blocks: [number, number];
+  markets: MarketBacktest[];
+  notes: string[];
+  pool: Record<string, unknown> | null;
+  /** The CLI's table, line by line. */
+  lines: string[];
+};
+
 /* ----------------------------------------------------------------- dashboard */
 
 /** One borrower: the oracle fall that liquidates it, and its debt (the vault's part, in a vault). */

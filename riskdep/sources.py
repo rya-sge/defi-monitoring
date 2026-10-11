@@ -121,7 +121,11 @@ class Fetcher:
                     last = SourceError(f"rate limited {throttled} time(s), HTTP {r.status_code}")
                     time.sleep(2.0 * throttled)
                     continue
-                if r.status_code >= 400 and payload is not None and "error" in json.dumps(payload)[:2000]:
+                if (
+                    r.status_code >= 400
+                    and payload is not None
+                    and ("error" in json.dumps(payload)[:2000] or (isinstance(payload, dict) and "message" in payload))
+                ):
                     # the free node answers some refusals (archive reads) with 403 + a JSON-RPC error body;
                     # kept apart from `body`, which a retry must send again unchanged
                     data, done = payload, True

@@ -22,6 +22,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 from . import engine as EN
+from . import exit_liquidity as XL
 from . import exit_queue as EQ
 from . import market_risk as MR
 from . import nexus as NX
@@ -55,7 +56,11 @@ class MarketHit:
     event: str = "markdown"  # "markdown" (a token shock) or "default" (borrowers stop repaying, D130)
     defaulters: list[str] = field(default_factory=list)
     defaulted_debt: float = 0.0  # D130: the defaulters' debt
-    exit_route: str | None = None  # D131: the collateral's exit liquidity from the registry: none, thin, deep
+    exit_route: str | None = None  # D131, D213: the collateral's exit liquidity: none, thin, deep
+    exit_impact: float | None = None  # D213: the slippage against the oracle at the size the liquidations seize
+    exit_capacity: float | None = None  # D213: the largest size the aggregator routes, loan units
+    exit_source: str = ""  # D214: "KyberSwap" (quoted live), "registry" (measured by hand on 2026-10-11) or ""
+    exit_text: str = ""
     no_liquidator_shortfall: float = 0.0  # D131: the loss if nobody liquidates (liquidity then stays locked)
     top1_share: float = 0.0  # D128: the largest borrower's share of the market's debt, before the incident
     top3_share: float = 0.0
@@ -128,6 +133,8 @@ class VaultIncident:
                     f"    default: {len(h.defaulters)} borrower(s) stop repaying {h.defaulted_debt:,.0f} {s} "
                     f"({', '.join(a[:10] + '…' for a in h.defaulters)})"
                 )
+            if h.exit_text:
+                out.append(f"    exit liquidity: {h.exit_text}")
             if h.exit_route in ("none", "thin") and h.liquidatable_debt > 0 and h.event == "markdown":
                 out.append(
                     f"    exit liquidity for the collateral: {h.exit_route}; liquidators may not act: if nobody "
@@ -281,6 +288,22 @@ def describe(shock: tuple, labels: dict[str, str] | None = None) -> str:
     return f"{who} of {where} default{'s' if n == 1 else ''}, collateral recovered at {v:.0%}"
 
 
+def live_exit(f: S.Fetcher, h: MarketHit, mp, price: int | None, info) -> None:
+    """D213–D214: the hit's exit liquidity quoted live on KyberSwap at the size its liquidations seize (debt × LIF),
+    in place of the registry's; the registry's stays when no quote is available."""
+    if h.event != "markdown" or h.liquidatable_debt <= 0 or not price:
+        return
+    try:
+        q = XL.ladder(f, mp.collateral_token, mp.loan_token, price, info.loan_decimals)
+    except (S.CacheMiss, S.SourceError):
+        h.exit_source = "registry" if h.exit_route else ""
+        return
+    size = h.liquidatable_debt * info.lif
+    h.exit_route, h.exit_impact, h.exit_capacity = XL.at(q, size)
+    h.exit_source = "KyberSwap"
+    h.exit_text = XL.text(h.exit_route, h.exit_impact, h.exit_capacity, size, info.loan_symbol, "KyberSwap")
+
+
 def exit_route(collateral: str) -> str | None:
     """D131: the collateral's exit liquidity on DEXs, from the registry (none, thin, deep), or None if not measured."""
     e = REGISTRY["exit_liquidity"]["tokens"].get(collateral.lower())
@@ -353,7 +376,8 @@ def market_feeds(graph: dict, market_id: str) -> list[tuple[str, str, bool]]:
     for e in graph["edges"]:
         d = nodes.get(e["target"], {}).get("details", {})
         if e["rel"] == "reads" and e["source"] in oracles and d.get("freshness"):
-            out.append((nodes[e["target"]]["label"], d["freshness"], bool(d.get("stale"))))
+            txt = d["freshness"] + (f"; {d['shared_text']}" if d.get("shared_text") else "")  # D215
+            out.append((nodes[e["target"]]["label"], txt, bool(d.get("stale"))))
     return out
 
 
@@ -686,6 +710,8 @@ def run(
         engine_block = graph.get("block")
         siblings = apply_engine(graph, shocks, hits, risk.markets, shares, st, unit)
     for h in hits:
+        live_exit(f, h, params[h.market_id], st.markets[h.market_id].oracle_price, risk.markets[h.market_id])
+    for h in hits:
         loss_raw += int(h.vault_loss * unit)
         if h.bad_debt > 0:
             exposure_raw += st.markets[h.market_id].vault_assets
@@ -730,10 +756,22 @@ def run(
             "liquidating issuer-priced collateral needs a buyer of the issuer's token; if no liquidator acts, the bad "
             "debt stays unrealised and the market's liquidity stays locked"
         )
-    unmeasured = sorted({symbols.get(params[h.market_id].collateral_token, "?") for h in hits if h.exit_route is None})
+    if any(h.exit_source == "KyberSwap" and h.exit_route != "deep" for h in hits):
+        notes.append(
+            "exit liquidity is what the DEX aggregator routes; an issuer redemption, a vault share's withdrawal or "
+            "Pendle's router may offer another exit, slower or gated"
+        )
+    unmeasured = sorted(
+        {
+            symbols.get(params[h.market_id].collateral_token, "?")
+            for h in hits
+            if h.exit_route is None and h.liquidatable_debt > 0
+        }
+    )
     if unmeasured:
         notes.append(
-            f"exit liquidity not measured for {', '.join(unmeasured)}: add it to the registry's exit_liquidity"
+            f"exit liquidity not available for {', '.join(unmeasured)}: no KyberSwap quote recorded (run with "
+            "--record) and none in the registry's exit_liquidity"
         )
     if st.liquidity_market and st.liquidity_market in {h.market_id for h in hits}:
         notes.append(

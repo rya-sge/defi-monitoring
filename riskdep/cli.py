@@ -67,7 +67,8 @@ def main(argv: list[str] | None = None) -> int:
         help="incident mode: a known incident, e.g. oracle=0.10 or issuer_depeg=0.08 (repeatable); events: "
         + ", ".join(scenario.EVENTS)
         + "; with --vault or --book: token=<collateral>:<fall> (a markdown) or "
-        "borrower=<collateral, market id or all>:<recovery>[:<n>] (the n largest borrowers default)",
+        "borrower=<collateral, market id or all>:<recovery>[:<n>] (the n largest borrowers default); everywhere: "
+        "venue=<exchange>:<loss>, a share of USDe's backing at that venue lost (Ethena, e.g. venue=Binance:0.5)",
     )
     a.add_argument("--out", default=str(Path(__file__).resolve().parent.parent / "out"))
 
@@ -290,6 +291,18 @@ def main(argv: list[str] | None = None) -> int:
         protocols = pipeline.llama_protocols("offline" if args.replay else "live")
         drawn = GR.annotate_tvl(g, protocols) if protocols else 0
         confidential = GR.annotate_zama(g)
+        shared = GR.annotate_shared(g)
+        venues = GR.annotate_ethena(
+            g, pipeline.ethena_snapshot("record" if args.record else "offline" if args.replay else "live")
+        )
+        fs = (
+            S.Fetcher("offline", rdir)
+            if args.replay
+            else S.Fetcher("refresh", rdir)
+            if args.record
+            else S.Fetcher("direct")
+        )
+        measured = GR.annotate_supply(g, fs, block)
         title = "Morpho dependency graph: " + ", ".join([u[:10] + "…" for u in users] + [v[:10] + "…" for v in vaults])
         hp, jp = GR.write(g, Path(args.out), title, GR.subtitle_for(block))
         kinds = {}
@@ -302,6 +315,14 @@ def main(argv: list[str] | None = None) -> int:
         )
         if confidential:
             print(f"Zama: {confidential} vault(s) entered confidentially, their batchers and decryption drawn")
+        print(f"shared feeds and oracles: {shared} read by more than one market")
+        if venues:
+            print(f"Ethena: {venues} venue(s) holding USDe's backing drawn behind USDe")
+        print(
+            f"collateral supply: {measured} token(s) with their share posted in Morpho"
+            if measured
+            else "collateral supply: not checked"
+        )
         print(f"html: {hp}\njson: {jp}")
         return 0
 
@@ -375,11 +396,12 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.vault or args.book:
         return _vault_incident(ap, args)
+    mode = "refresh" if args.refresh else "live" if args.live else "offline"
     try:
-        shocks = scenario.parse_shocks(args.shock)
+        items, venue = pipeline.venue_shocks(args.shock, mode, "position")
+        shocks = scenario.parse_shocks(items)
     except ValueError as e:
         ap.error(str(e))
-    mode = "refresh" if args.refresh else "live" if args.live else "offline"
     f = S.Fetcher(mode)
     as_of_path = S.SNAPSHOT_DIR / "as_of.json"
     if mode == "offline" and as_of_path.exists():
@@ -395,6 +417,7 @@ def main(argv: list[str] | None = None) -> int:
             horizon=args.horizon,
             paths=args.paths,
             shocks=shocks,
+            venue=venue,
         )
     except ValueError as e:
         ap.error(str(e))

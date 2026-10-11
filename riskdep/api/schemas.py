@@ -301,7 +301,8 @@ class IncidentRequest(BaseModel):
     shocks: list[str] = Field(
         min_length=1,
         description="As `analyze --shock`: `token=<collateral>:<fall>` (an issuer markdown), "
-        "`borrower=<collateral, market id or all>:<recovery>[:<n>]` (the n largest borrowers default).",
+        "`borrower=<collateral, market id or all>:<recovery>[:<n>]` (the n largest borrowers default), "
+        "`venue=<exchange>:<loss>` (a share of USDe's backing at that venue lost; Ethena).",
         examples=[["token=PST:0.30"]],
     )
     user: str | None = Field(default=None, description="Depositor address, for every vault without its own.")
@@ -360,6 +361,11 @@ class MarketHit(BaseModel):
     defaulters: list[str] = Field(default_factory=list)
     defaulted_debt: float = 0.0
     exit_route: Literal["none", "thin", "deep"] | None = None
+    exit_impact: float | None = Field(
+        default=None, description="Slippage against the oracle selling what the liquidations seize (KyberSwap)."
+    )
+    exit_capacity: float | None = Field(default=None, description="Largest size the aggregator routes, loan token.")
+    exit_source: str = Field(default="", description="KyberSwap (quoted), registry (measured by hand) or empty.")
     no_liquidator_shortfall: float = 0.0
     top1_share: float = 0.0
     top3_share: float = 0.0
@@ -452,3 +458,128 @@ class IncidentResponse(BaseModel):
 
     book: BookIncident
     vaults: list[VaultIncident]
+
+
+# --- a failure propagated through the dependency graph: `shock.trace` and `shock.run_sweep` (docs/model/shock-trace.md)
+
+
+class ShockGraph(BaseModel):
+    target: str = Field(description="Pass it as `vault` (or `user`) to the shock routes to run offline.")
+    vaults: list[str]
+    users: list[str]
+    block: int
+    siblings: bool
+
+
+class ShockTarget(BaseModel):
+    node: str = Field(description="Address or id; use it before the colon of a shock.")
+    label: str
+    kind: str
+    oracle_class: str | None = None
+    held: int = Field(description="Markets of the vault (or the user) whose price this node enters.")
+    siblings: int = Field(description="Sibling markets whose price it enters.")
+    markets: list[str]
+
+
+class ShockRequest(BaseModel):
+    vault: list[str] = Field(default_factory=list, description="Vault V2 addresses: GET /api/shock/graphs offline.")
+    user: list[str] = Field(default_factory=list, description="Addresses whose borrows seed the graph.")
+    shocks: list[str] = Field(
+        min_length=1,
+        description="As `shock --shock`: `<node>:<mode>[:<size>]`, node an address, a market id or a unique label "
+        "fragment; mode reads-low, reads-high, frozen or price. Applied together.",
+        examples=[["Ojo PT:reads-low:10%"]],
+    )
+    siblings: bool = Field(default=True, description="Include the sibling markets (live only: a recording fixes it).")
+    live: bool = Field(default=False, description="Read the chain instead of the recording (nothing is saved).")
+
+
+class ShockSweepRequest(BaseModel):
+    vault: list[str] = Field(default_factory=list)
+    user: list[str] = Field(default_factory=list)
+    mode: Literal["reads-low", "reads-high", "frozen", "price"]
+    size: str | None = Field(default=None, description="e.g. `10%`; none for frozen.", examples=["10%"])
+    top: int = Field(default=15, ge=1, le=200)
+    siblings: bool = True
+    live: bool = False
+
+
+class ShockSweepRow(BaseModel):
+    node: str
+    label: str
+    kind: str
+    vault_loss: float
+    markets_hit: int
+    worst_market: str | None = None
+    worst_market_loss: float
+
+
+class ShockSweep(BaseModel):
+    block: int
+    mode: str
+    size: float | None = None
+    ranking: list[ShockSweepRow] = Field(description="Ranked by the vaults' total loss.")
+
+
+class ShockTrace(BaseModel):
+    """The propagation as data: the shape is `docs/model/shock-trace.md`; the inner objects are kept open."""
+
+    format: str
+    block: int | None = None
+    as_of: str | None = None
+    note: str
+    shocks: list[dict[str, Any]]
+    converged: bool
+    evaluations: int
+    graph: dict[str, Any]
+    rules: dict[str, Any]
+    steps: list[dict[str, Any]]
+    evaluations_log: list[dict[str, Any]]
+    waves: list[dict[str, Any]]
+    nodes: dict[str, Any]
+    paths: dict[str, list[int]]
+
+
+# --- a past incident replayed: `backtest.Backtest`
+
+
+class BacktestSummary(BaseModel):
+    episode: str
+    title: str
+    markets: int
+    recorded: bool = Field(description="False: GET /api/backtest/{episode} answers 404 until it is recorded.")
+
+
+class MarketBacktest(BaseModel):
+    market_id: str
+    label: str
+    loan_symbol: str
+    oracle_fall: float
+    borrowers: int
+    predicted_positions: int
+    predicted_debt: float
+    predicted_bonus: float
+    predicted_bad_debt: float
+    realised_positions: int
+    realised_events: int
+    realised_repaid: float
+    realised_bonus: float
+    realised_bad_debt: float
+    missed: list[str] = Field(default_factory=list, description="Liquidated, not predicted.")
+    extra: list[str] = Field(default_factory=list, description="Predicted, not liquidated.")
+    extra_later: list[str] = Field(default_factory=list)
+    extra_defended: list[str] = Field(default_factory=list)
+    left_debt: float = 0.0
+    left_dust: int = 0
+    from_sale: dict[str, Any] | None = None
+
+
+class Backtest(BaseModel):
+    episode: str
+    title: str
+    before_block: int
+    blocks: tuple[int, int] = Field(description="First and last liquidation block.")
+    markets: list[MarketBacktest]
+    notes: list[str]
+    pool: dict[str, Any] | None = Field(default=None, description="The Pendle pool behind the oracle (D208).")
+    lines: list[str] = Field(description="The CLI's table, line by line.")

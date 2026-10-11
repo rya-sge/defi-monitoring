@@ -1,0 +1,1 @@
+{"method": "GET", "url": "https://aggregator-api.kyberswap.com/ethereum/api/v1/routes?tokenIn=0x079c3469143804af5d0d645a878c371dbe8d038e&tokenOut=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48&amountIn=1007476897983039779385185", "body": null, "fetched": "2026-10-11T04:31:05Z", "response": {"code": 4009, "message": "amountIn is greater than max allowed", "amountOut": null}}

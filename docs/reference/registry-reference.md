@@ -22,6 +22,7 @@ Rules for editing:
 - [`watch`](#watch)
 - [`graph`](#graph)
 - [`engine`](#engine)
+- [`ethena`](#ethena)
 - [`exit_liquidity`](#exit_liquidity)
 - [`pharos`](#pharos)
 - [`nexus`](#nexus)
@@ -217,6 +218,17 @@ The shock engine's propagation rules and settings (plan `2026-10-10-propagation-
 
 **Changing a rule.** Prefer a `--rules` file for a study: the registry's rules are the defaults everyone gets. A change here keeps its `basis` honest and is followed by `python3 -m pytest -q tests/test_engine.py`. The drain threshold uses `watch.drain_buy_cost`.
 
+## `ethena`
+
+USDe's backing venues (plan `2026-10-11-venues`, D218–D221). Read by `ethena.py` and `graph.py`.
+
+| Key | Unit | Default | What it controls |
+|---|---|---|---|
+| `usde`, `susde` | address | USDe, sUSDe on Ethereum | the tokens a venue incident marks down; USDe is the graph node the venues hang from |
+| `custodians` | list | Copper, Ceffu | the off-exchange settlement providers named in Ethena's docs (no share published) |
+| `funding_stress` | fraction a year | −0.10 | the negative funding rate of the funding-stress line |
+| `basis`, `funding_basis` | text | — | the sources and the method |
+
 ## `exit_liquidity`
 
 How easily a collateral token can be sold on DEXs, per token address (plan `2026-10-11-borrower-concentration`, D131). Read by `vault_incident.py`: a markdown hit on a market whose collateral has `route` `none` or `thin` reports the loss if nobody liquidates, and the liquidity left locked; a hit token without an entry is named in a note. Measured once, by hand, so it ages: re-measure before relying on it.
@@ -224,7 +236,9 @@ How easily a collateral token can be sold on DEXs, per token address (plan `2026
 | Key | Unit | Default | What it controls |
 |---|---|---|---|
 | `basis` | text | — | the source (KyberSwap quotes into USDC on Ethereum, 2026-10-11, `docs/analysis/ROCK-VAULT-DEP.md` §7) and the route rule |
-| `thin_impact` | fraction | 0.05 | above this price impact at 1M USD, the route is `thin` |
+| `thin_impact` | fraction | 0.05 | above this slippage at the size the incident liquidates (live) or at 1M USD (hand-measured), the route is `thin` |
+| `sizes` | loan units | 0.1M, 1M, 5M, 20M | the ladder each hit collateral is quoted at on KyberSwap (D212) |
+| `live_basis` | text | — | D212–D214: the live quote replaces the hand-measured route, which stays as the fallback |
 | `tokens.<address>` | object | PST, AUTO, mGLOeuro, fxSAVE, etrUSD, strUSD, PRIME | `symbol`; `route` (`none`: no route at 0.1M USD; `thin`; `deep`); `impact` by sale size in USD (negative = loss; `null`: no route); optional `note` |
 
 **Adding a token.** Quote a sale of the token into the vault's asset at 0.1M, 1M and 5M USD on an aggregator, and add `"<address in lower case>": {"symbol": …, "route": …, "impact": {…}, "note": "<date, source>"}`.

@@ -1,12 +1,16 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useSearch } from '@tanstack/react-router';
-import { api } from './client';
+import { api, EXAMPLE_SHOCK } from './client';
 import type {
   AnalyzeRequest,
+  Backtest,
+  BacktestSummary,
   GraphQuery,
   GraphResponse,
   Health,
   Report,
+  ShockRequest,
+  ShockTarget,
   ShockTrace,
   Target,
   Market,
@@ -45,10 +49,36 @@ export function useGraph(query: GraphQuery = {}) {
   });
 }
 
-export function useShockTrace() {
+export function useShockTrace(body: ShockRequest = EXAMPLE_SHOCK) {
   return useQuery<ShockTrace>({
-    queryKey: ['shock-trace'],
-    queryFn: () => api.shockTrace(),
+    queryKey: ['shock-trace', body],
+    queryFn: ({ signal }) => api.shockTrace(body, signal),
+    staleTime: Infinity,
+  });
+}
+
+export function useShockTargets(vault: string | undefined) {
+  return useQuery<ShockTarget[]>({
+    queryKey: ['shock-targets', vault],
+    queryFn: ({ signal }) => api.shockTargets(vault!, signal),
+    enabled: !!vault,
+    staleTime: Infinity,
+  });
+}
+
+export function useBacktests() {
+  return useQuery<BacktestSummary[]>({
+    queryKey: ['backtests'],
+    queryFn: ({ signal }) => api.backtests(signal),
+    staleTime: Infinity,
+  });
+}
+
+export function useBacktest(episode: string | undefined) {
+  return useQuery<Backtest>({
+    queryKey: ['backtest', episode],
+    queryFn: ({ signal }) => api.backtest(episode!, signal),
+    enabled: !!episode,
     staleTime: Infinity,
   });
 }

@@ -1,10 +1,17 @@
 import type {
   AlertPage,
+  Backtest,
+  BacktestSummary,
   AnalyzeRequest,
   GraphQuery,
   GraphResponse,
   Health,
   Report,
+  ShockGraph,
+  ShockRequest,
+  ShockSweep,
+  ShockSweepRequest,
+  ShockTarget,
   ShockTrace,
   Target,
   Vault,
@@ -23,6 +30,24 @@ const MOCK_LATENCY_MS = 250;
 const MOCK_GRAPH = graphFixture as unknown as GraphResponse;
 const MOCK_SHOCK_TRACE = shockTraceFixture as unknown as ShockTrace;
 const MOCK_REPORT = reportFixture as unknown as Report;
+
+/** The trace `api.shockTrace()` returns with no request: the committed example. */
+export const EXAMPLE_SHOCK: ShockRequest = {
+  vault: ['0xe0181090c22579b6a217f1522cbf8c9f1f0c1965'],
+  shocks: ['Ojo PT:reads-low:10%'],
+};
+
+type ShockFixtures = {
+  graphs: ShockGraph[];
+  targets: Record<string, ShockTarget[]>;
+  sweep: Record<string, ShockSweep>;
+};
+type BacktestFixtures = { list: BacktestSummary[]; episodes: Record<string, Backtest> };
+
+// recorded from the API (`/api/shock*`, `/api/backtest*`) on the committed fixtures; loaded on demand
+const shockFixtures = async () => (await import('../mocks/shock.json')).default as ShockFixtures;
+const backtestFixtures = async () =>
+  (await import('../mocks/backtests.json')).default as unknown as BacktestFixtures;
 
 function delay<T>(value: T, ms = MOCK_LATENCY_MS): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(value), ms));
@@ -88,11 +113,45 @@ export const api = {
   },
 
   /**
-   * A shock trace. No endpoint serves one yet: in both modes this is the committed example
+   * A shock trace (`POST /api/shock`). Mocking, only the committed example is available
    * (`docs/model/shock-trace-example.json`: RockawayX USDC Yield, the Ojo PT feed reading 10 % low).
    */
-  shockTrace(): Promise<ShockTrace> {
-    return delay(MOCK_SHOCK_TRACE);
+  shockTrace(body: ShockRequest = EXAMPLE_SHOCK, signal?: AbortSignal): Promise<ShockTrace> {
+    if (USE_MOCKS) return delay(MOCK_SHOCK_TRACE);
+    return post<ShockTrace>('/api/shock', body, signal);
+  },
+
+  /** The graphs recorded for offline shocks: pass a `target` as `vault` (or `user`). */
+  async shockGraphs(signal?: AbortSignal): Promise<ShockGraph[]> {
+    if (USE_MOCKS) return delay((await shockFixtures()).graphs);
+    return get<ShockGraph[]>('/api/shock/graphs', signal);
+  },
+
+  /** The nodes of a vault's graph that can be shocked, held markets first. */
+  async shockTargets(vault: string, signal?: AbortSignal): Promise<ShockTarget[]> {
+    if (USE_MOCKS)
+      return fixture((await shockFixtures()).targets[vault], `shock targets of ${vault}`);
+    return get<ShockTarget[]>(`/api/shock/targets${queryString({ vault })}`, signal);
+  },
+
+  async shockSweep(body: ShockSweepRequest, signal?: AbortSignal): Promise<ShockSweep> {
+    if (USE_MOCKS) {
+      // the fixture is the reads-low 10 % sweep of the example vault
+      const vault = body.vault?.[0] ?? '';
+      return fixture((await shockFixtures()).sweep[vault], `shock sweep of ${vault}`);
+    }
+    return post<ShockSweep>('/api/shock/sweep', body, signal);
+  },
+
+  async backtests(signal?: AbortSignal): Promise<BacktestSummary[]> {
+    if (USE_MOCKS) return delay((await backtestFixtures()).list);
+    return get<BacktestSummary[]>('/api/backtests', signal);
+  },
+
+  async backtest(episode: string, signal?: AbortSignal): Promise<Backtest> {
+    if (USE_MOCKS)
+      return fixture((await backtestFixtures()).episodes[episode], `backtest ${episode}`);
+    return get<Backtest>(`/api/backtest/${episode}`, signal);
   },
 
   async vault(address: string, signal?: AbortSignal): Promise<Vault> {

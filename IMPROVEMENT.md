@@ -92,7 +92,7 @@ The PT-on-Morpho loop loses money without any incident through the borrow rate (
 ## Priority 4: coherence of the product
 
 - **One verdict engine.** *Open (NEXT_STEP A6).* A borrow position (`decide.py`) and a vault (`vault_incident.py`, `vault_book.py`) reach STAY / REDUCE / EXIT by different code and different wording. A mixed book (borrow + vault + PT pockets, `NEXT_STEP.md` A2) needs one; build it before adding a third path.
-- **HTML for vault and book incidents** (A5). *The API is done (`POST /api/incident`, plan `2026-10-11-incident-api`); the page is the front end's.* The PT report has HTML; the book, which is the closest answer to the brief, prints only to the terminal and JSON. The web Impact page reads a committed example trace (`api.shockTrace()`), not a live run; wiring it to `POST /api/incident` (in progress in the working tree) closes that.
+- **HTML for vault and book incidents** (A5). *The API is done (`POST /api/incident`, plan `2026-10-11-incident-api`); the page is the front end's.* The PT report has HTML; the book, which is the closest answer to the brief, prints only to the terminal and JSON. The web Impact page now asks `POST /api/shock` for its trace outside mock mode (the committed example by default); a page on `POST /api/incident` is what is left.
 - **Detection → impact for vaults** (A3). *Open: after the fork demo's `admin.py` lands.* Only `OracleDivergence` in `watch --user` carries an impact; a vault depositor's critical alert should carry its loss, time to impact and verdict too.
 
 ## What not to spend time on before the judging
