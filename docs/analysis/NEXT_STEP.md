@@ -43,6 +43,7 @@ Sizes: **S** about a day, **M** a few days, **L** more.
 | One incident, one number (A0) | vault and book incidents run through the engine on recorded graphs | `2026-10-11-one-number` |
 | Breakeven p\*, Nexus (most of A2) | p\* per vault and for the book, "act first on" by lowest p\*; Nexus cover prices as an outside view | `2026-10-11-breakeven` |
 | Incidents over HTTP (part of A5) | `POST /api/incident`, `GET /api/books` | `2026-10-11-incident-api` |
+| Shocks and backtests over HTTP (part of A5) | `POST /api/shock`, `/api/shock/graphs`, `/api/shock/targets`, `/api/shock/sweep`, `GET /api/backtests`, `/api/backtest/{episode}`; `web/` client wrappers with fixtures | — |
 | The judge path (`IMPROVEMENT.md` 1.1–2.2) | the brief's ten pockets (`pocket` weighting, `--exit-cost`); README path; a reason on every verdict; the expected loss's sampling interval | `2026-10-11-judge-path` |
 | Fork crisis demo (D3; part of C6) | `scripts/fork/`: the Belem crisis on an anvil fork, alternative crises; `RISKDEP_FORK`; the timelock queue, the feed band and the exit gates in `admin.py`; `test_fork_replay.py` | `2026-10-11-fork-demo` |
 | Feed quality, TVL concentration (most of C2, C3) | each feed's freshness against its own rhythm; each protocol's share of DeFi and of its category | `2026-10-11-feed-quality` |
@@ -94,7 +95,7 @@ Exit liquidity is now quoted live on KyberSwap (plan `2026-10-11-exit-liquidity`
 
 ### A5. The web page for incidents
 
-`POST /api/incident` serves the vault and book incident (losses, verdict, p\*, the conditional distribution); the Impact page still replays a committed trace. A page for the five-minute path. The front end's.
+`POST /api/incident` serves the vault and book incident (losses, verdict, p\*, the conditional distribution); `POST /api/shock` serves the engine's trace (`api.shockTrace()` calls it outside mock mode, on the committed example by default) and `GET /api/backtest/{episode}` the backtests; no page offers a shock picker or a backtest view yet. A page for the five-minute path. The front end's.
 
 ## 5. Phase B: the numbers, the rest
 

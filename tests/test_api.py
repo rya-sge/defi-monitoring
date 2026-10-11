@@ -6,6 +6,7 @@ the committed snapshot and writes nothing.
 """
 
 import json
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -166,6 +167,12 @@ def test_openapi_is_served_and_names_every_route(client):
         "/api/alerts",
         "/api/vault/{address}",
         "/api/market/{market_id}",
+        "/api/shock",
+        "/api/shock/graphs",
+        "/api/shock/targets",
+        "/api/shock/sweep",
+        "/api/backtests",
+        "/api/backtest/{episode}",
     }
 
 
@@ -233,3 +240,69 @@ def test_incident_on_the_mixed_book(client):
     r = client.post("/api/incident", json=body)
     assert r.status_code == 200, r.text
     assert any(ln["verdict"] == "EXIT" and ln["name"].startswith("PT-sUSDe") for ln in r.json()["book"]["lines"])
+
+
+# --- a failure propagated through a recorded graph, and the backtests, offline
+
+RX = "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965"  # RockawayX USDC Yield, the documented shock
+
+
+def test_shock_graphs_list_the_recordings(client):
+    graphs = {g["target"]: g for g in client.get("/api/shock/graphs").json()}
+    assert graphs[RX]["vaults"] == [RX] and graphs[RX]["block"] == 26164907
+
+
+def test_shock_targets_put_the_held_markets_first(client):
+    rows = client.get("/api/shock/targets", params={"vault": RX}).json()
+    assert rows[0]["held"] >= rows[-1]["held"]
+    assert any(r["node"] == "0x77ee147391eac11c92817e771860ff4aad265d89" for r in rows)
+
+
+def test_shock_matches_the_committed_trace(client):
+    r = client.post("/api/shock", json={"vault": [RX], "shocks": ["Ojo PT:reads-low:10%"]})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    same = json.loads(
+        (Path(__file__).resolve().parent.parent / "docs" / "model" / "shock-trace-example.json").read_text()
+    )
+    assert body["shocks"] == same["shocks"] and body["paths"] == same["paths"]
+    assert body["nodes"].keys() == same["nodes"].keys()
+    # a replay moves the clock to its recording; the API's clock stays on the snapshot
+    assert client.get("/api/health").json()["data_as_of"].startswith("2026-10-10")
+
+
+def test_shock_sweep_ranks_by_vault_loss(client):
+    r = client.post("/api/shock/sweep", json={"vault": [RX], "mode": "reads-low", "size": "10%", "top": 5})
+    assert r.status_code == 200, r.text
+    losses = [x["vault_loss"] for x in r.json()["ranking"]]
+    assert len(losses) == 5 and losses == sorted(losses, reverse=True) and losses[0] > 0
+
+
+@pytest.mark.parametrize(
+    "path, body, status",
+    [
+        ("/api/shock", {"vault": [RX], "shocks": []}, 422),  # no shock
+        ("/api/shock", {"shocks": ["Ojo PT:frozen"]}, 422),  # no vault or user
+        ("/api/shock", {"vault": [RX], "shocks": ["no such node:frozen"]}, 422),
+        ("/api/shock", {"vault": [RX], "shocks": ["Ojo PT:sideways"]}, 422),  # unknown mode
+        ("/api/shock", {"vault": ["0x" + "1" * 40], "shocks": ["x:frozen"]}, 404),  # not recorded
+        ("/api/shock/sweep", {"vault": [RX], "mode": "reads-low"}, 422),  # reads-low needs a size
+    ],
+)
+def test_shock_errors(client, path, body, status):
+    assert client.post(path, json=body).status_code == status
+
+
+def test_backtests_list_the_registry_episodes(client):
+    eps = {b["episode"]: b for b in client.get("/api/backtests").json()}
+    assert eps["pt-reusd-2026-08-25"]["recorded"] and eps["pt-reusd-2026-08-25"]["markets"] == 2
+
+
+def test_backtest_replays_an_episode(client):
+    r = client.get("/api/backtest/pt-reusd-2026-08-25")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    usdc = body["markets"][0]
+    assert usdc["predicted_positions"] == usdc["realised_positions"] == 13
+    assert body["pool"] and body["lines"][0].startswith("BACKTEST")
+    assert client.get("/api/backtest/nope").status_code == 404

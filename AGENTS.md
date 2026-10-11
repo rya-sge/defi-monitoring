@@ -69,7 +69,7 @@ riskdep/
     main.py           FastAPI assembly, CORS, lifespan, /api/health
     schemas.py        the published contract, mirrored by openapi.json
     artifacts.py      the only reader of out/, and the fetch lock
-    routes/           one module per resource: graph, report, incident (books, incident), alerts, dashboard (vault, market)
+    routes/           one module per resource: graph, report, incident (books, incident), shock (graphs, targets, trace, sweep), backtest, alerts, dashboard (vault, market)
   sources.py          keyless HTTP/RPC sources behind one cached fetcher (fixtures/snapshot/)
   clock.py            single clock; snapshot date when offline
   abi.py              Morpho Blue / Vault V2 / adapter event and function signatures
@@ -202,7 +202,7 @@ web/src/
   lib/utils.ts        re-exports `cn` from the `cn` package, where `components.json` tells `shadcn add` to import it
   lib/graph.ts        kind colours, shapes and icons, node amounts, dagre layout, flow reach, edge width, report-graph normalisation
   routes/             VaultPage (follows the top-bar selector) · MarketPage · GraphPage · ImpactPage (a shock trace, one view per tab) · WatchPage
-  mocks/              report.json, graph.json, vaults.json, markets.json, shock-trace.json (a copy of docs/model/shock-trace-example.json), alerts.ts
+  mocks/              report.json, graph.json, vaults.json, markets.json, shock-trace.json (a copy of docs/model/shock-trace-example.json), shock.json, backtests.json, alerts.ts
 ```
 
 **Invariants.**
@@ -213,7 +213,7 @@ web/src/
 - **The node colours are duplicated from `riskdep/graph.py` into `lib/graph.ts`** (with the edge width curve), so the SPA and the CLI's standalone HTML read alike. A colour change touches both files. The shapes are not shared: the SPA draws by role (`nodeRole`: circle asset; near-square vault or pool, rounded for an address; hexagon for what holds no assets, smaller for a price feed than for its oracle — D64), the CLI keeps its Cytoscape shapes (D66). It lives in TypeScript and not in the Tailwind theme on purpose: there colour is *data*, keyed to the shape that repeats it, and not part of the interface palette.
 - **`index.css` holds the raw palette; the Tailwind theme is a naming layer over it, never a second palette.** `--bg`, `--fg`, `--muted`, `--line` and `--edge` are a contract with two consumers that cannot read Tailwind: Recharts takes `var(--line)` strings that land in SVG attributes, and the graph's nodes, edges and arrowheads use `var(--bg)`, `var(--fg)` and `var(--edge)` in inline styles. Renaming one means updating `GraphElements` and `GraphCanvas` in the same commit. shadcn's own token names (`--color-background`, `--color-border`, `--color-card`…) are aliased onto the same values, so a vendored component that still says `bg-card` paints the one ground instead of introducing a surface.
 - **The vendored shadcn components are stock** (`pnpm dlx shadcn add --overwrite` is safe), with two local edits: `TableRow` draws its hairline at `border-border/50`, and Prettier reformats them. The sidebar's colours are mapped onto the palette in `@theme` (`--color-sidebar*`), not the hsl values the CLI writes; the CLI's `tw-animate-css` import and `.dark` class variant are dropped (dark mode follows the system and the `data-theme` attribute), so `animate-*` classes are inert; `eslint.config.js` turns `react-hooks/purity` off for `components/ui/**` because the stock `SidebarMenuSkeleton` calls `Math.random` in a `useMemo`. The theme gives every control a light radius (`--radius: 0.5rem`, shadcn's scale), and the quiet surfaces (`muted`, `accent`, `secondary`) are the ground with 5–6 % ink. Colour is reserved for severity — `info` / `warn` / `critical` / `ok`, plus the graph's data palette — and is carried by a **word**, never by a number: no figure is ever coloured. Prose, labels **and numbers** use the system UI stack, numbers with `tabular-nums`; the `mono` utility is for identifiers only (addresses, hashes, market ids, event names).
-- **Impact has no trace endpoint yet:** `api.shockTrace()` returns the committed example trace in both modes (`POST /api/incident` serves the vault and book incident, losses and verdict, but not the engine's trace, and no page uses it yet); refresh `mocks/shock-trace.json` by copying `docs/model/shock-trace-example.json` whenever the test that keeps that file current regenerates it.
+- **Impact reads `POST /api/shock`:** `api.shockTrace()` posts the committed example (`EXAMPLE_SHOCK`) by default and returns `mocks/shock-trace.json` when mocking; refresh that file by copying `docs/model/shock-trace-example.json` whenever the test that keeps it current regenerates it. `mocks/shock.json` (graphs, targets, sweep of the example vault) and `mocks/backtests.json` are recorded from the API's offline answers, not hand-written. `POST /api/incident` and the backtests have no page yet.
 - **Mocks are the default, including with no `.env`:** `USE_MOCKS` is `import.meta.env.VITE_USE_MOCKS !== 'false'`. Every endpoint added to `api/client.ts` needs its fixture branch in the same commit, or mock mode breaks on that page.
 - **Two fixture alerts are invented.** The `critical` entries in `mocks/alerts.ts` are modelled on `docs/reference/alert-runbook.md` because no recorded run has one; the header of that file says so. Never cite their `data` keys as the real event payload.
 - **SSE, not WebSocket:** named events `alert` and `tick`, one JSON object each. `min_level` is a server-side filter, so `WatchPage` restarts the stream by remounting on `key={minLevel}` rather than resetting state in an effect. The browser reconnects on its own; `onStatus` only reports the gap.
@@ -230,7 +230,7 @@ Python ≥ 3.10; CI runs the suite on 3.10, the floor `requires-python` in `pypr
 
 ```bash
 uv sync
-uv run pytest -q tests                                 # 343 tests, offline
+uv run pytest -q tests                                 # 366 tests, offline
 uv run python -m riskdep analyze --demo                # cached snapshot, no network → out/report.html/.json
 uv run python -m riskdep watch --replay                # re-run the recorded vault range offline
 uv run python -m riskdep watch --blocks 1000 --record  # live range, saved for --replay

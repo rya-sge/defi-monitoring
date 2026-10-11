@@ -6,3 +6,5 @@ src/mocks/shock-trace.json
 src/mocks/vaults.json
 src/mocks/markets.json
 pnpm-lock.yaml
+src/mocks/shock.json
+src/mocks/backtests.json

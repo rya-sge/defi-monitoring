@@ -320,6 +320,12 @@ uv run python -c "import json,riskdep.api as a; print(json.dumps(a.app.openapi()
 | `POST /api/analyze` | run `analyze` (market, user, horizon, paths, live) and return the report; writes nothing |
 | `GET /api/books` | the books of vaults shipped in `examples/` |
 | `POST /api/incident` | a known incident (`shocks` as `analyze --shock`, e.g. `token=PST:0.30`) on `vaults`, an inline `book` or an `example` book: the book's loss, headline and breakeven, and each vault's detail, as `analyze --vault` / `--book` computes them; offline from the recordings unless `live`; writes nothing |
+| `GET /api/shock/graphs` | the dependency graphs recorded under `fixtures/replay/graph-*`, which a shock runs on offline |
+| `GET /api/shock/targets?vault=&user=` | the oracles, feeds and assets of that graph that can be shocked, with the markets they price (`shock --list`) |
+| `POST /api/shock` | a failure propagated (`shocks` as `shock --shock`, e.g. `Ojo PT:reads-low:10%`) on a vault's or a user's graph: the trace of `docs/model/shock-trace.md`; offline from the recording unless `live`; writes nothing |
+| `POST /api/shock/sweep` | the same failure on every oracle and feed (every asset, for `price`), ranked by the vaults' loss (`shock --sweep`) |
+| `GET /api/backtests` | the episodes of `registry.json` `backtest.episodes`, and whether each is recorded |
+| `GET /api/backtest/{episode}` | a past incident replayed from its recording: predicted against realised liquidations, per market (`backtest`); offline only |
 | `GET /api/graph?user=&vault=&block=` | the dependency graph; with no user and no vault, the last one written to `out/` |
 | `GET /api/targets` | one entry per `out/watch-*.jsonl`: the watch targets with alerts |
 | `GET /api/alerts?target=&since=&level=&limit=` | alerts after a block cursor; pass the returned `cursor` back as `since` |
