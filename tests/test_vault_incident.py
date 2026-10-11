@@ -2,11 +2,10 @@
 
 import json
 from pathlib import Path
-from types import SimpleNamespace
 
 import pytest
 
-from riskdep import cli, scenario
+from riskdep import cli, pipeline, scenario
 from riskdep import exit_queue as EQ
 from riskdep import oracle_class as OC
 from riskdep import vault_incident as VI
@@ -160,7 +159,7 @@ YIELD = "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965"
 
 
 def _yield_graph():
-    return cli._vault_graph(YIELD)
+    return pipeline.vault_graph(YIELD)
 
 
 def test_markdown_in_engine_terms():
@@ -175,7 +174,7 @@ def test_engine_and_incident_agree_without_a_squeeze(tmp_path):
     """PRIME has no quotes, so nothing is squeezed: both models give the same loss, to the dollar."""
     r = {}
     for graph in (False, True):
-        f, block, _ = cli._vault_source(YIELD, SimpleNamespace(record=False, live=False, refresh=False))
+        f, block, _ = pipeline.vault_source(YIELD)
         inc = VI.run(f, YIELD, block, None, [("token", "prime", 0.3, 0)], graph=_yield_graph() if graph else None)
         r[graph] = inc
     assert r[True].vault_loss == pytest.approx(r[False].vault_loss, rel=1e-6)

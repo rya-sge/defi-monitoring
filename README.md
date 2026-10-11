@@ -231,7 +231,7 @@ pnpm format       # prettier --write
 uv run uvicorn riskdep.api:app --reload      # http://127.0.0.1:8000, docs at /docs
 ```
 
-It owns no risk logic: `pipeline.analyze` computes, `report.to_dict` and `graph.to_dict` shape, the API routes. The watcher is **not** hosted — `python -m riskdep watch` stays its own process and appends to `out/watch-*.jsonl`, which `GET /api/alerts` reads with a block cursor. One poll loop per target however many browsers are open, and either side can restart without the other.
+It owns no risk logic: `pipeline.analyze` and `pipeline.incident` compute, `report.to_dict` and `graph.to_dict` shape, the API routes. The watcher is **not** hosted — `python -m riskdep watch` stays its own process and appends to `out/watch-*.jsonl`, which `GET /api/alerts` reads with a block cursor. One poll loop per target however many browsers are open, and either side can restart without the other.
 
 `openapi.json` is committed and is the contract: regenerate it with the command below, and CI fails if it has drifted from the code.
 
@@ -246,6 +246,8 @@ uv run python -c "import json,riskdep.api as a; print(json.dumps(a.app.openapi()
 | `GET /api/market/{market_id}` | a Blue market read live from the Morpho API: its state and every borrower's liquidating fall |
 | `GET /api/report` | the last `analyze` report written to `out/` |
 | `POST /api/analyze` | run `analyze` (market, user, horizon, paths, live) and return the report; writes nothing |
+| `GET /api/books` | the books of vaults shipped in `examples/` |
+| `POST /api/incident` | a known incident (`shocks` as `analyze --shock`, e.g. `token=PST:0.30`) on `vaults`, an inline `book` or an `example` book: the book's loss, headline and breakeven, and each vault's detail, as `analyze --vault` / `--book` computes them; offline from the recordings unless `live`; writes nothing |
 | `GET /api/graph?user=&vault=&block=` | the dependency graph; with no user and no vault, the last one written to `out/` |
 | `GET /api/targets` | one entry per `out/watch-*.jsonl`: the watch targets with alerts |
 | `GET /api/alerts?target=&since=&level=&limit=` | alerts after a block cursor; pass the returned `cursor` back as `since` |

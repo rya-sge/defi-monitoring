@@ -64,12 +64,12 @@
 riskdep/
   __main__.py         entry point → cli.main
   cli.py              argparse: analyze, watch, graph
-  pipeline.py         one analyse end to end, shared by the CLI and the API (no I/O of its own)
+  pipeline.py         one analyse, and one vault or book incident, end to end, shared by the CLI and the API (no I/O of its own beyond the fetchers)
   api/
     main.py           FastAPI assembly, CORS, lifespan, /api/health
     schemas.py        the published contract, mirrored by openapi.json
     artifacts.py      the only reader of out/, and the fetch lock
-    routes/           one module per resource: graph, report, alerts, dashboard (vault, market)
+    routes/           one module per resource: graph, report, incident (books, incident), alerts, dashboard (vault, market)
   sources.py          keyless HTTP/RPC sources behind one cached fetcher (fixtures/snapshot/)
   clock.py            single clock; snapshot date when offline
   abi.py              Morpho Blue / Vault V2 / adapter event and function signatures
@@ -131,7 +131,7 @@ pyproject.toml        project metadata, dependencies, ruff and pytest configurat
 - `keys.example.ini` — template of the API keys and secrets (no values); the real `keys.ini` is git-ignored.
 - `erpc.yaml` — configuration of the optional local eRPC proxy (eRPC 0.3.0, six free upstreams, no key); `docs/erpc.md` is the setup guide. Its upstream list is mirrored in `docs/analysis/PROVIDERS.md`.
 - `docs/analysis/ANALYSIS_MONITORING.md` — design note: dependency graph, impact, monitoring, execution, and gaps of the current implementation (done / partial / missing).
-- `plan/` — the nineteen plans (`defi-risk-dependency`, `morpho-vault-v2-watcher`, `morpho-user-watcher`, `lenders-and-timelocks`, `market-borrowers`, `admin-surface`, `exit-queue`, `drain-threshold`, `sibling-markets`, `incident-mode`, `propagation-engine`, `vault-incident`, `vault-book`, `wrapped-collateral`, `borrower-concentration`, `pharos`, `one-number`, `breakeven`, and `web-graph-react-flow` for the SPA's graph).
+- `plan/` — the twenty plans (`defi-risk-dependency`, `morpho-vault-v2-watcher`, `morpho-user-watcher`, `lenders-and-timelocks`, `market-borrowers`, `admin-surface`, `exit-queue`, `drain-threshold`, `sibling-markets`, `incident-mode`, `propagation-engine`, `vault-incident`, `vault-book`, `wrapped-collateral`, `borrower-concentration`, `pharos`, `one-number`, `breakeven`, `incident-api`, and `web-graph-react-flow` for the SPA's graph).
 - `examples/` — `rockawayx-ethereum.json`, the demo book of vaults and the template for any other (`analyze --book`).
 - `docs/` — `alert-runbook.md` (what each alert means and what to do), `glossary.md`, `registry-reference.md` (every `registry.json` key), `how-risk-is-computed.md`, `monte-carlo.md` (how `analyze`'s simulation works; its mindmap in `docs/img/`), `scenarios-and-breakeven.md`, `vault-depositor-scenarios.md`, `graph-propagation.md`, `how-a-block-is-analysed.md`, `websocket-vs-polling.md`, `user-watcher-options.md`, `exit-queue.md`, `erpc.md` (the optional local RPC proxy), `shock-engine.md` (the shock engine and its rules), `shock-trace.md` (the propagation trace for a front end, example in `shock-trace-example.json`), `drain-threshold.md`, `graph-example.html/.json`.
 - `docs/external/` — third-party references, read-only; check behaviour against them before changing a rule:
@@ -194,7 +194,7 @@ web/src/
 - **The node colours are duplicated from `riskdep/graph.py` into `lib/graph.ts`** (with the edge width curve), so the SPA and the CLI's standalone HTML read alike. A colour change touches both files. The shapes are not shared: the SPA draws by role (`nodeRole`: circle asset; near-square vault or pool, rounded for an address; hexagon for what holds no assets, smaller for a price feed than for its oracle — D64), the CLI keeps its Cytoscape shapes (D66). It lives in TypeScript and not in the Tailwind theme on purpose: there colour is *data*, keyed to the shape that repeats it, and not part of the interface palette.
 - **`index.css` holds the raw palette; the Tailwind theme is a naming layer over it, never a second palette.** `--bg`, `--fg`, `--muted`, `--line` and `--edge` are a contract with two consumers that cannot read Tailwind: Recharts takes `var(--line)` strings that land in SVG attributes, and the graph's nodes, edges and arrowheads use `var(--bg)`, `var(--fg)` and `var(--edge)` in inline styles. Renaming one means updating `GraphElements` and `GraphCanvas` in the same commit. shadcn's own token names (`--color-background`, `--color-border`, `--color-card`…) are aliased onto the same values, so a vendored component that still says `bg-card` paints the one ground instead of introducing a surface.
 - **The vendored shadcn components are stock** (`pnpm dlx shadcn add --overwrite` is safe), with two local edits: `TableRow` draws its hairline at `border-border/50`, and Prettier reformats them. The sidebar's colours are mapped onto the palette in `@theme` (`--color-sidebar*`), not the hsl values the CLI writes; the CLI's `tw-animate-css` import and `.dark` class variant are dropped (dark mode follows the system and the `data-theme` attribute), so `animate-*` classes are inert; `eslint.config.js` turns `react-hooks/purity` off for `components/ui/**` because the stock `SidebarMenuSkeleton` calls `Math.random` in a `useMemo`. The theme gives every control a light radius (`--radius: 0.5rem`, shadcn's scale), and the quiet surfaces (`muted`, `accent`, `secondary`) are the ground with 5–6 % ink. Colour is reserved for severity — `info` / `warn` / `critical` / `ok`, plus the graph's data palette — and is carried by a **word**, never by a number: no figure is ever coloured. Prose, labels **and numbers** use the system UI stack, numbers with `tabular-nums`; the `mono` utility is for identifiers only (addresses, hashes, market ids, event names).
-- **Impact has no endpoint yet:** `api.shockTrace()` returns the committed example trace in both modes; refresh `mocks/shock-trace.json` by copying `docs/shock-trace-example.json` whenever the test that keeps that file current regenerates it.
+- **Impact has no trace endpoint yet:** `api.shockTrace()` returns the committed example trace in both modes (`POST /api/incident` serves the vault and book incident, losses and verdict, but not the engine's trace, and no page uses it yet); refresh `mocks/shock-trace.json` by copying `docs/shock-trace-example.json` whenever the test that keeps that file current regenerates it.
 - **Mocks are the default, including with no `.env`:** `USE_MOCKS` is `import.meta.env.VITE_USE_MOCKS !== 'false'`. Every endpoint added to `api/client.ts` needs its fixture branch in the same commit, or mock mode breaks on that page.
 - **Two fixture alerts are invented.** The `critical` entries in `mocks/alerts.ts` are modelled on `docs/alert-runbook.md` because no recorded run has one; the header of that file says so. Never cite their `data` keys as the real event payload.
 - **SSE, not WebSocket:** named events `alert` and `tick`, one JSON object each. `min_level` is a server-side filter, so `WatchPage` restarts the stream by remounting on `key={minLevel}` rather than resetting state in an effect. The browser reconnects on its own; `onStatus` only reports the gap.
@@ -211,7 +211,7 @@ Python ≥ 3.10; CI runs the suite on 3.10, the floor `requires-python` in `pypr
 
 ```bash
 uv sync
-uv run pytest -q tests                                 # 268 tests, offline
+uv run pytest -q tests                                 # 276 tests, offline
 uv run python -m riskdep analyze --demo                # cached snapshot, no network → out/report.html/.json
 uv run python -m riskdep watch --replay                # re-run the recorded vault range offline
 uv run python -m riskdep watch --blocks 1000 --record  # live range, saved for --replay

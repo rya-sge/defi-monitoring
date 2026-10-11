@@ -8,13 +8,13 @@ import sys
 import time
 from pathlib import Path
 
-from . import clock, discover, pipeline, report, scenario, vault_book, vault_incident
+from . import clock, pipeline, report, scenario, vault_book, vault_incident
 from . import sources as S
 
 # D14: largest borrower of Morpho market PT-sUSDE-26NOV2026 / USDC, cached in fixtures/snapshot.
 DEMO_VAULT = "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf"  # Sentora RLUSD Main, largest Vault V2 on 2026-10-10
 DEMO_BORROWER = "0xdf81987465681d0515058fe0a47a3bd174012730"  # 6 Blue borrows on 2026-10-10
-REPLAY_DIR = Path(__file__).resolve().parent.parent / "fixtures" / "replay"
+REPLAY_DIR = pipeline.REPLAY_DIR
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -82,6 +82,12 @@ def main(argv: list[str] | None = None) -> int:
         "--record", action="store_true", help="with --blocks: save every response under fixtures/replay/<vault>"
     )
     w.add_argument("--replay", action="store_true", help="re-run a recorded range offline")
+    w.add_argument(
+        "--record-as",
+        metavar="NAME",
+        help="with --record or --replay: the recording's folder under fixtures/replay/ instead of the vault address, "
+        "e.g. fork-belem for a run on a local fork (scripts/fork/)",
+    )
     w.add_argument("--level", choices=["info", "warn", "critical"], default="info", help="lowest level printed")
     w.add_argument("--max-polls", type=int, help="stop after N empty polls (live mode)")
     w.add_argument("--out", default=str(Path(__file__).resolve().parent.parent / "out"))
@@ -132,6 +138,17 @@ def main(argv: list[str] | None = None) -> int:
     sh.add_argument("--replay", action="store_true", help="use a recorded graph, offline")
     sh.add_argument("--out", default=str(Path(__file__).resolve().parent.parent / "out"))
     args = ap.parse_args(argv)
+
+    if S.FORK:
+        # fork-demo D1–D2: a local fork only; its clock is the fork's, which `anvil_increaseTime` moves ahead of ours
+        if S.RPC not in S.ROUTES:
+            ap.error("RISKDEP_FORK needs RISKDEP_RPC_URL pointing at the local fork (scripts/fork/start-fork.sh)")
+        if not getattr(args, "replay", False):
+            try:
+                head = S.rpc(S.Fetcher("direct"), "eth_getBlockByNumber", ["latest", False])
+                clock.set_as_of(int(head["timestamp"], 16))
+            except (S.SourceError, KeyError, TypeError) as e:
+                ap.error(f"the local fork does not answer at {S.ROUTES[S.RPC]}: {str(e)[:80]}")
 
     if args.cmd == "shock":
         from . import engine as EN
@@ -215,7 +232,7 @@ def main(argv: list[str] | None = None) -> int:
         except S.SourceError as e:
             print(f"data source error: {e}", file=sys.stderr)
             return 3
-        ph = _pharos(argparse.Namespace(record=args.record, refresh=False, live=not (args.replay or args.record)))
+        ph = pipeline.pharos_snapshot("record" if args.record else "offline" if args.replay else "live")
         graded = GR.annotate_pharos(g, ph) if ph else 0
         title = "Morpho dependency graph: " + ", ".join([u[:10] + "…" for u in users] + [v[:10] + "…" for v in vaults])
         hp, jp = GR.write(g, Path(args.out), title, GR.subtitle_for(block))
@@ -266,9 +283,11 @@ def main(argv: list[str] | None = None) -> int:
         from .watch import Options, run
 
         args.vault = args.vault or DEMO_VAULT
-        rdir = REPLAY_DIR / args.vault.lower()
+        rdir = REPLAY_DIR / (args.record_as or args.vault.lower())
         if args.record and not args.blocks:
             ap.error("--record needs --blocks")
+        if args.record_as and not (args.record or args.replay):
+            ap.error("--record-as needs --record or --replay")
         opts = Options(
             args.vault.lower(),
             args.user,
@@ -351,100 +370,14 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-def _vault_source(vault: str, args) -> tuple[S.Fetcher, int, bool]:
-    """D121: where a vault is read. `--record`: live at the head, every response saved under incident-<vault>/;
-    `--live`: live, nothing saved; offline: the incident recording if there is one, else the watch recording at its
-    state block. Returns (fetcher, block, read every oracle)."""
-    w = discover.REGISTRY["watch"]
-    if args.record:
-        rdir = REPLAY_DIR / f"incident-{vault}"
-        f = S.Fetcher("refresh", rdir)
-        block = int(S.rpc(S.Fetcher("direct"), "eth_blockNumber", []), 16) - w["confirmations"]
-        (rdir / "meta.json").write_text(json.dumps({"vault": vault, "block": block}, indent=1))
-        return f, block, True
-    if args.live or args.refresh:
-        f = S.Fetcher("direct")
-        return f, int(S.rpc(f, "eth_blockNumber", []), 16) - w["confirmations"], False
-    inc_dir, watch_dir = REPLAY_DIR / f"incident-{vault}", REPLAY_DIR / vault
-    if (inc_dir / "meta.json").exists():
-        return S.Fetcher("offline", inc_dir), json.loads((inc_dir / "meta.json").read_text())["block"], False
-    if (watch_dir / "start.json").exists():
-        head = json.loads((watch_dir / "start.json").read_text())["head"]
-        return S.Fetcher("offline", watch_dir), head - w["confirmations"] - w["state_window_blocks"], False
-    raise FileNotFoundError(
-        f"no recording for {vault}: record it with analyze --vault {vault} --record --shock …, or run with --live"
-    )
-
-
-def _pharos(args):
-    """D138: Pharos's dependency graph, keyless and optional. Offline: the recording under fixtures/replay/pharos/;
-    `--record` and `--refresh` re-read and save it; `--live` reads it without saving. None when it cannot be read."""
-    from . import pharos
-
-    mode = "refresh" if args.record or args.refresh else "direct" if args.live else "offline"
-    return pharos.load(S.Fetcher(mode, REPLAY_DIR / "pharos") if mode != "direct" else S.Fetcher("direct"))
-
-
-def _nexus(args):
-    """D145: Nexus Mutual's products and cover prices, keyless and optional, recorded under fixtures/replay/nexus/
-    like Pharos (offline by default; --record and --refresh re-read; --live reads without saving)."""
-    from . import nexus
-
-    mode = "refresh" if args.record or args.refresh else "direct" if args.live else "offline"
-    return nexus.load(S.Fetcher(mode, REPLAY_DIR / "nexus") if mode != "direct" else S.Fetcher("direct"))
-
-
-def _vault_graph(vault: str) -> dict | None:
-    """D139: the vault's recorded dependency graph (graph --vault … --record), for the shock engine; None without one.
-    Loading a replay moves the clock to the recording's date, so the clock is put back."""
-    from . import graph as GR
-
-    rdir = REPLAY_DIR / f"graph-{vault.lower()}"
-    if not (rdir / "meta.json").exists():
-        return None
-    as_of = clock.as_of()
-    try:
-        g, block, *_ = GR.load([], [], True, "replay", rdir)
-    except S.CacheMiss:
-        return None
-    finally:
-        clock.set_as_of(as_of)
-    return {"nodes": list(g.nodes.values()), "edges": g.edges, "block": block}
-
-
 def _vault_incident(ap, args) -> int:
     """`analyze --vault` / `--book`: a known incident on a collateral, for one vault or a book of vaults
-    (plans 2026-10-11-vault-incident and 2026-10-11-vault-book)."""
+    (plans 2026-10-11-vault-incident and 2026-10-11-vault-book); the work is `pipeline.incident`."""
+    mode = "record" if args.record else "refresh" if args.refresh else "live" if args.live else "offline"
     try:
-        token_shocks = vault_incident.parse_shocks(args.shock)
         book = vault_book.load(Path(args.book)) if args.book else vault_book.from_addresses(args.vault, args.user)
-    except ValueError as e:
-        ap.error(str(e))
-    if not token_shocks:
-        ap.error(
-            "--vault and --book need --shock token=<collateral address or symbol>:<fall>, e.g. token=mGLOeuro:0.30, "
-            "or --shock borrower=<collateral, market id or all>:<recovery>[:<n>], e.g. borrower=mGLOeuro:0.5"
-        )
-    incidents = []
-    ph, nx = _pharos(args), _nexus(args)
-    try:
-        for v in book.vaults:
-            f, block, all_oracles = _vault_source(v.address, args)
-            incidents.append(
-                vault_incident.run(
-                    f,
-                    v.address,
-                    block,
-                    v.depositor or args.user,
-                    token_shocks,
-                    profile_all=all_oracles,
-                    pharos=ph,
-                    graph=_vault_graph(v.address),
-                    horizon_days=args.horizon,
-                    nexus=nx,
-                )
-            )
-    except FileNotFoundError as e:
+        res = pipeline.incident(book, args.shock, args.user, args.horizon, mode)
+    except (ValueError, FileNotFoundError) as e:
         ap.error(str(e))
     except S.CacheMiss as e:
         print(f"recording incomplete: {e}", file=sys.stderr)
@@ -452,13 +385,12 @@ def _vault_incident(ap, args) -> int:
     except S.SourceError as e:
         print(f"data source error: {e}", file=sys.stderr)
         return 3
-    if len(incidents) == 1 and not args.book:
-        for line in incidents[0].lines():
+    if len(res.incidents) == 1 and not args.book:
+        for line in res.incidents[0].lines():
             print(line)
-        print(f"json:   {vault_incident.write(incidents[0], Path(args.out))}")
+        print(f"json:   {vault_incident.write(res.incidents[0], Path(args.out))}")
         return 0
-    result = vault_book.aggregate(book, token_shocks, incidents)
-    for line in result.text():
+    for line in res.result.text():
         print(line)
-    print(f"json:   {vault_book.write(result, Path(args.out))}")
+    print(f"json:   {vault_book.write(res.result, Path(args.out))}")
     return 0

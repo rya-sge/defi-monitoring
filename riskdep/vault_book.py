@@ -27,6 +27,7 @@ from pathlib import Path
 from .vault_incident import VaultIncident, describe
 
 WEIGHTINGS = ("vault", "depositor")
+EXAMPLES = Path(__file__).resolve().parent.parent / "examples"
 
 
 @dataclass
@@ -128,6 +129,11 @@ def parse(d: dict, where: str = "book") -> Book:
         dep = v.get("depositor")
         vaults.append(BookVault(a, v.get("label"), dep.lower() if dep else None))
     return Book(d.get("name") or f"{len(vaults)} vault(s)", weighting, vaults)
+
+
+def examples() -> dict[str, Book]:
+    """The books shipped in `examples/`, by file name without `.json`."""
+    return {p.stem: load(p) for p in sorted(EXAMPLES.glob("*.json"))}
 
 
 def from_addresses(addresses: list[str], depositor: str | None = None) -> Book:
