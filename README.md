@@ -42,6 +42,8 @@ What to read in the output:
 | PT-reUSD/USDC | −2.45 % | 13 / 13, the same borrowers | 35.46M / 35.19M USDC (−0.8 %) | 927,975 / 920,781 | 0 / 0 |
 | PT-reUSD/USDT | −2.76 % | 7 / 7, the same borrowers | 1.89M / 0.96M USDT (liquidators repaid about half) | 49,378 / 25,015 | 0 / 0 |
 
+A second episode tests a different mechanism, price-tracking oracles in a market-wide crash: `backtest --episode crash-2025-10-10`, the main wave of the 2025-10-10 crash on the six Morpho markets with the most liquidations (Mog, PEPE, SPX, WBTC, wstETH). No liquidated borrower is missed in any of them; WBTC/USDC's debt and incentive are within 2 %. The model over-predicts by count in a fast crash, and the backtest accounts for each case: 36 of Mog's 52 extra positions were liquidated later that night, a few were defended by their borrowers, and the rest owe little (under 3 % of the debt repaid, much of it dust no liquidator takes). The bad debt predicted at the low over-states the realised one (Mog: 403k against 22.7k), because liquidators reached many positions after the wick.
+
 The impact given the incident is right to within 1 % where positions were liquidated in full. Not tested: the oracle's fall itself, and the squeeze (the Pendle pool's curve at that date is not served by the quote API). Recorded through an archive RPC (`keys.ini`), it replays offline with no key.
 
 The brief's book with its own worked example, the PT-sUSDe loop on Morpho, as one pocket next to nine vaults: `analyze --book examples/brief-mixed-book.json --shock token=sUSDe:0.08 --exit-cost 0.11` ("leaving it costs 110,000 USD … for sure and saves 776,708 if the incident comes": EXIT).

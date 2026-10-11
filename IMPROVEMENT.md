@@ -61,7 +61,7 @@ The engineering is well above what a hackathon usually shows: real mainnet data,
 
 **Problem.** Nothing shows the engine's numbers against what actually happened. This is the single strongest argument for "is the number defensible", and the repository already names the case: the PT-reUSD liquidations of 2026-08-25 (`NEXT_STEP.md` B9). USDe at −8 % on 2025-10-10 is a second one.
 
-**Status: done** (plan `2026-10-11-backtest`): `riskdep backtest` replays the PT-reUSD liquidations of 2026-08-25 through an archive RPC, recorded keyless: the same 13 + 7 borrowers predicted as liquidated, none missed; in the USDC market debt and incentive within 0.8 %; no bad debt, as observed. The table is in the README. Left: the squeeze at that date, the USDe episode.
+**Status: done** (plan `2026-10-11-backtest`): `riskdep backtest` replays the PT-reUSD liquidations of 2026-08-25 through an archive RPC, recorded keyless: the same 13 + 7 borrowers predicted as liquidated, none missed; in the USDC market debt and incentive within 0.8 %; no bad debt, as observed. The table is in the README. Left: the squeeze at that date. A second episode is done (plan `2026-10-11-backtest-crash`): the 2025-10-10 crash on six markets, no liquidated borrower missed; USDe itself barely reached Morpho that night.
 
 **How.** Record the graph at the block before the incident (an archive RPC is needed; one free archive endpoint or a one-day paid key is enough), apply the observed shock, and compare predicted against realised liquidations and bad debt from `Liquidate` events. Report the error in a table in the README, even if it is large: a measured error is more credible than an unmeasured one. Size: M.
 

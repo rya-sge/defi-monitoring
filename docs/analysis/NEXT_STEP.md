@@ -46,6 +46,7 @@ Sizes: **S** about a day, **M** a few days, **L** more.
 | The judge path (`IMPROVEMENT.md` 1.1–2.2) | the brief's ten pockets (`pocket` weighting, `--exit-cost`); README path; a reason on every verdict; the expected loss's sampling interval | `2026-10-11-judge-path` |
 | Fork crisis demo (D3; part of C6) | `scripts/fork/`: the Belem crisis on an anvil fork, alternative crises; `RISKDEP_FORK`; the timelock queue, the feed band and the exit gates in `admin.py`; `test_fork_replay.py` | `2026-10-11-fork-demo` |
 | Feed quality, TVL concentration (most of C2, C3) | each feed's freshness against its own rhythm; each protocol's share of DeFi and of its category | `2026-10-11-feed-quality` |
+| Second backtest: the 2025-10-10 crash (B9+) | `backtest --episode crash-2025-10-10`: six markets, no missed borrower, every over-prediction accounted for | `2026-10-11-backtest-crash` |
 | Backtest (B9) | `backtest`: the 2026-08-25 PT-reUSD liquidations, through an archive RPC, recorded keyless | `2026-10-11-backtest` |
 | Conditional Monte Carlo (A4) | `--conditional`: the loss of staying given the incident, drawn from real incident runs, against the certain cost of leaving | `2026-10-11-conditional` |
 | PT yield and rate channels (B1, B2 as incidents) | `--shock pt_yield=…`, `--shock borrow_rate=…` | `2026-10-11-pt-channels` |
@@ -66,7 +67,6 @@ Sizes: **S** about a day, **M** a few days, **L** more.
 | B5 | *Secondary: the priors feed only `analyze --demo`'s ex-ante view; no known-incident answer uses them.* Priors: decayed window, survivorship, two-part depeg, protocol multiplier, the RockawayX issuers; calibrate the conditional draw | K1–K5, K17, K18 | M | `priors.py`, `registry.json` |
 | B6 | Liquidity returned by liquidations; the squeeze at a past date (the pool's curve from its reserves) | K9, K27 | M | `engine.py`, `backtest.py` |
 | B3 | Stressed exit cost (the hold-to-maturity path is done, plan `2026-10-11-alerts-and-verdict`) | K12 | S | Pendle quotes at several sizes |
-| B9+ | A second backtest episode: USDe at −8 % on 2025-10-10 | K5, K8 | S | `backtest.py` |
 | B1+, B2+ | The rate and yield channels as Monte Carlo layers, with Pendle's and Morpho's history | K10, K11 | S | `simulate.py` |
 | B8 | Loans at the market price; the drain as a loss channel | K16 | S–M | `market_risk.py`, `drain.py` |
 | C1 | Discovery depth in `analyze`: the graph's layers in the PT report | K19 | M | `discover.py`, `graph.py` |

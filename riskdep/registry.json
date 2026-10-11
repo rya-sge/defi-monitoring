@@ -918,7 +918,7 @@
     "warn_category_min_usd": 1000000000.0
   },
   "backtest": {
-    "basis": "D161-D164: a past incident replayed: the markets' borrowers (their Borrow events up to the block before), their positions, the market totals and the oracle price read at that block through an archive RPC (keys.ini), the oracle's lowest price over the liquidation blocks applied as the shock, the liquidation model of market_risk.value predicting what becomes liquidatable, against the Liquidate events. lead_blocks: how far before the first liquidation the 'before' state is read (60 blocks, 12 minutes: the episode's yield spike took nine).",
+    "basis": "D161-D164: a past incident replayed: the markets' borrowers (their Borrow events up to the block before), their positions, the market totals and the oracle price read at that block through an archive RPC (keys.ini), the oracle's lowest price over the liquidation blocks applied as the shock, the liquidation model of market_risk.value predicting what becomes liquidatable, against the Liquidate events. lead_blocks: how far before the first liquidation the 'before' state is read (60 blocks, 12 minutes: the episode's yield spike took nine). followup_to (optional): liquidations after the window up to this block, to tell an over-prediction from a liquidation that came later; positions predicted but not liquidated are re-read at the window's last liquidation block, to tell a borrower who defended (repaid, added collateral) from one no liquidator reached (D197).",
     "lead_blocks": 60,
     "episodes": {
       "pt-reusd-2026-08-25": {
@@ -947,9 +947,12 @@
           23549800,
           23550200
         ],
-        "source": "Liquidate events on Morpho Blue read through Etherscan on 2026-10-11: 258 liquidations in 29 markets between 2025-10-10 12:00 and 10-11 12:00 UTC, led by memecoin collateral (Mog, PEPE, SPX) and WBTC; the six markets with the most, in the crash's main wave. USDe itself barely reached Morpho that night (2 liquidations in sUSDe/USDT): its −35 % print was on a centralized exchange."
+        "source": "Liquidate events on Morpho Blue read through Etherscan on 2026-10-11: 258 liquidations in 29 markets between 2025-10-10 12:00 and 10-11 12:00 UTC, led by memecoin collateral (Mog, PEPE, SPX) and WBTC; the six markets with the most, in the crash's main wave. USDe itself barely reached Morpho that night (2 liquidations in sUSDe/USDT): its −35 % print was on a centralized exchange.",
+        "followup_to": 23554345
       }
-    }
+    },
+    "dust_debt": 1000,
+    "dust_basis": "a position owing less than this (loan units, about USD) is rarely worth a liquidator's gas and incentive on Ethereum: left liquidatable, it is not a miss of the model"
   },
   "conditional": {
     "paths": 10000,
