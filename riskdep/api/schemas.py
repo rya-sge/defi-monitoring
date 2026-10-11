@@ -310,7 +310,8 @@ class IncidentRequest(BaseModel):
         "`fx=<fxusd|usdc|aave>:<loss>` (a loss on one of fxSAVE's NAV components), "
         "`bridge=<PST|etrUSD>[:<hours>]` (a forged bridge mint within the bridge's rate limits, posted to borrow), "
         "`drain=<collateral>:<tokens>[:<decimals>]` (unbacked tokens posted at the oracle's price borrow the free "
-        "liquidity).",
+        "liquidity), `loan=<the vault's asset>:<fall>` (the asset the depositor lent depegs, e.g. `loan=EURØP:0.1`), "
+        "`upshift=<loss>` (a loss of the Tori vault's off-chain assets, as etrUSD's markdown).",
         examples=[["token=PST:0.30"]],
     )
     user: str | None = Field(default=None, description="Depositor address, for every vault without its own.")

@@ -426,17 +426,28 @@ def issuer_shocks(items: list[str] | None, mode: str, target: str) -> tuple[list
     from . import bridge as BR
     from . import fx as FX
     from . import infinifi as IF
+    from . import upshift as UP
 
     rest, bridges = BR.parse(items)
+    rest, ups = UP.parse(rest)
     rest, found = FX.parse(rest)
-    if not found and not bridges:
+    if not found and not bridges and not ups:
         return rest, []
     if target == "position":
         raise ValueError(
-            "infinifi=, fx= and bridge= apply with --vault or --book: the analyze position is not on siUSD, fxSAVE, "
-            "PST or etrUSD"
+            "infinifi=, fx=, bridge= and upshift= apply with --vault or --book: the analyze position is not on siUSD, "
+            "fxSAVE, PST or etrUSD"
         )
     words = []
+    if ups:
+        # D254: a loss of the Tori vault's off-chain assets, as etrUSD's markdown once reported
+        snap = block_snapshot("upshift", mode)
+        if snap is None:
+            raise ValueError("an upshift incident needs the vault's state: no recording under fixtures/replay/upshift/")
+        for loss in ups:
+            m = UP.markdown(snap, loss)
+            words.append(m["text"])
+            rest.append(f"token=etrUSD:{min(0.99, m['markdown'])}")
     if bridges:
         # D251: the unbacked mint a bridge allows within the stop time, as the token's dilution
         routes = block_snapshot("bridge", mode)
@@ -621,6 +632,8 @@ def incident(
         borrows.append(ln)
         names.update(n)
     result = vault_book.aggregate(book, parsed, incidents, borrows, names)
+    result.offchain_usd, words = vault_book.offchain(parsed)
+    result.notes += words
     if venue:
         result.notes.insert(0, venue["text"])
         for inc in incidents:

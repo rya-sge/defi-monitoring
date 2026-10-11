@@ -1,0 +1,18 @@
+{
+  "name": "RockawayX, every Morpho Vault V2 on Ethereum",
+  "weighting": "vault",
+  "vaults": [
+    {"address": "0xc207d3f66537D7F66456808379A0E560cF20Da36", "label": "RockawayX Confidential RWA USDC"},
+    {"address": "0x2cA22cb25558fa2018ecb1CE4eD8AF92Ee7ea423", "label": "RockawayX f(x) Protocol Ecosystem USDC"},
+    {"address": "0xE0181090c22579B6A217f1522cbf8c9f1F0C1965", "label": "RockawayX USDC Yield"},
+    {"address": "0x3BD9AdAE6643dDcddD02746b8B60075E56DF9478", "label": "RockawayX Tori Ecosystem"},
+    {"address": "0x8aC91877b93330f52b2979a31a4879506021475c", "label": "Huma USDC Main"},
+    {"address": "0xD6d4b804014EF27836dBe9f8f6Bf6c71251548Ec", "label": "Belem RWA EURCV"},
+    {"address": "0x93e0F9d502eEfce8D34924ab3478C7EA0CBC5a2E", "label": "RockawayX NUVA Ecosystem"},
+    {"address": "0x9C57E02bC31e7e463f439353D97bd8f42F5a7F9c", "label": "RockawayX EUROP"},
+    {"address": "0xe99A27169c2aA26a8f2757949d09Fa3f9A8f0B3B", "label": "RockawayX Midas USDC Prime"},
+    {"address": "0x64C18DCC4Ccb3b8D27877a4aeBB4C3126CB39cB9", "label": "RockawayX wETH"},
+    {"address": "0xd65d6E8dbC3Cd3D12418199E6f4014dB3aaa0097", "label": "Figure USDC Main"},
+    {"address": "0x5f829B1B473cBA86838E1B7BB7E144DbDE228e21", "label": "RockawayX USDC Prime"}
+  ]
+}

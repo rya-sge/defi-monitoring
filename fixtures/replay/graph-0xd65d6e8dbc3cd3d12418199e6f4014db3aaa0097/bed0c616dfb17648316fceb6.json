@@ -1,0 +1,1 @@
+{"method": "GET", "url": "https://api.etherscan.io/v2/api?chainid=1&module=contract&action=getsourcecode&address=0xd9547692d9a01cb10d9cf4bf41381355a6570415", "body": null, "fetched": "2026-10-11T07:21:42Z", "response": {"verified": true, "name": "MetaOracleDeviationTimelock", "proxy": true, "implementation": "0x9b4655239e91dc9e1f7599bb88fba41b4542de5b"}}

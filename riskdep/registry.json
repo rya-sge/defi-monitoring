@@ -138,6 +138,34 @@
         },
         "basis": "Governance or oracle attack on the CDP system."
       }
+    },
+    "0xe72b141df173b999ae7c1adcbf60cc9833ce56a8": {
+      "symbol": "ETH+",
+      "issuer": "Reserve",
+      "llama_slug": "reserve",
+      "category": "Liquid Staking",
+      "kind": "lst-basket",
+      "dependencies": [
+        "A basket of liquid-staking tokens: per ETH+, 0.401 wstETH (Lido), 0.226 weETH (ether.fi), 0.213 sfrxETH (Frax), read from its BasketHandler.quote on 2026-10-11",
+        "RSR stakers (stRSR), seized first when the basket falls short",
+        "Reserve's governance (Main's owner) and the basket's collateral plugins"
+      ],
+      "depeg": {
+        "p_year": 0.08,
+        "severity": {
+          "a": 1.5,
+          "b": 30.0
+        },
+        "recovery": 0.85,
+        "basis": "GAPV3: a basket of three liquid-staking tokens depegs with them, wstETH's history (stETH/ETH ~0.94 in Jun-2022) taken for the basket; diversification across three issuers and the RSR first-loss layer are not credited, so the figure is conservative. The market is the RockawayX wETH vault's own (94.5 % LLTV, 99 % utilised)."
+      },
+      "hack": {
+        "severity": {
+          "a": 1.0,
+          "b": 8.0
+        },
+        "basis": "A loss in one of the three LSTs, or in the RToken's plugins: up to its basket weight (40 % for wstETH) before RSR covers part of it; mean ~11 %, as wstETH."
+      }
     }
   },
   "stables": {
@@ -150,6 +178,11 @@
       "symbol": "USDT",
       "issuer": "Tether",
       "basis": "Fiat/treasury-backed. For a borrower, a loan-asset depeg lowers the debt: no loss channel."
+    },
+    "0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51": {
+      "symbol": "EURØP",
+      "issuer": "Schuman Financial",
+      "basis": "GAPV3: a euro e-money token (MiCA), 7.87M on Ethereum on 2026-10-11, 6 decimals. In the RockawayX EUROP vault it is the asset the depositor lends: a depeg is a direct loss to the depositor, before any market (loan=EURØP:<fall>); for a borrower it lowers the debt."
     }
   },
   "protocols": {
@@ -1350,5 +1383,43 @@
         }
       }
     }
+  },
+  "offchain": {
+    "basis": "GAPV3 §3: RockawayX's exposure to the book's issuers on venues riskdep does not read (Kamino, Solana), from RockawayX's published update and the Dune dashboard (rockawayxvault/rockawayx-dashboard), read 2026-10-10; not read on-chain. `holds`: the vault's asset is the token, so a markdown is its loss pro rata; `lends`: the vault lends against the token, so its loss depends on the venue's LLTV and borrowers, not read: the amount is at risk, not lost.",
+    "as_of": "2026-10-10",
+    "lines": [
+      {
+        "token": "PST",
+        "venue": "Kamino",
+        "vault": "Huma PST",
+        "usd": 42500000,
+        "how": "holds"
+      },
+      {
+        "token": "PST",
+        "venue": "Kamino",
+        "vault": "RockawayX RWA USDC, Huma market",
+        "usd": 5000000,
+        "how": "lends"
+      },
+      {
+        "token": "PST",
+        "venue": "Kamino",
+        "vault": "Huma USDC",
+        "usd": 600000,
+        "how": "lends"
+      },
+      {
+        "token": "PRIME",
+        "venue": "Kamino",
+        "vault": "RockawayX RWA USDC, Prime market",
+        "usd": 5900000,
+        "how": "lends"
+      }
+    ]
+  },
+  "upshift": {
+    "vault": "0xcd69123b3fbbfc666e1f6a501da27b564c00de54",
+    "basis": "D253-D255 (GAPV3 §2): the Tori Ecosystem Vault on Upshift (docs.upshift.finance, contracts/addresses.md), a TokenizedVault behind a transparent proxy; its share is etrUSD (lpTokenAddress). Its NAV cap and fee units read from the verified source (updateTotalAssets, getMaxAllowedChange, getChangePercentage, _previewRedemption: 1/10,000); raising the cap is a call scheduled through ResourceBasedTimelockedCall (TIMELOCK_DURATION)."
   }
 }

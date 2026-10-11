@@ -1,0 +1,1 @@
+{"method": "GET", "url": "https://api.etherscan.io/v2/api?chainid=1&module=contract&action=getsourcecode&address=0x6978de4916df8cd2bf7732bedebbe7090f028555", "body": null, "fetched": "2026-10-11T07:24:40Z", "response": {"verified": true, "name": "EthereumPriceFeedLbtcFundamentalWithoutRoundsV1", "proxy": false, "implementation": null}}

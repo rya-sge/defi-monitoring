@@ -272,13 +272,20 @@ def parse_shocks(items: list[str] | None) -> list[tuple[str, str, float, int]]:
     drain=<collateral>:<tokens>[:<decimals>]                  ("drain", target, tokens, decimals), D252: that many
                                                               tokens with nothing behind them (a forged bridge mint)
                                                               are posted at the oracle's price and borrow the free
-                                                              liquidity of each matching market, then are refused"""
+                                                              liquidity of each matching market, then are refused
+    loan=<the vault's asset, symbol or address>:<fall>        ("loan", target, fall, 0), GAPV3: the asset the depositor
+                                                              lent depegs; the vault's markets are untouched, its
+                                                              value falls by that much"""
     out = []
     for it in items or []:
         name = it.partition("=")[0].strip()
         if name == "token":
             tok, v = parse_token_shocks([it])[0]
             out.append(("token", tok, v, 0))
+            continue
+        if name == "loan":
+            tok, v = parse_token_shocks([it.replace("loan=", "token=", 1)])[0]
+            out.append(("loan", tok.replace("ø", "o"), v, 0))  # EURØP's symbol on-chain is EUROP
             continue
         if name == "drain":
             parts = it.partition("=")[2].split(":")
@@ -325,6 +332,8 @@ def describe(shock: tuple, labels: dict[str, str] | None = None) -> str:
         return f"{name} −{v:.0%}"
     if kind == "drain":
         return f"{v / 1e6:,.1f}M unbacked {name} borrow the free liquidity"
+    if kind == "loan":
+        return f"{name} (the loan asset) −{v:.0%}"
     who = "the largest borrower" if n == 1 else f"the {n} largest borrowers"
     where = "every market" if target == "all" else name
     return f"{who} of {where} default{'s' if n == 1 else ''}, collateral recovered at {v:.0%}"
@@ -715,6 +724,8 @@ def run(
     drains: dict[str, list] = {}  # D252: token → [raw collateral left to post, the markets it reaches]
     for kind, tok, v, n in shocks:
         for mid, mp in params.items():
+            if kind == "loan":
+                break  # the loan asset: no market's collateral, applied to the vault's value below
             if kind == "borrower" and tok in ("all", mid):
                 found = ("", "every market" if tok == "all" else mp.collateral_symbol)
             else:
@@ -856,6 +867,20 @@ def run(
     liq = EQ.liquidity(st)
     stay, par, stuck, leave, verdict, reason = decide(liq, loss_raw, exposure_raw, unit)
     apy = vault_apy(f, view.address)
+    own = {view.asset_symbol.lower().replace("ø", "o"), view.asset.lower()}
+    fall = max((v for k, tok, v, _ in shocks if k == "loan" and tok in own), default=0.0)
+    if fall:
+        names.update({tok: view.asset_symbol for k, tok, _, _ in shocks if k == "loan" and tok in own})
+        # GAPV3: the asset itself depegs; every share still redeems as many units, each worth `fall` less. What leaves
+        # now and is swapped out before the depeg escapes it; what stays falls with it
+        loss_raw += int(st.total_assets * fall)
+        stay, leave = stay + fall * liq.position / unit, leave + fall * stuck
+        if fall * par > 1:
+            verdict, reason = (
+                "EXIT",
+                f"the vault's own asset, {view.asset_symbol}, is what falls: withdraw the {par:,.0f} that can leave now "
+                f"and swap it out before the depeg; the {stuck:,.0f} left behind falls {fall:.0%} with it",
+            )
     exit_cost, p_star, p_year = breakeven(stay, leave, par, apy, horizon_days, exit_cost_rate)
     if exit_cost_rate is not None and verdict == "EXIT" and stay - leave <= exit_cost:
         verdict, reason = (

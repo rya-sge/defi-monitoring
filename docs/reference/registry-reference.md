@@ -23,6 +23,8 @@ Rules for editing:
 - [`graph`](#graph)
 - [`engine`](#engine)
 - [`bridge`](#bridge)
+- [`upshift`](#upshift)
+- [`offchain`](#offchain)
 - [`infinifi`](#infinifi)
 - [`fx`](#fx)
 - [`sky`](#sky)
@@ -230,6 +232,28 @@ The shock engine's propagation rules and settings (plan `2026-10-10-propagation-
 | `basis` | text | — | why |
 
 **Changing a rule.** Prefer a `--rules` file for a study: the registry's rules are the defaults everyone gets. A change here keeps its `basis` honest and is followed by `python3 -m pytest -q tests/test_engine.py`. The drain threshold uses `watch.drain_buy_cost`.
+
+## `upshift`
+
+The Upshift vault behind etrUSD (D253–D254). Read by `upshift.py`, `graph.py`, `pipeline.py`.
+
+| Key | Unit | Default | What it controls |
+|---|---|---|---|
+| `vault` | address | the Tori Ecosystem Vault | every read; its share (etrUSD), owner, operator and scheduler are read from it |
+| `basis` | text | — | where the address and the units come from |
+
+## `offchain`
+
+RockawayX's exposure on venues not read (D256). Read by `vault_book.offchain`.
+
+| Key | Unit | Default | What it controls |
+|---|---|---|---|
+| `lines[].token` | symbol | PST, PRIME | the token an incident must shock for the line to count |
+| `lines[].venue`, `vault`, `usd` | text, USD | Kamino vaults, 2026-10-10 | where, and how much |
+| `lines[].how` | `holds` or `lends` | — | `holds`: the markdown is the loss, pro rata; `lends`: the amount is at risk, its loss not computed |
+| `as_of`, `basis` | date, text | 2026-10-10 | the source, not read on-chain |
+
+The `issuers` block also holds ETH+ (Reserve) and the `stables` block EURØP (Schuman Financial), D257.
 
 ## `bridge`
 

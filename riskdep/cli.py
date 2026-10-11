@@ -73,7 +73,9 @@ def main(argv: list[str] | None = None) -> int:
         "infinifi=<share>, a loss of infiniFi's backing through its waterfall (e.g. infinifi=0.3); "
         "fx=<fxusd|usdc|aave>:<loss>, a loss on one of fxSAVE's NAV components (e.g. fx=fxusd:0.1); "
         "bridge=<PST|etrUSD>[:<hours>], a forged bridge mint within its rate limits, posted to borrow (e.g. bridge=PST); "
-        "drain=<collateral>:<tokens>[:<decimals>], unbacked tokens borrowing the free liquidity",
+        "drain=<collateral>:<tokens>[:<decimals>], unbacked tokens borrowing the free liquidity; "
+        "loan=<the vault's asset>:<fall>, the asset the depositor lent depegs (e.g. loan=EURØP:0.1); "
+        "upshift=<loss>, a loss of the Tori vault's off-chain assets (e.g. upshift=0.1)",
     )
     a.add_argument(
         "--since",
@@ -323,6 +325,7 @@ def main(argv: list[str] | None = None) -> int:
             pipeline.block_snapshot("infinifi", mode_i),
             pipeline.block_snapshot("fx", mode_i),
             pipeline.block_snapshot("bridge", mode_i),
+            pipeline.block_snapshot("upshift", mode_i),
         )
         title = "Morpho dependency graph: " + ", ".join([u[:10] + "…" for u in users] + [v[:10] + "…" for v in vaults])
         hp, jp = GR.write(g, Path(args.out), title, GR.subtitle_for(block))
@@ -345,7 +348,7 @@ def main(argv: list[str] | None = None) -> int:
         if venues:
             print(f"Ethena: {venues} venue(s) holding USDe's backing drawn behind USDe")
         if issuers:
-            print(f"issuer stacks and bridges: {issuers} node(s) behind siUSD, fxSAVE and the bridged tokens")
+            print(f"issuer stacks and bridges: {issuers} node(s) behind siUSD, fxSAVE, etrUSD and the bridged tokens")
         skies = GR.annotate_sky(
             g, pipeline.sky_snapshot("record" if args.record else "offline" if args.replay else "live")
         )

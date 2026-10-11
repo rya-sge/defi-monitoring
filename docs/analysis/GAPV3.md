@@ -4,6 +4,17 @@
 
 The 8 vaults the Dune page did not show at first were added to `ROCK-VAULT.md` §2 on 2026-10-11 (rows 26–33). The 5 of them that are Morpho vaults on Ethereum were read from the Morpho API the same day (`ROCK-VAULT.md` §3).
 
+## Status (2026-10-11, plan `2026-10-11-gapv3`)
+
+| Step | Status |
+|---|---|
+| 1. The five Ethereum vaults | **done**: recorded (graph and incident) and in `examples/rockawayx-ethereum-all.json`, the twelve vaults with money in them; the demo book keeps its seven. The Morpho API lists 16 Vault V2 for the curator: four more are near-empty duplicates ($1 to $13), left out |
+| 2. ETH+ | **done**: Reserve in `registry.json` `issuers`, its basket read on-chain (wstETH 0.401, weETH 0.226, sfrxETH 0.213 per ETH+); its market is priced by Reserve's exchange rate (constant-price), so a market depeg liquidates nobody |
+| 3. `loan=` for EURØP | **done**: `loan=<the vault's asset>:<fall>`, the depositor's own asset depegging; EXIT when what can leave now is swapped out before it |
+| 4. The Kamino line for Huma | **done**: registry `offchain`; a PST incident states the Kamino loss next to the book's (20 %: 8.5M on Kamino's Huma PST vault, against 1.70M in the Ethereum book) |
+| 5. Upshift's Tori vault | **done**: `upshift.py`: 99.99 % of its 17.15M trUSD is reported off-chain by an operator that is one key, its NAV can move 0.05 % a day at most (a 10 % loss needs 222 days, or the owner raising the cap through a 24 h timelock), a redemption waits 7 days or pays 5 %, 36 % of etrUSD is queued; `upshift=<loss>`; a graph node behind etrUSD. The docs under `docs/external/upschift/` are the right ones: their address list names this vault |
+| 6. mROX, Ember, OnRe | open. Ember's docs (`docs/external/ember/`) describe the right protocol (eTokens, Bluewater Labs) but give no contract address, so Y10K's contract is not confirmed yet |
+
 ## How the vaults are triaged
 
 Four questions, in this order:

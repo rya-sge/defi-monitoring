@@ -735,10 +735,10 @@ def annotate_shared(g: Graph) -> int:
     return shared
 
 
-def annotate_issuers(g: Graph, infinifi=None, fx=None, bridges=None) -> int:
+def annotate_issuers(g: Graph, infinifi=None, fx=None, bridges=None, upshift=None) -> int:
     """D246, D248: behind siUSD, infiniFi's loss order (the safety buffer, liUSD, then siUSD, then iUSD); behind fxSAVE,
     what fxSP's NAV is made of (fxUSD, USDC idle and lent on Aave). D250: behind a bridged token, its bridge and what
-    bounds an unbacked mint. Returns the nodes drawn."""
+    bounds an unbacked mint. D253: behind etrUSD, Upshift's Tori vault and its NAV cap. Returns the nodes drawn."""
     from . import infinifi as IF
 
     drawn = 0
@@ -775,6 +775,20 @@ def annotate_issuers(g: Graph, infinifi=None, fx=None, bridges=None) -> int:
                 )
                 g.edge(nid, x, "NAV made of", round(share * fx.total), "USD")
                 drawn += 1
+        if upshift and n["kind"] == "Asset" and n["label"] == "etrUSD":
+            from .upshift import K as UK
+
+            x = g.node(
+                "upshift:tori",
+                "External",
+                upshift.lines()[0],
+                vault=UK["vault"],
+                exits=upshift.lines()[1],
+                holders=[f"{', '.join(h.roles)}: {h.label}" for h in upshift.holders],
+                source="Upshift TokenizedVault read on-chain (D253)",
+            )
+            g.edge(nid, x, "share of", round(upshift.total), "trUSD")
+            drawn += 1
         for r in (bridges or {}).values():
             if addr != r.token:
                 continue

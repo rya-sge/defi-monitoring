@@ -80,6 +80,7 @@ class BookIncident:
     horizon_days: float = 30.0
     conditional: dict | None = None  # D165: the book's loss of staying given the incident, drawn, against leaving
     value_at_risk: dict | None = None  # D227: what the incident puts at risk, in one block
+    offchain_usd: float = 0.0  # GAPV3: the loss on venues not read (registry `offchain`), outside the book's figures
 
     def text(self) -> list[str]:
         shock = "; ".join(self.shocks)
@@ -110,6 +111,34 @@ class BookIncident:
 
 
 # --- pure
+
+
+def offchain(parsed: list[tuple]) -> tuple[float, list[str]]:
+    """GAPV3 §3, pure: the same incident on the firm's positions in venues not read (registry `offchain`): a vault that
+    holds the token loses the markdown pro rata; one that lends against it has that amount at risk, its loss unknown.
+    Returns (the loss, the lines in words)."""
+    from .discover import REGISTRY
+
+    oc = REGISTRY["offchain"]
+    falls = {t.lower(): v for k, t, v, _ in parsed if k in ("token", "loan")}
+    loss, out = 0.0, []
+    for x in oc["lines"]:
+        fall = falls.get(x["token"].lower())
+        if not fall:
+            continue
+        where = f"{x['venue']} {x['vault']} ({x['usd'] / 1e6:,.1f}M"
+        if x["how"] == "holds":
+            loss += fall * x["usd"]
+            out.append(f"{where}, holds {x['token']}): −{fall * x['usd']:,.0f}")
+        else:
+            out.append(f"{where}, lends against {x['token']}): at risk, its loss depends on {x['venue']}'s LLTV")
+    if out:
+        out = [
+            f"beyond the book, not read on-chain ({oc['as_of']}, registry `offchain`): "
+            + "; ".join(out)
+            + (f"; firm-wide, at least {loss:,.0f} more" if loss else "")
+        ]
+    return loss, out
 
 
 def load(path: Path) -> Book:
@@ -213,7 +242,10 @@ def line(inc: VaultIncident, label: str | None, weighting: str, amount: float | 
     """D122, pure: one vault's line in USD, in the book's weighting."""
     usd = inc.asset_usd if inc.asset_usd else 1.0
     exposure = sum(h.vault_exposure for h in inc.hits)
-    hit = bool(inc.hits)
+    # GAPV3: a vault hit through its own asset (loan=) has no hit market, but is hit all the same
+    own = [] if inc.hits or inc.vault_loss <= 0 else [f"{inc.symbol} (the vault's asset)"]
+    exposure = exposure or (inc.vault_total if own else 0.0)
+    hit = bool(inc.hits or own)
     if weighting == "pocket":
         a, stay, leave, _, cost, p, py, verdict = pocket(inc, amount or 0.0)
         frac = a / inc.vault_total if inc.vault_total else 0.0
@@ -226,7 +258,7 @@ def line(inc: VaultIncident, label: str | None, weighting: str, amount: float | 
             stay * usd,
             exposure * frac * usd,
             verdict,
-            [h.label for h in inc.hits],
+            [h.label for h in inc.hits] + own,
             inc.asset_usd is not None,
             p if p_ok else None,
             py if p_ok else None,
@@ -257,7 +289,7 @@ def line(inc: VaultIncident, label: str | None, weighting: str, amount: float | 
         loss * usd,
         exposure * usd,
         inc.verdict,
-        [h.label for h in inc.hits],
+        [h.label for h in inc.hits] + own,
         inc.asset_usd is not None,
         inc.p_star if p_ok else None,
         inc.p_star_year if p_ok else None,
@@ -387,6 +419,7 @@ def aggregate(
     labels = {v.address: v.label for v in book.vaults}
     amounts = {v.address: v.amount for v in book.vaults}
     names = {k.lower(): k for i in incidents for k in i.shocks}  # the symbol as the vaults' markets name it
+    names.update({i.symbol.lower(): i.symbol for i in incidents if i.symbol})  # GAPV3: a loan= names the vault's asset
     for i in incidents:
         names.update(i.labels)
     names.update(extra_names or {})

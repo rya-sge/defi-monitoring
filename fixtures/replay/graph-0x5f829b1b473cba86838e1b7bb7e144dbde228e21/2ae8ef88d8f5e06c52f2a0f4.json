@@ -1,0 +1,1 @@
+{"method": "GET", "url": "https://api.etherscan.io/v2/api?chainid=1&module=contract&action=getsourcecode&address=0x7d57e514a187f5596f10385a9d42ed5780111d94", "body": null, "fetched": "2026-10-11T07:24:34Z", "response": {"verified": true, "name": "MellowPriceFeed", "proxy": true, "implementation": "0xc2e105535132e588b5d1764a0b9472e5537fa9cd"}}
