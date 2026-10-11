@@ -11,6 +11,7 @@ import type {
   Target,
   Market,
   Vault,
+  IncidentRequest,
 } from './types';
 
 export const queryKeys = {
@@ -19,6 +20,24 @@ export const queryKeys = {
   targets: ['targets'] as const,
   graph: (query: GraphQuery) => ['graph', query] as const,
 };
+
+export function useBooks() {
+  return useQuery({
+    queryKey: ['books'],
+    queryFn: ({ signal }) => api.books(signal),
+    staleTime: Infinity,
+  });
+}
+
+/** Fixed detected event for the demo; the event feed will supply this request later. */
+export function useIncidentImpact(body: IncidentRequest) {
+  return useQuery({
+    queryKey: ['incident', body],
+    queryFn: ({ signal }) => api.incident(body, signal),
+    staleTime: Infinity,
+    retry: false,
+  });
+}
 
 export function useHealth() {
   return useQuery<Health>({

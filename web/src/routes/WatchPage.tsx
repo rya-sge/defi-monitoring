@@ -1,3 +1,4 @@
+import { FormattedText } from '../components/FormattedText';
 import { useEffect, useMemo, useState } from 'react';
 import { useSelectedTarget } from '../api/hooks';
 import { subscribeWatch } from '../api/stream';
@@ -205,10 +206,10 @@ function AlertRow({
         <span className="mono">{alert.event}</span>
         {alert.depositor_impact != null ? (
           <span
-            className="ml-auto font-semibold tabular-nums"
+            className={`ml-auto font-semibold tabular-nums ${alert.depositor_impact < 0 ? 'text-critical' : 'text-ok'}`}
             title="Impact on your deposit, in the vault's asset"
           >
-            {signedUsd(alert.depositor_impact)}
+            <FormattedText>{signedUsd(alert.depositor_impact)}</FormattedText>
           </span>
         ) : null}
       </div>

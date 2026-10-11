@@ -1,3 +1,5 @@
+import { ChartTooltip } from '../components/ChartTooltip';
+import { CHART_COLORS } from '../lib/charts';
 import { useMemo, useState } from 'react';
 import {
   CartesianGrid,
@@ -15,7 +17,7 @@ import type { ShockStatus, ShockTrace } from '../api/types';
 import { GraphCanvas } from '../components/GraphCanvas';
 import type { GraphSelection } from '../components/GraphCanvas';
 import { ErrorState, Loading } from '../components/States';
-import { compactNum, compactUsd, detailValue, num, percent } from '../lib/format';
+import { usd, compactNum, detailValue, num, percent } from '../lib/format';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -166,15 +168,15 @@ function Summary({ trace, label }: ViewProps) {
                 <TableCell>{status}</TableCell>
                 <TableCell className="text-right">{num(n(d.oracle_factor), 3)}</TableCell>
                 <TableCell className="text-right">{num(n(d.market_factor), 3)}</TableCell>
-                <TableCell className="text-right">{compactNum(n(d.liquidated_debt))}</TableCell>
+                <TableCell className="text-right">{num(n(d.liquidated_debt))}</TableCell>
                 <TableCell className="text-right">{n(d.positions_liquidated)}</TableCell>
-                <TableCell className="text-right">{compactNum(n(d.bad_debt))}</TableCell>
-                <TableCell className="text-right">{compactNum(n(d.insolvent))}</TableCell>
-                <TableCell className="text-right">{compactNum(n(d.drained))}</TableCell>
+                <TableCell className="text-right">{num(n(d.bad_debt))}</TableCell>
+                <TableCell className="text-right">{num(n(d.insolvent))}</TableCell>
+                <TableCell className="text-right">{num(n(d.drained))}</TableCell>
                 <TableCell className="text-right font-semibold">
-                  {compactNum(n(d.lender_loss))} {detailValue(d.loan_unit)}
+                  {num(n(d.lender_loss))} {detailValue(d.loan_unit)}
                 </TableCell>
-                <TableCell className="text-right">{compactUsd(n(d.collateral_sold_usd))}</TableCell>
+                <TableCell className="text-right">{usd(n(d.collateral_sold_usd))}</TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -197,10 +199,10 @@ function Summary({ trace, label }: ViewProps) {
             {assets.map(([id, { detail: d }]) => (
               <TableRow key={id}>
                 <TableCell>{label(id)}</TableCell>
-                <TableCell className="text-right">{compactUsd(n(d.sold_usd))}</TableCell>
-                <TableCell className="text-right">{compactUsd(n(d.absorbed_usd))}</TableCell>
+                <TableCell className="text-right">{usd(n(d.sold_usd))}</TableCell>
+                <TableCell className="text-right">{usd(n(d.absorbed_usd))}</TableCell>
                 <TableCell className="text-right">
-                  {percent(n(d.absorbed_usd) / (n(d.sold_usd) || 1), 0)}
+                  {percent(n(d.absorbed_usd) / (n(d.sold_usd) || 1))}
                 </TableCell>
                 <TableCell className="text-right">{num(n(d.impact), 4)}</TableCell>
               </TableRow>
@@ -261,10 +263,10 @@ function ImpactGraph({ trace, label }: ViewProps) {
 function finalLoss(trace: ShockTrace, id: string): string | null {
   const steps = finalSteps(trace).filter((step) => step.target === id && step.effect === 'loss');
   const total = steps.reduce((sum, step) => sum + n(step.value), 0);
-  if (steps.length) return `−${compactNum(total)} ${steps[0].unit}`;
+  if (steps.length) return `−${num(total)} ${steps[0].unit}`;
   const own = trace.nodes[id];
   return own.detail.lender_loss != null
-    ? `−${compactNum(n(own.detail.lender_loss))} ${own.loss_unit ?? ''}`
+    ? `−${num(n(own.detail.lender_loss))} ${own.loss_unit ?? ''}`
     : null;
 }
 
@@ -346,7 +348,9 @@ function SaleFlow({ trace, label }: ViewProps) {
           link={{ stroke: 'var(--edge)', strokeOpacity: 0.35 }}
           node={<SankeyNode />}
         >
-          <Tooltip formatter={(value) => compactUsd(Number(value))} />
+          <Tooltip
+            content={(props) => <ChartTooltip {...props} formatValue={(value) => usd(value)} />}
+          />
         </Sankey>
       </ResponsiveContainer>
     </div>
@@ -364,7 +368,7 @@ type SankeyNodeProps = {
 function SankeyNode({ x = 0, y = 0, width = 0, height = 0, payload }: SankeyNodeProps) {
   return (
     <g>
-      <rect x={x} y={y} width={width} height={height} rx={2} fill="var(--fg)" fillOpacity={0.6} />
+      <rect x={x} y={y} width={width} height={height} rx={2} fill="var(--chart-1)" />
       <text
         x={x + width + 6}
         y={y + height / 2}
@@ -372,7 +376,7 @@ function SankeyNode({ x = 0, y = 0, width = 0, height = 0, payload }: SankeyNode
         fontSize={11}
         fill="var(--fg)"
       >
-        {payload?.name} · {compactUsd(payload?.value ?? 0)}
+        {payload?.name} · {usd(payload?.value ?? 0)}
       </text>
     </g>
   );
@@ -406,14 +410,13 @@ function Waves({ trace, label }: ViewProps) {
             <CartesianGrid stroke="var(--line)" vertical={false} />
             <XAxis dataKey="wave" {...AXIS} />
             <YAxis {...AXIS} tickFormatter={(v: number) => compactNum(v)} width={50} />
-            <Tooltip formatter={(value) => compactNum(Number(value))} />
+            <Tooltip cursor={false} content={(props) => <ChartTooltip {...props} />} />
             {losers.map((id, i) => (
               <Line
                 key={id}
                 dataKey={id}
                 name={label(id)}
-                stroke="var(--fg)"
-                strokeOpacity={1 - i * 0.3}
+                stroke={CHART_COLORS[i % CHART_COLORS.length]}
                 dot={false}
                 isAnimationActive={false}
               />

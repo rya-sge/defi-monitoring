@@ -260,6 +260,28 @@ EVENTS: list[EventSpec] = [
     _ev("admin", "RoleGranted", "bytes32 indexed role", "address indexed account", "address indexed sender"),
     _ev("admin", "RoleRevoked", "bytes32 indexed role", "address indexed account", "address indexed sender"),
     _ev("admin", "Transfer", "address indexed from", "address indexed to", "uint256 value"),
+    # OpenZeppelin TimelockController queue, on the timelocks that control a watched contract (fork-demo D3)
+    _ev(
+        "admin",
+        "CallScheduled",
+        "bytes32 indexed id",
+        "uint256 indexed index",
+        "address target",
+        "uint256 value",
+        "bytes data",
+        "bytes32 predecessor",
+        "uint256 delay",
+    ),
+    _ev(
+        "admin",
+        "CallExecuted",
+        "bytes32 indexed id",
+        "uint256 indexed index",
+        "address target",
+        "uint256 value",
+        "bytes data",
+    ),
+    _ev("admin", "Cancelled", "bytes32 indexed id"),
     # MorphoMarketV1AdapterV2 (Submit / Revoke / Accept / Abdicate / timelock events share
     # their signatures with the vault's and are told apart by the emitting address)
     _ev("adapter", "Allocate", "bytes32 indexed marketId", "uint256 newAllocation", "uint256 mintedShares"),

@@ -1,3 +1,4 @@
+import { FormattedText } from './FormattedText';
 import { createElement, useState } from 'react';
 import {
   BaseEdge,
@@ -12,7 +13,12 @@ import type { GraphEdge, GraphNode } from '../api/types';
 import { KIND_COLOR, NAME_SLOT, nodeDrawing, tokenIconUrl } from '../lib/graph';
 
 /** `ring`: a colour to ring the node with when it is not selected (the impact page's status). */
-export type RiskNodeData = { node: GraphNode; amount: string[]; ring?: string };
+export type RiskNodeData = {
+  node: GraphNode;
+  amount: string[];
+  ring?: string;
+  underlying?: GraphNode;
+};
 export type RiskEdgeData = { edge: GraphEdge; label: string; width: number; colour: string };
 export type RiskNodeType = Node<RiskNodeData, 'risk'>;
 export type RiskEdgeType = Edge<RiskEdgeData, 'risk'>;
@@ -34,7 +40,7 @@ const AMOUNT =
   'rounded-sm bg-[color-mix(in_srgb,var(--fg)_8%,var(--bg))] px-1 text-[9px] leading-[1.4] text-foreground tabular-nums';
 
 /** Every node sits on the same neutral ground; the kind colour is carried by the icon alone. */
-const NODE_FILL = 'color-mix(in srgb, var(--fg) 5%, var(--bg))';
+const NODE_FILL = 'color-mix(in srgb, var(--fg) 12%, var(--bg))';
 /** Selected: a 2px border in the kind colour and a 6px halo of it at 10 % opacity. */
 const HALO = 6;
 const halo = (colour: string) => `color-mix(in srgb, ${colour} 10%, transparent)`;
@@ -47,6 +53,8 @@ export function RiskNode({ data, selected }: NodeProps<RiskNodeType>) {
   const iconSize = Math.round(Math.min(width, height) * 0.48);
   const logo = tokenIconUrl(node);
   const [logoFailed, setLogoFailed] = useState(false);
+  const [badgeFailed, setBadgeFailed] = useState(false);
+  const badge = data.underlying && tokenIconUrl(data.underlying);
   const scale = useLabelScale();
 
   return (
@@ -107,11 +115,32 @@ export function RiskNode({ data, selected }: NodeProps<RiskNodeType>) {
         )}
       </div>
 
+      {node.kind === 'Asset' &&
+      node.label.toUpperCase().startsWith('PT-') &&
+      badge &&
+      data.underlying ? (
+        <div
+          className="absolute top-0 right-0 flex size-5 items-center justify-center overflow-hidden rounded-full border"
+          style={{ background: NODE_FILL, borderColor: NODE_FILL }}
+          title={data.underlying?.label}
+        >
+          {badgeFailed ? (
+            createElement(nodeDrawing(data.underlying).icon, {
+              size: 12,
+              style: { color: colour },
+              'aria-hidden': true,
+            })
+          ) : (
+            <img src={badge} alt="" className="size-full" onError={() => setBadgeFailed(true)} />
+          )}
+        </div>
+      ) : null}
+
       {amount.length > 0 ? (
         <div className="absolute inset-x-0.5 bottom-1 flex flex-col items-center gap-px">
           {amount.map((line) => (
             <div key={line} className={`${AMOUNT} max-w-full truncate`}>
-              {line}
+              <FormattedText>{line}</FormattedText>
             </div>
           ))}
         </div>
@@ -120,7 +149,7 @@ export function RiskNode({ data, selected }: NodeProps<RiskNodeType>) {
       {/* Counter-scaled for legibility, but kept inside its layout slot: narrower as it grows,
           and one line once two would no longer fit the slot's height. */}
       <div
-        className={`absolute top-full left-1/2 mt-1 origin-top bg-background/80 text-center text-[11px] leading-tight text-foreground ${
+        className={`absolute top-full left-1/2 mt-1 origin-top rounded-md bg-background px-1 py-0.5 text-center text-[11px] leading-tight text-foreground ${
           scale > 1.4 ? 'line-clamp-1' : 'line-clamp-2'
         }`}
         style={{
@@ -129,7 +158,7 @@ export function RiskNode({ data, selected }: NodeProps<RiskNodeType>) {
         }}
         title={node.label}
       >
-        {node.label}
+        <FormattedText>{node.label}</FormattedText>
       </div>
 
       <Handle
@@ -180,7 +209,7 @@ export function RiskEdge({
         style={{
           ...style,
           stroke: selected ? 'var(--fg)' : (data?.colour ?? 'var(--edge)'),
-          strokeWidth: data?.width ?? 1,
+          strokeWidth: Math.max(2, data?.width ?? 2),
           // No amount: a dependency, not a flow of funds.
           strokeDasharray: data?.edge.amount == null ? '4 3' : undefined,
         }}
@@ -194,7 +223,7 @@ export function RiskEdge({
               opacity: style?.opacity,
             }}
           >
-            {data.label}
+            <FormattedText>{data.label}</FormattedText>
           </div>
         </EdgeLabelRenderer>
       ) : null}

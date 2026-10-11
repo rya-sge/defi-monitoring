@@ -271,3 +271,147 @@ class Vault(BaseModel):
     liquidations: list[Liquidation] = Field(
         description="Every borrower of the vault's markets, its debt weighted by the vault's share of the market."
     )
+
+
+# --- a known incident on a vault or a book of vaults: `vault_incident.VaultIncident` and `vault_book.BookIncident`
+
+
+class BookVaultIn(BaseModel):
+    address: str
+    label: str | None = None
+    depositor: str | None = Field(default=None, description="Whose position to weigh; default the largest depositor.")
+
+
+class BookIn(BaseModel):
+    """A book of Morpho Vault V2 vaults, as in `examples/*.json`."""
+
+    name: str | None = None
+    weighting: Literal["vault", "depositor"] = "vault"
+    vaults: list[BookVaultIn] = Field(min_length=1)
+
+
+class IncidentRequest(BaseModel):
+    """One of `vaults`, `book` or `example`, and at least one shock."""
+
+    vaults: list[str] = Field(default_factory=list, description="Vault V2 addresses: an ad hoc book.")
+    book: BookIn | None = Field(default=None, description="A book given inline.")
+    example: str | None = Field(default=None, description="A book of `examples/` by name (GET /api/books).")
+    shocks: list[str] = Field(
+        min_length=1,
+        description="As `analyze --shock`: `token=<collateral>:<fall>` (an issuer markdown), "
+        "`borrower=<collateral, market id or all>:<recovery>[:<n>]` (the n largest borrowers default).",
+        examples=[["token=PST:0.30"]],
+    )
+    user: str | None = Field(default=None, description="Depositor address, for every vault without its own.")
+    horizon: float = Field(default=30.0, gt=0, le=365, description="Days over which the breakeven p* is stated.")
+    live: bool = Field(default=False, description="Read the chain instead of the recordings (nothing is saved).")
+
+
+class BookSummary(BaseModel):
+    name: str
+    title: str
+    weighting: Literal["vault", "depositor"]
+    vaults: list[BookVaultIn]
+
+
+class MarketHit(BaseModel):
+    market_id: str
+    label: str
+    drop: float = Field(description="Fall of the collateral's value applied to this market.")
+    borrowers: int
+    total_borrow: float
+    liquidatable_debt: float
+    bad_debt: float = Field(description="What the market's lenders lose, in the loan token.")
+    vault_share: float
+    vault_loss: float
+    oracle_class: str
+    timing: str = Field(description="How fast the incident lands.")
+    vault_exposure: float = 0.0
+    via: str = ""
+    seen: bool = True
+    event: Literal["markdown", "default"] = "markdown"
+    defaulters: list[str] = Field(default_factory=list)
+    defaulted_debt: float = 0.0
+    exit_route: Literal["none", "thin", "deep"] | None = None
+    no_liquidator_shortfall: float = 0.0
+    top1_share: float = 0.0
+    top3_share: float = 0.0
+    grade: str | None = Field(default=None, description="Pharos grade of the collateral, e.g. 'fxSAVE F 36'.")
+    pharos_exposure: float = 0.0
+    source: Literal["incident", "engine"] = "incident"
+    engine: str = ""
+
+
+class VaultIncident(BaseModel):
+    vault: str
+    name: str
+    symbol: str
+    block: int
+    depositor: str | None
+    shocks: dict[str, float]
+    hits: list[MarketHit]
+    vault_total: float
+    vault_loss: float
+    depositor_assets: float
+    loss_if_stay: float
+    can_leave_now: float
+    stuck: float
+    loss_if_exit_first: float
+    verdict: Verdict = Field(description="Given the incident: it is assumed to happen.")
+    reason: str
+    notes: list[str] = Field(default_factory=list)
+    asset: str = ""
+    asset_usd: float | None = None
+    events: list[str] = Field(default_factory=list)
+    labels: dict[str, str] = Field(default_factory=dict)
+    pharos: str | None = None
+    common_mode: list[str] = Field(default_factory=list)
+    engine_block: int | None = None
+    sibling_losses: list[tuple[str, str, float, str]] = Field(
+        default_factory=list, description="Sibling markets the engine reaches: (market id, label, loss, loan token)."
+    )
+    apy: float | None = None
+    horizon_days: float = 30.0
+    exit_cost: float = 0.0
+    p_star: float | None = Field(
+        default=None, description="Probability over the horizon above which leaving now pays; ≥ 1: stay whatever."
+    )
+    p_star_year: float | None = None
+    outside: list[str] = Field(default_factory=list)
+
+
+class VaultLine(BaseModel):
+    vault: str
+    name: str
+    value_usd: float
+    loss_usd: float
+    exposure_usd: float
+    verdict: Verdict
+    hit_markets: list[str]
+    priced: bool
+    p_star: float | None = None
+    p_star_year: float | None = None
+    exit_cost_usd: float = 0.0
+    saved_usd: float = 0.0
+
+
+class BookIncident(BaseModel):
+    name: str
+    weighting: Literal["vault", "depositor"]
+    shocks: list[str]
+    lines: list[VaultLine]
+    value_usd: float
+    loss_usd: float
+    exposure_usd: float
+    headline: str
+    notes: list[str] = Field(default_factory=list)
+    p_star: float | None = None
+    p_star_year: float | None = None
+    horizon_days: float = 30.0
+
+
+class IncidentResponse(BaseModel):
+    """The book's sum and headline, and each vault's detail (one vault: a book of one)."""
+
+    book: BookIncident
+    vaults: list[VaultIncident]

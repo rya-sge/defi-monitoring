@@ -174,6 +174,15 @@ The incident is a fall of a collateral's oracle price, such as an issuer marking
 - the collateral's exit liquidity (from the registry's `exit_liquidity`) and, when it is thin or absent, the loss if nobody liquidates;
 - a verdict.
 
+**One number with `shock`.** When the vault's dependency graph is recorded (`graph --vault <vault> --record`; the seven RockawayX vaults are), the markdown also runs through the shock engine: the token's price falls and the issuer's rate or NAV feed reads as much lower. The engine's figures are used on the markets it reaches, so `analyze` and `shock` agree (PRIME −30 % on RockawayX USDC Yield: 131,162 USDC from both). They include the squeeze: when the collateral's market cannot absorb the liquidation sales, positions are left insolvent rather than liquidated. The notes list the sibling markets the same incident reaches. A borrower default and a Pharos-reached market keep the incident's own figures.
+
+**When the incident is not certain: p\*.** The verdict above assumes the incident happens. Each vault and book incident also gives its breakeven probability: leaving now gives up the vault's yield (its net APY from the Morpho API) on what can leave, over `--horizon` days (default 30), and saves what leaving first avoids if the incident comes. Leaving pays when the incident's probability over the horizon is above p\* = yield given up ÷ loss saved (also given per year). The book acts first on the vault with the lowest p\*. Next to it, Nexus Mutual's cover price on the protocol (keyless, `fixtures/replay/nexus/`) gives an outside probability, with what that cover pays on:
+
+```
+if the incident is not certain: leaving now forgoes 17,042 USDC of yield over 30 days (8.29%/yr); it pays if the incident's probability over 30 days is above 7.92% (63.3%/yr)
+outside view: Nexus f(x) Protocol cover 1.82%–8.20%/yr, capacity 2,539,099 USDC: implies 1.2%–13.7%/yr for an exploit of the protocol at this severity; it pays on that, not on an issuer's markdown or a borrower's default
+```
+
 **Pharos** (keyless, optional): each hit market shows its collateral's grade from Pharos, a token shock also follows Pharos's off-chain backing (fxSAVE backs 16.4 % of infiniFi's iUSD, so an fxSAVE cut reaches siUSD markets, at 16.4 % of the fall), and the notes name the collateral sharing a mint key, upgrade admin or reserve issuer with the shocked token. `graph` draws the same backing and groups. Offline it reads `fixtures/replay/pharos/`; `--record` re-reads it. See `docs/risk-assessment/outside-providers.md`.
 
 **A borrower's default** (`--shock borrower=<collateral symbol or address, market id, or all>:<recovery>[:<n>]`): in each matching market, the n largest borrowers (1 by default) stop repaying and their collateral is recovered at that fraction of its oracle value. It works on any vault or book, and combines with a markdown (`--shock token=mGLOeuro:0.30 --shock borrower=mGLOeuro:0.5`) without counting a position twice:
@@ -218,11 +227,13 @@ pnpm format       # prettier --write
 
 **The backend.** `riskdep/api/` is a FastAPI app serving the routes below; Vite proxies `/api` to it. With `VITE_USE_MOCKS=false` the hooks hit it for real.
 
+**Incident (`/incident`).** An active-alert demo: PST −30%, occurred 19 minutes ago and detected 16 minutes ago. The event timing and severity are illustrative metadata in `src/mocks/incident.ts`; losses and liquidity come from the recorded RockawayX example through `/api/incident`. One top-bar vault selector stays in sync with fully clickable vault rows; the selected vault's actions, position-loss chart, withdrawal liquidity and propagation summary appear on the right. There is no scenario form or hit-markets table. The backend verdict determines the action; pre-incident breakeven probabilities and Nexus prose are omitted. Policy ownership and incident coverage remain unverified. Regenerate the impact fixtures and vault list with `uv run python scripts/export_incident_fixtures.py`. A real detector must supply occurrence/detection timestamps; a combined Impact view must use a trace for this same incident, rather than the separate Ojo example.
+
 ```bash
 uv run uvicorn riskdep.api:app --reload      # http://127.0.0.1:8000, docs at /docs
 ```
 
-It owns no risk logic: `pipeline.analyze` computes, `report.to_dict` and `graph.to_dict` shape, the API routes. The watcher is **not** hosted — `python -m riskdep watch` stays its own process and appends to `out/watch-*.jsonl`, which `GET /api/alerts` reads with a block cursor. One poll loop per target however many browsers are open, and either side can restart without the other.
+It owns no risk logic: `pipeline.analyze` and `pipeline.incident` compute, `report.to_dict` and `graph.to_dict` shape, the API routes. The watcher is **not** hosted — `python -m riskdep watch` stays its own process and appends to `out/watch-*.jsonl`, which `GET /api/alerts` reads with a block cursor. One poll loop per target however many browsers are open, and either side can restart without the other.
 
 `openapi.json` is committed and is the contract: regenerate it with the command below, and CI fails if it has drifted from the code.
 
@@ -237,11 +248,13 @@ uv run python -c "import json,riskdep.api as a; print(json.dumps(a.app.openapi()
 | `GET /api/market/{market_id}` | a Blue market read live from the Morpho API: its state and every borrower's liquidating fall |
 | `GET /api/report` | the last `analyze` report written to `out/` |
 | `POST /api/analyze` | run `analyze` (market, user, horizon, paths, live) and return the report; writes nothing |
+| `GET /api/books` | the books of vaults shipped in `examples/` |
+| `POST /api/incident` | a known incident (`shocks` as `analyze --shock`, e.g. `token=PST:0.30`) on `vaults`, an inline `book` or an `example` book: the book's loss, headline and breakeven, and each vault's detail, as `analyze --vault` / `--book` computes them; offline from the recordings unless `live`; writes nothing |
 | `GET /api/graph?user=&vault=&block=` | the dependency graph; with no user and no vault, the last one written to `out/` |
 | `GET /api/targets` | one entry per `out/watch-*.jsonl`: the watch targets with alerts |
 | `GET /api/alerts?target=&since=&level=&limit=` | alerts after a block cursor; pass the returned `cursor` back as `since` |
 
-**Limits.** Read-only: no wallet, no transaction, no form to launch a run — the Vault, Graph and Alerts pages follow the vault selector of the top bar, one vault at a time: it lists every vault of the last graph and the watched addresses, starts on the first watch target, and only watched targets have alerts, and `POST /api/analyze` is typed and wired in the client but no page offers it. Dark mode follows the system; the `data-theme` override the palette supports has no toggle yet (the graph reads the colour tokens live, so one would need no re-init). Alerts arrive by polling `/api/alerts` every 3 s with a block cursor, not over a socket; a failed poll is surfaced and retried on the next tick. No frontend tests; CI does build `web/` and checks its formatting (`pnpm lint && pnpm build`).
+**Limits.** No wallet or transaction. Incident displays a fixed demo event with recorded impact; its timestamps are illustrative, not live detection. The Vault, Graph and Alerts pages follow the vault selector of the top bar, one vault at a time: it lists every vault of the last graph and the watched addresses, starts on the first watch target, and only watched targets have alerts. `POST /api/analyze` is typed and wired in the client but no page offers it. Dark mode follows the system; the `data-theme` override the palette supports has no toggle yet (the graph reads the colour tokens live, so one would need no re-init). Alerts arrive by polling `/api/alerts` every 3 s with a block cursor, not over a socket; a failed poll is surfaced and retried on the next tick. No frontend tests; CI does build `web/` and checks its formatting (`pnpm lint && pnpm build`).
 
 ## Layout
 

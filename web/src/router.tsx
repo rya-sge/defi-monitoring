@@ -47,6 +47,12 @@ const impactRoute = createRoute({
   component: lazyRouteComponent(() => import('./routes/ImpactPage'), 'ImpactPage'),
 });
 
+const incidentRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/incident',
+  component: lazyRouteComponent(() => import('./routes/IncidentPage'), 'IncidentPage'),
+});
+
 const crossRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/cross',
@@ -59,6 +65,7 @@ const routeTree = rootRoute.addChildren([
   graphRoute,
   crossRoute,
   impactRoute,
+  incidentRoute,
   watchRoute,
 ]);
 

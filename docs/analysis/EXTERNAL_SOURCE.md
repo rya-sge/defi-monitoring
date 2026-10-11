@@ -1,6 +1,6 @@
 # External sources: Pharos, Credora, Nexus Mutual
 
-> **Status 2026-10-11.** Pharos's keyless dependency graph is in use (plan `2026-10-11-pharos`): grades, off-chain backing in incidents, common-mode groups. Nexus Mutual is next. How each is used now: `docs/risk-assessment/outside-providers.md`; this document stays the survey.
+> **Status 2026-10-11.** Pharos's keyless dependency graph is in use (plan `2026-10-11-pharos`): grades, off-chain backing in incidents, common-mode groups. Nexus Mutual is in use as an outside probability next to the breakeven p\* (plan `2026-10-11-breakeven`). How each is used now: `docs/risk-assessment/outside-providers.md`; this document stays the survey.
 
 This document reviews three outside providers of risk data, whose documentation is saved in `docs/external/risk-assessment/` (git-ignored, local only). For each one: what it is, how its data can be reached (public, keyed, paid), what was checked live on 2026-10-10, and how it could improve `riskdep`'s risk computation. The gap ids `K<n>` refer to `GAP.md`; the others (C, M, R, G) to `ANALYSIS_MONITORING.md`.
 

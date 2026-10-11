@@ -16,7 +16,7 @@ from eth_utils import keccak
 from . import borrower as B
 from . import discover
 from . import sources as S
-from .abi import MORPHO_BLUE, Event, topic
+from .abi import MORPHO_BLUE, Event, selector, topic
 from .discover import REGISTRY
 from .rules import Alert
 from .vault import _call, _symbol, _uint
@@ -50,6 +50,24 @@ ADMIN_EVENTS = [
     "RoleGranted(bytes32,address,address)",
     "RoleRevoked(bytes32,address,address)",
 ]
+# the queue of an OpenZeppelin TimelockController that controls a watched contract (fork-demo D3)
+TIMELOCK_EVENTS = [
+    "CallScheduled(bytes32,uint256,address,uint256,bytes,bytes32,uint256)",
+    "CallExecuted(bytes32,uint256,address,uint256,bytes)",
+    "Cancelled(bytes32)",
+]
+# calls that replace a contract's code: on a ProxyAdmin (the proxy is the first argument) or on the proxy (UUPS)
+UPGRADE_CALLS = {
+    selector(sig): sig
+    for sig in (
+        "upgrade(address,address)",
+        "upgradeAndCall(address,address,bytes)",
+        "upgradeTo(address)",
+        "upgradeToAndCall(address,bytes)",
+        "changeProxyAdmin(address,address)",
+        "transferOwnership(address)",
+    )
+}
 BLUE_OWNER = ["SetOwner(address)", "EnableIrm(address)", "EnableLltv(uint256)", "SetFeeRecipient(address)"]
 TRANSFER = topic("Transfer(address,address,uint256)")
 DEFAULT_ADMIN_ROLE = "0x" + "00" * 32
@@ -70,6 +88,10 @@ class Contract:
     aggregator: str | None = None
     clone_of: str | None = None
     total_supply: int | None = None
+    # fork-demo D3–D4: a timelock or proxy admin found above a watched contract, and a custom feed's fixed band
+    timelock_delay: int | None = None  # seconds, when this contract is an OpenZeppelin TimelockController
+    controls: list[str] = field(default_factory=list)  # addresses of the watched contracts it can change
+    band: tuple[int, int, int, int] | None = None  # (minAnswer, maxAnswer, decimals, latest answer)
 
     @property
     def upgradeable(self) -> bool:
@@ -78,6 +100,13 @@ class Contract:
     @property
     def label(self) -> str:
         return f"{self.symbol or self.address[:10] + '…'} ({'; '.join(self.roles[:2])}{'…' if len(self.roles) > 2 else ''})"
+
+
+def _word(raw: str | None, signed: bool = False) -> int | None:
+    """One 32-byte return word as an int; None for an empty or reverted answer."""
+    if not raw or len(raw) < 66:
+        return None
+    return int.from_bytes(bytes.fromhex(raw[2:66]), "big", signed=signed)
 
 
 def _addr(word: str | None) -> str | None:
@@ -97,6 +126,8 @@ class AdminWatch:
         for m in self.markets.values():
             self._discover_market(f, m, block)
         self.read_state(f, block)
+        self.controllers_checked = self._discover_controllers(f, block)
+        self.bands_checked = self._read_bands(f, block)
         self.divergence = self.read_divergence(f, block)
 
     # --- discovery
@@ -138,6 +169,77 @@ class AdminWatch:
             und = pm["underlyingAsset"].split("-", 1)[-1].lower()
             self._add(sy, f"Pendle SY of {m.collateral_symbol}", f"SY-{pm['name']}")
             self._add(und, f"yield token of {m.collateral_symbol}", _symbol(f, und, block), mint_watch=True)
+
+    def _discover_controllers(self, f: S.Fetcher, block: int) -> bool:
+        """D3: who can change a watched contract, one level up. The proxy admin of each proxy, the owner of that
+        proxy admin, and each contract's owner; any of them answering `getMinDelay()` is an OpenZeppelin
+        TimelockController, whose queue is then watched: an upgrade is seen when it is scheduled, a full delay before
+        it can land. False when it could not be read (a replay recorded before this check): the watch goes on."""
+        cands: dict[str, list[tuple[str, Contract]]] = {}
+        for c in list(self.contracts.values()):
+            if c.admin:
+                cands.setdefault(c.admin, []).append(("proxy admin", c))
+            if c.owner:
+                cands.setdefault(c.owner, []).append(("owner", c))
+        if not cands:
+            return True
+        try:
+            pas = sorted(a for a, rs in cands.items() if any(r == "proxy admin" for r, _ in rs))
+            for a, r in zip(pas, S.rpc_batch(f, [_call(a, "owner()") for a in pas], block)):
+                o = _addr(r)
+                if o:
+                    for _, c in list(cands[a]):
+                        cands.setdefault(o, []).append(("owner of its proxy admin", c))
+            addrs = sorted(cands)
+            delays = S.rpc_batch(f, [_call(a, "getMinDelay()") for a in addrs], block)
+        except (S.SourceError, S.CacheMiss):
+            return False
+        for a, d in zip(addrs, delays):
+            delay = _word(d)
+            proxy_admin = any(r == "proxy admin" for r, _ in cands[a])
+            if delay is None and not proxy_admin:
+                continue
+            for r, c in cands[a]:
+                kind = f"timelock ({delay / 3600:g} h)" if delay is not None else "proxy admin"
+                t = self._add(a, f"{kind}, {r} of {c.symbol or c.address[:10]}")
+                t.timelock_delay = delay
+                if c.address not in t.controls:
+                    t.controls.append(c.address)
+        return True
+
+    def _read_bands(self, f: S.Fetcher, block: int) -> bool:
+        """D4: the fixed band of a custom feed (`minAnswer`/`maxAnswer` readable on the feed itself, e.g. Midas
+        CustomAggregatorV3CompatibleFeed). Below `minAnswer` the feed cannot report without new code, so a loss
+        beyond the band reaches the oracle only through an upgrade. Chainlink proxies expose no band: skipped."""
+        feeds = sorted(a for a, c in self.contracts.items() if any(r.startswith("feed of") for r in c.roles))
+        if not feeds:
+            return True
+        calls = []
+        for a in feeds:
+            calls += [
+                _call(a, "minAnswer()"),
+                _call(a, "maxAnswer()"),
+                _call(a, "decimals()"),
+                _call(a, "latestRoundData()"),
+            ]
+        try:
+            res = S.rpc_batch(f, calls, block)
+        except (S.SourceError, S.CacheMiss):
+            return False
+        for i, a in enumerate(feeds):
+            lo, hi, dec, rd = res[4 * i : 4 * i + 4]
+            lo, hi, dec = _word(lo, True), _word(hi, True), _word(dec)
+            ans = _word("0x" + rd[66:130], True) if rd and len(rd) >= 130 else None
+            if lo is not None and hi is not None and dec is not None and ans and 0 < lo < hi:
+                self.contracts[a].band = (lo, hi, dec, ans)
+        return True
+
+    def timelock_over(self, address: str) -> Contract | None:
+        """The timelock controlling a watched contract, directly or through its proxy admin."""
+        for c in self.contracts.values():
+            if c.timelock_delay is not None and address in c.controls:
+                return c
+        return None
 
     # --- state
     def read_state(self, f: S.Fetcher, block: int) -> None:
@@ -217,6 +319,9 @@ class AdminWatch:
         if mint:
             out.append({"address": mint, "topics": [TRANSFER, "0x" + "0" * 64], "_optional": True})
         out.append({"address": MORPHO_BLUE, "topics": [[topic(e) for e in BLUE_OWNER]], "_optional": True})
+        tls = sorted(a for a, c in self.contracts.items() if c.timelock_delay is not None)
+        if tls:
+            out.append({"address": tls, "topics": [[topic(e) for e in TIMELOCK_EVENTS]], "_optional": True})
         return out
 
     # --- per batch
@@ -262,6 +367,26 @@ class AdminWatch:
                     {"upgradeable": [c.address for c in up]},
                 )
             )
+        out += band_findings(self.contracts, self.timelock_over, block)
+        tls = [c for c in self.contracts.values() if c.timelock_delay is not None]
+        if tls:
+            out.append(
+                Alert(
+                    "info",
+                    block,
+                    None,
+                    "AdminSurface",
+                    f"{len(tls)} timelock(s) control contracts your markets depend on; their queue is watched",
+                    "; ".join(
+                        f"{c.address[:10]}… ({c.timelock_delay / 3600:g} h) over "
+                        + ", ".join(self.contracts[x].symbol or x[:10] for x in c.controls)
+                        for c in tls
+                    )
+                    + ". An upgrade is alerted when it is scheduled, not when it lands",
+                    None,
+                    {"timelocks": [c.address for c in tls]},
+                )
+            )
         out += assess_divergence({}, self.divergence, self.markets, block)
         return out
 
@@ -277,6 +402,15 @@ class AdminWatch:
                 f"    {(c.symbol or '')[:20] + ' ' + c.address[:10] + '…':<34} {up:<12} {who[:44]:<44} {c.roles[0]}"
                 + (f" (+{len(c.roles) - 1})" if len(c.roles) > 1 else "")
             )
+        for c in self.contracts.values():
+            if c.band:
+                lo, hi, dec, ans = c.band
+                line(
+                    f"  feed band {c.symbol} {c.address[:10]}…: {lo / 10**dec:,.4g} – {hi / 10**dec:,.4g}, "
+                    f"now {ans / 10**dec:,.6g} ({lo / ans - 1:+.1%} to the floor)"
+                )
+        if not (self.controllers_checked and self.bands_checked):
+            line("  timelocks and feed bands: not checked (not in this recording)")
         div = [
             f"{self.markets[m].collateral_symbol}/{self.markets[m].loan_symbol} {d:+.2%}"
             for m, d in self.divergence.items()
@@ -427,6 +561,8 @@ def assess_events(events: list[Event], contracts: dict[str, Contract], block: in
                     {"contract": c.address},
                 )
             )
+        elif name in ("CallScheduled", "CallExecuted", "Cancelled"):
+            out += _timelock_alert(e, c, contracts)
         elif name == "Transfer" and a.get("from") == ZERO and c.mint_watch and c.total_supply:
             share = a["value"] / c.total_supply
             if share >= W["mint_share_critical"]:
@@ -443,6 +579,100 @@ def assess_events(events: list[Event], contracts: dict[str, Contract], block: in
                         {"contract": c.address, "share": share},
                     )
                 )
+    return out
+
+
+def _timelock_alert(e: Event, tl: Contract, contracts: dict[str, Contract]) -> list[Alert]:
+    """D3: a call queued, executed or cancelled on a timelock that controls a watched contract. An upgrade (or a
+    change of the proxy's admin or owner) of a watched contract is a warn when scheduled: the depositor has the
+    timelock's delay to act. Its execution is followed by the contract's own Upgraded event (critical)."""
+    a = e.args
+    if e.name == "Cancelled":
+        return [
+            Alert(
+                "info",
+                e.block,
+                e.tx,
+                "Admin.Cancelled",
+                f"Queued call cancelled on timelock {tl.address[:10]}…",
+                f"id {a['id'][:12]}…",
+                None,
+                {"contract": tl.address},
+            )
+        ]
+    data = a.get("data") or "0x"
+    sig = UPGRADE_CALLS.get(data[2:10])
+    target = a["target"].lower()
+    victim = target
+    if sig and sig.split("(")[0] in ("upgrade", "upgradeAndCall", "changeProxyAdmin") and len(data) >= 10 + 64:
+        victim = "0x" + data[10 + 24 : 10 + 64].lower()
+    watched = contracts.get(victim)
+    what = (
+        f"{sig.split('(')[0]} of {watched.label}"
+        if sig and watched
+        else f"call {data[:10]} on {contracts[target].label if target in contracts else target}"
+    )
+    if e.name == "CallScheduled":
+        delay = int(a["delay"])
+        lvl = "warn" if sig and watched else "info"
+        return [
+            Alert(
+                lvl,
+                e.block,
+                e.tx,
+                "Admin.CallScheduled",
+                f"Scheduled on timelock {tl.address[:10]}…: {what}, executable in {delay / 3600:g} h",
+                (
+                    "its code can change once the delay has passed; this is the window to reduce or exit before "
+                    "the new code (and any new price) applies"
+                    if sig and watched
+                    else "a governance call is queued on a timelock above your markets"
+                ),
+                None,
+                {"contract": tl.address, "target": target, "victim": victim, "delay": delay, "id": a["id"]},
+            )
+        ]
+    return [
+        Alert(
+            "warn" if sig and watched else "info",
+            e.block,
+            e.tx,
+            "Admin.CallExecuted",
+            f"Executed on timelock {tl.address[:10]}…: {what}",
+            "the queued change has landed",
+            None,
+            {"contract": tl.address, "target": target, "victim": victim, "id": a["id"]},
+        )
+    ]
+
+
+def band_findings(contracts: dict[str, Contract], timelock_over, block: int) -> list[Alert]:
+    """D4: a custom feed whose floor is close to its answer caps how far the oracle can fall: a larger loss stays
+    invisible to the market (no liquidation, hidden bad debt) until new code is installed."""
+    out = []
+    for c in contracts.values():
+        if not c.band:
+            continue
+        lo, hi, dec, ans = c.band
+        room = lo / ans - 1
+        if room < -W["feed_band_report_floor"]:
+            continue
+        tl = timelock_over(c.address)
+        via = f"an upgrade through timelock {tl.address[:10]}… ({tl.timelock_delay / 3600:g} h)" if tl else "an upgrade"
+        out.append(
+            Alert(
+                "warn",
+                block,
+                None,
+                "FeedBand",
+                f"{c.symbol or c.address[:10]} cannot report below {lo / 10**dec:,.6g} ({room:+.1%}) without {via}",
+                f"its band is {lo / 10**dec:,.6g} – {hi / 10**dec:,.6g}, now {ans / 10**dec:,.6g}. A loss larger than "
+                f"{-room:.1%} reaches the oracle only after the upgrade: until then the market prices the collateral "
+                "at the floor, liquidations stop there and the shortfall is bad debt nobody sees",
+                None,
+                {"contract": c.address, "floor": lo / 10**dec, "answer": ans / 10**dec, "room": room},
+            )
+        )
     return out
 
 

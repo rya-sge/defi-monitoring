@@ -1,8 +1,10 @@
-import { Bell, Gauge, Network, Waypoints, Zap } from 'lucide-react';
-import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
-import { useGraph, useHealth, useSelectedTarget, useTargets } from '../api/hooks';
+import { FormattedText } from './FormattedText';
+import { Bell, Gauge, Network, Scale, Waypoints, Zap } from 'lucide-react';
+import { Link, Outlet, useNavigate, useRouterState, useSearch } from '@tanstack/react-router';
+import { useBooks, useGraph, useHealth, useSelectedTarget, useTargets } from '../api/hooks';
+import { INCIDENT } from '../mocks/incident';
 import { USE_MOCKS } from '../api/client';
-import { detailValue } from '../lib/format';
+import { detailValue, shortHash } from '../lib/format';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import {
   Sidebar,
@@ -22,6 +24,7 @@ const NAV = [
   { to: '/', label: 'Vault', icon: Gauge, exact: true },
   { to: '/graph', label: 'Dependency graph', icon: Network, exact: false },
   { to: '/cross', label: 'Cross-market', icon: Waypoints, exact: false },
+  { to: '/incident', label: 'Incident', icon: Scale, exact: false },
   { to: '/impact', label: 'Impact', icon: Zap, exact: false },
   { to: '/watch', label: 'Alerts', icon: Bell, exact: false },
 ] as const;
@@ -32,7 +35,7 @@ export function AppShell() {
 
   return (
     <SidebarProvider>
-      <Sidebar>
+      <Sidebar variant="inset">
         <SidebarHeader className="px-4 pt-3.5 font-bold tracking-[-0.01em]">riskdep</SidebarHeader>
         <SidebarContent>
           <SidebarGroup>
@@ -46,7 +49,7 @@ export function AppShell() {
                   >
                     <Link to={to} search={(prev) => prev}>
                       <Icon />
-                      {label}
+                      <FormattedText>{label}</FormattedText>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -67,17 +70,50 @@ export function AppShell() {
           ) : null}
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset className="h-svh min-w-0">
-        <div className="flex items-center gap-2 border-b px-5.5 py-2 text-[0.85rem] text-muted-foreground">
+      <SidebarInset className="m-1 h-[calc(100svh-8px)] min-w-0 overflow-hidden rounded-[6px] bg-[var(--surface)] shadow-none md:m-1 md:ml-0 md:rounded-[6px]">
+        <div className="flex items-center gap-2 px-5.5 py-2 text-[0.85rem] text-muted-foreground">
           {/* Below md the sidebar is a sheet: this is the only way to open it there. */}
           <SidebarTrigger className="md:hidden" />
-          <TargetSelect />
+          {pathname === '/incident' ? <IncidentVaultSelect /> : <TargetSelect />}
         </div>
         <div className="min-h-0 flex-1 overflow-auto">
           <Outlet />
         </div>
       </SidebarInset>
     </SidebarProvider>
+  );
+}
+
+function IncidentVaultSelect() {
+  const { data: books } = useBooks();
+  const { target } = useSearch({ strict: false });
+  const navigate = useNavigate();
+  const vaults = books?.find((book) => book.name === INCIDENT.example)?.vaults ?? [];
+  const selected = vaults.some((vault) => vault.address.toLowerCase() === target?.toLowerCase())
+    ? target!.toLowerCase()
+    : INCIDENT.defaultVault;
+
+  return (
+    <>
+      <span id="incident-vault-label">Vault</span>
+      <Select
+        value={selected}
+        onValueChange={(value) =>
+          void navigate({ to: '.', search: (prev) => ({ ...prev, target: value }) })
+        }
+      >
+        <SelectTrigger aria-labelledby="incident-vault-label" size="sm" className="w-72">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {vaults.map((vault) => (
+            <SelectItem key={vault.address} value={vault.address.toLowerCase()}>
+              {vault.label ?? shortHash(vault.address)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </>
   );
 }
 
@@ -118,7 +154,7 @@ function TargetSelect() {
         <SelectContent>
           {options.map(({ value, label }) => (
             <SelectItem key={value} value={value}>
-              {label}
+              <FormattedText>{label}</FormattedText>
             </SelectItem>
           ))}
         </SelectContent>

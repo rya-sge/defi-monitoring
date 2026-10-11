@@ -106,7 +106,25 @@ function initialNodes(
     id: node.id,
     type: 'risk',
     position: positions.get(node.id) ?? { x: 0, y: 0 },
-    data: { node, amount: nodeAmount(node, edges) },
+    data: {
+      node,
+      amount: nodeAmount(node, edges),
+      underlying: nodes.find(
+        (candidate) =>
+          candidate.kind === 'Asset' &&
+          edges.some(
+            (ptEdge) =>
+              ptEdge.source === node.id &&
+              ptEdge.rel === 'trades in / redeems through' &&
+              edges.some(
+                (poolEdge) =>
+                  poolEdge.source === ptEdge.target &&
+                  poolEdge.rel === 'yield source' &&
+                  poolEdge.target === candidate.id,
+              ),
+          ),
+      ),
+    },
   }));
 }
 
@@ -161,9 +179,8 @@ export function GraphCanvas({
     () =>
       edges.map((edge, index) => {
         const hf = edge.details.health_factor;
-        // An edge that carries no amount (lends, priced by, reads…) is a dependency, not a
-        // flow of funds: drawn in the lighter hairline colour.
-        const colour = edge.amount != null ? 'var(--edge)' : 'var(--line)';
+        // Dependencies use dashes; every edge and arrowhead has the same readable contrast.
+        const colour = 'var(--edge)';
         return {
           id: edgeId(index),
           type: 'risk',
@@ -214,7 +231,7 @@ export function GraphCanvas({
       rfEdges.map((e) => ({
         ...e,
         selected: selection?.type === 'edge' && selection.id === e.id,
-        style: { opacity: lit && !lit.edges.has(e.id) ? FADED : 0.85 },
+        style: { opacity: lit && !lit.edges.has(e.id) ? FADED : 1 },
       })),
     [rfEdges, lit, selection],
   );

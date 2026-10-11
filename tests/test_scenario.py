@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from riskdep import cli, decide, discover, pipeline, scenario
+from riskdep import cli, clock, decide, discover, pipeline, scenario
 from riskdep import oracle_class as OC
 from riskdep import sources as S
 from riskdep.borrower import BorrowMarket, BorrowState
@@ -17,6 +17,7 @@ DEMO_ORACLE = "0xf8b29e7e9c00ce531434775f7923cc9fbca01b08"
 
 @pytest.fixture(scope="module")
 def demo():
+    clock.set_as_of(json.loads((SNAP / "as_of.json").read_text())["as_of"])  # cache keys hold the snapshot's date
     f = S.Fetcher("offline", SNAP)
     return f, discover.discover_morpho_position(f, pipeline.DEMO_MARKET, pipeline.DEMO_USER)
 

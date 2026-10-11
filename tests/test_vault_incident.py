@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from riskdep import cli, scenario
+from riskdep import cli, pipeline, scenario
 from riskdep import exit_queue as EQ
 from riskdep import oracle_class as OC
 from riskdep import vault_incident as VI
@@ -151,3 +151,50 @@ def test_no_liquidator_branch_on_thin_exit_liquidity(tmp_path):
     h = next(h for h in r["hits"] if not h["via"])
     assert h["exit_route"] == "thin" and h["liquidatable_debt"] > 0
     assert 0 < h["no_liquidator_shortfall"] < h["vault_loss"]  # no liquidation incentive paid, but liquidity locked
+
+
+# --- the shock engine as the impact core (plan 2026-10-11-one-number, D139–D141)
+
+YIELD = "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965"
+
+
+def _yield_graph():
+    return pipeline.vault_graph(YIELD)
+
+
+def test_markdown_in_engine_terms():
+    g = _yield_graph()
+    nodes = {n["id"]: n["label"] for n in g["nodes"]}
+    sh = {(nodes[s.node], s.mode, s.size) for s in VI.engine_shocks(g, [("token", "prime", 0.3, 0)])}
+    assert sh == {("PRIME", "price", -0.3), ("PRIME / WYLDS Exchange Rate", "reads-low", 0.3)}
+    assert VI.engine_shocks(g, [("borrower", "prime", 0.5, 1)]) == []  # a default has no engine form
+
+
+def test_engine_and_incident_agree_without_a_squeeze(tmp_path):
+    """PRIME has no quotes, so nothing is squeezed: both models give the same loss, to the dollar."""
+    r = {}
+    for graph in (False, True):
+        f, block, _ = pipeline.vault_source(YIELD)
+        inc = VI.run(f, YIELD, block, None, [("token", "prime", 0.3, 0)], graph=_yield_graph() if graph else None)
+        r[graph] = inc
+    assert r[True].vault_loss == pytest.approx(r[False].vault_loss, rel=1e-6)
+    (h,) = r[True].hits
+    assert h.source == "engine" and "oracle × 0.700" in h.engine
+    sib = {m: v for _, m, v, _ in r[True].sibling_losses}
+    assert 22e6 < sib["PRIME/PYUSD"] < 24e6  # the same markdown, felt by other lenders
+
+
+def test_engine_squeeze_raises_the_loss_where_the_market_is_thin(tmp_path):
+    args = ["analyze", "--vault", YIELD, "--shock", "token=strUSD:0.30", "--out", str(tmp_path)]
+    assert cli.main(args) == 0
+    r = json.loads((tmp_path / f"vault-incident-{YIELD}.json").read_text())
+    h = next(h for h in r["hits"] if h["label"].startswith("strUSD/"))
+    assert h["source"] == "engine" and "left insolvent" in h["engine"] and h["liquidatable_debt"] == 0
+    assert 850_000 < r["vault_loss"] < 900_000 and r["engine_block"] == 26164907
+
+
+def test_default_stays_with_the_incident_module(tmp_path):
+    args = ["analyze", "--vault", BELEM, "--shock", "borrower=mGLOeuro:0.5", "--out", str(tmp_path)]
+    assert cli.main(args) == 0
+    (h,) = json.loads((tmp_path / f"vault-incident-{BELEM}.json").read_text())["hits"]
+    assert h["source"] == "incident" and h["event"] == "default"

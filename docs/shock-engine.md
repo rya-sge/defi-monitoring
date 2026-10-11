@@ -262,6 +262,10 @@ A node rule has `id`, `when` (on `node.<field>`), `apply` (`blue_market` with `s
 - **A new kind of transmission or node:** write a function in `riskdep/engine.py`, register it in `TRANSMISSIONS` or `NODE_MODELS`, and give it a pure test in `tests/test_engine.py`. A transmission takes `(graph, edge, from, to, effect, value, params, states)` and returns a list of `(node, effect, value)`. A node model takes `(graph, node, state, params)` and returns `(effects, detail)`.
 - **A new kind of node** (another lending protocol, say) needs only graph nodes and edges of its own, plus a node model. The engine does not change.
 
+## Used by `analyze --vault` and `--book`
+
+A vault or book incident (`analyze --vault … --shock token=T:f`) runs this engine on the vault's recorded graph (plan `2026-10-11-one-number`, D139–D141). The issuer markdown it describes is, in the engine's terms, `T:price:-f` plus `reads-low:f` on every constant-price input of the oracles of markets taking T: the issuer cuts the rate its own feed publishes. That is not `T:price:-f` alone, which is a market fall the rate feed does not follow. On RockawayX USDC Yield, PRIME −30 % costs the vault 131,162 USDC either way once mapped like this; `T:price:-30%` alone gives 122.8k. The engine's figures replace the incident module's on the markets it moves, and its sibling markets are listed as contagion.
+
 ## Validation: what is checked, what is not
 
 | Part | Checked against | Status |

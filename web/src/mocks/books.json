@@ -1,0 +1,44 @@
+[
+  {
+    "name": "rockawayx-ethereum",
+    "title": "RockawayX, Morpho Vault V2 on Ethereum",
+    "weighting": "vault",
+    "vaults": [
+      {
+        "address": "0xc207d3f66537d7f66456808379a0e560cf20da36",
+        "label": "RockawayX Confidential RWA USDC",
+        "depositor": null
+      },
+      {
+        "address": "0x2ca22cb25558fa2018ecb1ce4ed8af92ee7ea423",
+        "label": "RockawayX f(x) Protocol Ecosystem USDC",
+        "depositor": null
+      },
+      {
+        "address": "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
+        "label": "RockawayX USDC Yield",
+        "depositor": null
+      },
+      {
+        "address": "0x3bd9adae6643ddcddd02746b8b60075e56df9478",
+        "label": "RockawayX Tori Ecosystem",
+        "depositor": null
+      },
+      {
+        "address": "0x8ac91877b93330f52b2979a31a4879506021475c",
+        "label": "Huma USDC Main",
+        "depositor": null
+      },
+      {
+        "address": "0xd6d4b804014ef27836dbe9f8f6bf6c71251548ec",
+        "label": "Belem RWA EURCV",
+        "depositor": null
+      },
+      {
+        "address": "0x93e0f9d502eefce8d34924ab3478c7ea0cbc5a2e",
+        "label": "RockawayX NUVA Ecosystem",
+        "depositor": null
+      }
+    ]
+  }
+]

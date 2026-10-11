@@ -1,66 +1,34 @@
 @import 'tailwindcss';
 
-/* One ground, one ink, one rule. Colour is reserved for severity — info, warn,
-   critical, ok — so that where colour appears, it means "act on this". The
-   categorical palette of the dependency graph lives in lib/graph.ts, mirrored
-   from riskdep/graph.py: there, colour is data, not chrome.
+@font-face {
+  font-family: 'Figtree';
+  src: url('/fonts/figtree.ttf') format('truetype');
+  font-weight: 300 900;
+  font-style: normal;
+  font-display: swap;
+}
 
-   The raw custom properties below stay the single source of the palette. They
-   are read in three ways and all three must keep working:
-     - Tailwind utilities, through the `@theme inline` mapping further down;
-     - `var(--line)` strings handed to Recharts, which land in SVG attributes;
-     - `var(--…)` in the inline styles of the graph's nodes, edges and
-       arrowheads (GraphElements, GraphCanvas).
-   So the names --bg, --fg, --muted, --line and --edge are part of the contract;
-   renaming one means updating GraphElements and GraphCanvas in the same commit.
-
-   Spacing rhythm. The step between a label and its value is visibly smaller
-   than the step between two groups; that difference is the layout. The six
-   steps of the rhythm land exactly on Tailwind's default scale, so they need no
-   tokens of their own — use only these:
-     1 = 4px   2 = 8px   3.5 = 14px   5.5 = 22px   9 = 36px   14 = 56px */
+/* Raw tokens are shared by Tailwind, Recharts and React Flow. */
 :root {
-  --bg: #ffffff;
-  --fg: #15181d;
-  --muted: #5c636d;
-  --line: #d9dce1;
-  --edge: #9aa1a9;
-
-  --info: #0072b2;
-  --warn: #9c5c00;
-  --critical: #c5221f;
-  --ok: #0f7b4f;
-
-  --mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
-  --sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --bg: #0e1116;
-    --fg: #e7ecf2;
-    --muted: #949ba5;
-    --line: #2f353d;
-    --edge: #6e7681;
-
-    --info: #58a6ff;
-    --warn: #e3b341;
-    --critical: #ff7b72;
-    --ok: #3fb950;
-  }
-}
-
-:root[data-theme='dark'] {
-  --bg: #0e1116;
-  --fg: #e7ecf2;
-  --muted: #949ba5;
-  --line: #2f353d;
-  --edge: #6e7681;
-
-  --info: #58a6ff;
-  --warn: #e3b341;
-  --critical: #ff7b72;
-  --ok: #3fb950;
+  color-scheme: dark;
+  --bg: #050505;
+  --surface: #0e0e10;
+  --fg: #f4f4f5;
+  --muted: #92929d;
+  --line: #242429;
+  --edge: #92929d;
+  --loss-bar: #9f3453;
+  --chart-1: #38d9f5;
+  --chart-2: #a78bfa;
+  --chart-3: #fb7185;
+  --chart-4: #fbbf24;
+  --chart-5: #34e5a5;
+  --info: var(--chart-1);
+  --warn: var(--chart-4);
+  --critical: var(--chart-3);
+  --ok: var(--chart-5);
+  --sans: 'Figtree', sans-serif;
+  --mono: var(--sans);
 }
 
 /* The Tailwind theme is a thin naming layer over those tokens, never a second
@@ -88,8 +56,8 @@
   --color-destructive: var(--critical);
   --color-destructive-foreground: var(--bg);
 
-  /* shadcn's sidebar: a ground a shade off the page, the same ink and hairline. */
-  --color-sidebar: color-mix(in srgb, var(--fg) 2.5%, var(--bg));
+  /* The sidebar belongs to the outer background. */
+  --color-sidebar: var(--bg);
   --color-sidebar-foreground: var(--fg);
   --color-sidebar-primary: var(--fg);
   --color-sidebar-primary-foreground: var(--bg);
@@ -120,13 +88,34 @@
   --container-measure: 74ch;
 }
 
-/* Mono is for identifiers only: addresses, hashes, market ids. Numbers —
-   amounts, block numbers, health factors, counts — stay in the UI face with
-   `tabular-nums`, and are never coloured: severity is said by a word. */
 @utility mono {
-  font-family: var(--mono);
-  font-size: 0.88em;
+  font-family: var(--sans);
   font-variant-numeric: tabular-nums;
+}
+
+/* Shared tooltip surface for both Radix and Recharts. */
+@utility tooltip-surface {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--fg);
+  padding: 8px 12px;
+  font-size: 12px;
+  box-shadow: 0 8px 24px #0008;
+}
+
+@layer base {
+  tbody:has(> tr:hover) > tr:not(:hover) {
+    opacity: 0.35;
+  }
+  td {
+    padding-block: 6px !important;
+    color: var(--fg);
+  }
+  th {
+    height: 32px;
+    color: var(--muted);
+  }
 }
 
 @layer base {
@@ -176,7 +165,7 @@
      gets more space above it than below: it belongs to what follows. */
   h1 {
     max-width: var(--container-measure);
-    font-size: 1.5rem;
+    font-size: 2rem;
     font-weight: 700;
     line-height: 1.25;
     letter-spacing: -0.015em;
@@ -205,4 +194,21 @@
   * {
     @apply border-border outline-ring/50;
   }
+}
+
+/* Sentence-case headings preserve the spelling of technical names and symbols. */
+@layer base {
+  h1::first-letter,
+  h2::first-letter,
+  h3::first-letter {
+    text-transform: uppercase;
+  }
+}
+
+/* Override the stock inset spacing, including its peer variants. */
+[data-slot='sidebar-inset'] {
+  border: 1px solid var(--line);
+  margin: 4px;
+  border-radius: 6px;
+  box-shadow: none;
 }

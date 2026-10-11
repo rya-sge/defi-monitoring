@@ -5,7 +5,7 @@
 | Provider | Status | Key | Used in |
 |---|---|---|---|
 | [Pharos](#1-pharos) | **in use** since 2026-10-11 (plan `2026-10-11-pharos`, D133–D138) | none | `analyze --vault` / `--book`, `graph` |
-| [Nexus Mutual](#2-nexus-mutual-next) | next | none | planned: "stay and insure" in the verdict; an outside probability next to the breakeven p\* |
+| [Nexus Mutual](#2-nexus-mutual) | **in use** since 2026-10-11 (plan `2026-10-11-breakeven`, D145–D146) | none | `analyze --vault` / `--book`: an outside probability next to the breakeven p\* |
 | Credora | not planned | whitelist only | its published method is cited as a basis (`docs/analysis/EXTERNAL_SOURCE.md` §3) |
 
 The survey that chose them, with the live checks of 2026-10-10, is `docs/analysis/EXTERNAL_SOURCE.md`. Endpoints and limits are in `docs/analysis/PROVIDERS.md`.
@@ -21,7 +21,7 @@ The survey that chose them, with the live checks of 2026-10-10, is `docs/analysi
   - [1.6 Recording, offline runs, freshness](#16-recording-offline-runs-freshness)
   - [1.7 Limits](#17-limits)
   - [1.8 Adding a token](#18-adding-a-token)
-- [2. Nexus Mutual, next](#2-nexus-mutual-next)
+- [2. Nexus Mutual](#2-nexus-mutual)
 - [3. Rules for any outside provider](#3-rules-for-any-outside-provider)
 
 ## 1. Pharos
@@ -136,7 +136,7 @@ When an incident or a graph leaves a token ungraded that Pharos covers under an 
 
 Unambiguous symbols need nothing.
 
-## 2. Nexus Mutual, next
+## 2. Nexus Mutual
 
 Nexus Mutual sells cover against protocol exploits and depegs. Its API is keyless: `api.nexusmutual.io/v2/products` and `/v2/capacity`. These are the products relevant to the RockawayX book, as checked on 2026-10-11:
 
@@ -149,12 +149,20 @@ Nexus Mutual sells cover against protocol exploits and depegs. Its API is keyles
 | Midas (356) | 1.48 %, with little capacity |
 | Morpho smart-contract cover (460) | 0.79 % |
 
-Planned use, through the same fetcher and the same optional rules:
+**What we read.** Two keyless requests, `GET /v2/products` (names) and `GET /v2/capacity` (yearly price range and capacity per product), slimmed and recorded under `fixtures/replay/nexus/` with the same rules as Pharos: offline by default, `--record` / `--refresh` re-read, `--live` reads without saving, "not checked" when it cannot be read.
 
-1. **"Stay and insure"** next to STAY and EXIT: the premium for the depositor's exposure over the horizon, when capacity covers it.
-2. **An outside probability** next to the breakeven p\* (`NEXT_STEP.md` A2): price ÷ loading ÷ severity, with the loading as a range in the registry.
+**From a collateral to a product.** `registry.json` `nexus.products` maps a token address to the product covering its protocol, with the product's kind: `protocol` (Single Protocol Cover: pays on an exploit of the protocol) or `depeg`. Mapped today: trUSD, strUSD, etrUSD → Tori; fxSAVE → f(x); fxUSD → fxUSD depeg; iUSD, siUSD → infiniFi; mGLOeuro → Midas. A hit market's collateral and every token it wraps are looked up.
 
-The open question is the wording. Protocol cover pays on an exploit, not on an issuer marking its NAV down or a borrower defaulting, so the tool must say which incidents a product covers before it offers "insure".
+**What it changes.** Each vault incident with a mapped hit gets an `outside view` line next to its breakeven probability p\* (plan `2026-10-11-breakeven`):
+
+```
+if the incident is not certain: leaving now forgoes 17,042 USDC of yield over 30 days (8.29%/yr); it pays if the incident's probability over 30 days is above 7.92% (63.3%/yr)
+outside view: Nexus f(x) Protocol cover 1.82%–8.20%/yr, capacity 2,539,099 USDC: implies 1.2%–13.7%/yr for an exploit of the protocol at this severity; it pays on that, not on an issuer's markdown or a borrower's default
+```
+
+The implied probability is price ÷ (loading × severity): a price is the expected payout plus a loading for capital and margin, taken as 2 to 5 (`nexus.loading`); the severity is the shock's fall (1 − recovery for a default). It is the probability of the **covered** event, an exploit, which is one cause among others of the incident priced: a reader compares it with p\*, the tool never does.
+
+**Not done: "stay and insure".** Protocol cover pays on an exploit of the protocol, not on an issuer marking its NAV down or a borrower defaulting, and it covers funds held in that protocol, not a Morpho vault lending against its token. Offering a premium as a hedge for these incidents would mislead, so the tool states what the cover pays on instead.
 
 ## 3. Rules for any outside provider
 

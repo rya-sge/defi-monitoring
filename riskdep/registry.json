@@ -219,7 +219,8 @@
   "incident": {
     "reduce_margin": 0.01,
     "exit_min_gain": 0.05,
-    "basis": "D90. Incident mode sizes a partial sale so that liquidation sits this far beyond the oracle drop the incident causes: one point of margin, so a small further move does not liquidate the reduced position. exit_min_gain (D101): for a vault depositor, leaving first is recommended only when it cuts the incident's loss by at least 5 %; a depositor that is most of the vault loses about the same either way."
+    "basis": "D90. Incident mode sizes a partial sale so that liquidation sits this far beyond the oracle drop the incident causes: one point of margin, so a small further move does not liquidate the reduced position. exit_min_gain (D101): for a vault depositor, leaving first is recommended only when it cuts the incident's loss by at least 5 %; a depositor that is most of the vault loses about the same either way.",
+    "breakeven_basis": "D142-D144: exiting now forgoes the vault's net yield (Morpho API avgNetApy, rewards included) on what can leave, over --horizon days; it saves the difference between the loss if the depositor stays and if it leaves first. p* = carry forgone / loss saved, over the horizon; yearly = 1 - (1 - p*)^(365 / horizon)."
   },
   "watch": {
     "market_share_warn": 0.25,
@@ -255,7 +256,9 @@
     "drain_margin": 0.02,
     "drain_check_every_blocks": 25,
     "drain_basis": "D70, D72. drain_buy_cost: the cost c of buying the collateral at the drain's size, in d* = 1 - LLTV / (1 + c); 0.5 % is low on purpose (a lower cost gives an earlier, more conservative threshold) and is not measured per token. drain_margin: warn when the collateral's discount to the oracle is within 2 points of d*. drain_check_every_blocks: DefiLlama's prices are re-read every 25 blocks (~5 min); oracle prices come with every state read.",
-    "exit_queue_basis": "D64, D66. exit_queue_phi: the share of the other depositors' assets assumed to leave before you in a run, Team 2's single parameter phi; 0.5 is a middle case with no data behind it. exit_queue_stuck_warn: warn when at least half of the position would be stuck if every contract holder (vault, fund, multisig) withdrew first; critical when, in addition, the vault already carries unrealised bad debt."
+    "exit_queue_basis": "D64, D66. exit_queue_phi: the share of the other depositors' assets assumed to leave before you in a run, Team 2's single parameter phi; 0.5 is a middle case with no data behind it. exit_queue_stuck_warn: warn when at least half of the position would be stuck if every contract holder (vault, fund, multisig) withdrew first; critical when, in addition, the vault already carries unrealised bad debt.",
+    "feed_band_report_floor": 0.5,
+    "feed_band_basis": "fork-demo D4 (plan/2026-10-11-fork-demo.plan.md). A custom feed whose minAnswer/maxAnswer are readable on the feed is reported (FeedBand) when its floor lies within this fraction below its latest answer. mGLOeuro/EUR (Midas, read 2026-10-11) has a band of 90,000-110,000 EUR around 100,000 and no setter, so a fund loss above 10 % reaches the Belem market's oracle only after an upgrade behind a 48 h timelock. Chainlink OCR bands are not exposed on the proxy and never trigger."
   },
   "graph": {
     "sibling_min_tvl_usd": 1000000,
@@ -824,5 +827,55 @@
     ],
     "basis": "D104-D116 (plan 2026-10-10-propagation-engine). Rules are tried in order; the first edge rule whose effect, direction, rel and criteria match carries the effect, and no match stops it. --rules <file> puts a file's edge_rules and node_rules first. eps: relative change below which an input is not propagated again; max_evaluations bounds the loop. quote_sizes_x_liquidity: the sale sizes of the Pendle quote ladders the graph records per PT, as multiples of the pool's liquidity, at most quote_max_usd (Pendle refuses above 100M USD); a size Pendle cannot route (MarketProportionTooHigh) ends the ladder and sets the capacity at the last size that went through; capacity_min_ratio: a ladder's capacity is where the marginal price falls under this share of spot or the amount received stops growing (2026-10-10: PT-reUSD into reUSD loses 0.57 % at $25M, reUSD into USDC stops near $12M). depth_usd: a depth for the constant_product comparison model only.",
     "capacity_min_ratio": 0.5
+  },
+  "nexus": {
+    "basis": "Nexus Mutual public API (api.nexusmutual.io/v2, keyless), read 2026-10-11. A product is mapped to the tokens whose issuer protocol it covers; the wording (IPFS annex of each product) decides what pays: Single Protocol Cover pays on a smart-contract exploit of that protocol, not on an issuer's NAV markdown or a borrower's default. Shown next to the breakeven probability, never used in a verdict.",
+    "loading": [
+      2,
+      5
+    ],
+    "loading_basis": "a cover price is the expected payout times a loading for capital cost and margin; 2-5 brackets it (docs/analysis/EXTERNAL_SOURCE.md §7.5: a loading of 3 brings the Nexus-implied depeg frequencies of USDe and USDS back to the internal ones)",
+    "products": {
+      "0xd0580192e98ea6ceb9c7b6191ed2e27560911697": {
+        "product": 446,
+        "kind": "protocol",
+        "token": "trUSD"
+      },
+      "0x280839980a7ed0d7717f64125fe241012e5f5815": {
+        "product": 446,
+        "kind": "protocol",
+        "token": "strUSD"
+      },
+      "0x6f20ae2c98c2d34e6a57f3411f2c5af92e32592d": {
+        "product": 446,
+        "kind": "protocol",
+        "token": "etrUSD"
+      },
+      "0x7743e50f534a7f9f1791dde7dcd89f7783eefc39": {
+        "product": 137,
+        "kind": "protocol",
+        "token": "fxSAVE"
+      },
+      "0x085780639cc2cacd35e474e71f4d000e2405d8f6": {
+        "product": 311,
+        "kind": "depeg",
+        "token": "fxUSD"
+      },
+      "0x48f9e38f3070ad8945dfeae3fa70987722e3d89c": {
+        "product": 308,
+        "kind": "protocol",
+        "token": "iUSD"
+      },
+      "0xdbdc1ef57537e34680b898e1febd3d68c7389bcb": {
+        "product": 308,
+        "kind": "protocol",
+        "token": "siUSD"
+      },
+      "0x2f8bae126b8d416c009b82ccd60e4f9cabbd7702": {
+        "product": 356,
+        "kind": "protocol",
+        "token": "mGLOeuro"
+      }
+    }
   }
 }

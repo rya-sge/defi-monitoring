@@ -149,6 +149,7 @@ def run(opts: Options) -> int:
     if opts.mode == "replay":
         meta = json.loads(meta_path.read_text())
         pinned, start_cursor, dep = meta["head"], meta["cursor"], meta["depositor"]
+        S.FORK = meta.get("fork", False)  # a range recorded on a local fork replays as one (fork-demo D1)
     else:
         pinned = None
         head = int(S.rpc(f, "eth_blockNumber", []), 16)
@@ -159,7 +160,9 @@ def run(opts: Options) -> int:
         if opts.mode == "record":
             state_dir.mkdir(parents=True, exist_ok=True)
             meta_path.write_text(
-                json.dumps({"vault": opts.vault, "head": pinned, "cursor": start_cursor, "depositor": dep})
+                json.dumps(
+                    {"vault": opts.vault, "head": pinned, "cursor": start_cursor, "depositor": dep, "fork": S.FORK}
+                )
             )
 
     safe0 = (pinned or int(S.rpc(f, "eth_blockNumber", []), 16)) - W["confirmations"]

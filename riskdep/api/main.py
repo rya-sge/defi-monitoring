@@ -22,7 +22,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .. import clock
 from .. import sources as S
-from .routes import alerts, dashboard, graph, report
+from .routes import alerts, dashboard, graph, incident, report
 from .schemas import Health
 
 meta = APIRouter(tags=["meta"])
@@ -58,5 +58,5 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-for r in (meta, graph.router, report.router, alerts.router, dashboard.router):
+for r in (meta, graph.router, report.router, incident.router, alerts.router, dashboard.router):
     app.include_router(r)

@@ -1,3 +1,4 @@
+import { FormattedText } from './FormattedText';
 import { useMemo } from 'react';
 import {
   Bar,
@@ -16,8 +17,7 @@ import { compactUsd, percent, usd } from '../lib/format';
 const STEP = 0.005;
 const MAX = 0.3;
 
-const TOOLTIP =
-  'max-w-[320px] rounded-md border bg-popover p-2 text-[0.82rem] text-popover-foreground tabular-nums shadow-md';
+const TOOLTIP = 'tooltip-surface max-w-80 tabular-nums';
 // No axis line, no tick marks, small faint labels: the bars carry the chart.
 const AXIS = {
   axisLine: false,
@@ -65,7 +65,7 @@ export function LiquidationChart({
             dataKey="drop"
             {...AXIS}
             interval={9}
-            tickFormatter={(v: number) => `−${percent(v, 0)}`}
+            tickFormatter={(v: number) => `−${percent(v)}`}
           />
           {/* Two scales on purpose: the running total dwarfs any one bucket. Left = bars, right = line. */}
           <YAxis yAxisId="debt" {...AXIS} tickFormatter={(v: number) => compactUsd(v)} width={62} />
@@ -76,14 +76,12 @@ export function LiquidationChart({
             tickFormatter={(v: number) => compactUsd(v)}
             width={62}
           />
-          <Tooltip
-            content={(props) => <LiqTooltip {...props} price={price} />}
-            cursor={{ fill: 'var(--line)', opacity: 0.3 }}
-          />
+          <Tooltip content={(props) => <LiqTooltip {...props} price={price} />} cursor={false} />
           <Bar
             yAxisId="debt"
             dataKey="debt"
-            fill="var(--muted)"
+            fill="var(--chart-1)"
+            activeBar={false}
             radius={[2, 2, 0, 0]}
             isAnimationActive={false}
           />
@@ -91,7 +89,7 @@ export function LiquidationChart({
             yAxisId="cumulative"
             dataKey="cumulative"
             type="stepAfter"
-            stroke="var(--fg)"
+            stroke="var(--chart-2)"
             strokeWidth={2}
             dot={false}
             isAnimationActive={false}
@@ -108,13 +106,18 @@ function LiqTooltip({ active, payload, price }: TooltipContentProps & { price?: 
   return (
     <div className={TOOLTIP}>
       <strong>
-        price −{percent(datum.drop, 1)}
-        {price != null ? ` · ${usd(price * (1 - datum.drop), 2)}` : null}
+        <FormattedText>{`Price −${percent(datum.drop)}${price != null ? ` · ${usd(price * (1 - datum.drop), 2)}` : ''}`}</FormattedText>
       </strong>
       <br />
-      {usd(datum.debt)} liquidated here
+      <div className="flex items-center gap-2">
+        <span className="size-2 rounded-full bg-[var(--chart-1)]" />
+        <FormattedText>{usd(datum.debt)}</FormattedText> liquidated here
+      </div>
       <br />
-      {usd(datum.cumulative)} cumulated
+      <div className="flex items-center gap-2">
+        <span className="size-2 rounded-full bg-[var(--chart-2)]" />
+        <FormattedText>{usd(datum.cumulative)}</FormattedText> cumulated
+      </div>
     </div>
   );
 }

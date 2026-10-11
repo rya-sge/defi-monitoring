@@ -1,6 +1,6 @@
 import dagre from '@dagrejs/dagre';
 import type { XYPosition } from '@xyflow/react';
-import { Activity, Coins, Eye, Globe, KeyRound, Landmark, User, Vault, Waves } from 'lucide-react';
+import { Activity, Coins, Database, Eye, Globe, KeyRound, User, Vault } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { detailValue } from './format';
 import type { GraphEdge, GraphNode, GraphNodeKind, GraphResponse, ReportGraph } from '../api/types';
@@ -56,8 +56,8 @@ const ROLE_DRAWING: Record<
 > = {
   vault: { shape: 'rect', width: 80, height: 70, icon: Vault },
   user: { shape: 'rounded', width: 80, height: 70, icon: User },
-  market: { shape: 'rect', width: 80, height: 70, icon: Landmark },
-  pendle: { shape: 'rect', width: 80, height: 70, icon: Waves },
+  market: { shape: 'rect', width: 80, height: 70, icon: Database },
+  pendle: { shape: 'rect', width: 80, height: 70, icon: Database },
   asset: { shape: 'circle', width: 56, height: 56, icon: Coins },
   oracle: { shape: 'hexagon', width: 60, height: 52, icon: Eye },
   feed: { shape: 'hexagon', width: 46, height: 40, icon: Activity },
@@ -79,7 +79,9 @@ export const NAME_SLOT = { width: 128, height: 40 };
 
 /** DefiLlama's keyless token-icon CDN, by address (D67). */
 export function tokenIconUrl(node: GraphNode): string | null {
-  const address = node.details.address;
+  const address = node.label.toUpperCase().startsWith('PT-')
+    ? '0x808507121b80c02388fad14726482e061b8da827'
+    : node.details.address;
   return node.kind === 'Asset' && typeof address === 'string'
     ? `https://token-icons.llamao.fi/icons/tokens/1/${address.toLowerCase()}?h=64&w=64`
     : null;

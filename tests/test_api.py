@@ -10,7 +10,7 @@ import json
 import pytest
 from fastapi.testclient import TestClient
 
-from riskdep import clock, pipeline, report
+from riskdep import cli, clock, pipeline, report
 from riskdep import graph as GR
 from riskdep import sources as S
 from riskdep.api import app, artifacts
@@ -160,8 +160,52 @@ def test_openapi_is_served_and_names_every_route(client):
         "/api/graph",
         "/api/report",
         "/api/analyze",
+        "/api/books",
+        "/api/incident",
         "/api/targets",
         "/api/alerts",
         "/api/vault/{address}",
         "/api/market/{market_id}",
     }
+
+
+# --- a known incident on a vault or a book (plan 2026-10-11-incident-api), offline from the recordings
+
+FX = "0x2ca22cb25558fa2018ecb1ce4ed8af92ee7ea423"
+
+
+def test_books_lists_the_examples(client):
+    books = {b["name"]: b for b in client.get("/api/books").json()}
+    assert len(books["rockawayx-ethereum"]["vaults"]) == 7
+
+
+def test_incident_on_an_example_book(client):
+    r = client.post("/api/incident", json={"example": "rockawayx-ethereum", "shocks": ["token=PST:0.30"]})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert 5.0e6 < body["book"]["loss_usd"] < 5.4e6 and "Act first on" in body["book"]["headline"]
+    assert len(body["vaults"]) == 7 and body["book"]["p_star"] is not None
+
+
+def test_incident_on_one_vault_matches_the_cli(client, tmp_path):
+    r = client.post("/api/incident", json={"vaults": [FX], "shocks": ["token=fxSAVE:0.30"], "horizon": 30})
+    assert r.status_code == 200, r.text
+    (v,) = r.json()["vaults"]
+    assert cli.main(["analyze", "--vault", FX, "--shock", "token=fxSAVE:0.30", "--out", str(tmp_path)]) == 0
+    same = json.loads((tmp_path / f"vault-incident-{FX}.json").read_text())
+    assert v["vault_loss"] == pytest.approx(same["vault_loss"]) and v["p_star"] == pytest.approx(same["p_star"])
+    assert any(h["source"] == "engine" for h in v["hits"]) and v["outside"]
+
+
+@pytest.mark.parametrize(
+    "body, status",
+    [
+        ({"example": "rockawayx-ethereum", "shocks": []}, 422),  # no shock
+        ({"example": "rockawayx-ethereum", "vaults": [FX], "shocks": ["token=PST:0.3"]}, 422),  # two books
+        ({"vaults": [FX], "shocks": ["token=PST"]}, 422),  # malformed shock
+        ({"example": "nope", "shocks": ["token=PST:0.3"]}, 404),
+        ({"vaults": ["0x" + "1" * 40], "shocks": ["token=PST:0.3"]}, 404),  # not recorded
+    ],
+)
+def test_incident_errors(client, body, status):
+    assert client.post("/api/incident", json=body).status_code == status

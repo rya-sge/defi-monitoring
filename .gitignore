@@ -7,6 +7,8 @@ out/
 .venv
 data
 .ruff_cache/
+# Foundry build cache of the fork-demo contracts (scripts/fork/); their out/ is covered by out/ above
+scripts/fork/cache/
 # secrets: keys.ini holds real API keys and is never committed; keys.example.ini (no values) stays tracked
 keys.ini
 # third-party docs kept locally only: the Chainlink Data Feeds, Morpho developer, Tori, infiniFi, Midas, f(x) Protocol and Ethena documentation, and the risk-assessment providers' documentation (Credora, Nexus Mutual, Pharos) (listed in CLAUDE.md, docs/external/)

@@ -10,6 +10,9 @@ import type {
   Vault,
   Market,
   WatchQuery,
+  BookSummary,
+  IncidentRequest,
+  IncidentResponse,
 } from './types';
 import graphFixture from '../mocks/graph.json';
 import shockTraceFixture from '../mocks/shock-trace.json';
@@ -55,8 +58,14 @@ async function post<T>(path: string, body: unknown, signal?: AbortSignal): Promi
     headers: { 'content-type': 'application/json', accept: 'application/json' },
     body: JSON.stringify(body),
   });
-  if (!res.ok)
-    throw new ApiError(res.status, `POST ${path} failed: ${res.status} ${res.statusText}`);
+  if (!res.ok) {
+    const error: unknown = await res.json().catch(() => null);
+    const detail =
+      error && typeof error === 'object' && 'detail' in error && typeof error.detail === 'string'
+        ? error.detail
+        : `${res.status} ${res.statusText}`;
+    throw new ApiError(res.status, detail);
+  }
   return (await res.json()) as T;
 }
 
@@ -70,6 +79,36 @@ function queryString(params: Record<string, string | number | undefined>): strin
 }
 
 export const api = {
+  async books(signal?: AbortSignal): Promise<BookSummary[]> {
+    if (USE_MOCKS) return delay((await import('../mocks/books.json')).default as BookSummary[]);
+    return get<BookSummary[]>('/api/books', signal);
+  },
+
+  async incident(body: IncidentRequest, signal?: AbortSignal): Promise<IncidentResponse> {
+    if (USE_MOCKS) {
+      const cases = (await import('../mocks/incidents.json')).default as {
+        request: IncidentRequest;
+        response: IncidentResponse;
+      }[];
+      const match = cases.find(
+        ({ request }) =>
+          !body.live &&
+          request.example === body.example &&
+          JSON.stringify(request.vaults?.map((v) => v.toLowerCase())) ===
+            JSON.stringify(body.vaults?.map((v) => v.toLowerCase())) &&
+          request.horizon === body.horizon &&
+          JSON.stringify(request.shocks) === JSON.stringify(body.shocks),
+      );
+      if (!match)
+        throw new ApiError(
+          404,
+          'No fixture for this scenario. Try PST −30%, fxSAVE −30%, or the largest borrower of all markets with 50% collateral recovery, over 30 days, on the RockawayX book or one of its vaults. Other scenarios need the offline API with VITE_USE_MOCKS=false.',
+        );
+      return delay(match.response, 900);
+    }
+    return post<IncidentResponse>('/api/incident', body, signal);
+  },
+
   health(signal?: AbortSignal): Promise<Health> {
     if (USE_MOCKS) {
       return delay<Health>({

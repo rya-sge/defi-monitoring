@@ -9,8 +9,6 @@ import { DetailsTable } from '../components/DetailsTable';
 import { ErrorState, Loading } from '../components/States';
 import { KIND_COLOR, RISK_KEYS, edgeLabel, scopeToTarget } from '../lib/graph';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 
 const PANEL_H3 = 'mt-5.5 mb-1 text-[0.82rem] font-bold text-muted-foreground';
 
@@ -32,9 +30,7 @@ export function GraphPage() {
   const { data: full, dataUpdatedAt, isPending, error } = useGraph();
   const data = useMemo(() => full && scopeToTarget(full, target), [full, target]);
   const [hiddenKinds, setHiddenKinds] = useState<ReadonlySet<GraphNodeKind>>(new Set());
-  const [search, setSearch] = useState('');
   const [selection, setSelection] = useState<GraphSelection>(null);
-  const [layoutNonce, setLayoutNonce] = useState(0);
 
   const presentKinds = useMemo(
     () => GRAPH_NODE_KINDS.filter((kind) => data?.nodes.some((node) => node.kind === kind)),
@@ -61,33 +57,16 @@ export function GraphPage() {
 
   return (
     <div className="relative h-full min-h-[70vh] overflow-hidden">
-      {/* Remounting re-runs the layout: on new data, or on Re-layout. */}
+      {/* Remounting re-runs the layout when the target or data changes. */}
       <GraphCanvas
-        key={`${target ?? ''}-${dataUpdatedAt}-${layoutNonce}`}
+        key={`${target ?? ''}-${dataUpdatedAt}`}
         nodes={data.nodes}
         edges={data.edges}
         visibleKinds={visibleKinds}
-        search={search}
+        search=""
         selection={selection}
         onSelect={setSelection}
       />
-
-      <div className="absolute top-3.5 left-3.5 flex gap-2 bg-background">
-        <Label htmlFor="graph-search" className="sr-only">
-          Filter nodes by symbol, address or market id
-        </Label>
-        <Input
-          id="graph-search"
-          type="search"
-          className="w-60"
-          placeholder="symbol, address, market id…"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-        />
-        <Button type="button" variant="outline" onClick={() => setLayoutNonce((n) => n + 1)}>
-          Re-layout
-        </Button>
-      </div>
 
       {/* Legend and kind filter in one: the colour chip keys the node colour. */}
       <div className="absolute bottom-3.5 left-3.5 flex flex-wrap gap-1 rounded-md bg-background/80">
@@ -106,14 +85,6 @@ export function GraphPage() {
           </Button>
         ))}
       </div>
-
-      {/* The subtitle is the provenance line: chain, block, how it was read. */}
-      <p
-        className="absolute right-16 bottom-3.5 max-w-[40%] truncate text-[0.75rem] text-muted-foreground"
-        title={data.subtitle}
-      >
-        {data.subtitle}
-      </p>
 
       {selection ? (
         <aside className="absolute top-3.5 right-3.5 bottom-12 w-[340px] max-w-[calc(100%-28px)] overflow-auto rounded-lg border bg-background p-5.5 shadow-sm">

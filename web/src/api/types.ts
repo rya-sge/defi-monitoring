@@ -403,3 +403,111 @@ export type WatchQuery = {
   target?: string;
   min_level?: AlertLevel;
 };
+
+/* --------------------------------------------------------------- incidents */
+
+export type BookVault = { address: string; label: string | null; depositor: string | null };
+export type BookSummary = {
+  name: string;
+  title: string;
+  weighting: 'vault' | 'depositor';
+  vaults: BookVault[];
+};
+export type IncidentRequest = {
+  example?: string;
+  vaults?: string[];
+  shocks: string[];
+  horizon: number;
+  live?: boolean;
+};
+export type MarketHit = {
+  market_id: string;
+  label: string;
+  drop: number;
+  borrowers: number;
+  total_borrow: number;
+  liquidatable_debt: number;
+  bad_debt: number;
+  vault_share: number;
+  vault_loss: number;
+  oracle_class: string;
+  timing: string;
+  vault_exposure: number;
+  via: string;
+  seen: boolean;
+  event: 'markdown' | 'default';
+  defaulters: string[];
+  defaulted_debt: number;
+  exit_route: 'none' | 'thin' | 'deep' | null;
+  no_liquidator_shortfall: number;
+  top1_share: number;
+  top3_share: number;
+  grade: string | null;
+  pharos_exposure: number;
+  source: 'incident' | 'engine';
+  engine: string;
+};
+export type VaultIncident = {
+  vault: string;
+  name: string;
+  symbol: string;
+  block: number;
+  depositor: string | null;
+  shocks: Record<string, number>;
+  hits: MarketHit[];
+  vault_total: number;
+  vault_loss: number;
+  depositor_assets: number;
+  loss_if_stay: number;
+  can_leave_now: number;
+  stuck: number;
+  loss_if_exit_first: number;
+  verdict: 'STAY' | 'REDUCE' | 'EXIT';
+  reason: string;
+  notes: string[];
+  asset: string;
+  asset_usd: number | null;
+  events: string[];
+  labels: Record<string, string>;
+  pharos: string | null;
+  common_mode: string[];
+  engine_block: number | null;
+  sibling_losses: [string, string, number, string][];
+  apy: number | null;
+  horizon_days: number;
+  exit_cost: number;
+  p_star: number | null;
+  p_star_year: number | null;
+  outside: string[];
+};
+export type VaultLine = {
+  vault: string;
+  name: string;
+  value_usd: number;
+  loss_usd: number;
+  exposure_usd: number;
+  verdict: VaultIncident['verdict'];
+  hit_markets: string[];
+  priced: boolean;
+  p_star: number | null;
+  p_star_year: number | null;
+  exit_cost_usd: number;
+  saved_usd: number;
+};
+export type IncidentResponse = {
+  book: {
+    name: string;
+    weighting: 'vault' | 'depositor';
+    shocks: string[];
+    lines: VaultLine[];
+    value_usd: number;
+    loss_usd: number;
+    exposure_usd: number;
+    headline: string;
+    notes: string[];
+    p_star: number | null;
+    p_star_year: number | null;
+    horizon_days: number;
+  };
+  vaults: VaultIncident[];
+};
