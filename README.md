@@ -29,11 +29,12 @@ What to read in the output:
 | Output line | Answers |
 |---|---|
 | `fxSAVE/USDC …: 1,494,648 of 25,324,668 USDC of debt liquidatable (19 borrowers); bad debt 2,284,812 …` | the impact, market by market, from the shock engine over the recorded graph |
-| `oracle constant-price; how fast: at its next published round, by a transaction …` | how fast it lands |
+| `oracle constant-price; how fast: at once, when the issuer's accounting records the loss …` | how fast it lands (fxSAVE's NAV is computed on read, so a loss reaches the oracle at once) |
 | `verdict given the incident: EXIT: withdraw the 2,500,571 that can leave now …` | stay or exit, if the incident happens |
 | `if the incident is not certain: … it pays if the incident's probability over 30 days is above 7.92%` | the breakeven: exiting is certain and costly, staying is uncertain |
 | `outside view: Nexus f(x) Protocol cover …` | an outside price to compare that probability with |
 | `Leaving Belem RWA EURCV costs 110,000 USD for sure, against 53,445 saved if the incident comes: stay.` | the brief's ten-pocket example, made explicit |
+| `VALUE AT RISK, given: …` `at risk:`, `loss if it happens, at that size:`, `worst cases if it happens…:`, `leaving the hit pockets now:`, `beyond the book:` | the total at risk in one block: the money in the hit markets, the loss, its worst cases, the cost of leaving, and the losses outside the book (also `book.value_at_risk` in `POST /api/incident`) |
 | `given the incident, drawn: staying loses 52,067 USD on average (median 11,164, 95 % 246,211, 99 % 352,195); leaving now costs 110,000 …; staying is worse in 18% of 10,000 paths` | "exiting is expensive and certain, staying is cheap and uncertain": the uncertain side as a distribution (`--conditional`) |
 
 **Is the number defensible: a backtest.** `uv run python -m riskdep backtest` replays the PT-reUSD liquidations of 2026-08-25 (a Pendle yield spike moved a min(TWAP, linear) oracle; `GAP.md` K8). It reads the state 60 blocks before them, applies the oracle's observed fall, and compares the prediction with the 33 `Liquidate` events:
@@ -45,13 +46,19 @@ What to read in the output:
 
 **The venues behind USDe.** The brief's PT sits on sUSDe, a claim on USDe, whose backing Ethena publishes keyless: 4.77B, 79.5 % not on an exchange, the rest as margin for its hedges (Binance 13.4 %, OKX 4.2 %, Bybit 2.3 %…), a 62.1M reserve fund that absorbs a loss first. `graph` and the PT report draw them; `--shock venue=Binance:0.5` (also with `--vault`, `--book` and over the API) loses half the margin there: 319M, 62M absorbed, USDe and sUSDe −5.39 %, and the PT loop is liquidated once its meta-oracle switches (EXIT, 16 h to act). Plan: `plan/2026-10-11-venues.plan.md`.
 
+**Sky behind USDS and sUSDS.** Read on-chain through Sky's ChainLog, keyless: 11.69B of debt, 44.7 % in the peg module (4.42B USDC), 30.9 % Spark's allocation, 14.6 % Bloom's…; a net surplus of −51.7M, so a loss goes to debt auctions minting SKY (about 450M) before USDS holders. `analyze --vault|--book --shock sky=spark:0.2`: 722M lost, USDS and sUSDS −2.36 %. Plan: `plan/2026-10-11-sky.plan.md`.
+
+**After the incident.** Once an incident has happened, `analyze --vault V --since <block> [--at <block>] --shock token=…` (and `POST /api/incident/after`) reads the vault at both blocks and splits the incident: what has **landed** (the share price's fall, the liquidations meanwhile), what is **still at risk** (bad debt not yet written off, and the part the oracle has not passed on yet, so a fall it already took is not counted twice), and the verdict on that part only, against the certain cost of leaving. On the PT-reUSD episode of 2026-08-25, for RockawayX USDC Yield: 16 liquidations repaid 35.19M, nothing written off, nothing pending. Plan: `plan/2026-10-11-after.plan.md`.
+
 **Shared feeds and concentration.** `graph` flags every oracle and feed read by more than one market (on Belem, EUR/USD prices 5 markets, 3 of them the vault's) and every collateral's share of its supply posted in Morpho (mGLOeuro 88.8 %, AUTO 99.8 %); the PT report adds the position's share of its market (half) and the market's PT against its Pendle pool's (8.2×). Plan: `plan/2026-10-11-shared-and-supply.plan.md`.
 
 **Where the fall came from.** The backtest also rebuilds the Pendle pool the oracle reads, from its on-chain state before the episode (`pendle_amm.py`, Pendle's own pool math, matching its quotes to 1e-9): the implied APY went from 10.58 % to 20.37 % as 5.43M PT was sold into the pool, and the pool's math, from the state before, needs 5.52M (+1.7 %). From the sale alone, with no observed price, the pool's math gives an oracle fall of 2.36 % (observed: 2.45 % and 2.76 %), at which the model predicts the same 13 and 7 borrowers, none missed and none extra. At the first liquidation the pool accepted only 309k more PT, against 38.6M seized by the liquidations. Plan: `plan/2026-10-11-pendle-pool.plan.md`.
 
 A second episode tests a different mechanism, price-tracking oracles in a market-wide crash: `backtest --episode crash-2025-10-10`, the main wave of the 2025-10-10 crash on the six Morpho markets with the most liquidations (Mog, PEPE, SPX, WBTC, wstETH). No liquidated borrower is missed in any of them; WBTC/USDC's debt and incentive are within 2 %. The model over-predicts by count in a fast crash, and the backtest accounts for each case: 36 of Mog's 52 extra positions were liquidated later that night, a few were defended by their borrowers, and the rest owe little (under 3 % of the debt repaid, much of it dust no liquidator takes). The bad debt predicted at the low over-states the realised one (Mog: 403k against 22.7k), because liquidators reached many positions after the wick.
 
-The impact given the incident is right to within 1 % where positions were liquidated in full, and the oracle's fall itself is predicted from the sale into the pool (above). Not tested: the cascade, the liquidations' own sales feeding back into the pool's price. Recorded through an archive RPC (`keys.ini`), it replays offline with no key.
+The impact given the incident is right to within 1 % where positions were liquidated in full, and the oracle's fall itself is predicted from the sale into the pool (above). The cascade is tested too: from the sale's 2.36 %, the liquidations seize 40.5M PT, the pool takes only 98k before its 96 % cap, and the fall stops at 2.46 % with the same borrowers; the rest of the PT stays with the liquidators, which is why the episode did not run away. Recorded through an archive RPC (`keys.ini`), it replays offline with no key.
+
+The brief's three shapes of pocket side by side, `analyze --book examples/brief-three-shapes.json --shock token=sUSDe:0.08 --exit-cost 0.11`: the PT-sUSDe loop loses 776,708 of its 1M (EXIT), the same PT held without a borrow loses 80,000, less than the 110,000 it costs to leave (STAY): the leverage, not the asset, makes the decision.
 
 The brief's book with its own worked example, the PT-sUSDe loop on Morpho, as one pocket next to nine vaults: `analyze --book examples/brief-mixed-book.json --shock token=sUSDe:0.08 --exit-cost 0.11` ("leaving it costs 110,000 USD … for sure and saves 776,708 if the incident comes": EXIT).
 
@@ -320,6 +327,7 @@ uv run python -c "import json,riskdep.api as a; print(json.dumps(a.app.openapi()
 | `GET /api/report` | the last `analyze` report written to `out/` |
 | `POST /api/analyze` | run `analyze` (market, user, horizon, paths, live) and return the report; writes nothing |
 | `GET /api/books` | the books of vaults shipped in `examples/` |
+| `POST /api/incident/after` | a vault after an incident that began at block `since`: landed, unrealised, pending, and the verdict on what is still at risk (`analyze --vault V --since`) |
 | `POST /api/incident` | a known incident (`shocks` as `analyze --shock`, e.g. `token=PST:0.30`) on `vaults`, an inline `book` or an `example` book: the book's loss, headline and breakeven, and each vault's detail, as `analyze --vault` / `--book` computes them; offline from the recordings unless `live`; writes nothing |
 | `GET /api/shock/graphs` | the dependency graphs recorded under `fixtures/replay/graph-*`, which a shock runs on offline |
 | `GET /api/shock/targets?vault=&user=` | the oracles, feeds and assets of that graph that can be shocked, with the markets they price (`shock --list`) |

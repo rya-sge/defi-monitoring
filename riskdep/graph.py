@@ -145,9 +145,10 @@ def _oracle(g: Graph, f, oracle: str, block) -> str:
             g.edge(oracle, fid, "converts through", role=name)
         else:
             fcls = OC.classify_input(probes[addr]) if addr in probes else (None, None)
+            on_read = addr in probes and probes[addr].round_id == 0
             fresh = (
                 FD.freshness(probes[addr].updated_at, probes[addr].update_times, clock.now())
-                if addr in probes
+                if addr in probes and not on_read
                 else None
             )
             fid = g.node(
@@ -161,7 +162,8 @@ def _oracle(g: Graph, f, oracle: str, block) -> str:
                 constant_kind=OC.constant_kind(probes[addr]) if addr in probes else None,
                 tracks_market=probes[addr].pendle_market() if addr in probes else None,
                 updated_at=probes[addr].updated_at if addr in probes else None,
-                freshness=fresh.text if fresh else None,
+                # D242: a value computed on read has no update time: its `updatedAt` is 0 or the read's own block
+                freshness=fresh.text if fresh else "computed on read: no update time (round 0)" if on_read else None,
                 stale=fresh.stale if fresh else None,
                 source="oracle getter, description() on-chain; freshness from its rounds (D155)",
             )
@@ -733,6 +735,38 @@ def annotate_shared(g: Graph) -> int:
     return shared
 
 
+def annotate_roles(g: Graph, f: S.Fetcher, block: int) -> int:
+    """D245 (GAPV2 G2): each admin node labelled with what holds the role (one key, a Safe n/m, a timelock, a contract);
+    skipped when the reads are not recorded. Returns the holders held by one key."""
+    from . import roles as RL
+
+    admins = {
+        n["details"]["address"]: n["label"].rsplit(" ", 1)[0].split(" + ")
+        for n in g.nodes.values()
+        if n["kind"] == "Admin" and n["details"].get("address")
+    }
+    if not admins:
+        return 0
+    try:
+        holders = RL.read(f, admins, block)
+    except (S.CacheMiss, S.SourceError):
+        return 0
+    for h in holders:
+        nid = f"admin:{h.address}"
+        n = g.nodes[nid]
+        n["label"] = f"{n['label']} ({h.label})"  # `node` updates details only
+        g.node(
+            nid,
+            "Admin",
+            n["label"],
+            holder_kind=h.kind,
+            threshold=h.threshold,
+            one_key=h.one_key,
+            delay_s=h.delay_s,
+        )
+    return sum(1 for h in holders if h.one_key)
+
+
 def annotate_supply(g: Graph, f: S.Fetcher, block: int) -> int:
     """D216: each collateral of the graph's Blue markets, with what its borrowers post in them and that amount's share
     of the token's supply (`totalSupply()` at the graph's block, one batch; skipped when it cannot be read). The share
@@ -768,6 +802,52 @@ def annotate_supply(g: Graph, f: S.Fetcher, block: int) -> int:
         )
         n += 1
     return n
+
+
+def annotate_sky(g: Graph, snap) -> int:
+    """D224: behind USDS and DAI, where Sky's debt sits: one External node per source (the peg module, each allocator,
+    crypto, RWA and staked-SKY vaults) with its share; the surplus, the system's bad debt and the debt auctions'
+    capacity on USDS; the savings rate on sUSDS. Returns the sources drawn (0 when the graph holds no Sky token)."""
+    from . import sky as SK
+
+    if snap is None:
+        return 0
+    held = {
+        k: nid
+        for k in ("usds", "dai", "susds")
+        for nid, n in g.nodes.items()
+        if nid == SK.K[k] or n["details"].get("address") == SK.K[k]
+    }
+    if not held:
+        return 0
+    if "usds" in held:
+        n = g.nodes[held["usds"]]
+        g.node(
+            held["usds"],
+            n["kind"],
+            n["label"],
+            sky_debt_usd=round(snap.total),
+            sky_net_surplus_usd=round(snap.net_surplus),
+            sky_auction_capacity_usd=round(snap.auction_capacity),
+        )
+    if "susds" in held:
+        n = g.nodes[held["susds"]]
+        g.node(held["susds"], n["kind"], n["label"], savings_rate=round(snap.ssr, 4))
+    drawn = 0
+    for source, usd in sorted(snap.debt.items(), key=lambda x: -x[1]):
+        sid = g.node(
+            f"sky:{source.lower().replace(' ', '-')}",
+            "External",
+            f"Sky {source}" + (f" ({snap.psm_usdc / 1e9:,.2f}B USDC)" if source == "peg module" else ""),
+            usd=round(usd),
+            share_of_backing=round(usd / snap.total, 4),
+            source="Sky's Vat and IlkRegistry, read on-chain through its ChainLog (D223)",
+        )
+        for k in ("usds", "dai"):
+            if k in held:
+                g.edge(held[k], sid, "backed by (Sky)", round(usd), "USD")
+        drawn += 1
+    return drawn
 
 
 def annotate_ethena(g: Graph, snap) -> int:

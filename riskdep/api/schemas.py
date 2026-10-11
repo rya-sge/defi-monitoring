@@ -279,8 +279,10 @@ class BookVaultIn(BaseModel):
     label: str | None = None
     depositor: str | None = Field(default=None, description="Whose position to weigh; default the largest depositor.")
     amount: float | None = Field(default=None, gt=0, description="`pocket` weighting: the book's position, in USD.")
-    kind: Literal["vault", "borrow"] = Field(
-        default="vault", description="`borrow`: a Morpho Blue borrow; `address` is then the market id."
+    kind: Literal["vault", "borrow", "pt"] = Field(
+        default="vault",
+        description="`borrow`: a Morpho Blue borrow, `address` is then the market id; `pt`: a PT held without a "
+        "borrow, `address` is then its Pendle market and `amount` is required.",
     )
 
 
@@ -302,7 +304,8 @@ class IncidentRequest(BaseModel):
         min_length=1,
         description="As `analyze --shock`: `token=<collateral>:<fall>` (an issuer markdown), "
         "`borrower=<collateral, market id or all>:<recovery>[:<n>]` (the n largest borrowers default), "
-        "`venue=<exchange>:<loss>` (a share of USDe's backing at that venue lost; Ethena).",
+        "`venue=<exchange>:<loss>` (a share of USDe's backing at that venue lost; Ethena), "
+        "`sky=<source>:<loss>` (a share of a Sky source lost, e.g. `sky=spark:0.2`).",
         examples=[["token=PST:0.30"]],
     )
     user: str | None = Field(default=None, description="Depositor address, for every vault without its own.")
@@ -319,6 +322,65 @@ class IncidentRequest(BaseModel):
         description="Add the distribution of the loss of staying given the incident (needs a token=… shock).",
     )
     live: bool = Field(default=False, description="Read the chain instead of the recordings (nothing is saved).")
+
+
+class AfterRequest(BaseModel):
+    """A vault after an incident that began at block `since` (`analyze --vault V --since BLOCK`)."""
+
+    vault: str = Field(description="Vault V2 address.")
+    since: int = Field(gt=0, description="The block the incident began at.")
+    at: int | None = Field(default=None, gt=0, description="The block to read now; default the head (live).")
+    shocks: list[str] = Field(
+        min_length=1,
+        description="The incident in full, as `analyze --shock`: `token=<collateral>:<fall>`, `venue=…` or `sky=…`; "
+        "the part the oracle already took is not applied again.",
+        examples=[["token=PT-reUSD-10DEC2026:0.10"]],
+    )
+    user: str | None = Field(default=None, description="Depositor address; default the largest.")
+    horizon: float = Field(default=30.0, gt=0, le=365, description="Days of yield given up by leaving.")
+    exit_cost: float | None = Field(default=None, ge=0, lt=1, description="Cost of leaving as a share of what leaves.")
+    live: bool = Field(default=False, description="Read the chain (an archive RPC for `since`) instead of recordings.")
+
+
+class AfterMarket(BaseModel):
+    market_id: str
+    label: str
+    oracle_seen: float = Field(description="The oracle's fall since `since`, as read.")
+    pending_drop: float = Field(description="The fall still to come before the oracle reaches the incident's price.")
+    unrealised: float = Field(description="Bad debt now, not yet written off, the whole market, loan units.")
+    at_full: float
+    pending: float = Field(description="Bad debt still to come once the oracle passes the incident on.")
+    vault_share: float
+    liquidations: int = 0
+    repaid: float = 0.0
+    written_off: float = 0.0
+
+
+class AfterResponse(BaseModel):
+    """What has landed, what is still at risk, and the verdict on that part only (D228–D231)."""
+
+    vault: str
+    name: str
+    since: int
+    at: int
+    depositor: str
+    unit_symbol: str
+    share_price_since: float
+    share_price_at: float
+    landed: float = Field(description="The depositor's loss since, on what it still holds: sunk.")
+    landed_vault: float
+    unrealised: float = Field(description="The vault's part of the bad debt not yet written off.")
+    pending: float = Field(description="The vault's part of the loss the oracle has not passed on yet.")
+    at_risk: float = Field(description="unrealised + pending: what leaving may still avoid.")
+    stay: float
+    leave: float
+    par: float
+    stuck: float
+    verdict: Verdict
+    reason: str
+    exit_cost: float
+    markets: list[AfterMarket]
+    notes: list[str] = Field(default_factory=list)
 
 
 class BookSummary(BaseModel):
@@ -340,6 +402,34 @@ class Conditional(BaseModel):
     p_stay_worse: float = Field(description="Share of paths where staying costs more than leaving.")
     no_liquidator_share: float
     text: str
+
+
+class ValueAtRisk(BaseModel):
+    """What the incident puts at risk, in one block (D227): the figures are the book's, gathered."""
+
+    incident: str = Field(description="The incident the figures are given for, in words.")
+    exposure_usd: float = Field(description="Money in the markets the incident hits.")
+    loss_usd: float = Field(description="Loss if the incident happens, at the size given (no probability).")
+    loss_share: float = Field(description="That loss over the book's value.")
+    pockets_hit: int
+    pockets: int
+    worst_pocket: str | None = None
+    worst_pocket_loss_usd: float = 0.0
+    p95_usd: float | None = Field(default=None, description="95 % worst case given the incident (with `conditional`).")
+    p99_usd: float | None = Field(default=None, description="99 % worst case given the incident (with `conditional`).")
+    leave_cost_usd: float = Field(description="Certain cost of leaving the hit pockets now.")
+    saved_usd: float = Field(description="What leaving them saves if the incident happens.")
+    beyond_markets: int = Field(description="Other markets the incident reaches, outside the book.")
+    beyond_by_unit: dict[str, float] = Field(description="Their lenders' loss, by loan unit (USDC, EURCV…).")
+    returned_usd: float = Field(
+        default=0.0,
+        description="Liquidity the liquidations free (repaid debt), withdrawable once they have; 0 if none.",
+    )
+    loss_is_whole_vaults: bool = Field(
+        description="`vault` weighting: the loss counts each vault whole; the draw, the cost of leaving and the saving "
+        "are the followed depositors'."
+    )
+    lines: list[str] = Field(description="The block in words, as the CLI prints it.")
 
 
 class MarketHit(BaseModel):
@@ -373,6 +463,12 @@ class MarketHit(BaseModel):
     pharos_exposure: float = 0.0
     source: Literal["incident", "engine"] = "incident"
     engine: str = ""
+    band: dict[str, Any] | None = Field(
+        default=None,
+        description="A feed whose floor holds the oracle back: the floor's fall, the timelock above the feed, and the "
+        "stage now (liquidatable, bad debt, the vault's loss); the main figures apply once the feed is upgraded.",
+    )
+    cap_limit: float = Field(default=0.0, description="The most the vault can hold in this market within its caps.")
 
 
 class VaultIncident(BaseModel):
@@ -419,6 +515,15 @@ class VaultIncident(BaseModel):
     zama: list[str] = Field(
         default_factory=list, description="For a Zama confidential vault: the confidential share and the two exits."
     )
+    at_caps_loss: float = Field(
+        default=0.0,
+        description="The vault's loss if the hit markets held their caps, which an allocator reaches at once.",
+    )
+    returned_liquidity: float = Field(
+        default=0.0,
+        description="What the vault can withdraw more once liquidators have repaid (asset units); 0 if nobody "
+        "liquidates.",
+    )
 
 
 class VaultLine(BaseModel):
@@ -451,6 +556,7 @@ class BookIncident(BaseModel):
     p_star_year: float | None = None
     horizon_days: float = 30.0
     conditional: Conditional | None = None
+    value_at_risk: ValueAtRisk | None = None
 
 
 class IncidentResponse(BaseModel):

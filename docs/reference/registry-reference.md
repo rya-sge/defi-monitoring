@@ -22,6 +22,7 @@ Rules for editing:
 - [`watch`](#watch)
 - [`graph`](#graph)
 - [`engine`](#engine)
+- [`sky`](#sky)
 - [`ethena`](#ethena)
 - [`exit_liquidity`](#exit_liquidity)
 - [`pharos`](#pharos)
@@ -84,6 +85,10 @@ The two protocols whose exploits the model includes: `pendle` and `morpho-blue`.
 
 Read by `priors.py`.
 
+## `protocols.<key>.isolated_markets`
+
+D233: a protocol whose markets are isolated (Morpho Blue) gets the TVL band's exploit rate without its category multiplier; `isolated_basis` states why. Read by `priors.exploit_p_year`.
+
 ## `oracle`
 
 The oracle-failure event of `analyze`.
@@ -107,12 +112,15 @@ How an exploit probability is derived from DefiLlama's hack record (details in `
 | `min_tvl_usd` | USD | protocols below this size are ignored in the counts |
 | `tiers_usd` | USD | size bands: under 10M, 10M to 100M, over 100M |
 | `category_multiplier_clip` | [min, max] | bounds of the category adjustment (0.5 to 2) |
-| `age_factor` | multipliers | 2 for a protocol listed less than a year ago, 1 between one and three years, 0.7 beyond |
+| `age_factor` | multipliers | 2 for a protocol listed less than a year ago, 1 between one and three years, 0.7 beyond; a judgement, stated in `age_factor_basis` (D235) |
+| `half_life_years` | years | each hack weighs 2^(−age / this) in the counts, and the window's protocol-years the same (2; D234, `decay_basis`) |
 | `floor`, `cap` | probability per year | the result is kept between 0.5 % and 15 % |
 
 Read by `priors.py`.
 
 ## `unknown_issuer`
+
+An `issuers` entry of kind `synthetic-dollar` also has `depeg.collapse` (`p_year`, `severity`, `basis`): a rare, near-total loss of backing next to the frequent wick (D237).
 
 The conservative default for a yield token not in `issuers`: a 15 % yearly depeg chance with 60 % recovery, and a heavy exploit severity (mean 33 %). Same fields as an `issuers` entry, plus `category` (`Yield`). Read by `priors.py`.
 
@@ -120,7 +128,7 @@ The conservative default for a yield token not in `issuers`: a 15 % yearly depeg
 
 | Key | Unit | Meaning | Read by |
 |---|---|---|---|
-| `pt_stress_extra_discount` | multiplier | during a depeg, an oracle that follows the PT market sees the depeg × (1 + this), because the PT trades below its backing as the Pendle pool drains (0.5) | `propagate.py`, `simulate.py`, `decide.py` |
+| `pt_stress_yield_spike` | implied-yield points | during a depeg, an oracle that follows the PT market also sees the PT fall from a spike of its implied yield, over its time to maturity (0.098, measured on the PT-reUSD pool on 2026-08-25; D236, `pt_stress_basis`) | `propagate.py`, `simulate.py`, `decide.py` |
 | `gas_exit_usd` | USD | gas cost added to every exit and de-lever estimate (25) | `decide.py` |
 | `tail_budget` | fraction of equity | REDUCE when CVaR 99 % exceeds this share of the equity (0.5) | `decide.py` |
 | `incident.exit_min_gain` | fraction of the loss | vault incident mode: EXIT only when leaving first cuts the depositor's loss by at least this share (0.05) | `vault_incident.py` |
@@ -147,6 +155,8 @@ The thresholds of `watch --vault` and `watch --user`. Changing them changes when
 | `state_window_blocks` | blocks | 64 | how far back state is read; older ranges use the oldest servable block |
 | `full_state_every_blocks` | blocks | 25 | a live batch with no event reads only oracle prices, `totalAssets`, `realAssets`, idle cash and the depositor's gates; the full state read runs on any event and at least this often (D61) |
 | `crosscheck_every_blocks` | blocks | 300 | cadence of cross-checks, lender refresh, exit quotes, position rediscovery, the full refresh of every market's borrowers, and the admin-surface state and oracle-divergence checks |
+| `admin_impact` | signature → `class`, `reach`, `basis` | the risk-increasing Vault V2 and adapter functions | D244: what a timelocked change can do to money already deposited (`retroactive`, `future`, `enabler`), what it can reach (`all`, `market`, `forced_exit`, `future_interest`, `caps`, `none`), and the source line; the `Submit` alert's level and amount follow it (`admin_impact_basis`) |
+| `cap_exposure_warn` | fraction of the vault | 0.25 | `CapExposure` at start: the share of the vault that can sit behind one oracle within its caps (D243, `cap_exposure_basis`) |
 | `market_share_warn` | fraction of the vault | 0.25 | `Exposure` at start, and `Adapter.Allocate` raised to warn when a market crosses it |
 | `utilization_warn` | fraction | 0.99 | utilisation alerts, for vaults and borrows |
 | `utilization_min_share` | fraction of the vault | 0.10 | a vault market's utilisation is alerted only if it holds at least this share |
@@ -217,6 +227,17 @@ The shock engine's propagation rules and settings (plan `2026-10-10-propagation-
 | `basis` | text | — | why |
 
 **Changing a rule.** Prefer a `--rules` file for a study: the registry's rules are the defaults everyone gets. A change here keeps its `basis` honest and is followed by `python3 -m pytest -q tests/test_engine.py`. The drain threshold uses `watch.drain_buy_cost`.
+
+## `sky`
+
+Sky's backing (plan `2026-10-11-sky`, D223–D226). Read by `sky.py` and `graph.py`.
+
+| Key | Unit | Default | What it controls |
+|---|---|---|---|
+| `usds`, `susds`, `dai` | address | on Ethereum | the tokens a Sky incident marks down and the graph nodes the sources hang from |
+| `sources` | name prefix → source | `LITE-PSM`/`PSM` peg module, `ALLOCATOR-` the allocator's name, `RWA`, `LSE` staked SKY | how collateral types are grouped; the rest are crypto vaults |
+| `debt_auction_share` | fraction | 0.25 | the share of SKY's market value debt auctions can raise before USDS holders bear a loss |
+| `basis` | text | — | the reads and the loss order |
 
 ## `ethena`
 

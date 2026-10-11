@@ -1,6 +1,6 @@
 # Next steps
 
-Where the project goes next, in recommended order, and what each step needs. It follows the reading of the brief in `ANALYSIS_CURRENT.md`: **an incident is known; the tool must detect it, compute its impact on the book, say how fast it lands, and decide stay or exit**. Built steps are listed once, in §2, with their plan; the rest of the file holds only what remains.
+Where the project goes next, in recommended order, and what each step needs. It follows the reading of the brief in the 2026-10-10 assessment (`docs/archive/ANALYSIS_CURRENT.md`, now archived; where each criterion stands is in `GOAL.md`): **an incident is known; the tool must detect it, compute its impact on the book, say how fast it lands, and decide stay or exit**. Built steps are listed once, in §2, with their plan; the rest of the file holds only what remains.
 
 Sources: the brief (`docs/hackaton_instruction/GOAL.md` and its PDF), the gap review `GAP.md` (K ids), `IMPROVEMENT.md` (a judge's reading, 2026-10-11), the gap list of `ANALYSIS_MONITORING.md` (C, D, M, R, T, X ids), and the RockawayX and Belem findings (`ROCK-VAULT.md`, `ROCK-VAULT-DEP.md`).
 
@@ -63,7 +63,7 @@ Sizes: **S** about a day, **M** a few days, **L** more.
 
 | # | Step | Gaps | Size | Builds on |
 |---|---|---|---|---|
-| **A6** | ~~Books mixing borrow and vault pockets, one rule~~ **done** (plan `2026-10-11-mixed-book`); K12 and K13 **done** (plan `2026-10-11-alerts-and-verdict`); the conditional distribution for a borrow **done** (D203); left: PT holdings without a borrow | K21, M6 | M | `decide.py`, `vault_book.py`, `conditional.py` |
+| **A6** | ~~Books mixing borrow and vault pockets, one rule~~ **done** (plan `2026-10-11-mixed-book`); K12 and K13 **done** (plan `2026-10-11-alerts-and-verdict`); the conditional distribution for a borrow **done** (D203); PT holdings without a borrow **done** (D222) | K21, M6 | M | `decide.py`, `vault_book.py`, `conditional.py` |
 | **A5** | The web page for vault and book incidents on `POST /api/incident` (the front end's) | demo | S | `web/` |
 | B4 | ~~Oracle structure, the rest~~ **done**: the pool move (plan `2026-10-11-pool-move`), constant-price split by kind and drain by class through the engine (plan `2026-10-11-oracle-kinds`) | K7, K8 | M | `oracle_class.py`, `engine.py` |
 | B5 | *Secondary: the priors feed only `analyze --demo`'s ex-ante view; no known-incident answer uses them.* Priors: decayed window, survivorship, two-part depeg, protocol multiplier, the RockawayX issuers; calibrate the conditional draw | K1–K5, K17, K18 | M | `priors.py`, `registry.json` |
@@ -77,7 +77,7 @@ Sizes: **S** about a day, **M** a few days, **L** more.
 | C4, C5 | ~~External venues~~ **done for USDe** (plan `2026-10-11-venues`); left: non-Morpho Vault V2 adapters; Vault V1, other chains | K24, C5 | M–L | registry, `metamorpho-v1.1` |
 | D | Validate on your positions; Slack/Discord/email alerts; infrastructure; execution | — | — | — |
 
-Exit liquidity is now quoted live on KyberSwap (plan `2026-10-11-exit-liquidity`). If time is short before the judging: the demo pass; then B6's rest (the engine's squeeze on the rebuilt pool). B6's pool at a past block is done: the backtest's oracle fall traces to a 5.4M PT sale, and from that sale alone the model predicts the same liquidated borrowers. B4 and A6's conditional draw for a borrow are done (PT holdings without a borrow are left). C1 is done. `IMPROVEMENT.md` advises against more documentation and against phase D.
+Sky's backing behind USDS, DAI and sUSDS is read on-chain (plan `2026-10-11-sky`). Exit liquidity is now quoted live on KyberSwap (plan `2026-10-11-exit-liquidity`). If time is short before the judging: the demo pass; then B6's rest (the engine's squeeze on the rebuilt pool). B6's pool at a past block is done: the backtest's oracle fall traces to a 5.4M PT sale, and from that sale alone the model predicts the same liquidated borrowers. B4 and A6's conditional draw for a borrow are done (PT holdings without a borrow are left). C1 is done. `IMPROVEMENT.md` advises against more documentation and against phase D.
 
 ## 4. Phase A: the brief's chain, the rest
 

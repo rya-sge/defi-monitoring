@@ -51,7 +51,7 @@ The engineering is well above what a hackathon usually shows: real mainnet data,
 
 ### 2.2 Do not state a reason the simulation does not establish
 
-**Problem.** `analyze --demo` opens with "the carry ($5,697) does not cover the expected loss ($6,265)". `ANALYSIS_CURRENT.md` §5 already shows the expected loss is 6,265 ± 380 USD, so the carry is inside its 95 % interval. The verdict holds on its two other reasons, but a judge testing "is the number defensible" will find this.
+**Problem.** `analyze --demo` opens with "the carry ($5,697) does not cover the expected loss ($6,265)". `docs/archive/ANALYSIS_CURRENT.md` §5 already shows the expected loss is 6,265 ± 380 USD, so the carry is inside its 95 % interval. The verdict holds on its two other reasons, but a judge testing "is the number defensible" will find this.
 
 **Status: done** (plan `2026-10-11-judge-path`): "expected loss $6,265 ± $745 (95 %, 20,000 paths)"; the carry gap reads "about equal" and is no longer a reason to REDUCE on its own (the demo's REDUCE stands on its tail and liquidation reasons).
 
@@ -67,7 +67,7 @@ The engineering is well above what a hackathon usually shows: real mainnet data,
 
 ### 2.4 Conditional Monte Carlo around the known incident
 
-**Problem.** The Monte Carlo draws incidents from yearly priors (an ex-ante view); the brief asks about a known incident. `ANALYSIS_CURRENT.md` §6 explains this well, but it is not built (`NEXT_STEP.md` A4).
+**Problem.** The Monte Carlo draws incidents from yearly priors (an ex-ante view); the brief asks about a known incident. `docs/archive/ANALYSIS_CURRENT.md` §6 explains this well, but it is not built (`NEXT_STEP.md` A4).
 
 **Status: done for vaults and books** (plan `2026-10-11-conditional`): `--conditional` draws the incident's size and whether liquidators act, reads the losses off real incident runs, and gives the loss of staying (mean, median, 95th, 99th percentile) against the certain cost of leaving; on the ten pockets, 52,067 on average against 110,000, but 246,211 at the 95th percentile. Left: a borrow position's, common-mode second failures, calibration.
 

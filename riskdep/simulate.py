@@ -53,7 +53,17 @@ def _tail(losses: np.ndarray, q: float) -> tuple[float, float]:
     return float(np.quantile(losses, q)), float(worst.mean())
 
 
+def _as_shocks(shocks: dict) -> dict:
+    """D237: a collapse is a loss of backing every oracle sees (propagate's `issuer_hack`), the deeper of the two."""
+    if "issuer_collapse" in shocks:
+        shocks = dict(shocks)
+        c = shocks.pop("issuer_collapse")
+        shocks["issuer_hack"] = max(shocks.get("issuer_hack", 0.0), c)
+    return shocks
+
+
 def _loss(pos: Position, shocks: dict, recovery: float):
+    shocks = _as_shocks(shocks)
     return loss(
         pos.collateral_usd,
         pos.debt_usd,
@@ -62,7 +72,7 @@ def _loss(pos: Position, shocks: dict, recovery: float):
         pos.oracle_mode,
         shocks,
         recovery=recovery,
-        pt_stress_extra=REGISTRY["pt_stress_extra_discount"],
+        pt_stress_spike=REGISTRY["pt_stress_yield_spike"],
     )
 
 

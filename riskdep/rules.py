@@ -230,12 +230,29 @@ def assess_event(e: Event, ctx: Ctx, held: set[str], dep: str | None) -> Alert |
                 {"data": a["data"], "abdicated": True},
             )
         no_notice = bool(tl and tl[1] == 0 and tl[0] in RISK_INCREASING_VAULT + RISK_INCREASING_ADAPTER)
+        cls, reach, amount, basis = admin_impact(ctx, a["data"])
+        # D244 (GAPV2 G10): the level follows what the change can do to money already deposited
+        level = {
+            "retroactive": "critical" if no_notice else "warn",
+            "enabler": "warn" if no_notice else "info",
+            "future": "info",
+        }.get(cls, "critical" if no_notice else "warn")
+        reaches = {
+            "retroactive": f"retroactive, can reach {ctx.amt(amount)} already deposited"
+            if amount
+            else "retroactive, can reach money already deposited",
+            "enabler": "an enabler: moves nothing itself, lets another role move existing money"
+            + (f" (up to {ctx.amt(amount)} more)" if amount else ""),
+            "future": "future only: money already deposited is untouched",
+        }.get(cls)
         return Alert(
-            "critical" if no_notice else "warn",
+            level,
             e.block,
             tx,
             f"{who}.Submit",
-            ("Pending change with no notice: " if no_notice else "Pending change: ") + what,
+            ("Pending change with no notice: " if no_notice else "Pending change: ")
+            + what
+            + (f" ({reaches})" if reaches else ""),
             f"{why}; executable from {_when(a['executableAt'])}"
             + (
                 " (timelock 0: it can be executed in the same block)"
@@ -243,9 +260,18 @@ def assess_event(e: Event, ctx: Ctx, held: set[str], dep: str | None) -> Alert |
                 else f" (timelock {tl[1] / 86400:g} days)"
                 if tl
                 else ""
-            ),
-            None,
-            {"data": a["data"], "executableAt": a["executableAt"], "timelock": tl[1] if tl else None},
+            )
+            + (f". Why: {basis}" if basis else ""),
+            -amount / ctx.unit * ctx.dep_fraction() if cls == "retroactive" and amount else None,
+            {
+                "data": a["data"],
+                "executableAt": a["executableAt"],
+                "timelock": tl[1] if tl else None,
+                "class": cls,
+                "reach": reach,
+                "amount": amount,
+                "basis": basis,
+            },
         )
     if e.name == "Accept":
         what, why = _timelocked_text(ctx, a["data"])
@@ -482,6 +508,68 @@ def assess_batch(events: list[Event], ctx: Ctx, dep: str | None, block: int) -> 
     return out
 
 
+def admin_impact(ctx: Ctx, data: str) -> tuple[str | None, str | None, int, str | None]:
+    """D244 (GAPV2 G10), pure: (class, reach, raw amount it can touch, basis) of a timelocked call, from
+    `watch.admin_impact`: `all` the vault's assets; `market` the vault's allocation to the market written off; `forced`
+    the new penalty on what would leave by forceDeallocate; `caps` the new limit above today's allocation."""
+    sig, args, _ = describe_call(data)
+    row = W["admin_impact"].get(sig)
+    if row is None:
+        return None, None, 0, None
+    st, reach, amount = ctx.after, row["reach"], 0
+    if reach == "all":
+        amount = st.total_assets
+    elif reach == "market" and args:
+        m = st.markets.get(str(args[0]).lower())
+        amount = m.vault_assets if m else 0
+    elif reach == "forced_exit" and len(args) == 2:
+        amount = int(st.force_withdrawable * args[1] / 10**18)
+    elif reach == "caps" and len(args) == 2:
+        from eth_utils import keccak
+
+        cid = "0x" + keccak(bytes.fromhex(str(args[0])[2:])).hex()
+        alloc = st.caps.get(cid, (0, 0, 0))[0]
+        new = args[1] if sig.startswith("increaseAbsolute") else args[1] * st.total_assets // 10**18
+        amount = max(0, new - alloc)
+    return row["class"], reach, int(amount), row["basis"]
+
+
+def cap_exposure_findings(view: VaultView, st: VaultState, ctx) -> list[Alert]:
+    """D243 (GAPV2 G1): per oracle, the share of the vault that can sit behind it within the caps, at once and with no
+    notice (`allocate` is not timelocked), against today's: a warn past `watch.cap_exposure_warn` when it is at least
+    1.5 times today's share, info otherwise."""
+    from . import exposure as XP
+
+    groups: dict[str, list] = {}
+    for a in view.adapters:
+        for mp in a.markets.values():
+            groups.setdefault(mp.oracle, []).append((mp, cap_ids(a.address, mp)))
+    out = []
+    total = st.total_assets or 1
+    for oracle, ms in groups.items():
+        allowed = XP.group_limit([ids for _, ids in ms], st.caps, st.total_assets)
+        held = sum(st.markets[mp.id].vault_assets for mp, _ in ms if mp.id in st.markets)
+        if allowed <= held or allowed < ctx.unit:
+            continue
+        share, now = allowed / total, held / total
+        level = "warn" if share > W["cap_exposure_warn"] and share >= 1.5 * now else "info"
+        names = ", ".join(sorted({ctx.label(mp.id) for mp, _ in ms}))[:120]
+        out.append(
+            Alert(
+                level,
+                st.block,
+                None,
+                "CapExposure",
+                f"up to {share:.0%} of the vault can sit behind the oracle of {names} within its caps ({now:.0%} today)",
+                f"{ctx.amt(allowed)} allowed against {ctx.amt(held)} allocated: an allocator can move it there at once, "
+                "with no timelock, so an incident on that oracle can cost more than today's allocation shows",
+                None,
+                {"oracle": oracle, "allowed": allowed, "allocated": held},
+            )
+        )
+    return out
+
+
 def startup_findings(view: VaultView, st: VaultState) -> list[Alert]:
     """Standing conditions worth a line when the watch starts."""
     ctx = Ctx(view, st, st)
@@ -501,6 +589,7 @@ def startup_findings(view: VaultView, st: VaultState) -> list[Alert]:
                     {"market": mid},
                 )
             )
+    out += cap_exposure_findings(view, st, ctx)
     for a in view.adapters:
         for mp in a.markets.values():
             alloc, abs_cap, rel_cap = st.caps.get(cap_ids(a.address, mp)["market"], (0, 0, 0))
@@ -601,23 +690,35 @@ def startup_findings(view: VaultView, st: VaultState) -> list[Alert]:
                 )
             )
     no_notice = [
-        sig.split("(")[0] + ("" if c == view.address else " (adapter)")
+        (sig, sig.split("(")[0] + ("" if c == view.address else " (adapter)"))
         for (c, sig), (t, ab) in view.timelocks.items()
         if t == 0 and not ab and sig in RISK_INCREASING_VAULT + RISK_INCREASING_ADAPTER
     ]
     if no_notice:
+        # D244 (GAPV2 G10): grouped by what each can do to money already deposited
+        table = W["admin_impact"]
+        by = {
+            k: [n for s, n in no_notice if table.get(s, {}).get("class", "retroactive") == k]
+            for k in ("retroactive", "enabler", "future")
+        }
+        words = {
+            "retroactive": "can reach money already deposited",
+            "enabler": "enablers (let another role move existing money)",
+            "future": "future only",
+        }
         out.append(
             Alert(
-                "warn",
+                "warn" if by["retroactive"] or by["enabler"] else "info",
                 st.block,
                 None,
                 "Timelock",
-                f"{len(no_notice)} risk-increasing change(s) can be made with no notice",
+                f"{len(no_notice)} risk-increasing change(s) can be made with no notice"
+                + (f", {len(by['retroactive'])} of them retroactive" if by["retroactive"] else ""),
                 "timelock 0, not abdicated: "
-                + ", ".join(no_notice)
+                + "; ".join(f"{words[k]}: {', '.join(v)}" for k, v in by.items() if v)
                 + ". A Submit for one of them gives no warning period",
                 None,
-                {"functions": no_notice},
+                {"functions": [n for _, n in no_notice], "by_class": by},
             )
         )
     zero_pen = [a for a, p in st.penalties.items() if p == 0]

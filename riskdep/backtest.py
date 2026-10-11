@@ -56,6 +56,7 @@ class MarketBacktest:
     extra_defended: list[str] = field(default_factory=list)  # repaid or added collateral: safe at the low by the end
     left_debt: float = 0.0  # D197: debt of the rest, left liquidatable at the window's end, loan units
     left_dust: int = 0  # of which positions below `backtest.dust_debt`: not worth a liquidator's gas
+    from_cascade: dict | None = None  # D238: the prediction at the cascade's fall
     # D210: the same prediction from the sale alone: the oracle fall the pool's math gives, not the observed one
     from_sale: dict | None = None
 
@@ -74,9 +75,8 @@ class PoolCheck:
     model_asset_out: float | None
     capacity_at_first: float  # the PT the pool still accepted at the first liquidation (its proportion at 96 %)
     seized_pt: float  # the collateral the liquidations seized, PT
-    sale_fall: float | None = (
-        None  # D210: the PT price fall the sold PT gives in the pool's math, from the state before
-    )
+    sale_fall: float | None = None  # D210: the PT's price fall from the sold PT, in the pool's math
+    cascade: dict | None = None  # D238: the liquidations' own sales fed back into the pool, from that fall
 
     def text(self) -> list[str]:
         out = [
@@ -94,11 +94,45 @@ class PoolCheck:
                 f"from the sale alone: {self.pt_sold:,.0f} PT into the pool as it stood before moves the PT's price "
                 f"{self.sale_fall:.2%}; the oracle's TWAP passes that on once the move has held its window"
             )
+        if self.cascade:
+            c = self.cascade
+            out.append(
+                f"the cascade: the liquidations at that fall seize {c['seized_pt']:,.0f} PT; sold into the pool "
+                f"{'up to its 96 % cap' if c['capped'] else 'in full'}, {c['sold_pt']:,.0f} of it moves the price to "
+                f"{c['fall']:.2%} in {len(c['steps']) - 1} round(s)"
+                + (f"; {c['unsold_pt']:,.0f} PT stay with the liquidators" if c["unsold_pt"] > 1 else "")
+            )
         out.append(
             f"the squeeze: the liquidations seized {self.seized_pt:,.0f} PT, and the pool accepted only "
             f"{self.capacity_at_first:,.0f} more at the first liquidation: liquidators held the rest or found other buyers"
         )
         return out
+
+
+def cascade_episode(pool: PoolCheck, before: PA.Pool, ctx: list) -> None:
+    """D238: from the sale alone, the liquidations at each fall seize PT (debt × LIF at the oracle's price) that
+    liquidators sell into the pool as it stood before; iterated to a fixed point, then each market predicted again."""
+    unit_pt = 10**before.decimals
+
+    def seized_at(fall: float) -> float:
+        total = 0.0
+        for _, info, lu, pos, tot, p0, ev in ctx:
+            low = int(p0 * (1 - fall))
+            debt = compare(info, lu, pos, tot, p0, {0: low}, ev).predicted_debt  # loan units
+            per_pt = low / 10**36 * unit_pt / lu  # loan units per PT
+            total += debt * info.lif / per_pt if per_pt else 0.0
+        return total
+
+    pool.cascade = PA.cascade(before, pool.pt_sold, seized_at)
+    for mb, info, lu, pos, tot, p0, ev in ctx:
+        s = compare(info, lu, pos, tot, p0, {0: int(p0 * (1 - pool.cascade["fall"]))}, ev)
+        mb.from_cascade = {
+            "oracle_fall": s.oracle_fall,
+            "positions": s.predicted_positions,
+            "debt": s.predicted_debt,
+            "missed": len(s.missed),
+            "extra": len(s.extra),
+        }
 
 
 def pool_check(before: PA.Pool, first: PA.Pool, seized_pt: float) -> PoolCheck:
@@ -153,6 +187,12 @@ class Backtest:
                     f"      from the sale alone: oracle {-s['oracle_fall']:+.2%}, {s['positions']} positions "
                     f"({s['missed']} liquidated but not predicted, {s['extra']} predicted but not liquidated), "
                     f"{s['debt']:,.0f} {u} liquidatable"
+                )
+            if m.from_cascade:
+                s = m.from_cascade
+                out.append(
+                    f"      with the cascade: oracle {-s['oracle_fall']:+.2%}, {s['positions']} positions "
+                    f"({s['missed']} liquidated but not predicted, {s['extra']} predicted but not liquidated)"
                 )
             if m.missed or m.extra:
                 left = len(m.extra) - len(m.extra_later) - len(m.extra_defended)
@@ -266,7 +306,7 @@ def run(f: S.Fetcher, name: str) -> Backtest:
         pb, pf = PA.read(f, ep["pendle_market"], before), PA.read(f, ep["pendle_market"], blocks[0])
         seized = sum(e[3] for evs in events.values() for e in evs) / 10**pf.decimals
         pool = pool_check(pb, pf, seized)
-    out = []
+    out, ctx = [], []
     for mid, m in markets.items():
         borrowers = sorted(
             {"0x" + x["topics"][2][26:] for x in S.etherscan_logs(f, MORPHO_BLUE, BORROW, mid, 0, before)}
@@ -299,6 +339,9 @@ def run(f: S.Fetcher, name: str) -> Backtest:
                 "missed": len(s.missed),
                 "extra": len(s.extra),
             }
+        ctx.append(
+            (mb, info, 10**m.loan_decimals, tr.positions.get(mid, {}), tr.totals.get(mid, (0, 0)), p0, events[mid])
+        )
         if mb.extra:
             # D197: why the extra ones were not liquidated in the window: later, or defended by their borrower
             end = MR.Tracker({mid: info})
@@ -320,6 +363,8 @@ def run(f: S.Fetcher, name: str) -> Backtest:
             ]
             mb.left_debt, mb.left_dust = sum(left), sum(1 for d in left if d < BT["dust_debt"])
         out.append(mb)
+    if pool and pool.sale_fall is not None:
+        cascade_episode(pool, pb, ctx)
     notes = [
         ep["source"],
         "the prediction is the liquidation model alone, at the oracle's lowest price of the episode"

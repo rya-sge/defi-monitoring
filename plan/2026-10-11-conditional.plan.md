@@ -3,7 +3,7 @@
 > **Status**: approved: the person, 2026-10-11, "Yes go for it" (`IMPROVEMENT.md` 2.4, `NEXT_STEP.md` A4). No interview: the decisions below are the agent's defaults.
 > **Delivers**: `analyze --vault|--book … --conditional` (API `conditional: true`) draws, given the incident, how it evolves (its size recovering or deepening; liquidators failing to act where the collateral has no exit route) and gives the distribution of the loss of staying against the certain cost of leaving, per vault and for the book. Proof: the brief's ten pockets under mGLOeuro −30 % at an 11 % unwind: leaving costs 110,000 for sure; staying loses 52,067 on average but 246,211 at the 95th percentile, and is worse in 18 % of paths.
 > **Hard rule**: losses come from real incident runs (engine included), not a second model; the parameters are a stated judgement in the registry; the verdict and p\* are unchanged; the agent never commits.
-> **Read against**: `docs/analysis/ANALYSIS_CURRENT.md` §6 (why the Monte Carlo must be conditional); plans `2026-10-11-breakeven`, `2026-10-11-judge-path`, `2026-10-11-borrower-concentration` (exit liquidity, no-liquidator shortfall).
+> **Read against**: `docs/archive/ANALYSIS_CURRENT.md` §6 (why the Monte Carlo must be conditional); plans `2026-10-11-breakeven`, `2026-10-11-judge-path`, `2026-10-11-borrower-concentration` (exit liquidity, no-liquidator shortfall).
 > **Left out**: §4 Flows and §5 State: one more pure step after the incident runs.
 
 ## The tracker
@@ -36,7 +36,7 @@ mandate: mode classic · no git, the person commits · inline · tests at the sl
 
 ## 1. Why, and why not
 
-The brief contrasts leaving, "expensive and certain", with staying, "cheap and uncertain". The verdict given the incident and p\* treat the incident's loss as one number; the uncertainty of staying once it has happened was not shown. `ANALYSIS_CURRENT.md` §6: the Monte Carlo should be conditional on the known incident, not draw incidents from yearly priors.
+The brief contrasts leaving, "expensive and certain", with staying, "cheap and uncertain". The verdict given the incident and p\* treat the incident's loss as one number; the uncertainty of staying once it has happened was not shown. `docs/archive/ANALYSIS_CURRENT.md` §6: the Monte Carlo should be conditional on the known incident, not draw incidents from yearly priors.
 
 **Non-goals**: a second issuer failing with the first (Pharos common-mode groups: next, it needs the mates' addresses, not their names); calibrating the draw on past markdowns (the registry states the judgement); borrower defaults (only a markdown's size is drawn).
 

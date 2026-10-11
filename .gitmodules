@@ -28,3 +28,24 @@
 [submodule "docs/external/fx-protocol/fx-protocol-contracts"]
 	path = docs/external/fx-protocol/fx-protocol-contracts
 	url = https://github.com/AladdinDAO/fx-protocol-contracts
+[submodule "docs/external/sky/usds"]
+	path = docs/external/sky/usds
+	url = https://github.com/sky-ecosystem/usds
+[submodule "docs/external/sky/spells-mainnet"]
+	path = docs/external/sky/spells-mainnet
+	url = https://github.com/sky-ecosystem/spells-mainnet
+[submodule "docs/external/sky/dss-exec-lib"]
+	path = docs/external/sky/dss-exec-lib
+	url = https://github.com/sky-ecosystem/dss-exec-lib
+[submodule "docs/external/sky/sky-protocol-info"]
+	path = docs/external/sky/sky-protocol-info
+	url = https://github.com/sky-ecosystem/sky-protocol-info
+[submodule "docs/external/sky/executive-votes"]
+	path = docs/external/sky/executive-votes
+	url = https://github.com/sky-ecosystem/executive-votes
+[submodule "docs/external/sky/dss-lite-psm"]
+	path = docs/external/sky/dss-lite-psm
+	url = https://github.com/sky-ecosystem/dss-lite-psm
+[submodule "docs/external/sky/dss"]
+	path = docs/external/sky/dss
+	url = https://github.com/sky-ecosystem/dss

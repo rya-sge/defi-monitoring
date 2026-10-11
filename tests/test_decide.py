@@ -78,3 +78,57 @@ def test_exit_when_de_levering_leaves_the_tail_unsurvivable():
         verdict(p, sim(el=0.1, cvar99=1.0), QUOTE, depeg_mean=0.08, resimulate=lambda q: sim(el=0.05)).verdict
         == "REDUCE"
     )
+
+
+# --- the priors: oracle exploits counted once (D232), Morpho Blue's core prior (D233)
+
+
+def test_oracle_exploits_are_counted_by_the_oracle_layer_only():
+    import json as _json
+
+    from riskdep import clock, priors
+    from riskdep import sources as S
+    from riskdep.discover import REGISTRY
+
+    clock.set_as_of(_json.loads((S.SNAPSHOT_DIR / "as_of.json").read_text())["as_of"])
+    st = priors.hack_stats(S.Fetcher("offline"))
+    assert st["oracle_moved"] == {"Lending": 3, "Yield Aggregator": 1}
+    p, note = priors.exploit_p_year(st, "morpho-blue", "Lending")
+    assert p == pytest.approx(st["tier_rate"][2]) and "not applied (isolated markets" in note
+    assert REGISTRY["protocols"]["morpho-blue"]["isolated_markets"]
+    p_pendle, note_pendle = priors.exploit_p_year(st, "pendle-v2", "Yield")
+    assert p_pendle < p and "× category 'Yield'" in note_pendle
+
+
+def test_recent_hacks_weigh_more():
+    """D234 (K17): with a two-year half-life, the window's weighted protocol-years are 2.38, not 5."""
+    import json as _json
+    import math
+
+    from riskdep import clock, priors
+    from riskdep import sources as S
+
+    clock.set_as_of(_json.loads((S.SNAPSHOT_DIR / "as_of.json").read_text())["as_of"])
+    st = priors.hack_stats(S.Fetcher("offline"))
+    assert st["years"] == pytest.approx((1 - 0.5**2.5) * 2 / math.log(2))
+    assert st["weight"]({"date": clock.now()}) == 1 and st["weight"]({"date": clock.now() - 2 * 365 * 86400}) == 0.5
+
+
+def test_pt_stress_shrinks_to_maturity():
+    """D236 (K15): the measured +9.79-point spike moves a 47-day PT about 1.1 %, a one-year PT about 8.5 %."""
+    from riskdep import propagate as PG
+
+    assert PG.pt_stress(0.05, 47 / 365, 0.098) == pytest.approx(0.0114, abs=5e-4)
+    assert PG.pt_stress(0.05, 1.0, 0.098) == pytest.approx(0.0854, abs=5e-4)
+    assert PG.pt_stress(0.05, 0.0, 0.098) == 0
+
+
+def test_a_synthetic_dollar_can_collapse():
+    """D237 (K5): the collapse is a loss of backing every oracle sees, near total."""
+    from riskdep import simulate
+
+    assert simulate._as_shocks({"issuer_collapse": 0.8, "issuer_hack": 0.3}) == {"issuer_hack": 0.8}
+    from riskdep.discover import REGISTRY
+
+    c = next(v for v in REGISTRY["issuers"].values() if v["symbol"] == "sUSDe")["depeg"]["collapse"]
+    assert c["p_year"] == 0.02 and c["severity"]["a"] / (c["severity"]["a"] + c["severity"]["b"]) > 0.8

@@ -154,3 +154,59 @@ def test_the_briefs_own_pt_loop_as_a_pocket(tmp_path):
     assert r["shocks"] == ["sUSDe −8%"] and "in 1 pocket(s)" in r["headline"]
     with pytest.raises(ValueError):
         VB.parse({"vaults": [{"kind": "borrow", "market": "0x12"}]})
+
+
+THREE = ROOT / "examples" / "brief-three-shapes.json"
+
+
+def test_a_pt_pocket_needs_its_pendle_market_and_amount():
+    """D222: a PT held without a borrow."""
+    ok = VB.parse({"weighting": "pocket", "vaults": [{"kind": "pt", "market": "0x" + "ab" * 20, "amount": 5}]})
+    assert ok.vaults[0].kind == "pt" and ok.vaults[0].amount == 5
+    for bad in ({"kind": "pt", "market": "0x12", "amount": 5}, {"kind": "pt", "market": "0x" + "ab" * 20}):
+        with pytest.raises(ValueError):
+            VB.parse({"weighting": "pocket", "vaults": [bad]})
+
+
+def test_the_three_shapes_under_one_shock(tmp_path):
+    """sUSDe −8 % with an 11 % unwind: the loop loses 78 % of its pocket and exits; the same PT held without a borrow
+    loses 8 %, less than the cost of leaving, and stays."""
+    args = ["analyze", "--book", str(THREE), "--shock", "token=sUSDe:0.08", "--exit-cost", "0.11"]
+    assert cli.main([*args, "--out", str(tmp_path)]) == 0
+    lines = {ln["name"]: ln for ln in json.loads((tmp_path / "book-incident.json").read_text())["lines"]}
+    loop, held = lines["PT-sUSDe loop on Morpho (the brief's example)"], lines["PT-sUSDe held, no borrow"]
+    assert loop["verdict"] == "EXIT" and loop["loss_usd"] == pytest.approx(776_708, rel=1e-3)
+    assert held["verdict"] == "STAY" and held["loss_usd"] == pytest.approx(80_000, rel=1e-3)
+
+
+def test_value_at_risk_gathers_the_book(tmp_path):
+    """D227: the mixed book under a Binance loss: 1M at risk in one pocket, 407k expected, the worst cases drawn, and
+    leaving it costs 110k against 407k saved."""
+    args = ["analyze", "--book", str(MIXED), "--shock", "venue=Binance:0.5", "--exit-cost", "0.11", "--conditional"]
+    assert cli.main([*args, "--out", str(tmp_path)]) == 0
+    v = json.loads((tmp_path / "book-incident.json").read_text())["value_at_risk"]
+    assert v["exposure_usd"] == pytest.approx(1_000_000) and v["pockets_hit"] == 1 and v["pockets"] == 10
+    assert v["loss_usd"] == pytest.approx(407_431, rel=1e-3) and v["p95_usd"] < v["p99_usd"] < v["exposure_usd"]
+    assert v["leave_cost_usd"] == pytest.approx(110_000) and not v["loss_is_whole_vaults"]
+
+
+def test_value_at_risk_counts_markets_beyond_the_book_once(tmp_path, capsys):
+    """A PT-trUSD markdown hits no market of RockawayX USDC Yield, but costs a sibling market's lenders 416k USDC."""
+    vault = "0xE0181090c22579B6A217f1522cbf8c9f1F0C1965"
+    assert (
+        cli.main(["analyze", "--vault", vault, "--shock", "token=PT-trUSD-26NOV2026:0.30", "--out", str(tmp_path)]) == 0
+    )
+    out = capsys.readouterr().out
+    assert (
+        "VALUE AT RISK" in out and "beyond the book: the lenders of 1 other market(s)" in out and "416,159 USDC" in out
+    )
+
+
+def test_value_at_risk_over_the_api():
+    from fastapi.testclient import TestClient
+
+    from riskdep.api import app
+
+    body = {"example": "rockawayx-ethereum", "shocks": ["token=strUSD:0.30"]}
+    v = TestClient(app).post("/api/incident", json=body).json()["book"]["value_at_risk"]
+    assert v["loss_is_whole_vaults"] and v["p95_usd"] is None and v["pockets_hit"] == 2

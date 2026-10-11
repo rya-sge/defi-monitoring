@@ -102,6 +102,40 @@ def sell_pt(pool: Pool, pt_in: float) -> tuple[float, float] | None:
     return out, (math.log(e) * YEAR / pool.t if e > 1 else 0.0)
 
 
+def price_fall(pool: Pool, pt_in: float) -> float:
+    """D238, pure: the PT's price fall in the pool after a sale of `pt_in` (the rate a TWAP oracle reads); at its 96 %
+    cap, the largest sale it accepts is counted."""
+    q = min(pt_in, max_sale(pool) * (1 - 1e-9))
+    r = sell_pt(pool, q) if q > 0 else None
+    return 1 - math.exp(-(r[1] - pool.last_ln_rate) * pool.t / YEAR) if r else 0.0
+
+
+def cascade(pool: Pool, sale: float, seized_at, rounds: int = 20) -> dict:
+    """D238, pure: liquidations feed the pool's price. A first sale of `sale` PT moves the price; the liquidations at
+    that fall seize collateral (`seized_at(fall)` → PT, cumulative) that liquidators sell into the pool, which moves it
+    further, until nothing new is sold or the pool accepts no more (96 %): what is beyond stays with the liquidators."""
+    cap = max_sale(pool) * (1 - 1e-9)
+    sold = min(sale, cap)
+    fall = price_fall(pool, sold)
+    steps = [fall]
+    seized = 0.0
+    for _ in range(rounds):
+        seized = seized_at(fall)
+        want = min(sale + seized, cap)
+        if want <= sold * (1 + 1e-9) + 1:
+            break
+        sold, fall = want, price_fall(pool, want)
+        steps.append(fall)
+    return {
+        "fall": fall,
+        "steps": steps,
+        "seized_pt": seized,
+        "sold_pt": max(0.0, sold - min(sale, cap)),
+        "unsold_pt": max(0.0, sale + seized - sold),
+        "capped": sold >= cap * (1 - 1e-6),
+    }
+
+
 def max_sale(pool: Pool) -> float:
     """D207, pure: the largest PT sale the pool accepts (its proportion reaches 96 %)."""
     return MAX_PROPORTION * (pool.total_pt + pool.total_asset) - pool.total_pt

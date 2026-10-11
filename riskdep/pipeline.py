@@ -363,15 +363,68 @@ def ethena_snapshot(mode: str = "offline"):
     return ethena.load(_outside_fetcher("ethena", mode))
 
 
+def sky_snapshot(mode: str = "offline"):
+    """D223: Sky's core at the recorded block (fixtures/replay/sky/meta.json) offline; at the head, saved, in `record`
+    and `refresh`; at the head, not saved, `live`."""
+    from . import sky
+
+    rdir = REPLAY_DIR / "sky"
+    if mode in ("record", "refresh"):
+        f = S.Fetcher("refresh", rdir)
+        block = int(S.rpc(S.Fetcher("direct"), "eth_blockNumber", []), 16) - 2
+        rdir.mkdir(parents=True, exist_ok=True)
+        (rdir / "meta.json").write_text(json.dumps({"block": block}, indent=1))
+    elif mode == "live":
+        f = S.Fetcher("direct")
+        block = int(S.rpc(f, "eth_blockNumber", []), 16) - 2
+    else:
+        if not (rdir / "meta.json").exists():
+            return None
+        f, block = S.Fetcher("offline", rdir), json.loads((rdir / "meta.json").read_text())["block"]
+    return sky.load(f, block)
+
+
+def incident_words(info: dict) -> str:
+    """D227: a venue or Sky incident in a few words, with the markdown it becomes."""
+    parts = []
+    for x in info["losses"]:
+        share = x["lost_usd"] / x["exposed_usd"] if x["exposed_usd"] else 0.0
+        if "venue" in x:
+            parts.append(f"{x['venue']} loses {share:.0%} of USDe's backing there")
+        else:
+            parts.append(f"Sky's {x['source']} loses {share:.0%}")
+    tokens = "USDe and sUSDe" if any("venue" in x for x in info["losses"]) else "USDS, DAI and sUSDS"
+    return f"{'; '.join(parts)} → {tokens} −{info['markdown']:.2%}"
+
+
 def venue_shocks(items: list[str] | None, mode: str, target: str) -> tuple[list[str], dict | None]:
     """D220: `venue=<exchange>:<loss>` replaced by the USDe markdown it leaves once the reserve fund absorbed what it
     can: `issuer_depeg=<markdown>` for `analyze` (`target` "position"), `token=` markdowns of USDe and sUSDe for a
     vault or a book. Returns (the shocks, the venue loss or None). Raises ValueError (unknown venue, no Ethena data)."""
     from . import ethena as ET
+    from . import sky as SK
 
+    rest, skies = SK.parse_sky(items)
+    if skies:
+        # D226: a loss on one of Sky's sources, after its surplus and its debt auctions, marks USDS, DAI and sUSDS down
+        if target == "position":
+            raise ValueError("sky=<source>:<loss> applies with --vault or --book: the analyze position is not on USDS")
+        snap = sky_snapshot(mode)
+        if snap is None:
+            raise ValueError("a Sky incident needs Sky's core: no recording under fixtures/replay/sky/")
+        losses = [SK.sky_loss(snap, s, v) for s, v in skies]
+        m = min(0.99, sum(x["markdown"] for x in losses))
+        info = {"losses": losses, "markdown": m, "text": "; ".join(x["text"] for x in losses)}
+        if m <= 0:
+            raise ValueError(info["text"])
+        rest += [f"token=USDS:{m}", f"token=sUSDS:{m}", f"token=DAI:{m}"]
+        items = rest
+        sky_info = info
+    else:
+        sky_info = None
     rest, venues = ET.parse_venue(items)
     if not venues:
-        return list(items or []), None
+        return list(items or []), sky_info
     snap = ethena_snapshot(mode)
     if snap is None:
         raise ValueError("a venue incident needs Ethena's backing: no recording under fixtures/replay/ethena/")
@@ -384,6 +437,8 @@ def venue_shocks(items: list[str] | None, mode: str, target: str) -> tuple[list[
         rest += [f"token=USDe:{m}", f"token=sUSDe:{m}"]
     else:
         raise ValueError(info["text"])
+    if sky_info:
+        info["text"] = sky_info["text"] + "; " + info["text"]
     return rest, info
 
 
@@ -417,6 +472,7 @@ def vault_graph(vault: str) -> dict | None:
     finally:
         clock.set_as_of(as_of)
     GR.annotate_shared(g)  # D215: a hit's feed read by other markets too
+    GR.annotate_roles(g, S.Fetcher("offline", rdir), block)  # D245: what holds each role
     return {"nodes": list(g.nodes.values()), "edges": g.edges, "block": block}
 
 
@@ -472,7 +528,7 @@ def incident(
 
     incidents = run_all(parsed)
     borrows, names = [], {}
-    pockets = [v for v in book.vaults if v.kind == "borrow"]
+    pockets = [v for v in book.vaults if v.kind in ("borrow", "pt")]
 
     def run_borrows(scaled):
         return [borrow_pocket(v, scaled, book.weighting, horizon, mode, exit_cost, venue)[0] for v in pockets]
@@ -484,21 +540,77 @@ def incident(
     result = vault_book.aggregate(book, parsed, incidents, borrows, names)
     if venue:
         result.notes.insert(0, venue["text"])
+        for inc in incidents:
+            inc.notes.insert(0, venue["text"])
     if conditional:
         conditional_distribution(book, parsed, incidents, result, run_all, borrows, run_borrows)
+    # D227, after the draw it reports; a venue or Sky incident is named by what it is, with the markdown it becomes
+    event = incident_words(venue) if venue else None
+    result.value_at_risk = vault_book.value_at_risk(result, incidents, event)
     return VaultIncidentResult(book, incidents, result)
 
 
+def after_incident(
+    vault: str,
+    since: int,
+    at: int | None,
+    shocks: list[str],
+    user: str | None = None,
+    mode: str = "offline",
+    exit_cost: float | None = None,
+    horizon: float = 30.0,
+):
+    """D230: a vault after an incident that began at block `since`: landed, unrealised, pending, and the verdict on
+    what is still at risk (`after.run`). Offline from `fixtures/replay/after-<vault>-<since>-<at>/`, or, when `at` is
+    `since`, from the vault's incident recording at that block; `record` reads through the archive route and saves;
+    `live` reads now. Raises ValueError (bad shocks), FileNotFoundError (no recording), `sources.CacheMiss`."""
+    from . import after
+
+    shocks, _ = venue_shocks(shocks, mode, "vault")
+    parsed = vault_incident.parse_shocks(shocks)
+    if any(k != "token" for k, *_ in parsed):
+        raise ValueError("after an incident, give the markdown as token=<collateral>:<fall> (a default has no price)")
+    v = vault.lower()
+    if mode == "offline":
+        inc = REPLAY_DIR / f"incident-{v}"
+        if at is None or at == since:
+            if not (inc / "meta.json").exists():
+                raise FileNotFoundError(f"no recording of {vault}: record it with --since {since} --record")
+            block = json.loads((inc / "meta.json").read_text())["block"]
+            if since != block:
+                raise FileNotFoundError(
+                    f"no recording of {vault} at block {since} (its incident recording is at {block})"
+                )
+            return after.run(S.Fetcher("offline", inc), v, since, since, user, parsed, exit_cost, horizon)
+        rdir = REPLAY_DIR / f"after-{v}-{since}-{at}"
+        if not rdir.exists():
+            raise FileNotFoundError(f"no recording in {rdir.name}: run once with --record")
+        return after.run(S.Fetcher("offline", rdir), v, since, at, user, parsed, exit_cost, horizon)
+    direct = S.Fetcher("direct")
+    at = at or int(S.rpc(direct, "eth_blockNumber", []), 16) - discover.REGISTRY["watch"]["confirmations"]
+    f = S.Fetcher("refresh", REPLAY_DIR / f"after-{v}-{since}-{at}") if mode == "record" else direct
+    with S.routed_rpc(S.archive_url()):  # the block `since` is past what the free RPCs serve
+        return after.run(f, v, since, at, user, parsed, exit_cost, horizon)
+
+
 def borrow_pocket(v, parsed, weighting: str, horizon: float, mode: str, exit_cost: float | None, venue=None):
-    """D177–D178: a Morpho Blue borrow in a book (the brief's PT loop). A token shock that names its collateral or the
-    collateral's underlying is, for the position, a loss of backing every oracle sees (`issuer_hack`); the incident
-    module of `analyze --shock` gives its loss and its exit cost. Offline from the analyze snapshot."""
+    """D177–D178: a Morpho Blue borrow in a book (the brief's PT loop), or D222 a PT held without a borrow (`kind`
+    "pt": its Pendle market, sized to the pocket's amount at the PT's price). A token shock that names its collateral
+    or the collateral's underlying is, for the position, a loss of backing every oracle sees (`issuer_hack`); the
+    incident module of `analyze --shock` gives its loss and its exit cost. Offline from the analyze snapshot."""
     f = S.Fetcher("offline") if mode == "offline" else S.Fetcher("direct")
     as_of = clock.as_of()
     if mode == "offline":
         clock.set_as_of(json.loads((S.SNAPSHOT_DIR / "as_of.json").read_text())["as_of"])
     try:
-        pos = discover.discover_morpho_position(f, v.address, v.depositor)
+        if v.kind == "pt":
+            price = discover.discover_pt_holding(f, v.address, 1.0).pt_price_usd
+            units = v.amount / price if price else 0.0
+            pos = discover.discover_pt_holding(f, v.address, units)
+            where = {"pendle_market": v.address, "pt_amount": units}
+        else:
+            pos = discover.discover_morpho_position(f, v.address, v.depositor)
+            where = {"market": v.address, "user": v.depositor}
         names = {
             x.lower()
             for x in (pos.collateral_symbol, pos.collateral_address, pos.underlying_symbol, pos.underlying_address)
@@ -520,9 +632,7 @@ def borrow_pocket(v, parsed, weighting: str, horizon: float, mode: str, exit_cos
             return line, shown
         # D220: a venue's loss of USDe backing is a depeg the oracle's class decides on, as in `analyze`
         event = "issuer_depeg" if venue else "issuer_hack"
-        res = analyze(
-            f, market=v.address, user=v.depositor, horizon=horizon, paths=2000, shocks={event: fall}, venue=venue
-        )
+        res = analyze(f, **where, horizon=horizon, paths=2000, shocks={event: fall}, venue=venue)
         inc = res.incident
         line = vault_book.borrow_line(
             label, weighting, v.amount, pos.equity_usd, inc.loss_usd, inc.exit_cost_usd, exit_cost, horizon, True

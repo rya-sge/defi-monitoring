@@ -1,5 +1,8 @@
 # Scenarios and breakeven probabilities
 
+> **Figures updated 2026-10-11 (D232–D237, GAP K3, K4, K5, K15, K17).** Oracle exploits are counted by the oracle layer only; Morpho Blue's core prior drops the Lending multiplier; hacks are weighted by age (half-life 2 years), which puts the top band at 3.29 %/yr; a synthetic dollar can collapse (2 %/yr, near total); the PT's stress in a depeg follows its time to maturity (a measured +9.79-point yield spike) instead of ×1.5. The demo's expected loss over 30 days is now **6,327 USD** (it was 6,265), its CVaR99 502,576 USD, the stress it should survive 9.2 % (was 12.2 %); the worked figures below were computed before, and their reasoning is unchanged.
+
+
 This document details point 4.2 of `docs/analysis/comparison_team.md`: how `analyze` decides today from estimated probabilities, why the teammates question that, and how named scenarios with a **breakeven probability** would complement it. Every number comes from the offline demo position (a Morpho Blue borrower using PT-sUSDE-26NOV2026 as collateral, data as of 2026-10-10) and was computed with the tool's own loss function, `propagate.loss()`. A [learn section](#learn-what-you-need-to-understand) at the end explains the concepts used.
 
 ## Contents
