@@ -1,12 +1,14 @@
 """Incident mode (plan 2026-10-10-incident-mode): a known incident's impact, timing and verdict; the alert link."""
 
 import json
+import math
 from pathlib import Path
 
 import pytest
 
 from riskdep import cli, clock, decide, discover, pipeline, scenario
 from riskdep import oracle_class as OC
+from riskdep import pendle_amm as PA
 from riskdep import sources as S
 from riskdep.borrower import BorrowMarket, BorrowState
 from riskdep.rules import Alert
@@ -168,28 +170,31 @@ def test_demo_borrow_rate_spike_and_pt_yield(tmp_path, capsys):
     assert r["verdict"] == "STAY" and r["after_switch"] is not None and "PT price −3.15%" in " ".join(r["path"])
 
 
-# --- the pool move (D204)
+# --- the pool move (D204, D211)
 
 
 def test_pool_move_pure(demo):
+    """A thin pool, a year from expiry: the sale that liquidates is found, and the yield rise reprices the PT."""
     _, pos = demo
-    curve = [[100.0, 1.0], [200.0, 0.98], [400.0, 0.90]]
-    assert scenario.pool_fall(curve, 300) == pytest.approx(0.06)
-    assert scenario.sale_for_fall(curve, 0.06) == pytest.approx(300) and scenario.sale_for_fall(curve, 0.2) is None
-    rise = scenario.yield_rise(pos, 0.01)
-    assert scenario.pt_fall(pos, {"pt_yield": rise}) == pytest.approx(0.01)
+    pool = PA.Pool("m", 1, 0, 1_000_000.0, 2_000_000.0, 20.0, PA.YEAR, 0.0, 0.0, math.log(1.05), 1.0)
+    rise, m = scenario.pool_move(pos, pool, 0.2)
+    assert rise > 0 and 0 < m["pool_fall"] < m["liquidation_fall"]
+    assert m["liquidating_sale_usd"] is not None and m["liquidating_sale_usd"] > m["sold_usd"]
+    assert scenario.pool_move(pos, pool, 5)[1]["beyond_pool"]
     with pytest.raises(ValueError):
         scenario.parse_shocks(["pool_move=6"])
 
 
 def test_demo_pool_move_cannot_reach_the_liquidation(tmp_path, capsys):
-    """47 days from maturity, the largest sale the pool routes moves the PT 0.70 %, short of the 5.16 % that
-    liquidates the position."""
+    """47 days from maturity, the largest sale the demo's pool accepts (2.69M USD, its PT share at 96 %) moves the PT
+    0.87 %, short of the 5.16 % that liquidates the position."""
     assert cli.main(["analyze", "--demo", "--shock", "pool_move=0.5", "--out", str(tmp_path)]) == 0
     inc = json.loads((tmp_path / "report.json").read_text())["incident"]
     m = inc["pool_move"]
-    assert m["pool_fall"] == pytest.approx(0.00064, abs=1e-4) and m["liquidating_sale_usd"] is None
-    assert m["refused_above_usd"] == pytest.approx(5_730_000) and not inc["liquidated"] and inc["verdict"] == "STAY"
+    assert m["pool_fall"] == pytest.approx(0.0048, abs=2e-4) and m["liquidating_sale_usd"] is None
+    assert (
+        m["max_sale_usd"] == pytest.approx(2_686_000, rel=1e-3) and not inc["liquidated"] and inc["verdict"] == "STAY"
+    )
     assert "short of the 5.16% that liquidates the position" in capsys.readouterr().out
 
 

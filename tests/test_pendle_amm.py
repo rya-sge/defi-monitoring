@@ -44,4 +44,9 @@ def test_the_reusd_pool_behind_the_oracle(tmp_path, capsys):
     assert p["model_sale"] / p["pt_sold"] == pytest.approx(1, abs=0.03)
     assert p["model_asset_out"] / p["asset_out"] == pytest.approx(1, abs=0.01)
     assert p["capacity_at_first"] < 0.01 * p["seized_pt"]
+    # D210: from the sale alone, the oracle falls 2.36 % and the same borrowers are liquidated, none missed
+    assert p["sale_fall"] == pytest.approx(0.0236, abs=5e-4)
+    for m in json.loads((tmp_path / "backtest-pt-reusd-2026-08-25.json").read_text())["markets"]:
+        s = m["from_sale"]
+        assert s["positions"] == m["realised_positions"] and s["missed"] == 0 and s["extra"] == 0
     assert "came back to the markets as free liquidity" in capsys.readouterr().out

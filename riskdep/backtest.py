@@ -14,6 +14,7 @@ any later run replay offline with no key.
 
 from __future__ import annotations
 
+import math
 from dataclasses import asdict, dataclass, field
 
 from eth_abi import decode
@@ -55,6 +56,8 @@ class MarketBacktest:
     extra_defended: list[str] = field(default_factory=list)  # repaid or added collateral: safe at the low by the end
     left_debt: float = 0.0  # D197: debt of the rest, left liquidatable at the window's end, loan units
     left_dust: int = 0  # of which positions below `backtest.dust_debt`: not worth a liquidator's gas
+    # D210: the same prediction from the sale alone: the oracle fall the pool's math gives, not the observed one
+    from_sale: dict | None = None
 
 
 @dataclass
@@ -71,6 +74,9 @@ class PoolCheck:
     model_asset_out: float | None
     capacity_at_first: float  # the PT the pool still accepted at the first liquidation (its proportion at 96 %)
     seized_pt: float  # the collateral the liquidations seized, PT
+    sale_fall: float | None = (
+        None  # D210: the PT price fall the sold PT gives in the pool's math, from the state before
+    )
 
     def text(self) -> list[str]:
         out = [
@@ -83,6 +89,11 @@ class PoolCheck:
                 f"{self.model_asset_out:,.0f} ({self.model_sale / self.pt_sold - 1:+.1%} and "
                 f"{self.model_asset_out / self.asset_out - 1:+.1%} against the chain)"
             )
+        if self.sale_fall is not None:
+            out.append(
+                f"from the sale alone: {self.pt_sold:,.0f} PT into the pool as it stood before moves the PT's price "
+                f"{self.sale_fall:.2%}; the oracle's TWAP passes that on once the move has held its window"
+            )
         out.append(
             f"the squeeze: the liquidations seized {self.seized_pt:,.0f} PT, and the pool accepted only "
             f"{self.capacity_at_first:,.0f} more at the first liquidation: liquidators held the rest or found other buyers"
@@ -94,6 +105,8 @@ def pool_check(before: PA.Pool, first: PA.Pool, seized_pt: float) -> PoolCheck:
     """D208, pure."""
     sale = PA.sale_for_apy(before, first.implied_apy)
     out = PA.sell_pt(before, sale) if sale else None
+    sold = first.total_pt - before.total_pt
+    moved = PA.sell_pt(before, sold) if sold > 0 else None
     return PoolCheck(
         before.market,
         before.implied_apy,
@@ -104,6 +117,7 @@ def pool_check(before: PA.Pool, first: PA.Pool, seized_pt: float) -> PoolCheck:
         out[0] if out else None,
         PA.max_sale(first),
         seized_pt,
+        1 - math.exp(-(moved[1] - before.last_ln_rate) * before.t / PA.YEAR) if moved else None,
     )
 
 
@@ -133,6 +147,13 @@ class Backtest:
                 f"{m.predicted_debt:>15,.0f} / {m.realised_repaid:<15,.0f} {m.predicted_bonus:>11,.0f} / "
                 f"{m.realised_bonus:<10,.0f} {m.predicted_bad_debt:>7,.0f} / {m.realised_bad_debt:<7,.0f} {u}"
             )
+            if m.from_sale:
+                s = m.from_sale
+                out.append(
+                    f"      from the sale alone: oracle {-s['oracle_fall']:+.2%}, {s['positions']} positions "
+                    f"({s['missed']} liquidated but not predicted, {s['extra']} predicted but not liquidated), "
+                    f"{s['debt']:,.0f} {u} liquidatable"
+                )
             if m.missed or m.extra:
                 left = len(m.extra) - len(m.extra_later) - len(m.extra_defended)
                 out.append(
@@ -239,6 +260,12 @@ def run(f: S.Fetcher, name: str) -> Backtest:
         raise ValueError(f"no liquidation in blocks {lo}–{hi} of {name}")
     before = blocks[0] - BT["lead_blocks"]
     markets = B.discover_markets(f, ep["markets"], before)
+    pool = None
+    if ep.get("pendle_market"):
+        # D208: the pool the oracle's TWAP reads, rebuilt from its state before the episode and at the first liquidation
+        pb, pf = PA.read(f, ep["pendle_market"], before), PA.read(f, ep["pendle_market"], blocks[0])
+        seized = sum(e[3] for evs in events.values() for e in evs) / 10**pf.decimals
+        pool = pool_check(pb, pf, seized)
     out = []
     for mid, m in markets.items():
         borrowers = sorted(
@@ -253,6 +280,25 @@ def run(f: S.Fetcher, name: str) -> Backtest:
         mb = compare(
             info, 10**m.loan_decimals, tr.positions.get(mid, {}), tr.totals.get(mid, (0, 0)), p0, prices, events[mid]
         )
+        if pool and pool.sale_fall is not None:
+            # D210: the oracle at the pool's fall instead of its observed low, every other input the same
+            low = int(p0 * (1 - pool.sale_fall))
+            s = compare(
+                info,
+                10**m.loan_decimals,
+                tr.positions.get(mid, {}),
+                tr.totals.get(mid, (0, 0)),
+                p0,
+                {0: low},
+                events[mid],
+            )
+            mb.from_sale = {
+                "oracle_fall": s.oracle_fall,
+                "positions": s.predicted_positions,
+                "debt": s.predicted_debt,
+                "missed": len(s.missed),
+                "extra": len(s.extra),
+            }
         if mb.extra:
             # D197: why the extra ones were not liquidated in the window: later, or defended by their borrower
             end = MR.Tracker({mid: info})
@@ -274,12 +320,6 @@ def run(f: S.Fetcher, name: str) -> Backtest:
             ]
             mb.left_debt, mb.left_dust = sum(left), sum(1 for d in left if d < BT["dust_debt"])
         out.append(mb)
-    pool = None
-    if ep.get("pendle_market"):
-        # D208: the pool the oracle's TWAP reads, rebuilt from its state before the episode and at the first liquidation
-        p0, p1 = PA.read(f, ep["pendle_market"], before), PA.read(f, ep["pendle_market"], blocks[0])
-        seized = sum(e[3] for evs in events.values() for e in evs) / 10**p1.decimals
-        pool = pool_check(p0, p1, seized)
     notes = [
         ep["source"],
         "the prediction is the liquidation model alone, at the oracle's lowest price of the episode"

@@ -16,7 +16,7 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import clock, crosscheck, decide, discover, priors, scenario, simulate, vault_book, vault_incident
+from . import clock, crosscheck, decide, discover, pendle_amm, priors, scenario, simulate, vault_book, vault_incident
 from . import sources as S
 from .decide import Decision
 from .discover import Position
@@ -217,25 +217,13 @@ def stressed_exit(f: S.Fetcher, pos, curve, drop: float, cost_now: float) -> dic
 
 
 def pool_move_shocks(f: S.Fetcher, pos, shocks: dict[str, float]) -> tuple[dict[str, float], dict]:
-    """D204: a sale into the PT's Pendle pool, measured on a ladder of real pool-only quotes (no aggregator: the
-    oracle's TWAP reads the pool), turned into the implied-yield rise the `pt_yield` channel prices."""
+    """D204, D211: a sale into the PT's Pendle pool, priced by the pool's math on its state at the position's block
+    (`pendle_amm`; recorded through the archive route), turned into the implied-yield rise the `pt_yield` channel
+    prices."""
     if not pos.pendle_market or not pos.amm_liquidity_usd:
         raise ValueError("pool_move needs a Pendle PT position with a known pool liquidity")
-    x = shocks["pool_move"]
-    sizes = sorted({*discover.ladder_sizes(pos.amm_liquidity_usd), round(x * pos.amm_liquidity_usd, -3)})
-    usd_per_unit = pos.collateral_usd / pos.collateral_units if pos.collateral_units else 0.0
-    ladder, refused = discover.quote_ladder(
-        f,
-        pos.pendle_market,
-        pos.collateral_address,
-        pos.underlying_address,
-        pos.collateral_decimals,
-        usd_per_unit,
-        False,
-        sizes,
-    )
-    curve, _ = discover.marginal_curve(ladder, 0.0)
-    rise, moved = scenario.pool_move(pos, curve, sizes[len(ladder)] if refused else None, x)
+    block = int(S.rpc(f, "eth_blockNumber", []), 16)
+    rise, moved = scenario.pool_move(pos, pendle_amm.read(f, pos.pendle_market, block), shocks["pool_move"])
     rest = {k: v for k, v in shocks.items() if k != "pool_move"}
     rest["pt_yield"] = rest.get("pt_yield", 0.0) + rise
     moved["implied_yield_rise"] = rise

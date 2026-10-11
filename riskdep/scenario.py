@@ -17,10 +17,9 @@ import copy
 import math
 from dataclasses import asdict, dataclass, field
 
-import numpy as np
-
 from . import decide
 from . import oracle_class as OC
+from . import pendle_amm as PA
 from . import sources as S
 from .discover import REGISTRY, Position, morpho_lif
 from .propagate import LossBreakdown, loss
@@ -351,68 +350,53 @@ def stressed_exit(cost_now: float, out: dict[float, int], small: float, ahead: f
     }
 
 
-def pool_fall(curve: list[list[float]], sold_usd: float) -> float:
-    """D204, pure: the pool's PT price fall after a sale of `sold_usd`, from `discover.marginal_curve` (the marginal
-    price after each step, relative to spot); past the ladder's end, its last point."""
-    if not curve:
-        return 0.0
-    xs, fs = [c[0] for c in curve], [c[1] for c in curve]
-    return 1 - float(np.interp(sold_usd, xs, fs))
-
-
-def sale_for_fall(curve: list[list[float]], fall: float) -> float | None:
-    """D204, pure: the smallest sale that moves the pool's price down by `fall`; None if the ladder never gets there."""
-    prev = (0.0, 0.0)
-    for s, f in curve:
-        if 1 - f >= fall:
-            (s0, d0), d1 = prev, 1 - f
-            return s0 + (s - s0) * (fall - d0) / (d1 - d0) if d1 > d0 else s
-        prev = (s, 1 - f)
-    return None
-
-
-def yield_rise(pos: Position, fall: float) -> float:
-    """D204, pure: the implied-yield rise that gives the PT's price `fall` (the inverse of `pt_fall`)."""
-    years = pos.days_to_maturity / 365
-    if fall <= 0 or years <= 0:
-        return 0.0
-    return (1 + pos.implied_apy) * ((1 - min(fall, 0.99)) ** (-1 / years) - 1)
-
-
-def pool_move(pos: Position, curve: list[list[float]], refused_above: float | None, x: float) -> tuple[float, dict]:
-    """D204, pure: a sale of `x` times the pool's liquidity into the PT's Pendle pool, as the implied-yield rise the
-    `pt_yield` channel prices (the oracle's TWAP, a meta-oracle's switch, the liquidation), with what it costs the seller
-    and the sale that would liquidate the position through a price-tracking oracle."""
-    liq = pos.amm_liquidity_usd or 0.0
+def pool_move(pos: Position, pool: PA.Pool, x: float) -> tuple[float, dict]:
+    """D204, D211, pure: a sale of `x` times the pool's liquidity of the PT into its Pendle pool, priced by the pool's
+    own math (`pendle_amm`, the rate the oracle's TWAP reads; the router's limit orders left out), as the implied-yield
+    rise the `pt_yield` channel prices; with the sale that would liquidate the position through a price-tracking
+    oracle, or the largest sale the pool accepts and its fall."""
+    usd_per_pt = pos.collateral_usd / pos.collateral_units if pos.collateral_units else 0.0
+    liq, cap = pos.amm_liquidity_usd or 0.0, PA.max_sale(pool)
     sold = x * liq
-    fall = pool_fall(curve, sold)
+    q = min(sold / usd_per_pt if usd_per_pt else 0.0, cap * (1 - 1e-9))
+    ln0, years = pool.last_ln_rate, pool.t / PA.YEAR
+
+    def fall_of(pt: float) -> float:
+        r = PA.sell_pt(pool, pt)
+        return 1 - math.exp(-(r[1] - ln0) * years) if r else 0.0
+
+    moved = PA.sell_pt(pool, q)
+    fall, top = fall_of(q), fall_of(cap * (1 - 1e-9))
     ld = pos.liquidation_drop
-    liquidating = sale_for_fall(curve, ld) if ld else None
-    return yield_rise(pos, fall), {
+    need = PA.sale_for_apy(pool, math.exp(ln0 - math.log(1 - ld) / years) - 1) if ld and years > 0 else None
+    liquidating = need * usd_per_pt if need is not None else None
+    beyond = sold > cap * usd_per_pt
+    return (math.exp(moved[1]) - math.exp(ln0) if moved else 0.0), {
         "sold_usd": sold,
         "pool_liquidity_usd": liq,
         "pool_fall": fall,
         "liquidation_fall": ld,
         "liquidating_sale_usd": liquidating,
-        "beyond_ladder": bool(curve) and sold > curve[-1][0],
-        "refused_above_usd": refused_above,
+        "beyond_pool": beyond,
+        "max_sale_usd": cap * usd_per_pt,
+        "pool_block": pool.block,
         "text": (
             f"a sale of {sold:,.0f} USD of PT into its Pendle pool ({x:g}× its liquidity) "
             + (
-                f"leaves the pool's price {fall:.2%} lower (Pendle quotes)"
-                if not (curve and sold > curve[-1][0])
-                else "is more than the pool routes: counted as its largest routed sale"
+                f"leaves the pool's price {fall:.2%} lower (the pool's math at block {pool.block:,})"
+                if not beyond
+                else "is more than the pool accepts: counted as its largest sale"
             )
             + (
                 f"; a price-tracking oracle liquidates the position after a sale of {liquidating:,.0f} USD"
                 if liquidating
-                else f"; the largest sale the pool routes ({curve[-1][0]:,.0f} USD) moves it {1 - curve[-1][1]:.2%}, short "
-                f"of the {ld:.2%} that liquidates the position"
-                if curve and ld
-                else "; no sale the pool can route liquidates the position"
+                else f"; the largest sale the pool accepts ({cap * usd_per_pt:,.0f} USD, its PT share at 96 %) moves "
+                f"it {top:.2%}, short of the {ld:.2%} that liquidates the position"
+                if ld
+                else ""
             )
-            + (f"; Pendle refuses a sale of {refused_above:,.0f} USD" if refused_above else "")
-            + "; the move must hold through the oracle's averaging window, and arbitrage can reverse it first"
+            + "; limit orders the router fills first would absorb part of a sale; the move must hold through the "
+            "oracle's averaging window, and arbitrage can reverse it first"
         ),
     }
 
