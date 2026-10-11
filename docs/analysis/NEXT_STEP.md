@@ -25,9 +25,11 @@ Sizes: **S** about a day, **M** a few days, **L** more.
 | Dependency discovery (30 %) | vault → adapters → markets → borrowers and lenders; the admin surface (feed band, timelock queue, exit gates); siblings, `wraps` edges, oracle classes; Pharos off-chain backing and common-mode groups; feed freshness; protocol TVL concentration | `analyze` (the PT position) does not use the graph; Morpho and Ethereum only; external venues | K19, K24, C5 |
 | Impact estimation (30 %) | one number from `analyze` and `shock` (the engine, with the squeeze and sibling markets); wrapped collateral; borrower default; no-liquidator branch; the PT's yield and rate channels; **backtested** on the 2026-08-25 PT-reUSD liquidations (the same 20 borrowers, debt and incentive within 0.8 %) | the squeeze at a past date; liquidity returned by liquidations; biased exploit priors | K9, K1, K17 |
 | Decision usefulness (25 %) | a verdict given the incident, with its reason; time to impact; breakeven p\*; the conditional distribution of staying against the certain cost of leaving; the brief's ten pockets with an 11 % unwind; Nexus as an outside view | two verdict code paths (a borrow, a vault); no borrow or PT pockets in a book; detection → impact only for borrowers | K21, K20 |
-| Working demo (15 %) | a five-minute path at the top of the README; everything offline from mainnet recordings; an HTTP API (`POST /api/incident`); a web app; the fork crisis demo (`scripts/fork/`); Telegram alerts | the web page for vault and book incidents | — |
+| Working demo (15 %) | a five-minute path at the top of the README; everything offline from mainnet recordings; an HTTP API (`POST /api/incident`); a web incident demo; the fork crisis demo (`scripts/fork/`); Telegram alerts | live detector times and a matching incident propagation trace in the web app | — |
 
 ## 2. What has been built
+
+Frontend incident decisions: `/incident` displays an active-alert demo using the recorded PST −30% impact, one vault selector, clickable vault rows and a right-hand action/chart panel. The real detector's event times and a matching propagation trace remain to be connected; the existing Impact example is a different shock. Nexus needs structured cover terms and policy ownership to become an actionable coverage card. See `FRONT_NEXT.md` and `plan/2026-10-11-front-incident.plan.md`.
 
 | Step | Built | Plan |
 |---|---|---|
@@ -64,7 +66,7 @@ Sizes: **S** about a day, **M** a few days, **L** more.
 | # | Step | Gaps | Size | Builds on |
 |---|---|---|---|---|
 | **A6** | ~~Books mixing borrow and vault pockets, one rule~~ **done** (plan `2026-10-11-mixed-book`); K12 and K13 **done** (plan `2026-10-11-alerts-and-verdict`); the conditional distribution for a borrow **done** (D203); PT holdings without a borrow **done** (D222) | K21, M6 | M | `decide.py`, `vault_book.py`, `conditional.py` |
-| **A5** | The web page for vault and book incidents on `POST /api/incident` (the front end's) | demo | S | `web/` |
+| **A5** | Connect the incident page to live detector times and a matching propagation trace; structured Nexus cover terms and policy ownership | demo | S | `web/`, `POST /api/incident` |
 | B4 | ~~Oracle structure, the rest~~ **done**: the pool move (plan `2026-10-11-pool-move`), constant-price split by kind and drain by class through the engine (plan `2026-10-11-oracle-kinds`) | K7, K8 | M | `oracle_class.py`, `engine.py` |
 | B5 | *Secondary: the priors feed only `analyze --demo`'s ex-ante view; no known-incident answer uses them.* Priors: decayed window, survivorship, two-part depeg, protocol multiplier, the RockawayX issuers; calibrate the conditional draw | K1–K5, K17, K18 | M | `priors.py`, `registry.json` |
 | B6 | ~~The pool at a past date~~ **done** (plan `2026-10-11-pendle-pool`: the pool rebuilt from its state, the sale behind the backtest's fall, the squeeze); left: the engine's squeeze on the rebuilt pool, returned liquidity in vault incidents | K9, K27 | M | `engine.py`, `backtest.py` |
@@ -95,7 +97,7 @@ Sky's backing behind USDS, DAI and sUSDS is read on-chain (plan `2026-10-11-sky`
 
 ### A5. The web page for incidents
 
-`POST /api/incident` serves the vault and book incident (losses, verdict, p\*, the conditional distribution); `POST /api/shock` serves the engine's trace (`api.shockTrace()` calls it outside mock mode, on the committed example by default) and `GET /api/backtest/{episode}` the backtests; no page offers a shock picker or a backtest view yet. A page for the five-minute path. The front end's.
+`POST /api/incident` serves the vault and book incident (losses, verdict, p\*, the conditional distribution); `/incident` displays the recorded PST demo, and live detector times and a matching propagation trace remain to be connected. `POST /api/shock` serves the engine's trace (the Impact page calls it outside mock mode, on the committed example by default) and `GET /api/backtest/{episode}` the backtests; no page offers a shock picker or a backtest view yet. See `FRONT_NEXT.md`.
 
 ## 5. Phase B: the numbers, the rest
 

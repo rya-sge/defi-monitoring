@@ -12,6 +12,7 @@ import os
 import time
 import warnings
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from . import clock
 
@@ -29,7 +30,12 @@ RPC = "https://ethereum-rpc.publicnode.com"
 ETHERSCAN = "https://api.etherscan.io/v2/api"  # needs a key: keys.ini [etherscan] api_key
 
 KEYS_FILE = Path(__file__).resolve().parent.parent / "keys.ini"  # git-ignored; keys.example.ini is the template
-THROTTLE_RETRIES = 6  # HTTP 429 resent after 2, 4 … 12 s: at most ~42 s of waiting before the request fails
+THROTTLE_RETRIES = 6  # HTTP 429 resent after Retry-After, else 2, 4 … 32, 60 s: ~2 min of waiting before it fails
+# A host that refuses for rate gets a gap between requests: PACE_MIN at the first refusal, doubled at each one after (up
+# to PACE_MAX), narrowed by 5 % at each answer and dropped once under PACE_MIN. A burst slows itself down instead of
+# spending its retries against the limit, and a host that never refuses (a paid RPC) is never slowed.
+PACE_MIN, PACE_MAX = 0.05, 2.0
+_hosts: dict[str, list[float]] = {}  # host -> [gap, monotonic time the next request may leave]
 
 # Where a request is sent can differ from the URL it is cached under: RISKDEP_RPC_URL sends the main RPC's requests
 # to another endpoint (a local node or proxy, a paid endpoint with its key) while cache keys, snapshots and replays
@@ -102,8 +108,12 @@ class Fetcher:
 
             target += ("&" if "?" in target else "?") + urlencode(secret)
         last, done, failures, throttled = None, False, 0, 0
+        pace = _hosts.setdefault(urlsplit(target).netloc, [0.0, 0.0])
         while failures < 3 and throttled < THROTTLE_RETRIES:
             try:
+                if not (failures or throttled):  # a resend has already waited
+                    time.sleep(max(0.0, pace[1] - time.monotonic()))
+                pace[1] = time.monotonic() + pace[0]
                 self.network_calls += 1
                 if method == "GET":
                     r = requests.get(target, timeout=60)
@@ -119,8 +129,11 @@ class Fetcher:
                     # reverted, and a recording would keep it
                     throttled += 1
                     last = SourceError(f"rate limited {throttled} time(s), HTTP {r.status_code}")
-                    time.sleep(2.0 * throttled)
+                    pace[0] = min(PACE_MAX, max(PACE_MIN, 2 * pace[0]))
+                    after = getattr(r, "headers", {}).get("Retry-After", "")
+                    time.sleep(float(after) if after.isdigit() else min(60.0, 2.0**throttled))
                     continue
+                pace[0] = 0.95 * pace[0] if 0.95 * pace[0] >= PACE_MIN else 0.0
                 if (
                     r.status_code >= 400
                     and payload is not None

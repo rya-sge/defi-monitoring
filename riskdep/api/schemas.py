@@ -217,6 +217,10 @@ class Report(BaseModel):
         description="The layers the borrower's recorded dependency graph adds: oracle inputs and who can change "
         "them, sibling markets, the collateral's backing and grade, the protocols' share of DeFi (plan 2026-10-11-depth).",
     )
+    incident: dict[str, Any] | None = Field(
+        default=None,
+        description="With `shocks`: the known incident's impact, time to impact, stressed exit and verdict given it.",
+    )
 
 
 class AnalyzeRequest(BaseModel):
@@ -227,14 +231,21 @@ class AnalyzeRequest(BaseModel):
     horizon: float = Field(default=30.0, gt=0, le=365, description="Horizon in days, capped at maturity.")
     paths: int = Field(default=20000, ge=1000, le=200000, description="Monte Carlo paths.")
     live: bool = Field(default=False, description="Fetch from the network instead of the cached snapshot.")
+    shocks: list[str] = Field(
+        default_factory=list,
+        description="As `analyze --shock`: `<event>=<severity>` (e.g. `issuer_depeg=0.08`, `pool_move=1.5`, a sale as a "
+        "multiple of the pool's liquidity) or `venue=<exchange>:<loss>` (Ethena). Adds the incident to the report.",
+        examples=[["pool_move=1.5"]],
+    )
 
 
 class Liquidation(BaseModel):
-    """One borrower: the oracle fall that liquidates it, and its debt (the vault's part, in a vault)."""
+    """One borrower: the oracle fall that liquidates it, its debt and collateral (the vault's part, in a vault)."""
 
     drop: float
     debt_usd: float
-    market: str | None = Field(default=None, description="The borrower's market, in a vault's list.")
+    collateral_usd: float
+    market: str | None = Field(default=None, description="The borrower's market id, in a vault's list.")
 
 
 class MarketSummary(BaseModel):
@@ -242,6 +253,11 @@ class MarketSummary(BaseModel):
     label: str
     lltv: float
     collateral_price_usd: float | None = None
+    collateral_drawdown_1y: float | None = Field(
+        default=None,
+        description="Worst 1-year drawdown of the collateral's USD price (DefiLlama); null without history.",
+    )
+    lif: float
     supply_usd: float
     borrow_usd: float
     liquidity_usd: float
@@ -254,9 +270,46 @@ class Market(MarketSummary):
     liquidations: list[Liquidation]
 
 
+class Feed(BaseModel):
+    label: str
+    freshness: str | None = Field(default=None, description="Last update against the feed's own rhythm (D155).")
+    stale: bool | None = None
+
+
 class VaultMarket(MarketSummary):
     allocation_usd: float
     share_of_vault: float
+    share_of_market: float
+    borrowers: int = Field(description="Borrowers with debt in the market.")
+    top1_share: float | None = Field(description="The largest borrower's share of the market's debt; null with none.")
+    top3_share: float | None = Field(description="The three largest borrowers' share of the market's debt.")
+    oracle_class: str | None = Field(
+        description="price-tracking, constant-price or not classified, from the vault's recorded graph; null without."
+    )
+    feeds: list[Feed] = Field(description="The feeds the market's oracle reads; empty without a recorded graph.")
+
+
+class Holder(BaseModel):
+    address: str
+    assets: float
+    fast: bool | None = Field(description="A contract (reacts fast) or a plain wallet; null when unknown.")
+
+
+class VaultExit(BaseModel):
+    """The vault's exit liquidity at its recorded state (D62–D71), in the vault's asset units."""
+
+    block: int
+    total: float
+    plain: float = Field(description="What a plain withdrawal pays now: idle plus the liquidity market.")
+    forced: float = Field(description="The other markets' unborrowed part, through forceDeallocate.")
+    penalty: float = Field(description="forceDeallocate penalty on the forced part, as a fraction.")
+    public_allocator: float | None = Field(
+        description="The most the Public Allocator lets anyone move out of the vault's liquid markets into one market;"
+        " null when its settings could not be read."
+    )
+    depositor: str | None = Field(description="The largest depositor, whose position is shown.")
+    position: float
+    holders: list[Holder] = Field(description="The vault's holders (first 100), largest first.")
 
 
 class Vault(BaseModel):
@@ -269,6 +322,7 @@ class Vault(BaseModel):
     liquidations: list[Liquidation] = Field(
         description="Every borrower of the vault's markets, its debt weighted by the vault's share of the market."
     )
+    exit: VaultExit | None = Field(description="Exit liquidity from the vault's recording; null without one.")
 
 
 # --- a known incident on a vault or a book of vaults: `vault_incident.VaultIncident` and `vault_book.BookIncident`

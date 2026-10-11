@@ -2,6 +2,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useSearch } from '@tanstack/react-router';
 import { api, EXAMPLE_SHOCK } from './client';
 import type {
+  AlertPage,
   AnalyzeRequest,
   Backtest,
   BacktestSummary,
@@ -10,11 +11,14 @@ import type {
   Health,
   Report,
   ShockRequest,
+  ShockSweep,
+  ShockSweepRequest,
   ShockTarget,
   ShockTrace,
   Target,
   Market,
   Vault,
+  IncidentRequest,
 } from './types';
 
 export const queryKeys = {
@@ -23,6 +27,25 @@ export const queryKeys = {
   targets: ['targets'] as const,
   graph: (query: GraphQuery) => ['graph', query] as const,
 };
+
+export function useBooks() {
+  return useQuery({
+    queryKey: ['books'],
+    queryFn: ({ signal }) => api.books(signal),
+    staleTime: Infinity,
+  });
+}
+
+/** Fixed detected event for the demo; the event feed will supply this request later. */
+export function useIncidentImpact(body: IncidentRequest, enabled = true) {
+  return useQuery({
+    queryKey: ['incident', body],
+    enabled,
+    queryFn: ({ signal }) => api.incident(body, signal),
+    staleTime: Infinity,
+    retry: false,
+  });
+}
 
 export function useHealth() {
   return useQuery<Health>({
@@ -66,6 +89,16 @@ export function useShockTargets(vault: string | undefined) {
   });
 }
 
+export function useShockSweep(body: ShockSweepRequest, enabled = true) {
+  return useQuery<ShockSweep>({
+    queryKey: ['shock-sweep', body],
+    queryFn: ({ signal }) => api.shockSweep(body, signal),
+    enabled,
+    staleTime: Infinity,
+    retry: false,
+  });
+}
+
 export function useBacktests() {
   return useQuery<BacktestSummary[]>({
     queryKey: ['backtests'],
@@ -95,6 +128,17 @@ export function useVault(address: string | undefined) {
     queryFn: ({ signal }) => api.vault(address!, signal),
     enabled: !!address,
     staleTime: 60_000,
+  });
+}
+
+/** Every alert of one watch target, read once; the Alerts page follows them live. */
+export function useAlerts(target: string | undefined) {
+  return useQuery<AlertPage>({
+    queryKey: ['alerts', target],
+    queryFn: ({ signal }) => api.alerts({ target }, signal),
+    enabled: !!target,
+    staleTime: 60_000,
+    retry: false,
   });
 }
 

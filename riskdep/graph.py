@@ -608,7 +608,33 @@ def build_all(f: S.Fetcher, block: int, users: list[str], vaults: list[str], sib
             g.node(n["id"], n["kind"], n["label"], **n["details"])
         for e in part.edges:
             g.edge(e["source"], e["target"], e["rel"], e["amount"], e["unit"], **e["details"])
+    _curators(g, f)
     return g
+
+
+def _curators(g: Graph, f: S.Fetcher) -> None:
+    """Each vault's curator, name and logo, from the Morpho API in one query (optional: the graph draws without)."""
+    vaults = [
+        n["details"]["address"] for n in g.nodes.values() if n["details"].get("actor_type", "").startswith("Vault")
+    ]
+    if not vaults:
+        return
+    try:
+        d = S.morpho(
+            f,
+            """query($a:[String!], $n:Int){
+                vaultV2s(first:$n, where:{address_in:$a, chainId_in:[1]}){ items{ address curators{ items{ name image } } } }
+                vaults(first:$n, where:{address_in:$a, chainId_in:[1]}){ items{ address state{ curators{ name image } } } } }""",
+            {"a": vaults, "n": len(vaults)},
+        )
+        found = [(v["address"], v["curators"]["items"]) for v in d["vaultV2s"]["items"]] + [
+            (v["address"], v["state"]["curators"]) for v in d["vaults"]["items"]
+        ]
+    except (S.SourceError, S.CacheMiss, KeyError, TypeError):
+        return
+    for address, curators in found:
+        if curators and address.lower() in g.nodes:
+            g.nodes[address.lower()]["details"].update(curator=curators[0]["name"], curator_image=curators[0]["image"])
 
 
 def load(

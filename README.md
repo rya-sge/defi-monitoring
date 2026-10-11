@@ -295,7 +295,7 @@ A separate process next to `watch`: it reads the alert files and posts to a priv
 
 ## web: the browser UI
 
-A React single-page app in `web/`, one page per CLI mode: **Vault** (the vault picked in the top bar: total assets, liquidity, its Blue markets by allocation, and the liquidations of their borrowers by collateral price drop — debt per 0.5 % bucket and its running total, weighted by the vault's share of each market), **Market** (one of those markets, opened from the vault's table: supply, borrow, utilization, rate, and the same liquidation chart for its borrowers), **Dependency graph** (the `graph` output in React Flow: shape by role, icon and amount inside each node, arrows; filterable by node kind, searchable, and a selection lights the node's whole upstream and downstream flow and opens a risk panel), **Impact** (a `shock` trace in six tabs — summary tables, the graph with reached nodes ringed, the path behind a loss, the liquidation sales as a Sankey, the losses round by round, a node × round matrix; for now always the committed example, `docs/model/shock-trace-example.json`) and **Alerts** (the `watch` stream, newest first, with level counts and a minimum-level filter).
+A React single-page app in `web/`, one page per CLI mode: **Vault** (the vault picked in the top bar: total assets, liquidity, its Blue markets by allocation, and four candidate charts in tabs, every borrower weighted by the vault's share of its market: the liquidations by collateral price drop — debt per 0.5 % bucket and its running total; the vault's bad debt in % of its assets if every collateral fell together; per market, the fall to the first bad debt beside the collateral's worst 1-year drawdown (DefiLlama); and per market, what the vault can withdraw now against what stays lent), **Market** (one of those markets, opened from the vault's table: supply, borrow, utilization, rate, and the same liquidation chart for its borrowers), **Dependency graph** (the `graph` output in React Flow: shape by role, icon and amount inside each node, arrows; filterable by node kind, searchable, and a selection lights the node's whole upstream and downstream flow and opens a risk panel), **Impact** (a `shock` trace in two tabs — summary tables and the whole graph, reached nodes ringed and the rest greyed out; for now always the committed example, `docs/model/shock-trace-example.json`) and **Alerts** (the `watch` stream, newest first, with level counts and a minimum-level filter).
 
 Tailwind CSS v4 with stock shadcn/ui primitives: a light radius on every control, faint table rules. Colour is reserved for severity — `info`, `warn`, `critical`, `ok` — and is carried by a word, never by a number, so an alert reads the same without it. The one other colour on screen is the dependency graph's six node kinds, which are data and are mirrored from `riskdep/graph.py`. Numbers are set in the UI face with tabular figures; only identifiers (addresses, hashes, market ids) are monospace.
 
@@ -313,6 +313,8 @@ pnpm format       # prettier --write
 
 **The backend.** `riskdep/api/` is a FastAPI app serving the routes below; Vite proxies `/api` to it. With `VITE_USE_MOCKS=false` the hooks hit it for real.
 
+**Incident (`/incident`).** An active-alert demo: PST −30%, occurred 19 minutes ago and detected 16 minutes ago. The event timing and severity are illustrative metadata in `src/mocks/incident.ts`; losses and liquidity come from the recorded RockawayX example through `/api/incident`. One top-bar vault selector stays in sync with fully clickable vault rows; the selected vault's actions, position-loss chart, withdrawal liquidity and propagation summary appear on the right. There is no scenario form or hit-markets table. The backend verdict determines the action; pre-incident breakeven probabilities and Nexus prose are omitted. Policy ownership and incident coverage remain unverified. Regenerate the impact fixtures and vault list with `uv run python scripts/export_incident_fixtures.py`. A real detector must supply occurrence/detection timestamps; a combined Impact view must use a trace for this same incident, rather than the separate Ojo example.
+
 ```bash
 uv run uvicorn riskdep.api:app --reload      # http://127.0.0.1:8000, docs at /docs
 ```
@@ -328,10 +330,10 @@ uv run python -c "import json,riskdep.api as a; print(json.dumps(a.app.openapi()
 | Endpoint | Serves |
 |---|---|
 | `GET /api/health` | `{status, mode, data_as_of}` — the mode chip in the header |
-| `GET /api/vault/{address}` | a Vault V2 read live from the Morpho API: its markets by allocation and their borrowers' liquidations |
+| `GET /api/vault/{address}` | a Vault V2 read live from the Morpho API: its markets by allocation, their borrowers' liquidations and concentration; from the vault's recordings when there are, each market's oracle class and feed freshness and the vault's exit liquidity and holders |
 | `GET /api/market/{market_id}` | a Blue market read live from the Morpho API: its state and every borrower's liquidating fall |
 | `GET /api/report` | the last `analyze` report written to `out/` |
-| `POST /api/analyze` | run `analyze` (market, user, horizon, paths, live) and return the report; writes nothing |
+| `POST /api/analyze` | run `analyze` (market, user, horizon, paths, shocks, live) and return the report, with the incident when shocks are given; writes nothing |
 | `GET /api/books` | the books of vaults shipped in `examples/` |
 | `POST /api/incident/after` | a vault after an incident that began at block `since`: landed, unrealised, pending, and the verdict on what is still at risk (`analyze --vault V --since`) |
 | `POST /api/incident` | a known incident (`shocks` as `analyze --shock`, e.g. `token=PST:0.30`) on `vaults`, an inline `book` or an `example` book: the book's loss, headline and breakeven, and each vault's detail, as `analyze --vault` / `--book` computes them; offline from the recordings unless `live`; writes nothing |
@@ -345,7 +347,7 @@ uv run python -c "import json,riskdep.api as a; print(json.dumps(a.app.openapi()
 | `GET /api/targets` | one entry per `out/watch-*.jsonl`: the watch targets with alerts |
 | `GET /api/alerts?target=&since=&level=&limit=` | alerts after a block cursor; pass the returned `cursor` back as `since` |
 
-**Limits.** Read-only: no wallet, no transaction, no form to launch a run — the Vault, Graph and Alerts pages follow the vault selector of the top bar, one vault at a time: it lists every vault of the last graph and the watched addresses, starts on the first watch target, and only watched targets have alerts, and `POST /api/analyze` is typed and wired in the client but no page offers it. Dark mode follows the system; the `data-theme` override the palette supports has no toggle yet (the graph reads the colour tokens live, so one would need no re-init). Alerts arrive by polling `/api/alerts` every 3 s with a block cursor, not over a socket; a failed poll is surfaced and retried on the next tick. No frontend tests; CI does build `web/` and checks its formatting (`pnpm lint && pnpm build`).
+**Limits.** No wallet or transaction. Incident displays a fixed demo event with recorded impact; its timestamps are illustrative, not live detection. The Vault, Graph and Alerts pages follow the vault selector of the top bar, one vault at a time: it lists every vault of the last graph and the watched addresses, starts on the first watch target, and only watched targets have alerts. Dark mode follows the system; the `data-theme` override the palette supports has no toggle yet (the graph reads the colour tokens live, so one would need no re-init). Alerts arrive by polling `/api/alerts` every 3 s with a block cursor, not over a socket; a failed poll is surfaced and retried on the next tick. No frontend tests; CI does build `web/` and checks its formatting (`pnpm lint && pnpm build`).
 
 ## Layout
 

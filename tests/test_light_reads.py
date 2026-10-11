@@ -222,11 +222,25 @@ def test_a_throttled_batch_is_resent_and_its_errors_never_recorded(monkeypatch, 
     reverted calls, and a recording keeps only the good answer (plan 2026-10-10-sibling-markets, S3)."""
     answers = iter([Resp(429, THROTTLED), Resp(429, THROTTLED), Resp(200, [{"id": 0, "result": "0x2"}])])
     waits = []
+    monkeypatch.setattr(S, "_hosts", {})
     monkeypatch.setattr(S.requests, "post", lambda url, json, timeout: next(answers))
     monkeypatch.setattr(S.time, "sleep", waits.append)
     f = S.Fetcher("refresh", tmp_path)
     assert f.post_json(S.RPC, [BODY]) == [{"id": 0, "result": "0x2"}]
-    assert waits == [2.0, 4.0] and "-32005" not in f._key("POST", S.RPC, [BODY]).read_text()
+    assert waits == [0.0, 2.0, 4.0] and "-32005" not in f._key("POST", S.RPC, [BODY]).read_text()
+    assert S._hosts["ethereum-rpc.publicnode.com"][0] == 0.95 * 2 * S.PACE_MIN  # set, doubled, narrowed once
+
+
+def test_a_retry_after_header_sets_the_wait(monkeypatch, tmp_path):
+    slow = Resp(429, THROTTLED)
+    slow.headers = {"Retry-After": "7"}
+    answers = iter([slow, Resp(200, [{"id": 0, "result": "0x2"}])])
+    waits = []
+    monkeypatch.setattr(S, "_hosts", {})
+    monkeypatch.setattr(S.requests, "post", lambda url, json, timeout: next(answers))
+    monkeypatch.setattr(S.time, "sleep", waits.append)
+    S.Fetcher("direct", tmp_path).post_json(S.RPC, [BODY])
+    assert waits == [0.0, 7.0]
 
 
 def test_throttling_that_does_not_stop_fails_the_request(monkeypatch, tmp_path):

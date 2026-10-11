@@ -17,7 +17,7 @@ eRPC is an open-source RPC proxy. Run it on your machine with the repository's `
 
 riskdep reads everything on-chain through the free publicnode RPC. A `graph` run reads hundreds of contracts, and the borrowers of every market, in batches of up to 200 calls. Under that load publicnode throttles. It answers HTTP 429 with a `Rate limit exceeded` error on every call of the batch.
 
-riskdep now waits and resends a throttled batch: 2, 4, … 12 s, up to 6 times. Nothing is lost, but a long run gets slow. Through eRPC, a throttled call is retried at once on another endpoint, and answers already given are served from a cache.
+riskdep paces its requests per host and waits and resends a throttled batch: its `Retry-After`, else 2, 4, … 32, 60 s, up to 6 times. Nothing is lost, but a long run gets slow. Through eRPC, a throttled call is retried at once on another endpoint, and answers already given are served from a cache.
 
 Measured on 2026-10-10:
 

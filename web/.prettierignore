@@ -1,10 +1,14 @@
 dist/
 node_modules/
 src/mocks/graph.json
+src/mocks/graphs.json
 src/mocks/report.json
 src/mocks/shock-trace.json
 src/mocks/vaults.json
 src/mocks/markets.json
+src/mocks/books.json
+src/mocks/incidents.json
 pnpm-lock.yaml
 src/mocks/shock.json
 src/mocks/backtests.json
+src/mocks/position-incidents.json

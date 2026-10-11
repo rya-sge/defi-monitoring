@@ -1,0 +1,202 @@
+{
+  "issuer_depeg=0.08": {
+    "shocks": {
+      "issuer_depeg": 0.08
+    },
+    "loss_usd": 78684.28605630761,
+    "loss_share_of_equity": 0.15124725922574192,
+    "liquidated": false,
+    "oracle_drop": 0.12,
+    "path": [
+      "depeg \u22128.0%, oracle does not follow the market, 75% recovers"
+    ],
+    "timing": {
+      "seconds": 57600.0,
+      "never": false,
+      "text": "not before 16 h: the primary source does not follow the market; if the two sources diverge by more than 0.75%, a challenge can switch it to the other one after 16 h (the other source is price-tracking)"
+    },
+    "exit_cost_usd": 78945.6861831538,
+    "exit_source": "Pendle swap quote",
+    "verdict": "REDUCE",
+    "reason": "selling part of the collateral costs $1,313 and leaves a loss of $51,016, less than staying ($520,236) or exiting ($78,946), counted after the oracle switch, which leaves 16 h to act",
+    "reduction": {
+      "sell_usd": 1383412.0876864574,
+      "share": 0.3516361797313555,
+      "cost_usd": 1312.7865007816606,
+      "loss_after_usd": 51016.04430257855,
+      "liquidated_after": false,
+      "source": "Pendle swap quote"
+    },
+    "notes": [
+      "the exit cost is today's quote",
+      "oracle mode from its class (meta-oracle), not from the price inference (market-tracking)",
+      "3 sibling market(s) take the same collateral or read the same price: their liquidations at a 10% fall (sUSDe/PYUSD 96,963,152 PYUSD, sUSDe/DAI 964,053 DAI, sUSDe/USDtb 911,976 USDtb) sell into the same market and can deepen the fall"
+    ],
+    "after_switch": {
+      "after": "16 h",
+      "loss_usd": 520236.1117755431,
+      "loss_share_of_equity": 1.0,
+      "liquidated": true,
+      "path": [
+        "depeg \u22128.0%, PT market trough \u221212.0% seen by the oracle, 75% recovers",
+        "liquidated: 100.0% of collateral seized at the oracle price"
+      ]
+    },
+    "pool_move": null,
+    "stressed_exit": {
+      "ahead_usd": 3641000.0,
+      "slippage_now": 0.02200025599028288,
+      "sellable_usd": 393000.0,
+      "cost_usd": null,
+      "slippage_after": 0.3070898071826703,
+      "full_exit": false,
+      "text": "after the incident's liquidations sell 3,641,000 first, Pendle routes only 393,000 more (10% of the position, slippage 30.71%): a full exit is not available, the rest waits for the pool to recover or for maturity; leaving within 16 h comes before them, at today's quote",
+      "counted": false
+    }
+  },
+  "pool_move=1.5": {
+    "shocks": {
+      "pt_yield": 0.07500699906546515
+    },
+    "loss_usd": 0.0,
+    "loss_share_of_equity": 0.0,
+    "liquidated": false,
+    "oracle_drop": 0.008762570924766178,
+    "path": [
+      "implied yield +7.5% pts: PT price \u22120.88%, not seen by the oracle; no liquidation"
+    ],
+    "timing": {
+      "seconds": 57600.0,
+      "never": false,
+      "text": "the PT's market price falls with the yield: not before 16 h: the primary source does not follow the market; if the two sources diverge by more than 0.75%, a challenge can switch it to the other one after 16 h (the other source is price-tracking)"
+    },
+    "exit_cost_usd": 78945.6861831538,
+    "exit_source": "Pendle swap quote",
+    "verdict": "STAY",
+    "reason": "staying loses $0, less than the $78,946 it costs to leave now, counted after the oracle switch, which leaves 16 h to act",
+    "reduction": null,
+    "notes": [
+      "a sale of 5,729,907 USD of PT into its Pendle pool (1.5\u00d7 its liquidity) is more than the pool accepts: counted as its largest sale; the largest sale the pool accepts (2,686,113 USD, its PT share at 96 %) moves it 0.87%, short of the 5.16% that liquidates the position; limit orders the router fills first would absorb part of a sale; the move must hold through the oracle's averaging window, and arbitrage can reverse it first",
+      "the exit cost is today's quote; in the incident the pool may be thinner (docs/analysis/GAP.md K12)",
+      "oracle mode from its class (meta-oracle), not from the price inference (market-tracking)",
+      "3 sibling market(s) take the same collateral or read the same price: their liquidations at a 10% fall (sUSDe/PYUSD 96,963,152 PYUSD, sUSDe/DAI 964,053 DAI, sUSDe/USDtb 911,976 USDtb) sell into the same market and can deepen the fall"
+    ],
+    "after_switch": {
+      "after": "16 h",
+      "loss_usd": 0.0,
+      "loss_share_of_equity": 0.0,
+      "liquidated": false,
+      "path": [
+        "implied yield +7.5% pts: PT price \u22120.88% (0.13 years to maturity), seen by the oracle; held to maturity the PT still redeems at par"
+      ]
+    },
+    "pool_move": {
+      "sold_usd": 5729907.001862951,
+      "pool_liquidity_usd": 3819938.001241967,
+      "pool_fall": 0.00874688480614394,
+      "liquidation_fall": 0.05162164059430607,
+      "liquidating_sale_usd": null,
+      "beyond_pool": true,
+      "max_sale_usd": 2686113.4738031845,
+      "pool_block": 26162046,
+      "text": "a sale of 5,729,907 USD of PT into its Pendle pool (1.5\u00d7 its liquidity) is more than the pool accepts: counted as its largest sale; the largest sale the pool accepts (2,686,113 USD, its PT share at 96 %) moves it 0.87%, short of the 5.16% that liquidates the position; limit orders the router fills first would absorb part of a sale; the move must hold through the oracle's averaging window, and arbitrage can reverse it first",
+      "implied_yield_rise": 0.07500699906546515
+    },
+    "stressed_exit": null
+  },
+  "venue=Binance:0.5": {
+    "shocks": {
+      "issuer_depeg": 0.05387617259065954
+    },
+    "loss_usd": 211960.40878712246,
+    "loss_share_of_equity": 0.4074311720955142,
+    "liquidated": false,
+    "oracle_drop": 0.08081425888598925,
+    "path": [
+      "depeg \u22125.4%, oracle does not follow the market, 0% recovers"
+    ],
+    "timing": {
+      "seconds": 57600.0,
+      "never": false,
+      "text": "not before 16 h: the primary source does not follow the market; if the two sources diverge by more than 0.75%, a challenge can switch it to the other one after 16 h (the other source is price-tracking)"
+    },
+    "exit_cost_usd": 78945.6861831538,
+    "exit_source": "Pendle swap quote",
+    "verdict": "EXIT",
+    "reason": "staying loses $403,965, more than the $78,946 it costs to leave now, counted after the oracle switch, which leaves 16 h to act",
+    "reduction": {
+      "sell_usd": 839321.7320376942,
+      "share": 0.21333909833967718,
+      "cost_usd": 947.0842977578632,
+      "loss_after_usd": 166740.96629276872,
+      "liquidated_after": false,
+      "source": "AMM-depth estimate (quote failed: no cached response for GET https://api-v2.pendle.finance/core/v2/sdk/1/markets/0)"
+    },
+    "notes": [
+      "Binance holds 638M USD of USDe's backing (13.4%); losing 50% of it is 319.0M, of which the reserve fund absorbs 62.1M: USDe and sUSDe are marked down 5.39%; the hedges held there are lost too, leaving that collateral unhedged until they are reopened elsewhere",
+      "the exit cost is today's quote; in the incident the pool may be thinner (docs/analysis/GAP.md K12)",
+      "oracle mode from its class (meta-oracle), not from the price inference (market-tracking)",
+      "3 sibling market(s) take the same collateral or read the same price: their liquidations at a 10% fall (sUSDe/PYUSD 96,963,152 PYUSD, sUSDe/DAI 964,053 DAI, sUSDe/USDtb 911,976 USDtb) sell into the same market and can deepen the fall"
+    ],
+    "after_switch": {
+      "after": "16 h",
+      "loss_usd": 403964.5975771193,
+      "loss_share_of_equity": 0.776502415794255,
+      "liquidated": true,
+      "path": [
+        "depeg \u22125.4%, PT market trough \u22128.1% seen by the oracle, 0% recovers",
+        "liquidated: 96.9% of collateral seized at the oracle price"
+      ]
+    },
+    "pool_move": null,
+    "stressed_exit": null
+  },
+  "oracle=0.1": {
+    "shocks": {
+      "oracle": 0.1
+    },
+    "loss_usd": 478591.43559471844,
+    "loss_share_of_equity": 0.9199504316632439,
+    "liquidated": true,
+    "oracle_drop": 0.09999999999999998,
+    "path": [
+      "oracle misreports \u221210.0%",
+      "liquidated: 98.9% of collateral seized at the oracle price"
+    ],
+    "timing": {
+      "seconds": 0.0,
+      "never": false,
+      "text": "now: the oracle already reports the shocked price; a liquidation can follow in the next block"
+    },
+    "exit_cost_usd": 78945.6861831538,
+    "exit_source": "Pendle swap quote",
+    "verdict": "REDUCE",
+    "reason": "selling part of the collateral costs $889 and leaves a loss of $0, less than staying ($478,591) or exiting ($78,946)",
+    "reduction": {
+      "sell_usd": 1131972.925085547,
+      "share": 0.2877252833622947,
+      "cost_usd": 889.2009919042583,
+      "loss_after_usd": 0.0,
+      "liquidated_after": false,
+      "source": "Pendle swap quote"
+    },
+    "notes": [
+      "the impact is immediate: leaving only helps if it is done before the liquidation lands",
+      "the exit cost is today's quote",
+      "oracle mode from its class (meta-oracle), not from the price inference (market-tracking)",
+      "3 sibling market(s) take the same collateral or read the same price: their liquidations at a 10% fall (sUSDe/PYUSD 96,963,152 PYUSD, sUSDe/DAI 964,053 DAI, sUSDe/USDtb 911,976 USDtb) sell into the same market and can deepen the fall"
+    ],
+    "after_switch": null,
+    "pool_move": null,
+    "stressed_exit": {
+      "ahead_usd": 3641000.0,
+      "slippage_now": 0.02200025599028288,
+      "sellable_usd": 393000.0,
+      "cost_usd": null,
+      "slippage_after": 0.3070898071826703,
+      "full_exit": false,
+      "text": "after the incident's liquidations sell 3,641,000 first, Pendle routes only 393,000 more (10% of the position, slippage 30.71%): a full exit is not available, the rest waits for the pool to recover or for maturity; the incident lands at once, so the verdict's exit and sale assume leaving before the liquidations",
+      "counted": false
+    }
+  }
+}

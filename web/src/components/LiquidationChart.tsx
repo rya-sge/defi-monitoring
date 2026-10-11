@@ -1,3 +1,4 @@
+import { FormattedText } from './FormattedText';
 import { useMemo } from 'react';
 import {
   Bar,
@@ -16,8 +17,7 @@ import { compactUsd, percent, usd } from '../lib/format';
 const STEP = 0.005;
 const MAX = 0.3;
 
-const TOOLTIP =
-  'max-w-[320px] rounded-md border bg-popover p-2 text-[0.82rem] text-popover-foreground tabular-nums shadow-md';
+const TOOLTIP = 'tooltip-surface max-w-80 tabular-nums';
 // No axis line, no tick marks, small faint labels: the bars carry the chart.
 const AXIS = {
   axisLine: false,
@@ -25,22 +25,26 @@ const AXIS = {
   tick: { fontSize: 10, fill: 'var(--muted)', fillOpacity: 0.7 },
 } as const;
 
-type Datum = { drop: number; debt: number; cumulative: number };
+type Datum = { drop: number; debt: number; cumulative: number; badDebt: number | null };
 
 /** Debt liquidated per 0.5 % of oracle fall (bars) and its running total (line), up to a 30 % fall. */
 export function LiquidationChart({
   liquidations,
   price,
+  badDebt,
 }: {
   liquidations: Liquidation[];
   /** The collateral's price, when there is one: the tooltip then shows the liquidating price. */
   price?: number | null;
+  /** The bad debt at a fall, when given: drawn on the running total's axis, both in USD. */
+  badDebt?: (drop: number) => number;
 }) {
   const data = useMemo<Datum[]>(() => {
     const buckets = Array.from({ length: Math.round(MAX / STEP) + 1 }, (_, i) => ({
       drop: i * STEP,
       debt: 0,
       cumulative: 0,
+      badDebt: badDebt ? badDebt(i * STEP) : null,
     }));
     for (const { drop, debt_usd } of liquidations) {
       const bucket = buckets[Math.ceil(drop / STEP - 1e-9)];
@@ -49,7 +53,7 @@ export function LiquidationChart({
     let total = 0;
     for (const bucket of buckets) bucket.cumulative = total += bucket.debt;
     return buckets;
-  }, [liquidations]);
+  }, [liquidations, badDebt]);
 
   return (
     <div>
@@ -65,7 +69,7 @@ export function LiquidationChart({
             dataKey="drop"
             {...AXIS}
             interval={9}
-            tickFormatter={(v: number) => `−${percent(v, 0)}`}
+            tickFormatter={(v: number) => `−${percent(v)}`}
           />
           {/* Two scales on purpose: the running total dwarfs any one bucket. Left = bars, right = line. */}
           <YAxis yAxisId="debt" {...AXIS} tickFormatter={(v: number) => compactUsd(v)} width={62} />
@@ -76,14 +80,12 @@ export function LiquidationChart({
             tickFormatter={(v: number) => compactUsd(v)}
             width={62}
           />
-          <Tooltip
-            content={(props) => <LiqTooltip {...props} price={price} />}
-            cursor={{ fill: 'var(--line)', opacity: 0.3 }}
-          />
+          <Tooltip content={(props) => <LiqTooltip {...props} price={price} />} cursor={false} />
           <Bar
             yAxisId="debt"
             dataKey="debt"
-            fill="var(--muted)"
+            fill="var(--chart-1)"
+            activeBar={false}
             radius={[2, 2, 0, 0]}
             isAnimationActive={false}
           />
@@ -91,11 +93,21 @@ export function LiquidationChart({
             yAxisId="cumulative"
             dataKey="cumulative"
             type="stepAfter"
-            stroke="var(--fg)"
+            stroke="var(--chart-2)"
             strokeWidth={2}
             dot={false}
             isAnimationActive={false}
           />
+          {badDebt ? (
+            <Line
+              yAxisId="cumulative"
+              dataKey="badDebt"
+              stroke="var(--chart-3)"
+              strokeWidth={2}
+              dot={false}
+              isAnimationActive={false}
+            />
+          ) : null}
         </ComposedChart>
       </ResponsiveContainer>
     </div>
@@ -108,13 +120,27 @@ function LiqTooltip({ active, payload, price }: TooltipContentProps & { price?: 
   return (
     <div className={TOOLTIP}>
       <strong>
-        price −{percent(datum.drop, 1)}
-        {price != null ? ` · ${usd(price * (1 - datum.drop), 2)}` : null}
+        <FormattedText>{`Price −${percent(datum.drop)}${price != null ? ` · ${usd(price * (1 - datum.drop), 2)}` : ''}`}</FormattedText>
       </strong>
       <br />
-      {usd(datum.debt)} liquidated here
+      <div className="flex items-center gap-2">
+        <span className="size-2 rounded-full bg-[var(--chart-1)]" />
+        <FormattedText>{usd(datum.debt)}</FormattedText> liquidated here
+      </div>
       <br />
-      {usd(datum.cumulative)} cumulated
+      <div className="flex items-center gap-2">
+        <span className="size-2 rounded-full bg-[var(--chart-2)]" />
+        <FormattedText>{usd(datum.cumulative)}</FormattedText> cumulated
+      </div>
+      {datum.badDebt != null ? (
+        <>
+          <br />
+          <div className="flex items-center gap-2">
+            <span className="size-2 rounded-full bg-[var(--chart-3)]" />
+            <FormattedText>{usd(datum.badDebt)}</FormattedText> bad debt
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }
