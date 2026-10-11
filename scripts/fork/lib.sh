@@ -22,3 +22,19 @@ deploy() {  # deploy <contract path:name> <from> <constructor args…>: prints t
     | awk '/Deployed to/ {print $3}'
 }
 require_fork() { cast chain-id --rpc-url "$R" >/dev/null 2>&1 || fail "no fork at $R: run scripts/fork/start-fork.sh"; }
+
+# demo.sh runs the watch in the background and exports WATCH_LOG: sync_watch waits until the watch has read the fork's
+# head (minus its 2 confirmations), so an act's alerts appear under it. Without WATCH_LOG it does nothing.
+watch_caught_up() {
+  local head last
+  head="$(cast block-number --rpc-url "$R")"
+  last="$(grep -oE '^·[[:space:]]+#[0-9]+–[0-9]+' "$WATCH_LOG" | tail -1 | grep -oE '[0-9]+$' || true)"
+  # before its first batch, the watch has read up to the block in its start-up line ("… · block N")
+  [[ -n "$last" ]] || last="$(grep -m1 -oE '· block [0-9]+' "$WATCH_LOG" | grep -oE '[0-9]+$' || echo 0)"
+  [[ "${last:-0}" -ge $((head - 2)) ]]
+}
+sync_watch() {
+  [[ -n "${WATCH_LOG:-}" ]] || return 0
+  for _ in $(seq 1 90); do watch_caught_up && { sleep 1; return 0; }; sleep 1; done
+  say "(riskdep has not caught up after 90 s; see $WATCH_LOG)"
+}

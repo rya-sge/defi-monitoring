@@ -152,6 +152,7 @@ Anvil fetches the state it needs from an upstream at the fork block, which must 
 
 | Query | Used for | Code |
 |---|---|---|
+| `module=logs&action=getLogs&address=…&topic0=…&topic1=…` | the `Liquidate` and `Borrow` events of a backtest's markets over wide block ranges (paged by 1,000; slimmed to block, time, topics, data, transaction) | `sources.etherscan_logs`, `backtest.py` |
 | `module=contract&action=getsourcecode&address=…` | whether the code behind the `analyze` position's oracle is verified: the implementation of an EIP-1167 clone, or of a proxy Etherscan recognises. A verified oracle drops the ×2 `oracle.unverified_factor` (D68) | `sources.contract_source`, `discover.oracle_verified` |
 | same | the verified contract name of an oracle input that no structural or history rule classifies, matched against `graph.oracle_patterns` (D83); asked only for those inputs | `oracle_class._contract_name` |
 
@@ -182,6 +183,10 @@ Anvil fetches the state it needs from an upstream at the fork block, which must 
 | `/capacity` | each product's yearly price range (`minAnnualPrice`, `maxAnnualPrice`) and its capacity in USDC | `nexus.load`, `vault_incident.py` |
 
 **Recording.** `fixtures/replay/nexus/`, read 2026-10-11. **Limits.** None published; a price of 0 means the product is not sold.
+
+## Archive RPC (Alchemy)
+
+**`https://eth-mainnet.g.alchemy.com/v2/<key>`**, JSON-RPC, keyed: `keys.ini` `[alchemy] alchemy_ethereum_endpoint` (or any archive endpoint in `[rpc] url`). Used only by `backtest --record`, to read state at a past block, which the free publicnode no longer serves. It is a **route**: requests go to it, responses are cached under the public RPC's URL (`sources.routed_rpc`), so no file and no output carries the key, and the replay needs none. **Limits** (free plan, 2026-10-11): `eth_getLogs` over at most 10 blocks, hence events through Etherscan; batches of `eth_call` at a past block work.
 
 ## Scripts loaded by the HTML outputs
 

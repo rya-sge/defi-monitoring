@@ -157,7 +157,19 @@ def main(argv: list[str] | None = None) -> int:
     sh.add_argument("--record", action="store_true", help="save every response under fixtures/replay/graph-<target>")
     sh.add_argument("--replay", action="store_true", help="use a recorded graph, offline")
     sh.add_argument("--out", default=str(Path(__file__).resolve().parent.parent / "out"))
+    bt = sub.add_parser("backtest", help="replay a past incident: the tool's prediction against the on-chain events")
+    bt.add_argument("--episode", default="pt-reusd-2026-08-25", help="an episode of registry.json backtest.episodes")
+    bt.add_argument(
+        "--record",
+        action="store_true",
+        help="read the episode through the archive RPC and the Etherscan key of keys.ini, and save every response "
+        "under fixtures/replay/backtest-<episode>/ (offline otherwise)",
+    )
+    bt.add_argument("--out", default=str(Path(__file__).resolve().parent.parent / "out"))
     args = ap.parse_args(argv)
+
+    if args.cmd == "backtest":
+        return _backtest(ap, args)
 
     if S.FORK:
         # D180–D181: a local fork only; its clock is the fork's, which `anvil_increaseTime` moves ahead of ours
@@ -394,6 +406,35 @@ def main(argv: list[str] | None = None) -> int:
     for c in res.checks:
         print(f"  {c.line}")
     print(f"report: {hp}\njson:   {jp}\nnetwork calls: {f.network_calls}")
+    return 0
+
+
+def _backtest(ap, args) -> int:
+    """`backtest`: plan 2026-10-11-backtest (D161–D164)."""
+    from . import backtest as BK
+
+    if args.episode not in BK.BT["episodes"]:
+        ap.error(f"unknown episode {args.episode!r}: one of {', '.join(BK.BT['episodes'])}")
+    rdir = REPLAY_DIR / f"backtest-{args.episode}"
+    url = S.archive_url() if args.record else None
+    if args.record and not url:
+        ap.error("--record reads past state: put an archive RPC in keys.ini ([rpc] url or [alchemy])")
+    try:
+        with S.routed_rpc(url):
+            res = BK.run(S.Fetcher("refresh" if args.record else "offline", rdir), args.episode)
+    except S.CacheMiss as e:
+        print(f"no recording of this episode: {e}; run once with --record", file=sys.stderr)
+        return 2
+    except S.SourceError as e:
+        print(f"data source error: {e}", file=sys.stderr)
+        return 3
+    for line in res.lines():
+        print(line)
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    jp = out / f"backtest-{args.episode}.json"
+    jp.write_text(json.dumps(res.to_json(), indent=2))
+    print(f"json:   {jp}")
     return 0
 
 

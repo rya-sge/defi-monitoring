@@ -84,7 +84,7 @@ Status checked on 2026-10-11: `keys.ini` exists, is git-ignored and `chmod 600`,
 4. Give it a username ending in `bot`, unique across Telegram, e.g. `riskdep_belem_alerts_bot`.
 5. BotFather answers with the token, of the form `123456789:AAH...` (a number, a colon, about 35 characters). That is the bot's only credential: whoever has it can post as the bot and read its updates.
 
-Optional, in the same chat: `/setdescription` and `/setuserpic` for a cleaner look on screen; `/setjoingroups` → Disable, so nobody can add the bot elsewhere.
+Optional, in the same chat: `/setdescription` and `/setuserpic` for a cleaner look on screen; `/setjoingroups` → Disable, so nobody can add the bot elsewhere. All BotFather commands: `docs/telegram-botfather-commands.md`.
 
 If the token ever leaks (pasted in a chat, committed, shown on the projector): `/revoke` in BotFather, pick the bot, and put the new token in `keys.ini`. The old one stops working at once.
 

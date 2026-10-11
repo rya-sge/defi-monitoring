@@ -910,5 +910,23 @@
       "0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f": "steakhouse-financial"
     },
     "warn_category_min_usd": 1000000000.0
+  },
+  "backtest": {
+    "basis": "D161-D164: a past incident replayed: the markets' borrowers (their Borrow events up to the block before), their positions, the market totals and the oracle price read at that block through an archive RPC (keys.ini), the oracle's lowest price over the liquidation blocks applied as the shock, the liquidation model of market_risk.value predicting what becomes liquidatable, against the Liquidate events. lead_blocks: how far before the first liquidation the 'before' state is read (60 blocks, 12 minutes: the episode's yield spike took nine).",
+    "lead_blocks": 60,
+    "episodes": {
+      "pt-reusd-2026-08-25": {
+        "title": "PT-reUSD liquidations on Morpho, 2026-08-25",
+        "markets": [
+          "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+          "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca"
+        ],
+        "window": [
+          25821306,
+          25842830
+        ],
+        "source": "GAP.md K8: trading in YT-reUSD pushed PT-reUSD's implied yield from about 11 % to over 20 % in nine minutes; the min(TWAP, linear) oracle fell; 33 positions liquidated, no bad debt. 33 Liquidate events confirmed on-chain on 2026-10-11 (blocks 25,829,868 to 25,829,936)."
+      }
+    }
   }
 }

@@ -4,7 +4,16 @@
 
 Needs Foundry (`anvil`, `cast`, `forge`) and the project's `uv` environment. No key: the fork's upstream is `keys.ini [rpc] url` when set, else a keyless archive endpoint.
 
-## Run it
+## One command
+
+```bash
+scripts/fork/demo.sh            # everything, in one terminal: build, fork, watch in the background, acts 0–7, stop
+scripts/fork/demo.sh --record   # the same, recorded to out/video/demo.cast (needs: sudo apt install asciinema)
+```
+
+It builds the contracts, forks mainnet at block 26,165,572, starts `riskdep watch --step 1 --poll 2` on the Belem vault in the background and plays each act; under each act it prints, marked `riskdep ▸`, the alerts the watch raised for it. At the end it stops the watch and the fork. `--manual` waits for Enter between steps (presenting live), `--fast` skips act 1 (the two predictions, ≈ 1.5 min), `--block N` forks elsewhere. The watch's full output is in `out/demo/watch.log`.
+
+## Step by step
 
 ```bash
 (cd scripts/fork && forge build)                  # the two demo contracts
@@ -66,7 +75,8 @@ A time jump (act 6, `alt-fxsave-expiry.sh`) makes RedStone's push feeds stale on
 | `alt-*.sh` | the alternative crises |
 | `src/MGloEuroFeedV2.sol` | act 6's feed implementation: wider band, same writer, own ERC-7201 storage; **not Midas code** |
 | `src/FixedAnswerFeed.sol` | `alt-redstone.sh`'s implementation: a fixed answer; **not RedStone code** |
-| `tapes/*.tape` | [vhs](https://github.com/charmbracelet/vhs) scripts, one per act and one for the offline watch replay → `out/video/`. Not run here (vhs is not installed): install with `go install github.com/charmbracelet/vhs@latest` (needs `ttyd` and `ffmpeg`) |
+| `demo.sh` | the whole demo in one command and one terminal; `--record` wraps it in asciinema |
+| `tapes/*.tape` | [vhs](https://github.com/charmbracelet/vhs) scripts: `demo.tape` runs `demo.sh` in one take, plus one per act and one for the offline watch replay → `out/video/`. Not run here (vhs is not installed): install with `go install github.com/charmbracelet/vhs@latest` (needs `ttyd` and `ffmpeg`) |
 | `foundry.toml` | builds `src/` against the Vault V2 interfaces in `docs/external/morpho/lib/vault-v2` |
 
 The recording `fixtures/replay/fork-belem/` was made on a fresh fork with `crisis-belem.sh`, then `riskdep watch --blocks 32 --step 1 --record --record-as fork-belem`. `tests/test_fork_replay.py` replays it and checks the alert sequence.

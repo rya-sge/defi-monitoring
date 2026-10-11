@@ -7,7 +7,7 @@
 > - **`watch --step 1`** is needed to see the acts one by one in a recording; **`--record-as`** keeps a fork run apart from the real recording.
 > - **Observed against predicted:** 217,286 EURCV realised against 251,761 predicted in act 1. The gap is act 3's early liquidation at 90,000.
 >
-> The alternative crises `alt-redstone.sh`, `alt-pst-mint.sh` and `alt-fxsave-expiry.sh` are scripted; the Pendle pool dump is not. The vhs tapes are written but not run here.
+> One command runs it all: `scripts/fork/demo.sh` (`--record` for a video). The alternative crises `alt-redstone.sh`, `alt-pst-mint.sh` and `alt-fxsave-expiry.sh` are scripted; the Pendle pool dump is not. The vhs tapes are written but not run here.
 
 **Yes, this works.** Anvil (Foundry 1.5.0, already installed in `~/.foundry/bin`) can fork Ethereum mainnet at a fixed block. It can run a crisis there with real contracts and real positions, by impersonating the accounts that can cause it. `riskdep watch` then follows the fork in real time through `RISKDEP_RPC_URL`.
 

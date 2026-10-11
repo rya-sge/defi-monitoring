@@ -82,7 +82,7 @@ Steps of the two earlier versions that are now done, with their plans:
 | B6 | Liquidation cascade with slippage; liquidity returned by liquidations (the no-liquidator branch is done) | K9, K27 | M | curves of held and sibling markets, `exit_liquidity` |
 | B7 | Tail-aware verdict, sampling error shown | K13, K14 | S–M | `simulate.py`, `decide.py` |
 | B8 | Market-price revaluation of loans; the drain as a loss channel | K16 | S–M | `market_risk.py`, `drain.py` |
-| B9 | Backtest the shock engine on the 2026-08-25 PT-reUSD liquidations | K8, K9 | M | `shock`, an archive RPC |
+| B9 | ~~Backtest on the 2026-08-25 PT-reUSD liquidations~~ **done** (plan `2026-10-11-backtest`: same 13 + 7 borrowers, USDC debt and incentive within 0.8 %); left: the squeeze at that date, a second episode | K8, K9 | S | `backtest.py` |
 | C1 | Discovery depth in `analyze`; watch the siblings; other venues | K19, R5, R6 | M | `admin.py`, `siblings.py` |
 | C2 | Feed quality: ~~freshness against the feed's own rhythm~~ **done** (plan `2026-10-11-feed-quality`); left: `FeedStale` in the watches (after the fork demo's `admin.py`), one feed under several markets | K23, R3 | S | `feeds.py`, `admin.py` |
 | C3 | TVL concentration: ~~protocol share of DeFi and of its category~~ **done** (plan `2026-10-11-feed-quality`); left: a collateral's share of its supply held in Morpho | K25 | S | `tvl.py` |

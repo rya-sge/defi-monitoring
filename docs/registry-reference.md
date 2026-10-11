@@ -27,6 +27,7 @@ Rules for editing:
 - [`nexus`](#nexus)
 - [`feeds`](#feeds)
 - [`tvl`](#tvl)
+- [`backtest`](#backtest)
 - [How to add a yield issuer](#how-to-add-a-yield-issuer)
 
 ## `chain`
@@ -261,6 +262,18 @@ TVL concentration of the protocols in a graph (plan `2026-10-11-feed-quality`, D
 | `pt_assets` | slug | `pendle-v2` | the protocol of every Pendle PT |
 | `tokens` | address → slug | Re, Tori, infiniFi, Hastra, NUVA, Midas, Lido, Huma, AUTOfinance, f(x), Steakhouse | the protocol issuing a token; add a token by its address and the slug in `https://api.llama.fi/protocols` |
 | `basis`, `warn_basis` | text | — | why |
+
+## `backtest`
+
+Past incidents replayed (plan `2026-10-11-backtest`, D161–D164). Read by `backtest.py`.
+
+| Key | Unit | Default | What it controls |
+|---|---|---|---|
+| `lead_blocks` | blocks | 60 | the state before is read this long before the first liquidation (12 minutes) |
+| `episodes.<name>` | object | `pt-reusd-2026-08-25` | `title`, `markets` (Blue market ids), `window` (first and last block to search for liquidations), `source` |
+| `basis` | text | — | the method |
+
+**Adding an episode.** Find the markets and a block window around the event, add it, run `backtest --episode <name> --record` once (archive RPC and Etherscan key in `keys.ini`), commit `fixtures/replay/backtest-<name>/`, and pin the result in `tests/test_backtest.py`.
 
 ## How to add a yield issuer
 

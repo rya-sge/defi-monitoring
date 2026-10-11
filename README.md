@@ -34,6 +34,15 @@ What to read in the output:
 | `outside view: Nexus f(x) Protocol cover …` | an outside price to compare that probability with |
 | `Leaving Belem RWA EURCV costs 110,000 USD for sure, against 53,445 saved if the incident comes: stay.` | the brief's ten-pocket example, made explicit |
 
+**Is the number defensible: a backtest.** `uv run python -m riskdep backtest` replays the PT-reUSD liquidations of 2026-08-25 (a Pendle yield spike moved a min(TWAP, linear) oracle; `GAP.md` K8). It reads the state 60 blocks before them, applies the oracle's observed fall, and compares the prediction with the 33 `Liquidate` events:
+
+| Market | Oracle | Positions (pred. / real) | Debt liquidatable / repaid | Liquidation incentive (pred. / real) | Bad debt |
+|---|---|---|---|---|---|
+| PT-reUSD/USDC | −2.45 % | 13 / 13, the same borrowers | 35.46M / 35.19M USDC (−0.8 %) | 927,975 / 920,781 | 0 / 0 |
+| PT-reUSD/USDT | −2.76 % | 7 / 7, the same borrowers | 1.89M / 0.96M USDT (liquidators repaid about half) | 49,378 / 25,015 | 0 / 0 |
+
+The impact given the incident is right to within 1 % where positions were liquidated in full. Not tested: the oracle's fall itself, and the squeeze (the Pendle pool's curve at that date is not served by the quote API). Recorded through an archive RPC (`keys.ini`), it replays offline with no key.
+
 The same runs are served over HTTP (`POST /api/incident`, below). A borrower's view of the brief's PT example: `analyze --demo --shock issuer_depeg=0.08`.
 
 How the system is built (components, data sources, data flow, state, testing): `docs/analysis/ARCHITECTURE.md`.

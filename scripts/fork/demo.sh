@@ -42,8 +42,10 @@ if [[ -n "$RECORD" ]]; then
 fi
 
 LOG="$ROOT/out/demo/watch.log"
+export WATCH_LOG="$LOG"  # crisis-belem.sh waits for the watch at the right moments (lib.sh sync_watch)
 mkdir -p "$ROOT/out/demo"
 : >"$LOG"
+rm -f "$ROOT"/out/demo/watch-*.cursor "$ROOT"/out/demo/watch-*.jsonl  # each demo starts on a fresh fork: no resume
 WATCH_PID="" TAIL_PID=""
 cleanup() {
   [[ -n "$TAIL_PID" ]] && kill "$TAIL_PID" 2>/dev/null || true
@@ -54,7 +56,7 @@ trap cleanup EXIT
 
 # what riskdep prints, as it prints it: alerts only, marked, info kept for the lines that tell the story
 show_watch() {
-  tail -n0 -F "$LOG" 2>/dev/null | stdbuf -oL grep -E --line-buffered '^(CRITICAL|WARN|INFO) ' \
+  tail --pid="$$" -n0 -F "$LOG" 2>/dev/null | stdbuf -oL grep -E --line-buffered '^(CRITICAL|WARN|INFO) ' \
     | stdbuf -oL grep -Ev --line-buffered '^INFO .*(Deallocate|Allocate|shares moved|Your withdraw|Your deposit)' \
     | while IFS= read -r line; do
         case "$line" in
@@ -63,18 +65,6 @@ show_watch() {
           *) printf '\033[2m  riskdep ▸ %s\033[0m\n' "$line" ;;
         esac
       done
-}
-
-# the watch is caught up when its last batch reaches the fork's head minus its 2 confirmations
-caught_up() {
-  local head last
-  head="$(cast block-number --rpc-url "$R")"
-  last="$(grep -oE '^·[[:space:]]+#[0-9]+–[0-9]+' "$LOG" | tail -1 | grep -oE '[0-9]+$' || echo 0)"
-  [[ "${last:-0}" -ge $((head - 2)) ]]
-}
-wait_watch() {
-  for _ in $(seq 1 90); do caught_up && { sleep 1; return; }; sleep 1; done
-  say "(riskdep has not caught up after 90 s; see out/demo/watch.log)"
 }
 
 caption "riskdep — a crisis on a mainnet fork"
@@ -97,12 +87,12 @@ pause
 
 for n in "${ACTS[@]}"; do
   DEMO=1 "$HERE/crisis-belem.sh" --act "$n"
-  wait_watch
+  sync_watch
   pause
 done
 
 caption "End — what riskdep said, by level"
-grep -cE '^CRITICAL ' "$LOG" | xargs -I{} printf '\033[1;31m  %s critical\033[0m\n' {}
-grep -cE '^WARN ' "$LOG" | xargs -I{} printf '\033[33m  %s warn\033[0m\n' {}
+printf '\033[1;31m  %s critical\033[0m\n' "$(grep -cE '^CRITICAL ' "$LOG" || true)"
+printf '\033[33m  %s warn\033[0m\n' "$(grep -cE '^WARN ' "$LOG" || true)"
 say "full log: out/demo/watch.log · alerts as JSON: out/demo/watch-${VAULT,,}.jsonl"
 say "the same run, offline: uv run python -m riskdep watch --vault $VAULT --replay --record-as fork-belem"

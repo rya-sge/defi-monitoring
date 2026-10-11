@@ -107,6 +107,7 @@ act5() {
   say "setReceiveAssetsGate reverts with Abdicated: the curator gave the power up for good"
   say "riskdep's startup said so (ExitGate): what stops the exit here is liquidity, not the curator"
   cast send "$VAULT" "revoke(bytes)" "$data" --from "$CURATOR" --unlocked --rpc-url "$R" >/dev/null
+  mine
 }
 
 act6() {
@@ -120,6 +121,7 @@ act6() {
     "$PROXY_ADMIN" 0 "$data" "$zero" "$salt" "$TIMELOCK_DELAY"
   mine
   say "upgrade of the feed scheduled on the Midas timelock: executable in 48 h — riskdep alerts now, not at execution"
+  sync_watch
   pause
   cast rpc evm_increaseTime "$((TIMELOCK_DELAY + 1))" --rpc-url "$R" >/dev/null
   mine 1
