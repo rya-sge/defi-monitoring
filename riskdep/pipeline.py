@@ -400,7 +400,7 @@ def incident_words(info: dict) -> str:
 
 
 def block_snapshot(name: str, mode: str = "offline"):
-    """D246, D248: an issuer's state read on-chain at one block (`infinifi`, `fx`), recorded under fixtures/replay/<name>/
+    """D246, D248, D250: an issuer's or a bridge's state read on-chain at one block (`infinifi`, `fx`, `bridge`), recorded under fixtures/replay/<name>/
     with its block offline; at the head, saved, in `record` and `refresh`; at the head, not saved, `live`."""
     import importlib
 
@@ -420,19 +420,35 @@ def block_snapshot(name: str, mode: str = "offline"):
 
 
 def issuer_shocks(items: list[str] | None, mode: str, target: str) -> tuple[list[str], list[str]]:
-    """D247, D249: `infinifi=<share of its backing>` through infiniFi's loss waterfall, `fx=<fxusd|usdc|aave>:<loss>`
-    through fxSAVE's NAV components, each as the `token=` markdowns they cause, with their words."""
+    """D247, D249, D251: `infinifi=<share of its backing>` through infiniFi's loss waterfall, `fx=<fxusd|usdc|aave>:<loss>`
+    through fxSAVE's NAV components, `bridge=<token>[:<hours>]` through the bridge's rate limits, each as the `token=`
+    markdowns they cause, with their words."""
+    from . import bridge as BR
     from . import fx as FX
     from . import infinifi as IF
 
-    rest, found = FX.parse(items)
-    if not found:
+    rest, bridges = BR.parse(items)
+    rest, found = FX.parse(rest)
+    if not found and not bridges:
         return rest, []
     if target == "position":
         raise ValueError(
-            "infinifi= and fx= apply with --vault or --book: the analyze position is not on siUSD or fxSAVE"
+            "infinifi=, fx= and bridge= apply with --vault or --book: the analyze position is not on siUSD, fxSAVE, "
+            "PST or etrUSD"
         )
     words = []
+    if bridges:
+        # D251: the unbacked mint a bridge allows within the stop time, as the token's dilution
+        routes = block_snapshot("bridge", mode)
+        if routes is None:
+            raise ValueError("a bridge incident needs its lanes: no recording under fixtures/replay/bridge/")
+        for sym, hours in bridges:
+            m = BR.markdown(routes[sym], hours)
+            words.append(m["text"])
+            if m["markdown"] > 0:
+                # D252: the issuer refuses the forged tokens, so holders stay whole and the markets they borrow from lose
+                minted = m["minted"] if m["minted"] is not None else 1e18
+                rest.append(f"drain={sym}:{minted}:{BR.K['tokens'][sym]['decimals']}")
     for name, comp, v in found:
         snap = block_snapshot(name, mode)
         if snap is None:
@@ -450,7 +466,7 @@ def issuer_shocks(items: list[str] | None, mode: str, target: str) -> tuple[list
             if m["markdown"] > 0:
                 rest.append(f"token=fxSAVE:{min(0.99, m['markdown'])}")
     if not any(x.startswith("token=") for x in rest) and not any(
-        x.split("=")[0] in ("sky", "venue", "borrower") for x in rest
+        x.split("=")[0] in ("sky", "venue", "borrower", "drain") for x in rest
     ):
         raise ValueError("; ".join(words) + ": nothing reaches the markets")
     return rest, words

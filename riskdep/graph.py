@@ -735,9 +735,10 @@ def annotate_shared(g: Graph) -> int:
     return shared
 
 
-def annotate_issuers(g: Graph, infinifi=None, fx=None) -> int:
+def annotate_issuers(g: Graph, infinifi=None, fx=None, bridges=None) -> int:
     """D246, D248: behind siUSD, infiniFi's loss order (the safety buffer, liUSD, then siUSD, then iUSD); behind fxSAVE,
-    what fxSP's NAV is made of (fxUSD, USDC idle and lent on Aave). Returns the nodes drawn."""
+    what fxSP's NAV is made of (fxUSD, USDC idle and lent on Aave). D250: behind a bridged token, its bridge and what
+    bounds an unbacked mint. Returns the nodes drawn."""
     from . import infinifi as IF
 
     drawn = 0
@@ -774,6 +775,19 @@ def annotate_issuers(g: Graph, infinifi=None, fx=None) -> int:
                 )
                 g.edge(nid, x, "NAV made of", round(share * fx.total), "USD")
                 drawn += 1
+        for r in (bridges or {}).values():
+            if addr != r.token:
+                continue
+            x = g.node(
+                f"bridge:{r.symbol}",
+                "External",
+                r.lines()[0],
+                bridge="CCIP" if r.kind == "ccip" else "LayerZero",
+                holders=[f"{', '.join(h.roles)}: {h.label}" for h in r.holders],
+                source="bridge pools and peers read on-chain (D250)",
+            )
+            g.edge(nid, x, "minted by", round(r.supply), r.symbol)
+            drawn += 1
     return drawn
 
 

@@ -49,3 +49,15 @@
 [submodule "docs/external/sky/dss"]
 	path = docs/external/sky/dss
 	url = https://github.com/sky-ecosystem/dss
+[submodule "docs/external/layzerzero/layerzero-v2"]
+	path = docs/external/layzerzero/layerzero-v2
+	url = https://github.com/LayerZero-Labs/layerzero-v2
+[submodule "docs/external/layzerzero/devtools"]
+	path = docs/external/layzerzero/devtools
+	url = https://github.com/LayerZero-Labs/devtools
+[submodule "docs/external/chainlink-ccip/documentation"]
+	path = docs/external/chainlink-ccip/documentation
+	url = https://github.com/smartcontractkit/documentation
+[submodule "docs/external/chainlink-ccip/chainlink-ccip"]
+	path = docs/external/chainlink-ccip/chainlink-ccip
+	url = https://github.com/smartcontractkit/chainlink-ccip

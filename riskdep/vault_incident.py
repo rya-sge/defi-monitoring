@@ -53,7 +53,7 @@ class MarketHit:
     vault_exposure: float = 0.0  # the vault's assets in this market: what the incident puts at risk
     via: str = ""  # D126: empty for the collateral itself; else the wrapping path, e.g. "PT-trUSD → trUSD"
     seen: bool = True  # D127: False when the oracle does not follow a markdown of what the collateral wraps
-    event: str = "markdown"  # "markdown" (a token shock) or "default" (borrowers stop repaying, D130)
+    event: str = "markdown"  # "markdown" (a token shock), "default" (borrowers stop repaying, D130) or "drain" (D252)
     defaulters: list[str] = field(default_factory=list)
     defaulted_debt: float = 0.0  # D130: the defaulters' debt
     exit_route: str | None = None  # D131, D213: the collateral's exit liquidity: none, thin, deep
@@ -268,13 +268,29 @@ def parse_shocks(items: list[str] | None) -> list[tuple[str, str, float, int]]:
     token=<collateral address or symbol>:<fall>              ("token", target, fall, 0)
     borrower=<collateral, market id or all>:<recovery>[:<n>]  ("borrower", target, recovery, n): the n largest
                                                               borrowers of each matching market default, and their
-                                                              collateral is recovered at that fraction of its value"""
+                                                              collateral is recovered at that fraction of its value
+    drain=<collateral>:<tokens>[:<decimals>]                  ("drain", target, tokens, decimals), D252: that many
+                                                              tokens with nothing behind them (a forged bridge mint)
+                                                              are posted at the oracle's price and borrow the free
+                                                              liquidity of each matching market, then are refused"""
     out = []
     for it in items or []:
         name = it.partition("=")[0].strip()
         if name == "token":
             tok, v = parse_token_shocks([it])[0]
             out.append(("token", tok, v, 0))
+            continue
+        if name == "drain":
+            parts = it.partition("=")[2].split(":")
+            try:
+                amount, dec = float(parts[1]), int(parts[2]) if len(parts) == 3 else 18
+            except (IndexError, ValueError):
+                raise ValueError(
+                    f"'{it}': write drain=<collateral>:<tokens>[:<decimals>], e.g. drain=PST:1e6:6"
+                ) from None
+            if len(parts) > 3 or not parts[0] or amount <= 0:
+                raise ValueError(f"'{it}': write drain=<collateral>:<tokens>[:<decimals>], tokens above 0")
+            out.append(("drain", parts[0].strip().lower(), amount, dec))
             continue
         if name != "borrower":
             raise ValueError(
@@ -307,6 +323,8 @@ def describe(shock: tuple, labels: dict[str, str] | None = None) -> str:
     name = (labels or {}).get(target, target)
     if kind == "token":
         return f"{name} −{v:.0%}"
+    if kind == "drain":
+        return f"{v / 1e6:,.1f}M unbacked {name} borrow the free liquidity"
     who = "the largest borrower" if n == 1 else f"the {n} largest borrowers"
     where = "every market" if target == "all" else name
     return f"{who} of {where} default{'s' if n == 1 else ''}, collateral recovered at {v:.0%}"
@@ -508,7 +526,7 @@ def apply_engine(graph: dict, shocks: list[tuple], hits: list[MarketHit], market
             h = MarketHit(mid, markets[mid].label, 0.0, 0, 0.0, 0.0, 0.0, shares.get(mid, 0.0), 0.0, "", "")
             h.via, h.vault_exposure = "the dependency graph (shock engine)", st.markets[mid].vault_assets / unit
             hits.append(h)
-        elif h.event == "default" or h.pharos_exposure:
+        elif h.event in ("default", "drain") or h.pharos_exposure:
             continue
         h.source = "engine"
         h.engine = (
@@ -694,6 +712,7 @@ def run(
     names: dict[str, str] = {}
     pexps: dict[str, float] = {}  # market → share of its collateral's backing the shocked token is (Pharos, D135)
     defaults: dict[str, tuple[float, int]] = {}  # market → (recovery, n), the harshest when several apply
+    drains: dict[str, list] = {}  # D252: token → [raw collateral left to post, the markets it reaches]
     for kind, tok, v, n in shocks:
         for mid, mp in params.items():
             if kind == "borrower" and tok in ("all", mid):
@@ -711,6 +730,11 @@ def run(
                 names.setdefault(tok, found[1])  # an on-chain match names the token better
             else:
                 names[tok] = found[1]
+            if kind == "drain":
+                if found[0]:
+                    continue  # the unbacked tokens are posted as they are, not wrapped
+                drains.setdefault(tok, [int(v * 10**n), []])[1].append(mid)
+                continue
             if kind == "borrower":
                 r0, n0 = defaults.get(mid, (1.0, 0))
                 defaults[mid] = (min(r0, v), max(n0, n))
@@ -725,7 +749,16 @@ def run(
     hits, loss_raw, exposure_raw = [], 0, 0
     direct = [m for m in drops if m in risk.markets and drops[m] > 0 and not vias.get(m)]
     bands = feed_bands(f, graph, direct, block)  # D241: a feed whose floor holds the markdown back
-    for mid in sorted(set(drops) | set(defaults), key=list(params).index):
+    drained: dict[str, int] = {}  # D252: market → loan units borrowed against the unbacked tokens
+    for left, mids in drains.values():
+        for mid in mids:
+            price, lltv = st.markets[mid].oracle_price, params[mid].lltv
+            if mid not in risk.markets or not price or left <= 0:
+                continue
+            take = min(int(left * price // 10**36 * lltv), st.markets[mid].liquidity)
+            drained[mid] = take
+            left -= int(take / lltv * 10**36 // price)
+    for mid in sorted(set(drops) | set(defaults) | set(drained), key=list(params).index):
         if mid not in risk.markets:
             continue  # below one whole token allocated: not followed (D47)
         profile = profiles.get(mid) or scenario.oracle_profile(f, params[mid].oracle, "latest")
@@ -753,6 +786,15 @@ def run(
             vias.get(mid, "") if d else "",
         )
         lu = 10 ** risk.markets[mid].loan_decimals
+        if drained.get(mid):
+            # D252: the unbacked tokens are refused once found, so what they borrowed is the lenders' loss
+            h.event = "drain"
+            h.bad_debt += drained[mid] / lu
+            h.vault_loss = h.bad_debt * h.vault_share
+            h.timing = (
+                "at once: posting the tokens and borrowing is one transaction, and the free liquidity is gone before "
+                "the bridge or the issuer can react; the loss is the lenders' once the tokens are refused"
+            )
         if who:
             h.event, h.defaulters, h.defaulted_debt = "default", who, ddebt / lu
             h.borrowers += len(who)
@@ -830,7 +872,7 @@ def run(
             for h in hits
             for x in [params[h.market_id].collateral_token] + chains.get(params[h.market_id].collateral_token, [])
         ]
-        severity = max((v if k == "token" else 1 - v) for k, _, v, _ in shocks)
+        severity = max((v if k == "token" else 1.0 if k == "drain" else 1 - v) for k, _, v, _ in shocks)
         outside = [NX.outside_line(c, severity) for c in NX.covers(*nexus, tokens)]
     notes = [
         "bad debt is written off only when the positions are liquidated; until then the share price stays at par, "

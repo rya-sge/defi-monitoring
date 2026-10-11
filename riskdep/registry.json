@@ -1313,5 +1313,42 @@
     }
   },
   "tail_exit_budget": 0.9,
-  "tail_exit_budget_basis": "D195 (K13): EXIT when the worst 1 % of outcomes still costs at least this share of equity after the proposed de-lever: reducing does not make the tail survivable. 0.9: a position that loses nearly everything in its worst month even after de-levering should be left; below it, REDUCE stands."
+  "tail_exit_budget_basis": "D195 (K13): EXIT when the worst 1 % of outcomes still costs at least this share of equity after the proposed de-lever: reducing does not make the tail survivable. 0.9: a position that loses nearly everything in its worst month even after de-levering should be left; below it, REDUCE stands.",
+  "bridge": {
+    "basis": "D250-D252: a burn-and-mint bridge mints on Ethereum when a message says the tokens were burnt on another chain; a forged message mints unbacked tokens. CCIP: a pool accepts messages only from its listed remote pools, through an inbound rate limit per chain (TokenPool._consumeInboundRateLimit, RateLimiter.TokenBucket); LayerZero: an OApp only from the peer set for a chain (OAppCore.peers). Pools and peers found on-chain 2026-10-11 (PST's MINTER_ROLE holders through RoleGranted; etrUSD never emitted PeerSet).",
+    "response_hours": 1,
+    "response_basis": "assumption: the time for the lane to be stopped once a forged mint is seen, by the rate-limit admin (a Safe, which must gather its signers) setting the capacity to 0 or by CCIP's risk management network cursing the lane; bridge=<token>:<hours> overrides it",
+    "tokens": {
+      "PST": {
+        "kind": "ccip",
+        "token": "0x22ae3d9a738471f405169af055d31c687087d4c7",
+        "decimals": 6,
+        "pools": [
+          "0xbe776c85fe1f35be8341167a6305230075f30d3d",
+          "0xfd34e1866092f2d422ae77acd242a88bacb123a8"
+        ],
+        "chains": {
+          "124615329519749607": "Solana"
+        }
+      },
+      "etrUSD": {
+        "kind": "layerzero",
+        "token": "0x6f20ae2c98c2d34e6a57f3411f2c5af92e32592d",
+        "decimals": 18,
+        "eids": {
+          "30110": "Arbitrum",
+          "30111": "Optimism",
+          "30184": "Base",
+          "30106": "Avalanche",
+          "30102": "BNB Chain",
+          "30168": "Solana",
+          "30109": "Polygon",
+          "30181": "Mantle",
+          "30183": "Linea",
+          "30332": "Sonic",
+          "30362": "Berachain"
+        }
+      }
+    }
+  }
 }
