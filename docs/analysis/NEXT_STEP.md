@@ -114,7 +114,7 @@ Sky's backing behind USDS, DAI and sUSDS is read on-chain (plan `2026-10-11-sky`
 - **C1. Depth in `analyze` (K19).** The PT report reuses the graph: siblings, the admin surface, Pharos backing, feed freshness, TVL concentration. **M.**
 - **C2+. `FeedStale` (K23).** The freshness rule as a watch alert, with a runbook row; one feed under several markets. After the fork demo's `admin.py`. **S.**
 - **C3+. Supply share (K25).** A collateral's share of its supply held in Morpho markets (`totalSupply` at the recorded block). **S.**
-- **C6. The rest of `ROCK-VAULT-DEP.md` §11.** Done by the fork demo: the exit-gate standing finding, the feed band, the timelock queue. Left: bridges as graph nodes (CCIP for PST, LayerZero for etrUSD); registry entries for issuers, RedStone, Ojo, CCIP; PT expiry in incidents (`alt-fxsave-expiry.sh` scripts it on the fork). **M.**
+- **C6. The rest of `ROCK-VAULT-DEP.md` §11.** Done by the fork demo: the exit-gate standing finding, the feed band, the timelock queue. *Bridges done* (plan `2026-10-11-bridges`, D250–D252: PST's CCIP lanes and limits, etrUSD's LayerZero peers, `bridge=` and `drain=`). Left: registry entries for issuers, RedStone, Ojo, CCIP; PT expiry in incidents (`alt-fxsave-expiry.sh` scripts it on the fork). **M.**
 - **C4. External venues (K24).** *Done for USDe* (plan `2026-10-11-venues`): the exchanges and custodians behind it, the reserve fund, `venue=<exchange>:<loss>`, the funding stress. Left: Vault V2 adapters into non-Morpho venues. **M–L.**
 - **C5. Vault V1, other chains.** A Vault V1 reader; the chain as a parameter. **M–L.**
 

@@ -14,6 +14,7 @@ from . import detect as DT
 from . import drain as DR
 from . import exit_queue as EQ
 from . import feeds as FD
+from . import infinifi as IF
 from . import market_risk as MR
 from . import roles as RL
 from . import sources as S
@@ -207,8 +208,18 @@ def run(opts: Options) -> int:
     except (S.CacheMiss, S.SourceError):
         role_alerts = []
         p.line("  role holders: not checked (not in this recording)")
+    pending = []
+    if any(mp.collateral_token == IF.K["siusd"] for a in view.adapters for mp in a.markets.values()):
+        # D247 (GAPV2 G18): a loss infiniFi knows and has not booked yet, on a collateral the vault lends against
+        try:
+            snap = IF.load(f, state0)
+            al = IF.pending_alert(snap, state0) if snap else None
+            pending = [al] if al else []
+        except (S.CacheMiss, S.SourceError):
+            p.line("  infiniFi pending loss: not checked (not in this recording)")
     for al in (
         startup_findings(view, before)
+        + pending
         + role_alerts
         + vrisk.startup(before, state0)
         + drain_alerts

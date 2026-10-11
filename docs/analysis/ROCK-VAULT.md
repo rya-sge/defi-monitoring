@@ -4,7 +4,7 @@ Source: the Dune dashboard [rockawayxvault/rockawayx-dashboard](https://dune.com
 
 ## 1. Summary
 
-- **33 vaults, $293.6M, 9 venues, 8 chains.** The 25 largest vaults add up to $293.7M, so the 8 rows the page did not show are dust.
+- **33 vaults, $293.6M, 9 venues, 8 chains.** The 25 largest vaults add up to $293.7M. The 8 rows the page did not show at first were added on 2026-10-11 (§2, rows 26–33): together they hold about $42k.
 
   | Venue | TVL |
   |---|---|
@@ -18,9 +18,9 @@ Source: the Dune dashboard [rockawayxvault/rockawayx-dashboard](https://dune.com
   | Midas | $3.4M |
   | Lista (BSC) | $1.3M |
 
-- **The 8 Morpho vaults are all Vault V2, and `riskdep` can read the 7 on Ethereum today.**
+- **14 Morpho vaults: 12 on Ethereum and 1 on Base, all Vault V2, and 1 on Monad (Y10K AUSD, empty, not read).** `riskdep` can read the 12 on Ethereum. The 7 large ones (§3) are analysed; the 5 found later hold about $17k together and are triaged in `GAPV3.md`.
   - Each vault holds one `MorphoMarketV1` adapter, has no Vault V1 underneath, and has nothing idle.
-  - All 8 have the same address as curator and owner: `0xbBacDCFB…f918`.
+  - The 12 on Ethereum checked have the same address as curator and owner: `0xbBacDCFB…f918`.
   - The demo vault of the `graph` command, `0xE018…1965`, is one of them.
 - **The risk sits in the issuers, not in Morpho.** About 98 % of the $99.7M Morpho book lends against RWA, credit or yield tokens from young issuers:
   - Huma, Tori, f(x), Re, Hastra, Midas/Fasanara, infiniFi and Nuva.
@@ -59,8 +59,16 @@ Source: the Dune dashboard [rockawayxvault/rockawayx-dashboard](https://dune.com
 | 23 | Huma USDC | Solana | Kamino | `4QKFoFDz…mpnkCphj` | USDC | $0.6M | 6.8 % | – |
 | 24 | Obligate USDC | Solana | Kamino | `Au2Cg9CN…5ZW` | USDC | $0.05M | 6.5 % | – |
 | 25 | Earn ctUSD | Citrea | Upshift | `0x6849…0BA2` | ctUSD | $0.05M | 0.0 % | – |
+| 26 | Huma USDS | Solana | Kamino | `9XbExNme…VHGU` | USDS | $24.7k | 4.3 % | – |
+| 27 | **RockawayX EUROP** | Ethereum | Morpho V2 | `0x9C57…5F9c` | EURØP | $11.2k | 0.0 % | – |
+| 28 | **RockawayX Midas USDC Prime** (Ethereum) | Ethereum | Morpho V2 | `0xe99A…0B3B` | USDC | $3.5k | 3.8 % | – |
+| 29 | **RockawayX wETH** | Ethereum | Morpho V2 | `0x64C1…9cB9` | WETH | $2.1k | 9.8 % | – |
+| 30 | **Figure USDC Main** | Ethereum | Morpho V2 | `0xd65d…0097` | USDC | $11 | 3.4 % | – |
+| 31 | **RockawayX USDC Prime** (Dune: "RockawayX PRIME USDC") | Ethereum | Morpho V2 | `0x5f82…8e21` | USDC | $10 | 4.5 % | – |
+| 32 | Raiku SOL | Solana | Kamino | `EMyn5A2H…zzf2s` | SOL | $0 | 5.4 % | – |
+| 33 | Y10K AUSD Vault | Monad | Morpho | `0xA2fa…19d6` | AUSD | $0 | 0.0 % | – |
 
-Bold rows are the Morpho vaults detailed in §3. The page's text names Plume, Etherlink and 0G, and DefiLlama adds Monad with $15.0M. No row on the page carries those chains, so they are either in the 8 hidden rows (which add up to almost nothing) or counted by DefiLlama outside this table.
+Bold rows are the Morpho vaults detailed in §3. Rows 26–33 come from the dashboard's second page, read on 2026-10-11; rows 27–31 were then read from the Morpho API on the same day (§3). The Morpho API names row 28 "RockawayX Midas USDC Prime" and row 31 "RockawayX USDC Prime". The page's text names Plume, Etherlink and 0G, and DefiLlama adds Monad with $15.0M. No row on the page carries those chains, so they are either in the 8 hidden rows (which add up to almost nothing) or counted by DefiLlama outside this table.
 
 **Two of them are also Zama confidential vaults** (checked on-chain on 2026-10-11, addresses from `docs/external/docs.zama.org-protocol-docs/confidential-vault/reference/addresses.md`). Zama's Confidential Vault protocol puts a deposit and a redeem batcher and a confidential share token (cShare, ERC-7984) in front of a public Vault V2, so a depositor's amount stays encrypted; batches settle once a day. How `riskdep` could analyse them: `docs/analysis/ZAMA-VAULT.md`.
 
@@ -100,6 +108,14 @@ All 8 are Vault V2, each with a single `MorphoMarketV1` adapter. The Morpho API 
 | **NUVA Ecosystem** ($1.5M) | nvPRIME (Nuva vault on Hastra PRIME) | $1.29M | 86 % | 90 % | $1.3M | `0x9cc1…` → nvPRIME vault rate × PRIME/WYLDS ÷ USDC/USD |
 | | cbBTC | $0.25M | 86 % | 90 % | $337M | `0xA6D6…` |
 | **Midas USDC Prime** (Base, $0.6M) | cbETH, cbBTC, WETH | $0.19M + $0.20M + $0.19M | 86 % | 90 % | blue-chip | Chainlink |
+| **EUROP** ($11.2k, loan asset EURØP `0x8888…5E51`) | wstETH, cbBTC, weETH, WBTC | $2.8k each | 86 % | 0 % | $2.8k each: the vault is each market's only lender | `0xCF3e…`, `0x735C…`, `0x9BfA…`, `0x9DA0…` |
+| **Midas USDC Prime** (Ethereum, $3.5k) | wstETH, cbBTC, WBTC | $1.0k each | 86 % | 90 % | $32.6M, $337M, $128.8M | `0x48F7…`, `0xA6D6…`, `0xDddd…` |
+| **wETH** ($2.1k) | ETH+ (Reserve) | $2.1k | 94.5 % | 99 % | $2.1k: the vault is the only lender | `0x0705…` |
+| | wstETH, weETH, WBTC | $0 (enabled, no allocation) | 96.5 %, 94.5 %, 91.5 % | 83 %, 81 %, 71 % | $86.9M, $14.8M, $0.2M | `0xbD60…`, `0xbDd2…`, `0xc29B…` |
+| **Figure USDC Main** ($11) | PRIME (Hastra) | $11 | 86 % | 90 % | $1.6M | `0x999e…` (as Prime above) |
+| | wstETH, cbBTC, WBTC | $0 (enabled) | 86 % | 90 % | blue-chip | as above |
+| **USDC Prime** ($10) | wstETH | $10 | 86 % | 90 % | $32.6M | `0x48F7…` |
+| | cbBTC, WBTC | $0 (enabled) | 86 % | 90 % | blue-chip | as above |
 
 ### Exposure by issuer (Morpho book, $99.7M)
 

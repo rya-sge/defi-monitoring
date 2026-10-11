@@ -359,7 +359,12 @@ class IncidentRequest(BaseModel):
         description="As `analyze --shock`: `token=<collateral>:<fall>` (an issuer markdown), "
         "`borrower=<collateral, market id or all>:<recovery>[:<n>]` (the n largest borrowers default), "
         "`venue=<exchange>:<loss>` (a share of USDe's backing at that venue lost; Ethena), "
-        "`sky=<source>:<loss>` (a share of a Sky source lost, e.g. `sky=spark:0.2`).",
+        "`sky=<source>:<loss>` (a share of a Sky source lost, e.g. `sky=spark:0.2`), "
+        "`infinifi=<share>` (a loss of infiniFi's backing, through its waterfall), "
+        "`fx=<fxusd|usdc|aave>:<loss>` (a loss on one of fxSAVE's NAV components), "
+        "`bridge=<PST|etrUSD>[:<hours>]` (a forged bridge mint within the bridge's rate limits, posted to borrow), "
+        "`drain=<collateral>:<tokens>[:<decimals>]` (unbacked tokens posted at the oracle's price borrow the free "
+        "liquidity).",
         examples=[["token=PST:0.30"]],
     )
     user: str | None = Field(default=None, description="Depositor address, for every vault without its own.")

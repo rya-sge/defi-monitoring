@@ -22,6 +22,9 @@ Rules for editing:
 - [`watch`](#watch)
 - [`graph`](#graph)
 - [`engine`](#engine)
+- [`bridge`](#bridge)
+- [`infinifi`](#infinifi)
+- [`fx`](#fx)
 - [`sky`](#sky)
 - [`ethena`](#ethena)
 - [`exit_liquidity`](#exit_liquidity)
@@ -227,6 +230,37 @@ The shock engine's propagation rules and settings (plan `2026-10-10-propagation-
 | `basis` | text | — | why |
 
 **Changing a rule.** Prefer a `--rules` file for a study: the registry's rules are the defaults everyone gets. A change here keeps its `basis` honest and is followed by `python3 -m pytest -q tests/test_engine.py`. The drain threshold uses `watch.drain_buy_cost`.
+
+## `bridge`
+
+The bridged collaterals and what bounds a forged mint (D250–D252). Read by `bridge.py`, `graph.py`, `pipeline.py`.
+
+| Key | Unit | Default | What it controls |
+|---|---|---|---|
+| `response_hours` | hours | 1 | the time to stop a lane once a forged mint is seen, an assumption; `bridge=<token>:<hours>` overrides it |
+| `tokens.<symbol>.kind` | `ccip` or `layerzero` | — | how the lanes are read |
+| `tokens.<symbol>.token`, `decimals` | address, int | PST, etrUSD on Ethereum | the token, its supply, and the `drain=` it produces |
+| `tokens.<symbol>.pools`, `chains` | addresses, selector → name | PST's two `BurnMintTokenPool`s, Solana | the CCIP pools read, the chain names shown |
+| `tokens.<symbol>.eids` | LayerZero eid → name | eleven chains | the peers checked |
+| `basis`, `response_basis` | text | — | the sources |
+
+## `infinifi`
+
+infiniFi's loss waterfall (D246–D247). Read by `infinifi.py`, `graph.py`, `watch.py`.
+
+| Key | Unit | Default | What it controls |
+|---|---|---|---|
+| `siusd` | address | siUSD on Ethereum | where every read starts (`yieldSharing()`), and the token an `infinifi=` incident marks down |
+| `basis` | text | — | the loss order and its source lines |
+
+## `fx`
+
+fxSAVE's NAV components (D248–D249). Read by `fx.py` and `graph.py`.
+
+| Key | Unit | Default | What it controls |
+|---|---|---|---|
+| `fxsp`, `usdc` | address | fxSP, USDC on Ethereum | the pool read and its stable token; the strategy is read live |
+| `basis` | text | — | the NAV formula and its source line |
 
 ## `sky`
 
