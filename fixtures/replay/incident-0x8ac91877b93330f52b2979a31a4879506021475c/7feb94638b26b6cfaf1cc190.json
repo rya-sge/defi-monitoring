@@ -1,0 +1,1 @@
+{"method": "GET", "url": "https://aggregator-api.kyberswap.com/ethereum/api/v1/routes?tokenIn=0x22ae3d9a738471f405169af055d31c687087d4c7&tokenOut=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48&amountIn=17570585434336", "body": null, "fetched": "2026-10-11T04:31:20Z", "response": {"code": 0, "message": "successfully", "amountOut": "36402088"}}

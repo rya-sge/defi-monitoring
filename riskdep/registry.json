@@ -362,6 +362,8 @@
   "exit_liquidity": {
     "basis": "KyberSwap aggregator quotes of a sale into USDC on Ethereum, measured 2026-10-11 (docs/analysis/ROCK-VAULT-DEP.md §7). route: none = no route at 0.1M USD, thin = price impact above thin_impact at 1M USD, deep = otherwise. impact: the price impact at each sale size in USD (null: no route). A liquidator who cannot sell the collateral does not liquidate (D131). Re-measure before relying on it; add any token by address.",
     "thin_impact": 0.05,
+    "sizes": [100000, 1000000, 5000000, 20000000],
+    "live_basis": "D212-D214: each hit market's collateral is quoted live on KyberSwap's aggregator into the market's loan token at these sizes (loan units), the slippage measured against the oracle's price; the route at the size the incident liquidates (debt liquidatable x LIF) replaces the hand-measured one below, which stays as the fallback.",
     "tokens": {
       "0x22ae3d9a738471f405169af055d31c687087d4c7": {
         "symbol": "PST",

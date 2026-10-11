@@ -76,7 +76,7 @@ Sizes: **S** about a day, **M** a few days, **L** more.
 | C4, C5 | External venues; Vault V1, other chains | K24, C5 | M–L | registry, `metamorpho-v1.1` |
 | D | Validate on your positions; Slack/Discord/email alerts; infrastructure; execution | — | — | — |
 
-If time is short before the judging: B6's rest (the engine's squeeze on the rebuilt pool). B6's pool at a past block is done: the backtest's oracle fall traces to a 5.4M PT sale, and from that sale alone the model predicts the same liquidated borrowers. B4 and A6's conditional draw for a borrow are done (PT holdings without a borrow are left). C1 is done. `IMPROVEMENT.md` advises against more documentation and against phase D.
+Exit liquidity is now quoted live on KyberSwap (plan `2026-10-11-exit-liquidity`). If time is short before the judging: the demo pass; then B6's rest (the engine's squeeze on the rebuilt pool). B6's pool at a past block is done: the backtest's oracle fall traces to a 5.4M PT sale, and from that sale alone the model predicts the same liquidated borrowers. B4 and A6's conditional draw for a borrow are done (PT holdings without a borrow are left). C1 is done. `IMPROVEMENT.md` advises against more documentation and against phase D.
 
 ## 4. Phase A: the brief's chain, the rest
 

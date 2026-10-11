@@ -360,6 +360,11 @@ class MarketHit(BaseModel):
     defaulters: list[str] = Field(default_factory=list)
     defaulted_debt: float = 0.0
     exit_route: Literal["none", "thin", "deep"] | None = None
+    exit_impact: float | None = Field(
+        default=None, description="Slippage against the oracle selling what the liquidations seize (KyberSwap)."
+    )
+    exit_capacity: float | None = Field(default=None, description="Largest size the aggregator routes, loan token.")
+    exit_source: str = Field(default="", description="KyberSwap (quoted), registry (measured by hand) or empty.")
     no_liquidator_shortfall: float = 0.0
     top1_share: float = 0.0
     top3_share: float = 0.0

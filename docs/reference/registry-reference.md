@@ -224,7 +224,9 @@ How easily a collateral token can be sold on DEXs, per token address (plan `2026
 | Key | Unit | Default | What it controls |
 |---|---|---|---|
 | `basis` | text | — | the source (KyberSwap quotes into USDC on Ethereum, 2026-10-11, `docs/analysis/ROCK-VAULT-DEP.md` §7) and the route rule |
-| `thin_impact` | fraction | 0.05 | above this price impact at 1M USD, the route is `thin` |
+| `thin_impact` | fraction | 0.05 | above this slippage at the size the incident liquidates (live) or at 1M USD (hand-measured), the route is `thin` |
+| `sizes` | loan units | 0.1M, 1M, 5M, 20M | the ladder each hit collateral is quoted at on KyberSwap (D212) |
+| `live_basis` | text | — | D212–D214: the live quote replaces the hand-measured route, which stays as the fallback |
 | `tokens.<address>` | object | PST, AUTO, mGLOeuro, fxSAVE, etrUSD, strUSD, PRIME | `symbol`; `route` (`none`: no route at 0.1M USD; `thin`; `deep`); `impact` by sale size in USD (negative = loss; `null`: no route); optional `note` |
 
 **Adding a token.** Quote a sale of the token into the vault's asset at 0.1M, 1M and 5M USD on an aggregator, and add `"<address in lower case>": {"symbol": …, "route": …, "impact": {…}, "note": "<date, source>"}`.

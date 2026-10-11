@@ -1453,6 +1453,36 @@
             ],
             "title": "Exit Route"
           },
+          "exit_impact": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exit Impact",
+            "description": "Slippage against the oracle selling what the liquidations seize (KyberSwap)."
+          },
+          "exit_capacity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exit Capacity",
+            "description": "Largest size the aggregator routes, loan token."
+          },
+          "exit_source": {
+            "type": "string",
+            "title": "Exit Source",
+            "description": "KyberSwap (quoted), registry (measured by hand) or empty.",
+            "default": ""
+          },
           "no_liquidator_shortfall": {
             "type": "number",
             "title": "No Liquidator Shortfall",

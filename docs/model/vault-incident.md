@@ -268,7 +268,7 @@ Optional providers add context without changing the verdict, except Pharos's off
 | shock engine | second-order liquidations, sibling markets | `docs/model/shock-engine.md` |
 | Zama registry | a confidential depositor's two exits (D174) | `docs/analysis/ZAMA-VAULT.md` |
 
-Each `VaultIncident` also carries notes that qualify the numbers: the share price stays at par until the write-off; a stale feed; a default accrues with no due date; issuer-priced collateral needs a buyer; exit liquidity not measured; the hit market is the vault's liquidity market; the depositor's share of the vault.
+Each `VaultIncident` also carries notes that qualify the numbers: the share price stays at par until the write-off; a stale feed; a default accrues with no due date; issuer-priced collateral needs a buyer; the exit liquidity is the DEX aggregator's only (KyberSwap, quoted live at the size the liquidations seize, plan `2026-10-11-exit-liquidity`), or not available; the hit market is the vault's liquidity market; the depositor's share of the vault.
 
 ## 13. Output: CLI, JSON, API
 
