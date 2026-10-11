@@ -46,6 +46,7 @@ Sizes: **S** about a day, **M** a few days, **L** more.
 | The judge path (`IMPROVEMENT.md` 1.1–2.2) | the brief's ten pockets (`pocket` weighting, `--exit-cost`); README path; a reason on every verdict; the expected loss's sampling interval | `2026-10-11-judge-path` |
 | Fork crisis demo (D3; part of C6) | `scripts/fork/`: the Belem crisis on an anvil fork, alternative crises; `RISKDEP_FORK`; the timelock queue, the feed band and the exit gates in `admin.py`; `test_fork_replay.py` | `2026-10-11-fork-demo` |
 | Feed quality, TVL concentration (most of C2, C3) | each feed's freshness against its own rhythm; each protocol's share of DeFi and of its category | `2026-10-11-feed-quality` |
+| Second backtest: the 2025-10-10 crash (B9+) | `backtest --episode crash-2025-10-10`: six markets, no missed borrower, every over-prediction accounted for | `2026-10-11-backtest-crash` |
 | Backtest (B9) | `backtest`: the 2026-08-25 PT-reUSD liquidations, through an archive RPC, recorded keyless | `2026-10-11-backtest` |
 | Conditional Monte Carlo (A4) | `--conditional`: the loss of staying given the incident, drawn from real incident runs, against the certain cost of leaving | `2026-10-11-conditional` |
 | PT yield and rate channels (B1, B2 as incidents) | `--shock pt_yield=…`, `--shock borrow_rate=…` | `2026-10-11-pt-channels` |
@@ -53,6 +54,7 @@ Sizes: **S** about a day, **M** a few days, **L** more.
 | The brief's book with its PT loop (most of A6) | a borrow pocket in a book (`kind: borrow`), the same verdict rule as a vault pocket; `examples/brief-mixed-book.json` | `2026-10-11-mixed-book` |
 | Zama confidential vaults (Z1–Z3 of `ZAMA-VAULT.md`) | 16 vaults verified; the cShare as a pool; a confidential depositor's two exits in incidents; the hidden layer in `graph` | `2026-10-11-zama` |
 | FeedStale, Zama batcher alerts (Z4), the PT verdict's horizon and tail (K12, K13: B7, part of B3) | `FeedStale`; the day's confidential outflow, instant exits, pauses; EXIT when de-levering leaves the tail unsurvivable; the hold-to-maturity path | `2026-10-11-alerts-and-verdict` |
+| Discovery depth for the PT position (C1) | `analyze` reports the meta-oracle's structure, who can change the tokens, sibling markets, issuer grade and backing, protocol concentration; the incident names the sibling contagion | `2026-10-11-depth` |
 | Push alerts (part of D2) | Telegram (`riskdep notify`, `TELEGRAM_BOT.md`) | — |
 | CI | lint, tests, the OpenAPI contract, the web build | — |
 
@@ -60,23 +62,21 @@ Sizes: **S** about a day, **M** a few days, **L** more.
 
 | # | Step | Gaps | Size | Builds on |
 |---|---|---|---|---|
-| **A6** | ~~Books mixing borrow and vault pockets, one rule~~ **done** (plan `2026-10-11-mixed-book`); K12 and K13 **done** (plan `2026-10-11-alerts-and-verdict`); left: the conditional distribution for a borrow, PT holdings without a borrow | K21, M6 | M | `decide.py`, `vault_book.py`, `conditional.py` |
+| **A6** | ~~Books mixing borrow and vault pockets, one rule~~ **done** (plan `2026-10-11-mixed-book`); K12 and K13 **done** (plan `2026-10-11-alerts-and-verdict`); the conditional distribution for a borrow **done** (D203); left: PT holdings without a borrow | K21, M6 | M | `decide.py`, `vault_book.py`, `conditional.py` |
 | **A5** | The web page for vault and book incidents on `POST /api/incident` (the front end's) | demo | S | `web/` |
-| B4 | Oracle structure, the rest: the pool-move event (the backtest's mechanism), split constant-price, drain priority by class | K7, K8 | M | `oracle_class.py`, `engine.py` |
+| B4 | ~~Oracle structure, the rest~~ **done**: the pool move (plan `2026-10-11-pool-move`), constant-price split by kind and drain by class through the engine (plan `2026-10-11-oracle-kinds`) | K7, K8 | M | `oracle_class.py`, `engine.py` |
 | B5 | *Secondary: the priors feed only `analyze --demo`'s ex-ante view; no known-incident answer uses them.* Priors: decayed window, survivorship, two-part depeg, protocol multiplier, the RockawayX issuers; calibrate the conditional draw | K1–K5, K17, K18 | M | `priors.py`, `registry.json` |
 | B6 | Liquidity returned by liquidations; the squeeze at a past date (the pool's curve from its reserves) | K9, K27 | M | `engine.py`, `backtest.py` |
 | B3 | Stressed exit cost (the hold-to-maturity path is done, plan `2026-10-11-alerts-and-verdict`) | K12 | S | Pendle quotes at several sizes |
-| B9+ | A second backtest episode: USDe at −8 % on 2025-10-10 | K5, K8 | S | `backtest.py` |
 | B1+, B2+ | The rate and yield channels as Monte Carlo layers, with Pendle's and Morpho's history | K10, K11 | S | `simulate.py` |
 | B8 | Loans at the market price; the drain as a loss channel | K16 | S–M | `market_risk.py`, `drain.py` |
-| C1 | Discovery depth in `analyze`: the graph's layers in the PT report | K19 | M | `discover.py`, `graph.py` |
 | C2+ | ~~`FeedStale` in the watches~~ **done**; left: one feed under several markets | K23 | S | `feeds.py` |
 | C3+ | A collateral's share of its supply held in Morpho | K25 | S | `graph.py` |
 | C6 | Bridges as graph nodes, issuer and oracle registry entries, PT expiry in incidents | K19, K23 | M | `graph.py`, registry |
 | C4, C5 | External venues; Vault V1, other chains | K24, C5 | M–L | registry, `metamorpho-v1.1` |
 | D | Validate on your positions; Slack/Discord/email alerts; infrastructure; execution | — | — | — |
 
-If time is short before the judging: **A6's rest, then B4** (the pool move behind the backtest's oracle fall). `IMPROVEMENT.md` advises against more documentation and against phase D.
+If time is short before the judging: **B6** (the Pendle pool at a past block, so the backtest's oracle fall traces to a sale). B4 and A6's conditional draw for a borrow are done (PT holdings without a borrow are left). C1 is done. `IMPROVEMENT.md` advises against more documentation and against phase D.
 
 ## 4. Phase A: the brief's chain, the rest
 
@@ -98,7 +98,7 @@ If time is short before the judging: **A6's rest, then B4** (the pool move behin
 
 ## 5. Phase B: the numbers, the rest
 
-- **B4. The pool-move event (K8).** The backtest replays a known oracle fall; the fall itself came from a trade into a thin Pendle pool moving a TWAP. A `pool_move` event: a trade's impact from Pendle quotes, through the oracle's TWAP window, into the engine. Also: split constant-price (exchange rate, linear discount, issuer-published); `drain.py` by class.
+- **B4. The pool-move event (K8).** *Done for the PT position* (plan `2026-10-11-pool-move`: `--shock pool_move=<x>`, real pool quotes, the liquidating sale); the pool at a past block is B6. The backtest replays a known oracle fall; the fall itself came from a trade into a thin Pendle pool moving a TWAP. A `pool_move` event: a trade's impact from Pendle quotes, through the oracle's TWAP window, into the engine. Also: split constant-price (exchange rate, linear discount, issuer-published); `drain.py` by class. *Done* (plan `2026-10-11-oracle-kinds`): four kinds; a markdown reaches only the kinds that move; the engine drains where the oracle keeps reading.
 - **B5. Priors (K1–K5, K17, K18).** Weight hacks by age and tier them by their TVL at the hack date; a two-part depeg for synthetic dollars; a bounded protocol multiplier (admin powers, Nexus prices); registry entries for the RockawayX issuers; calibrate `conditional` on past markdowns (Pharos depeg events, the hack corpus).
 - **B6. Returned liquidity and the squeeze at a past date (K9, K27).** The debt liquidators repay comes back as free liquidity, which changes what can leave; the Pendle pool's curve rebuilt from its reserves at a block, so the backtest can include the squeeze.
 - **B3. Stressed exit cost (K12).** The exit quote at a stressed pool depth (the hold-to-maturity path is done).

@@ -17,6 +17,8 @@ import copy
 import math
 from dataclasses import asdict, dataclass, field
 
+import numpy as np
+
 from . import decide
 from . import oracle_class as OC
 from . import sources as S
@@ -24,7 +26,8 @@ from .discover import REGISTRY, Position, morpho_lif
 from .propagate import LossBreakdown, loss
 from .vault import _call
 
-EVENTS = ("chain", "issuer_hack", "issuer_depeg", "amm", "oracle", "lending", "pt_yield", "borrow_rate")
+EVENTS = ("chain", "issuer_hack", "issuer_depeg", "amm", "oracle", "lending", "pt_yield", "borrow_rate", "pool_move")
+POOL_MOVE_MAX = 5.0  # pool_move is a sale in multiples of the pool's liquidity, up to the quote ladder's largest
 META_ORACLE = "MetaOracleDeviationTimelock"
 META_GETTERS = [
     "challengeTimelockDuration()",
@@ -50,6 +53,7 @@ class OracleProfile:
     deviation_threshold: float | None = None
     on_primary: bool | None = None  # a meta-oracle reading its primary source
     challenged: bool | None = None
+    constant_kind: str | None = None  # D205: a constant-price oracle's kind (`oracle_class.KINDS`)
     live: OracleProfile | None = None  # a meta-oracle's source in use, classified like any oracle
     other: OracleProfile | None = None  # the source it would switch to
 
@@ -77,6 +81,7 @@ class IncidentResult:
     reduction: dict | None = None
     notes: list[str] = field(default_factory=list)
     after_switch: dict | None = None  # a meta-oracle: the impact once it switches to the source that follows the market
+    pool_move: dict | None = None  # D204: the sale into the PT's pool, the price it leaves, the sale that liquidates
 
     def lines(self) -> list[str]:
         shock = ", ".join(f"{k} {v:.1%}" for k, v in self.shocks.items())
@@ -120,7 +125,9 @@ def parse_shocks(items: list[str] | None) -> dict[str, float]:
             v = float(value)
         except ValueError:
             raise ValueError(f"'{it}': the severity must be a number between 0 and 1") from None
-        if not 0 <= v <= 1:
+        if name == "pool_move" and not 0 < v <= POOL_MOVE_MAX:
+            raise ValueError(f"'{it}': pool_move is a sale as a multiple of the pool's liquidity, above 0, at most 5")
+        if name != "pool_move" and not 0 <= v <= 1:
             raise ValueError(f"'{it}': the severity must be between 0 and 1 (0.10 for 10 %)")
         out[name] = v
     return out
@@ -216,10 +223,12 @@ def time_to_impact(profile: OracleProfile | None, shocks: dict[str, float]) -> T
             )
         return Timing(live.seconds, False, f"{live.text} (through the {side} source); {switch}")
     if p.kind == OC.CONSTANT_PRICE:
+        loss = f"; a loss the issuer records reaches it {OC.MOVES[p.constant_kind]}" if p.constant_kind else ""
         return Timing(
             None,
             True,
-            "never: the oracle does not follow the market, so nobody is liquidated; the loss stays with the lenders",
+            "never: the oracle does not follow the market, so nobody is liquidated; the loss stays with the lenders"
+            + (f" ({p.constant_kind}{loss})" if p.constant_kind else ""),
         )
     if p.twap_s:
         return Timing(
@@ -269,8 +278,10 @@ def oracle_profile(f: S.Fetcher, oracle: str, block="latest") -> OracleProfile:
                 live=live,
                 other=other,
             )
-        cls, basis, base, _, _ = OC.classify_market_oracle(f, oracle, block)
-        return OracleProfile(cls, basis, name, twap_s=_twap(base))
+        cls, basis, base, _, standard = OC.classify_market_oracle(f, oracle, block)
+        return OracleProfile(
+            cls, basis, name, twap_s=_twap(base), constant_kind=OC.oracle_constant_kind(base, standard)
+        )
     except (S.SourceError, S.CacheMiss, ValueError) as e:
         return OracleProfile(OC.NOT_CLASSIFIED, f"not read: {str(e)[:80]}")
 
@@ -279,6 +290,72 @@ def pt_fall(pos: Position, shocks: dict[str, float]) -> float:
     """D169, pure: the PT's market price fall a rise of its implied yield causes."""
     s, years = shocks.get("pt_yield", 0.0), pos.days_to_maturity / 365
     return 1 - ((1 + pos.implied_apy) / (1 + pos.implied_apy + s)) ** years if s and years > 0 else 0.0
+
+
+def pool_fall(curve: list[list[float]], sold_usd: float) -> float:
+    """D204, pure: the pool's PT price fall after a sale of `sold_usd`, from `discover.marginal_curve` (the marginal
+    price after each step, relative to spot); past the ladder's end, its last point."""
+    if not curve:
+        return 0.0
+    xs, fs = [c[0] for c in curve], [c[1] for c in curve]
+    return 1 - float(np.interp(sold_usd, xs, fs))
+
+
+def sale_for_fall(curve: list[list[float]], fall: float) -> float | None:
+    """D204, pure: the smallest sale that moves the pool's price down by `fall`; None if the ladder never gets there."""
+    prev = (0.0, 0.0)
+    for s, f in curve:
+        if 1 - f >= fall:
+            (s0, d0), d1 = prev, 1 - f
+            return s0 + (s - s0) * (fall - d0) / (d1 - d0) if d1 > d0 else s
+        prev = (s, 1 - f)
+    return None
+
+
+def yield_rise(pos: Position, fall: float) -> float:
+    """D204, pure: the implied-yield rise that gives the PT's price `fall` (the inverse of `pt_fall`)."""
+    years = pos.days_to_maturity / 365
+    if fall <= 0 or years <= 0:
+        return 0.0
+    return (1 + pos.implied_apy) * ((1 - min(fall, 0.99)) ** (-1 / years) - 1)
+
+
+def pool_move(pos: Position, curve: list[list[float]], refused_above: float | None, x: float) -> tuple[float, dict]:
+    """D204, pure: a sale of `x` times the pool's liquidity into the PT's Pendle pool, as the implied-yield rise the
+    `pt_yield` channel prices (the oracle's TWAP, a meta-oracle's switch, the liquidation), with what it costs the seller
+    and the sale that would liquidate the position through a price-tracking oracle."""
+    liq = pos.amm_liquidity_usd or 0.0
+    sold = x * liq
+    fall = pool_fall(curve, sold)
+    ld = pos.liquidation_drop
+    liquidating = sale_for_fall(curve, ld) if ld else None
+    return yield_rise(pos, fall), {
+        "sold_usd": sold,
+        "pool_liquidity_usd": liq,
+        "pool_fall": fall,
+        "liquidation_fall": ld,
+        "liquidating_sale_usd": liquidating,
+        "beyond_ladder": bool(curve) and sold > curve[-1][0],
+        "refused_above_usd": refused_above,
+        "text": (
+            f"a sale of {sold:,.0f} USD of PT into its Pendle pool ({x:g}× its liquidity) "
+            + (
+                f"leaves the pool's price {fall:.2%} lower (Pendle quotes)"
+                if not (curve and sold > curve[-1][0])
+                else "is more than the pool routes: counted as its largest routed sale"
+            )
+            + (
+                f"; a price-tracking oracle liquidates the position after a sale of {liquidating:,.0f} USD"
+                if liquidating
+                else f"; the largest sale the pool routes ({curve[-1][0]:,.0f} USD) moves it {1 - curve[-1][1]:.2%}, short "
+                f"of the {ld:.2%} that liquidates the position"
+                if curve and ld
+                else "; no sale the pool can route liquidates the position"
+            )
+            + (f"; Pendle refuses a sale of {refused_above:,.0f} USD" if refused_above else "")
+            + "; the move must hold through the oracle's averaging window, and arbitrage can reverse it first"
+        ),
+    }
 
 
 def assess(

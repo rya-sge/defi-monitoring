@@ -9,6 +9,8 @@ from riskdep.oracle_class import (
     Probe,
     classify_input,
     classify_oracle,
+    constant_kind,
+    oracle_constant_kind,
 )
 
 A = "0x" + "aa" * 20
@@ -81,3 +83,17 @@ def test_oracle_class_from_base_inputs():
     assert classify_oracle([rate, feed()], standard=True)[0] == NOT_CLASSIFIED
     assert classify_oracle([], standard=True)[0] == CONSTANT_PRICE  # only the scale factor
     assert classify_oracle([feed()], standard=False)[0] == NOT_CLASSIFIED  # a custom oracle, read as one input
+
+
+def test_constant_kinds():
+    """D205: how a constant-price input moves on an issuer's loss."""
+    linear = feed(getters={"baseDiscountPerYear()": 235 * 10**15})
+    assert constant_kind(feed(vault=True)) == "exchange rate" and constant_kind(linear) == "linear discount"
+    assert constant_kind(feed(history=[100] * 7, answer=100, decimals=8)) == "published"  # pushed rounds, flat so far
+    assert constant_kind(feed(answer=10**8, decimals=8, history=[10**8])) == "fixed"
+    assert constant_kind(feed(description="mGLOeuro CustomAggregator", history=[5], answer=5)) == "published"
+    assert constant_kind(feed(getters={"twapDuration()": 900})) is None  # price-tracking: no kind
+    assert constant_kind(feed(children=[linear, feed(vault=True)])) == "exchange rate"  # the fastest part
+    assert (
+        oracle_constant_kind([], standard=True) == "fixed" and oracle_constant_kind([linear], True) == "linear discount"
+    )

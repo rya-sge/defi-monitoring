@@ -28,7 +28,7 @@ What to read in the output:
 | Output line | Answers |
 |---|---|
 | `fxSAVE/USDC …: 1,494,648 of 25,324,668 USDC of debt liquidatable (19 borrowers); bad debt 2,284,812 …` | the impact, market by market, from the shock engine over the recorded graph |
-| `oracle constant-price; how fast: at once when the issuer publishes …` | how fast it lands |
+| `oracle constant-price; how fast: at its next published round, by a transaction …` | how fast it lands |
 | `verdict given the incident: EXIT: withdraw the 2,500,571 that can leave now …` | stay or exit, if the incident happens |
 | `if the incident is not certain: … it pays if the incident's probability over 30 days is above 7.92%` | the breakeven: exiting is certain and costly, staying is uncertain |
 | `outside view: Nexus f(x) Protocol cover …` | an outside price to compare that probability with |
@@ -42,9 +42,13 @@ What to read in the output:
 | PT-reUSD/USDC | −2.45 % | 13 / 13, the same borrowers | 35.46M / 35.19M USDC (−0.8 %) | 927,975 / 920,781 | 0 / 0 |
 | PT-reUSD/USDT | −2.76 % | 7 / 7, the same borrowers | 1.89M / 0.96M USDT (liquidators repaid about half) | 49,378 / 25,015 | 0 / 0 |
 
+A second episode tests a different mechanism, price-tracking oracles in a market-wide crash: `backtest --episode crash-2025-10-10`, the main wave of the 2025-10-10 crash on the six Morpho markets with the most liquidations (Mog, PEPE, SPX, WBTC, wstETH). No liquidated borrower is missed in any of them; WBTC/USDC's debt and incentive are within 2 %. The model over-predicts by count in a fast crash, and the backtest accounts for each case: 36 of Mog's 52 extra positions were liquidated later that night, a few were defended by their borrowers, and the rest owe little (under 3 % of the debt repaid, much of it dust no liquidator takes). The bad debt predicted at the low over-states the realised one (Mog: 403k against 22.7k), because liquidators reached many positions after the wick.
+
 The impact given the incident is right to within 1 % where positions were liquidated in full. Not tested: the oracle's fall itself, and the squeeze (the Pendle pool's curve at that date is not served by the quote API). Recorded through an archive RPC (`keys.ini`), it replays offline with no key.
 
 The brief's book with its own worked example, the PT-sUSDe loop on Morpho, as one pocket next to nine vaults: `analyze --book examples/brief-mixed-book.json --shock token=sUSDe:0.08 --exit-cost 0.11` ("leaving it costs 110,000 USD … for sure and saves 776,708 if the incident comes": EXIT).
+
+**The brief's PT example, discovered in depth.** `analyze --demo` now also reports what its dependency graph knows beyond the five layers: the meta-oracle's two sources and its 16 h switch, who can change the tokens and through which timelock (sUSDe: a 24 h timelock; Pendle's SY and USDC: none seen), the three sibling markets on sUSDe (at a 10 % fall, 97M PYUSD liquidatable in sUSDe/PYUSD alone), sUSDe's grade and its backing by USDe, and Ethena's and Pendle's concentration. Its incident names the sibling contagion.
 
 **No hack probability in these answers.** The brief starts from a known incident, so every answer above takes the incident as given; p\* replaces a probability by the threshold above which leaving pays. The hack-history priors (DefiLlama's hack record, `priors.py`) feed only `analyze --demo`'s ex-ante Monte Carlo, a secondary view.
 
@@ -204,7 +208,7 @@ python3 -m riskdep analyze --demo --shock issuer_depeg=0.08 --shock amm=0.03
 
 Writes `out/report.html` and `out/report.json`.
 
-**Incident mode** (`--shock EVENT=SEVERITY`, events `chain`, `issuer_hack`, `issuer_depeg`, `amm`, `oracle`, `lending`, `pt_yield` (a rise of the PT's implied yield, in points: `pt_yield=0.09`), `borrow_rate` (the borrow APY over the horizon: `borrow_rate=0.40`)). The brief's question starts from a known incident, so `--shock` gives the incident's impact with no probability: the loss, whether the position is liquidated, how long before the oracle passes the shock on (from the oracle's type; a meta-oracle through its live source, and after its switch), and a verdict with the incident certain (REDUCE if a partial sale is cheapest, EXIT if staying loses more than leaving, STAY otherwise). The ex-ante Monte Carlo verdict follows it. Plan: `plan/2026-10-10-incident-mode.plan.md`.
+**Incident mode** (`--shock EVENT=SEVERITY`, events `chain`, `issuer_hack`, `issuer_depeg`, `amm`, `oracle`, `lending`, `pt_yield` (a rise of the PT's implied yield, in points: `pt_yield=0.09`), `borrow_rate` (the borrow APY over the horizon: `borrow_rate=0.40`), `pool_move` (a sale of the PT into its Pendle pool, in multiples of the pool's liquidity: `pool_move=0.5`; from real pool quotes, with the sale that would liquidate the position; on the demo, the largest sale the pool routes moves the PT 0.70 %, short of the 5.16 % that liquidates it)). The brief's question starts from a known incident, so `--shock` gives the incident's impact with no probability: the loss, whether the position is liquidated, how long before the oracle passes the shock on (from the oracle's type; a meta-oracle through its live source, and after its switch), and a verdict with the incident certain (REDUCE if a partial sale is cheapest, EXIT if staying loses more than leaving, STAY otherwise). The ex-ante Monte Carlo verdict follows it. Plan: `plan/2026-10-10-incident-mode.plan.md`.
 
 **Incident mode for a vault depositor** (`--vault`):
 
@@ -266,7 +270,7 @@ python3 -m riskdep notify --level critical --from-start  # only criticals, inclu
 python3 -m riskdep notify --post out/book-incident.json  # the headline of an incident run, as a scenario
 ```
 
-A separate process next to `watch`: it reads the alert files and posts to a private Telegram channel (`keys.ini` `[alerts] telegram_bot_token`, `telegram_chat_id`). It sends **only when there is an alert** at or above the level, never a heartbeat. Standing findings, printed again at every watch start, are posted once per 1800 blocks and those of one start come as one message; only criticals ring the phone. Offsets are saved in `out/notify.state.json` after each send, so a restart neither skips nor resends. Setup and design: `TELEGRAM_BOT.md`; thresholds: `registry.json` `notify`.
+A separate process next to `watch`: it reads the alert files and posts to a private Telegram channel (`keys.ini` `[alerts] telegram_bot_token`, `telegram_chat_id`). It sends **only when there is an alert** at or above the level, never a heartbeat. Standing findings, printed again at every watch start, are posted once per 1800 blocks. The alerts of one block come as one message: the cause in plain words, the loss and the decision (EXIT or STAY) on top, the details folded underneath, and a "What to do" button to the runbook; only criticals ring the phone. Offsets are saved in `out/notify.state.json` after each send, so a restart neither skips nor resends. Setup and design: `TELEGRAM_BOT.md`; thresholds: `registry.json` `notify`.
 
 ## web: the browser UI
 

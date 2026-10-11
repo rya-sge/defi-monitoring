@@ -7,6 +7,9 @@ D82–D84).
                     and the loss lands on the lenders once the collateral is worth less than the debt
   not classified    no rule decides; shown, never guessed
 
+A constant-price input has a kind (D205, plan 2026-10-11-oracle-kinds), how it moves when the issuer loses value: an
+exchange rate at once, a published value at its next round, a linear discount or a fixed value never (`MOVES`).
+
 A Morpho ChainlinkOracleV2 prices base vault × base feeds ÷ quote vault × quote feeds. Only the base side prices the
 collateral; the quote side prices the loan token and is ignored. The oracle is price-tracking if one base input is,
 constant-price if all are. Rules for one input, the first that applies wins, are in `classify_input`.
@@ -26,6 +29,15 @@ PRICE_TRACKING = "price-tracking"
 CONSTANT_PRICE = "constant-price"
 NOT_CLASSIFIED = "not classified"
 BASE_ROLES = ("BASE_VAULT", "BASE_FEED_1", "BASE_FEED_2")
+# D205: how a constant-price input moves when the issuer loses value, fastest first
+EXCHANGE_RATE, PUBLISHED, LINEAR_DISCOUNT, FIXED = "exchange rate", "published", "linear discount", "fixed"
+KINDS = (EXCHANGE_RATE, PUBLISHED, LINEAR_DISCOUNT, FIXED)
+MOVES = {
+    EXCHANGE_RATE: "at once, when the issuer's accounting records the loss",
+    PUBLISHED: "at its next published round, by a transaction",
+    LINEAR_DISCOUNT: "never: it follows a schedule to maturity",
+    FIXED: "never: its value is fixed",
+}
 MAX_DEPTH = 2  # composites inside composites, e.g. Ojo min → timestamp adapter → linear discount
 
 G = REGISTRY["graph"]
@@ -106,6 +118,39 @@ def classify_input(p: Probe, rules: dict = G) -> tuple[str, str]:
         if pat["match"].lower() in text:
             return pat["class"], f"{p.label}: matches '{pat['match']}', {pat['basis']}"
     return NOT_CLASSIFIED, f"{p.label}: no round history, no known structure or name"
+
+
+def constant_kind(p: Probe, rules: dict = G) -> str | None:
+    """D205, pure: for a constant-price input, how it moves when the issuer loses value (`KINDS`); None for any other
+    class, or when no rule says. A composite takes its fastest constant-price part."""
+    if classify_input(p, rules)[0] != CONSTANT_PRICE:
+        return None
+    if p.vault:
+        return EXCHANGE_RATE
+    if p.children:
+        return fastest([constant_kind(c, rules) for c in p.children])
+    for g in rules["oracle_getters"]:
+        v = p.getters.get(g["getter"])
+        if v is not None and (g["when"] == "answers" or v != 0):
+            return g.get("kind")
+    if len(p.history) - 1 >= rules["oracle_history_min"]:
+        return PUBLISHED  # rounds pushed by a transaction: flat so far, the next one can carry a loss
+    if not p.history[:-1] and p.answer is not None and p.decimals is not None and p.answer == 10**p.decimals:
+        return FIXED
+    text = f"{p.description or ''} {p.name or ''}".lower()
+    return next((pat.get("kind") for pat in rules["oracle_patterns"] if pat["match"].lower() in text), None)
+
+
+def fastest(kinds: list[str | None]) -> str | None:
+    """D205, pure: of several constant-price kinds priced together, the one that moves first."""
+    return next((k for k in KINDS if k in kinds), None)
+
+
+def oracle_constant_kind(base: list[Probe], standard: bool, rules: dict = G) -> str | None:
+    """D205, pure: the kind of a constant-price market oracle, from its base-side inputs."""
+    if standard and not base:
+        return FIXED
+    return fastest([constant_kind(p, rules) for p in base])
 
 
 def classify_oracle(base: list[Probe], standard: bool, rules: dict = G) -> tuple[str, str]:

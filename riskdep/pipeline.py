@@ -39,6 +39,7 @@ class AnalyzeResult:
     checks: list[crosscheck.Check] = field(default_factory=list)
     oracle_alt: dict | None = None
     incident: IncidentResult | None = None
+    discovery: dict = field(default_factory=dict)  # D199: the layers the position's recorded graph adds
 
 
 def analyze(
@@ -141,6 +142,9 @@ def analyze(
     incident = None
     if shocks:
         recovery = next((p.recovery for p in prs if p.event == "issuer_depeg"), 0.0)
+        moved = None
+        if "pool_move" in shocks:
+            shocks, moved = pool_move_shocks(f, pos, shocks)
         incident = scenario.assess(
             pos,
             shocks,
@@ -150,12 +154,25 @@ def analyze(
             quote_for=lambda q, fr: discover.partial_exit_quote(f, q, fr),
             horizon_days=horizon,
         )
+        if moved:
+            incident.pool_move = moved
+            incident.notes.insert(0, moved["text"])
 
     # a failed cross-check leads the reasons: the numbers below it are suspect
     bad = [c for c in checks if c.ok is False]
     if bad:
         dec.reasons.insert(0, "DATA CHECK FAILED — " + "; ".join(c.detail for c in bad))
 
+    depth = position_depth(pos, profile)
+    if incident and depth.get("siblings"):
+        # D202: the same incident reaches the markets that sell the same collateral or read the same price
+        s = depth["siblings"][:3]
+        incident.notes.append(
+            f"{len(depth['siblings'])} sibling market(s) take the same collateral or read the same price: their "
+            f"liquidations at a {depth['sibling_fall']:.0%} fall ("
+            + ", ".join(f"{x['label']} {x['liquidatable_at_fall']:,.0f} {x['unit']}" for x in s)
+            + ") sell into the same market and can deepen the fall"
+        )
     return AnalyzeResult(
         position=pos,
         priors=prs,
@@ -165,7 +182,75 @@ def analyze(
         checks=checks,
         oracle_alt=alt,
         incident=incident,
+        discovery=depth,
     )
+
+
+def pool_move_shocks(f: S.Fetcher, pos, shocks: dict[str, float]) -> tuple[dict[str, float], dict]:
+    """D204: a sale into the PT's Pendle pool, measured on a ladder of real pool-only quotes (no aggregator: the
+    oracle's TWAP reads the pool), turned into the implied-yield rise the `pt_yield` channel prices."""
+    if not pos.pendle_market or not pos.amm_liquidity_usd:
+        raise ValueError("pool_move needs a Pendle PT position with a known pool liquidity")
+    x = shocks["pool_move"]
+    sizes = sorted({*discover.ladder_sizes(pos.amm_liquidity_usd), round(x * pos.amm_liquidity_usd, -3)})
+    usd_per_unit = pos.collateral_usd / pos.collateral_units if pos.collateral_units else 0.0
+    ladder, refused = discover.quote_ladder(
+        f,
+        pos.pendle_market,
+        pos.collateral_address,
+        pos.underlying_address,
+        pos.collateral_decimals,
+        usd_per_unit,
+        False,
+        sizes,
+    )
+    curve, _ = discover.marginal_curve(ladder, 0.0)
+    rise, moved = scenario.pool_move(pos, curve, sizes[len(ladder)] if refused else None, x)
+    rest = {k: v for k, v in shocks.items() if k != "pool_move"}
+    rest["pt_yield"] = rest.get("pt_yield", 0.0) + rise
+    moved["implied_yield_rise"] = rise
+    return rest, moved
+
+
+def position_depth(pos, profile=None) -> dict:
+    """D199–D202: the borrow position's extra layers, from its borrower's recorded graph (`graph --user <borrower>
+    --record`) and its market's admin surface read at that block; {} when the graph is not recorded. Offline only:
+    the graph is a recording, so the layers carry its block and date."""
+    from . import admin as AD
+    from . import depth as DP
+    from . import graph as GR
+
+    if not pos.morpho_market or not pos.borrower:
+        return {}
+    rdir = REPLAY_DIR / f"graph-{pos.borrower.lower()}"
+    if not (rdir / "meta.json").exists():
+        return {}
+    as_of = clock.as_of()
+    try:
+        g, block, *_ = GR.load([], [], True, "replay", rdir)
+    except S.CacheMiss:
+        return {}
+    finally:
+        clock.set_as_of(as_of)
+    ph, protocols = pharos_snapshot("offline"), llama_protocols("offline")
+    if ph:
+        GR.annotate_pharos(g, ph)
+    if protocols:
+        GR.annotate_tvl(g, protocols)
+    try:
+        aw = AD.AdminWatch(S.Fetcher("offline", rdir), [pos.morpho_market], block)
+        admin = DP.admin_rows(aw.contracts, aw.timelock_over)
+    except S.CacheMiss:
+        admin = []
+    tokens = [x.lower() for x in (pos.collateral_address, pos.underlying_address) if x]
+    gd = {"nodes": list(g.nodes.values()), "edges": g.edges}
+    d = DP.position_depth(gd, pos.morpho_market, tokens, admin)
+    if d and profile is not None:
+        d["oracle_profile"] = DP.profile_text(profile)  # D200: what the graph cannot see inside a meta-oracle
+    if d:
+        d["graph_block"] = block
+        d["lines"] = DP.lines(d)
+    return d
 
 
 # --- a known incident on a vault or a book of vaults (plans 2026-10-11-vault-incident … 2026-10-11-breakeven)
@@ -302,18 +387,18 @@ def incident(
 
     incidents = run_all(parsed)
     borrows, names = [], {}
-    for v in book.vaults:
-        if v.kind == "borrow":
-            ln, n = borrow_pocket(v, parsed, book.weighting, horizon, mode, exit_cost)
-            borrows.append(ln)
-            names.update(n)
+    pockets = [v for v in book.vaults if v.kind == "borrow"]
+
+    def run_borrows(scaled):
+        return [borrow_pocket(v, scaled, book.weighting, horizon, mode, exit_cost)[0] for v in pockets]
+
+    for v in pockets:
+        ln, n = borrow_pocket(v, parsed, book.weighting, horizon, mode, exit_cost)
+        borrows.append(ln)
+        names.update(n)
     result = vault_book.aggregate(book, parsed, incidents, borrows, names)
-    if conditional and any(ln.hit_markets for ln in borrows):
-        result.notes.append(
-            "the conditional distribution covers the vault pockets; a borrow pocket keeps its one figure"
-        )
     if conditional:
-        conditional_distribution(book, parsed, incidents, result, run_all)
+        conditional_distribution(book, parsed, incidents, result, run_all, borrows, run_borrows)
     return VaultIncidentResult(book, incidents, result)
 
 
@@ -356,18 +441,23 @@ def borrow_pocket(v, parsed, weighting: str, horizon: float, mode: str, exit_cos
         clock.set_as_of(as_of)
 
 
-def conditional_distribution(book, parsed, incidents, result, run_all) -> None:
+def conditional_distribution(book, parsed, incidents, result, run_all, borrows=(), run_borrows=None) -> None:
     """D165–D168: run the incident at each multiple of `conditional.grid`, build each vault's loss curve in its
-    depositor's terms (the book's pocket when it has one), and draw the distribution for each vault and the book."""
+    depositor's terms (the book's pocket when it has one), and draw the distribution for each vault and the book.
+    D203: a borrow pocket hit by the incident gets its curve the same way, from `borrow_pocket` at each multiple:
+    leaving now avoids the loss and costs the exit; no liquidator branch, the borrower's own loss is the position's."""
     from dataclasses import asdict
 
     from . import conditional as CD
 
     grid = [m for m in CD.C["grid"] if m != 1.0]
-    runs = {1.0: incidents}
+    runs, bruns = {1.0: incidents}, {1.0: list(borrows)}
+    hit_borrows = any(ln.hit_markets for ln in borrows)
     for m in grid:
         scaled = [(k, t, min(0.99, v * m), n) if k == "token" else (k, t, v, n) for k, t, v, n in parsed]
         runs[m] = run_all(scaled)
+        if hit_borrows:
+            bruns[m] = run_borrows(scaled)
     mults = [0.0] + sorted(runs)
     amounts = {v.address: v.amount for v in book.vaults}
     curves = []
@@ -399,6 +489,21 @@ def conditional_distribution(book, parsed, incidents, result, run_all) -> None:
             d = CD.simulate([c], fall)
             inc.conditional = {**asdict(d), "text": d.text()}
     hit = [c for inc, c in zip(incidents, curves) if inc.hits]
+    for i, ln in enumerate(borrows):
+        if not ln.hit_markets:
+            continue
+        c = CD.Curve(
+            ln.name,
+            mults,
+            [0.0] + [bruns[m][i].loss_usd for m in mults[1:]],
+            [0.0] * len(mults),
+            [1.0] * len(mults),
+            ln.exit_cost_usd,
+            0.0,
+        )
+        hit.append(c)
+        d = CD.simulate([c], fall)
+        result.notes.append(f"{ln.name}, given the incident: {d.text()}")
     if hit:
         d = CD.simulate(hit, fall)
         result.conditional = {**asdict(d), "text": d.text()}

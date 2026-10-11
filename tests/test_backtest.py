@@ -37,3 +37,19 @@ def test_the_reusd_episode_replays_offline(tmp_path, capsys):
     assert usdc["realised_bad_debt"] == usdc["predicted_bad_debt"] == 0
     assert 940_000 < usdc["realised_bonus"] + usdt["realised_bonus"] < 950_000  # the cited $946k
     assert "13 / 13" in capsys.readouterr().out
+
+
+def test_the_2025_10_10_crash_replays_offline(tmp_path):
+    """A second mechanism: price-tracking oracles in a market-wide crash (memecoins, WBTC, wstETH). No liquidated
+    borrower is missed in any of the six markets; every one predicted but not liquidated in the wave is accounted for
+    (liquidated later that night, defended by its borrower, or left liquidatable with little debt, much of it dust)."""
+    assert cli.main(["backtest", "--episode", "crash-2025-10-10", "--out", str(tmp_path)]) == 0
+    ms = json.loads((tmp_path / "backtest-crash-2025-10-10.json").read_text())["markets"]
+    assert len(ms) == 6 and all(not m["missed"] for m in ms)
+    wbtc = next(m for m in ms if m["label"].startswith("WBTC/USDC"))
+    assert wbtc["predicted_debt"] == pytest.approx(wbtc["realised_repaid"], rel=0.02)
+    assert wbtc["predicted_bonus"] == pytest.approx(wbtc["realised_bonus"], rel=0.02)
+    mog = next(m for m in ms if m["label"].startswith("Mog/"))
+    assert len(mog["extra_later"]) == 36 and len(mog["extra_defended"]) == 3
+    left = sum(m["left_debt"] for m in ms)
+    assert left < 0.03 * sum(m["realised_repaid"] for m in ms)  # what no liquidator took: small next to what was repaid

@@ -36,19 +36,23 @@ B keeps the project's rule that the watcher is its own process writing `out/watc
 - **Standing findings once.** At start, `watch` prints standing findings (`Exposure`, `Caps`, `NoNoticeChange`…) with `tx: null`; after a restart they come again. Deduplicate on `(target, event, title)` over a window of 1800 blocks, about 6 h (`registry.json` `notify.dedup_blocks`; blocks rather than wall time, so replays behave like live runs), kept in the state file, so only new facts are pushed.
 - **Startup digest.** Alerts with `tx: null` from the same block are grouped into one message ("RockawayX USDC Yield, start: 2 critical, 5 warn"), followed by one message per critical.
 
-**Message.** `parse_mode=HTML`, one alert per message, under Telegram's 4096-character limit:
+**Message.** `parse_mode=HTML`, **one message per incident**: every alert of one block, so a cause and its consequences arrive together. Decision first, plain words, details folded (the Act 2 message of `scripts/demo-rock/`):
 
 ```
-🔴 CRITICAL · Belem RWA EURCV
-DrainWindow — mGLOeuro trades past its drain threshold
-d* 4.1 %, observed 4.6 %; 1.05M EURCV drainable in one block
-You: −12,430 EURCV
-block 26161886 · tx 0xab12… (Etherscan link) · runbook: DrainWindow
+🔴 RockawayX Tori Ecosystem — The code behind a price or a token was replaced
+RedStone Price Feed for strUSD_FUNDAMENTAL (feed of the oracle of strUSD/USDC) was upgraded
+💸 The vault's loss: 1,236,933 USDC · yours 454,103 USDC
+👉 Decision: EXIT. Withdraw the 2,374,262 USDC that can leave now: your loss falls from 454,103 to 293,378 USDC.
+▸ Details: 6 alerts, block 26,165,574           (expandable quote: each alert in plain words, title and detail)
+[ What to do ]  [ Etherscan ]                   (buttons)
 ```
 
+- The headline is the plain-words meaning of the **cause** (`PLAIN` in `riskdep/notify.py`, from the runbook's "What it means"); alerts are ordered cause first: a change of code or owner, data problems, the price, the losses, the exit.
+- The loss and the decision come from `OracleImpact`'s `data` (`vault_loss`, `loss_if_stay`, `loss_if_exit_first`, `can_leave_now`, `verdict`); without it, the depositor's share of the loss when an alert carries one.
+- Addresses shortened to `0x1234…abcd`, `(LLTV …)` left out of the headline.
+- Buttons: "What to do" opens the runbook section of the cause's alert family; "Etherscan" opens the transaction, and is left out on a fork (`RISKDEP_FORK`), whose transactions Etherscan does not have.
 - `critical` with sound; `warn` and `info` with `disable_notification=true`.
-- Vault name from the watch's target (address shortened otherwise); tx and addresses as Etherscan links; the runbook link to `docs/reference/alert-runbook.md` on GitHub.
-- Text from `title`, `detail` and `depositor_impact` only, escaped for HTML; `data` is not posted (it can be long and is for machines).
+- If Telegram rejects the HTML (HTTP 400), the message is sent once as plain text, so one bad message cannot block the queue.
 
 **Rate limits.** Telegram allows about 20 messages a minute to one group or channel and answers `429` with `retry_after`. When several alerts arrive together, space them at least 3 s apart (no effect when there is nothing to send), honour `retry_after`, and above a burst threshold (say 10 queued) fall back to one digest message.
 

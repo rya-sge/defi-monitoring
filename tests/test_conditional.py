@@ -52,3 +52,14 @@ def test_conditional_needs_a_markdown(tmp_path):
         cli.main(
             ["analyze", "--book", str(TEN), "--shock", "borrower=all:0.5", "--conditional", "--out", str(tmp_path)]
         )
+
+
+def test_the_briefs_pt_loop_drawn(tmp_path, capsys):
+    """D203: the borrow pocket of the mixed book gets its own distribution and joins the book's."""
+    mixed = TEN.with_name("brief-mixed-book.json")
+    args = ["analyze", "--book", str(mixed), "--shock", "token=sUSDe:0.10", "--exit-cost", "0.11", "--conditional"]
+    assert cli.main([*args, "--out", str(tmp_path)]) == 0
+    d = json.loads((tmp_path / "book-incident.json").read_text())["conditional"]
+    assert d["leave_mean"] == pytest.approx(110_000, rel=0.01)
+    assert d["leave_mean"] < d["stay_p50"] <= d["stay_p95"] <= 1_000_000 and d["p_stay_worse"] > 0.9
+    assert "PT-sUSDe loop on Morpho (the brief's example), given the incident" in capsys.readouterr().out

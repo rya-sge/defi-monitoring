@@ -349,6 +349,7 @@
      "price_raw": "970448044997537987715671",
      "oracle_class": "constant-price",
      "class_basis": "base side, none follows a market: 0xcb8c\u2026640b: baseDiscountPerYear() = 235000000000000000, Pendle linear-discount oracle: a deterministic discount to maturity, no market input; RedStone Price Feed for trUSD_FUNDAMENTAL: answers exactly 1.0 with no round history, a pegged or hardcoded value",
+     "constant_kind": "linear discount",
      "source": "price() and getters read on-chain; class from the base-side inputs (D82\u2013D84)",
      "tracks_bound": false
     }
@@ -362,6 +363,7 @@
      "role_in_oracle": "BASE_FEED_1",
      "oracle_class": "constant-price",
      "class_basis": "0xcb8c\u2026640b: baseDiscountPerYear() = 235000000000000000, Pendle linear-discount oracle: a deterministic discount to maturity, no market input",
+     "constant_kind": "linear discount",
      "source": "oracle getter, description() on-chain; freshness from its rounds (D155)"
     }
    },
@@ -374,6 +376,7 @@
      "role_in_oracle": "BASE_FEED_2",
      "oracle_class": "constant-price",
      "class_basis": "RedStone Price Feed for trUSD_FUNDAMENTAL: answers exactly 1.0 with no round history, a pegged or hardcoded value",
+     "constant_kind": "fixed",
      "updated_at": 1791642359,
      "freshness": "updated 7.7 h ago; no round history to learn its rhythm",
      "stale": false,
@@ -507,6 +510,7 @@
      "price_raw": "1029965341757300250098894",
      "oracle_class": "constant-price",
      "class_basis": "base side, none follows a market: RedStone Price Feed for strUSD_FUNDAMENTAL: matches 'FUNDAMENTAL', RedStone fundamental feed: the issuer's redemption value, not a market price",
+     "constant_kind": "published",
      "source": "price() and getters read on-chain; class from the base-side inputs (D82\u2013D84)",
      "tracks_bound": false
     }
@@ -520,6 +524,7 @@
      "role_in_oracle": "BASE_FEED_1",
      "oracle_class": "constant-price",
      "class_basis": "RedStone Price Feed for strUSD_FUNDAMENTAL: matches 'FUNDAMENTAL', RedStone fundamental feed: the issuer's redemption value, not a market price",
+     "constant_kind": "published",
      "updated_at": 1791663995,
      "freshness": "updated 1.7 h ago; no round history to learn its rhythm",
      "stale": false,
@@ -614,6 +619,7 @@
      "price_raw": "1014705297724236978045985",
      "oracle_class": "constant-price",
      "class_basis": "base side, none follows a market: RedStone Price Feed for etrUSD_FUNDAMENTAL/USD: matches 'FUNDAMENTAL', RedStone fundamental feed: the issuer's redemption value, not a market price",
+     "constant_kind": "published",
      "source": "price() and getters read on-chain; class from the base-side inputs (D82\u2013D84)",
      "tracks_bound": false
     }
@@ -627,6 +633,7 @@
      "role_in_oracle": "BASE_FEED_1",
      "oracle_class": "constant-price",
      "class_basis": "RedStone Price Feed for etrUSD_FUNDAMENTAL/USD: matches 'FUNDAMENTAL', RedStone fundamental feed: the issuer's redemption value, not a market price",
+     "constant_kind": "published",
      "updated_at": 1791663995,
      "freshness": "updated 1.7 h ago; no round history to learn its rhythm",
      "stale": false,
@@ -722,6 +729,7 @@
      "price_raw": "1093835380000000000000000",
      "oracle_class": "constant-price",
      "class_basis": "base side, none follows a market: 0xdbdc\u20269bcb: an ERC-4626 exchange rate, which follows the vault's accounting, not a market; Chainlink-formatted InfiniFi RT Oracle: answers exactly 1.0 with no round history, a pegged or hardcoded value",
+     "constant_kind": "exchange rate",
      "source": "price() and getters read on-chain; class from the base-side inputs (D82\u2013D84)",
      "tracks_bound": false
     }
@@ -735,6 +743,7 @@
      "role_in_oracle": "BASE_FEED_1",
      "oracle_class": "constant-price",
      "class_basis": "Chainlink-formatted InfiniFi RT Oracle: answers exactly 1.0 with no round history, a pegged or hardcoded value",
+     "constant_kind": "fixed",
      "updated_at": 1791669887,
      "freshness": "updated 2 min ago; no round history to learn its rhythm",
      "stale": false,
@@ -839,6 +848,7 @@
      "price_raw": "1063883030482435231483219189189683842",
      "oracle_class": "constant-price",
      "class_basis": "base side, none follows a market: PRIME / WYLDS Exchange Rate: fell 0 times in 24 changes over 24 rounds, an accrual rate",
+     "constant_kind": "published",
      "source": "price() and getters read on-chain; class from the base-side inputs (D82\u2013D84)",
      "tracks_bound": false
     }
@@ -852,6 +862,7 @@
      "role_in_oracle": "BASE_FEED_1",
      "oracle_class": "constant-price",
      "class_basis": "PRIME / WYLDS Exchange Rate: fell 0 times in 24 changes over 24 rounds, an accrual rate",
+     "constant_kind": "published",
      "updated_at": 1791607379,
      "freshness": "updated 17.4 h ago; usually every 24.0 h (25 rounds)",
      "stale": false,
@@ -1001,6 +1012,7 @@
      "price_raw": "1063752620098310366153383232181141847",
      "oracle_class": "constant-price",
      "class_basis": "base side, none follows a market: PRIME / WYLDS Exchange Rate: fell 0 times in 24 changes over 24 rounds, an accrual rate",
+     "constant_kind": "published",
      "source": "price() and getters read on-chain; class from the base-side inputs (D82\u2013D84)",
      "tracks_bound": false
     }
@@ -1096,6 +1108,7 @@
      "price_raw": "1106150773063658800000000",
      "oracle_class": "constant-price",
      "class_basis": "base side, none follows a market: reUSD/USD exchange rate: matches 'exchange rate', an exchange rate between a token and its underlying, not a market price",
+     "constant_kind": "exchange rate",
      "source": "price() and getters read on-chain; class from the base-side inputs (D82\u2013D84)",
      "tracks_bound": false
     }
@@ -1109,6 +1122,7 @@
      "role_in_oracle": "BASE_FEED_1",
      "oracle_class": "constant-price",
      "class_basis": "reUSD/USD exchange rate: matches 'exchange rate', an exchange rate between a token and its underlying, not a market price",
+     "constant_kind": "exchange rate",
      "updated_at": 1791589535,
      "freshness": "updated 22.4 h ago; no round history to learn its rhythm",
      "stale": false,
@@ -1285,6 +1299,7 @@
      "price_raw": "1063755864543801666000000000000000000",
      "oracle_class": "constant-price",
      "class_basis": "base side, none follows a market: PRIME / WYLDS Exchange Rate: fell 0 times in 24 changes over 24 rounds, an accrual rate",
+     "constant_kind": "published",
      "source": "price() and getters read on-chain; class from the base-side inputs (D82\u2013D84)",
      "tracks_bound": false
     }
@@ -1403,6 +1418,7 @@
      "price_raw": "971710661988669515667207",
      "oracle_class": "constant-price",
      "class_basis": "base side, none follows a market: 0x7180\u20264d19: baseDiscountPerYear() = 225000000000000000, Pendle linear-discount oracle: a deterministic discount to maturity, no market input; RedStone Price Feed for trUSD_FUNDAMENTAL: answers exactly 1.0 with no round history, a pegged or hardcoded value",
+     "constant_kind": "linear discount",
      "source": "price() and getters read on-chain; class from the base-side inputs (D82\u2013D84)",
      "tracks_bound": false
     }
@@ -1416,6 +1432,7 @@
      "role_in_oracle": "BASE_FEED_1",
      "oracle_class": "constant-price",
      "class_basis": "0x7180\u20264d19: baseDiscountPerYear() = 225000000000000000, Pendle linear-discount oracle: a deterministic discount to maturity, no market input",
+     "constant_kind": "linear discount",
      "source": "oracle getter, description() on-chain; freshness from its rounds (D155)"
     }
    },
@@ -1554,6 +1571,7 @@
      "price_raw": "1093835380000000000000000000000000000",
      "oracle_class": "constant-price",
      "class_basis": "base side, none follows a market: 0xdbdc\u20269bcb: an ERC-4626 exchange rate, which follows the vault's accounting, not a market; Chainlink-formatted InfiniFi RT Oracle: answers exactly 1.0 with no round history, a pegged or hardcoded value",
+     "constant_kind": "exchange rate",
      "source": "price() and getters read on-chain; class from the base-side inputs (D82\u2013D84)",
      "tracks_bound": false
     }
@@ -1649,6 +1667,7 @@
      "price_raw": "1063883030482435231483219",
      "oracle_class": "constant-price",
      "class_basis": "base side, none follows a market: 0xc360\u202687d1: an ERC-4626 exchange rate, which follows the vault's accounting, not a market; PRIME / WYLDS Exchange Rate: fell 0 times in 24 changes over 24 rounds, an accrual rate",
+     "constant_kind": "exchange rate",
      "source": "price() and getters read on-chain; class from the base-side inputs (D82\u2013D84)",
      "tracks_bound": false
     }
