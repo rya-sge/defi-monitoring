@@ -136,3 +136,21 @@ def test_the_briefs_ten_pockets(tmp_path):
     assert cli.main(args) == 0
     hit = next(ln for ln in json.loads((tmp_path / "book-incident.json").read_text())["lines"] if ln["hit_markets"])
     assert hit["verdict"] == "EXIT" and 0.03 < hit["p_star"] < 0.05
+
+
+MIXED = ROOT / "examples" / "brief-mixed-book.json"
+
+
+def test_the_briefs_own_pt_loop_as_a_pocket(tmp_path):
+    """D177–D178: the brief's book with its own example, the PT-sUSDe loop on Morpho, as a borrow pocket next to nine
+    vault pockets. sUSDe losing 8 % of its backing hits that pocket only: leaving it costs 110,000 for sure (the 11 %
+    unwind) against a 776,708 loss if it stays: EXIT, by the same rule as a vault pocket."""
+    args = ["analyze", "--book", str(MIXED), "--shock", "token=sUSDe:0.08", "--exit-cost", "0.11"]
+    assert cli.main([*args, "--out", str(tmp_path)]) == 0
+    r = json.loads((tmp_path / "book-incident.json").read_text())
+    (hit,) = [ln for ln in r["lines"] if ln["hit_markets"]]
+    assert hit["name"].startswith("PT-sUSDe loop") and hit["verdict"] == "EXIT"
+    assert hit["exit_cost_usd"] == pytest.approx(110_000) and 700_000 < hit["loss_usd"] < 850_000
+    assert r["shocks"] == ["sUSDe −8%"] and "in 1 pocket(s)" in r["headline"]
+    with pytest.raises(ValueError):
+        VB.parse({"vaults": [{"kind": "borrow", "market": "0x12"}]})

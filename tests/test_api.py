@@ -226,3 +226,10 @@ def test_incident_with_the_conditional_distribution(client):
     assert r.status_code == 200, r.text
     d = r.json()["book"]["conditional"]
     assert d["paths"] == 10_000 and d["stay_p95"] > d["leave_mean"]
+
+
+def test_incident_on_the_mixed_book(client):
+    body = {"example": "brief-mixed-book", "shocks": ["token=sUSDe:0.08"], "exit_cost": 0.11}
+    r = client.post("/api/incident", json=body)
+    assert r.status_code == 200, r.text
+    assert any(ln["verdict"] == "EXIT" and ln["name"].startswith("PT-sUSDe") for ln in r.json()["book"]["lines"])

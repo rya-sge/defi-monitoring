@@ -49,6 +49,7 @@ Sizes: **S** about a day, **M** a few days, **L** more.
 | Backtest (B9) | `backtest`: the 2026-08-25 PT-reUSD liquidations, through an archive RPC, recorded keyless | `2026-10-11-backtest` |
 | Conditional Monte Carlo (A4) | `--conditional`: the loss of staying given the incident, drawn from real incident runs, against the certain cost of leaving | `2026-10-11-conditional` |
 | PT yield and rate channels (B1, B2 as incidents) | `--shock pt_yield=…`, `--shock borrow_rate=…` | `2026-10-11-pt-channels` |
+| The brief's book with its PT loop (most of A6) | a borrow pocket in a book (`kind: borrow`), the same verdict rule as a vault pocket; `examples/brief-mixed-book.json` | `2026-10-11-mixed-book` |
 | Zama confidential vaults (Z1–Z3 of `ZAMA-VAULT.md`) | 16 vaults verified; the cShare as a pool; a confidential depositor's two exits in incidents; the hidden layer in `graph` | `2026-10-11-zama` |
 | Push alerts (part of D2) | Telegram (`riskdep notify`, `TELEGRAM_BOT.md`) | — |
 | CI | lint, tests, the OpenAPI contract, the web build | — |
@@ -58,11 +59,11 @@ Sizes: **S** about a day, **M** a few days, **L** more.
 | # | Step | Gaps | Size | Builds on |
 |---|---|---|---|---|
 | **A3** | Detection → impact for vaults: a NAV update, a stale feed or a feed upgrade fires the vault incident, and the alert carries the loss, the timing and the verdict | K20, K22 | S–M | `vault_incident.py`, `feeds.py`, the fork demo's `admin.py` |
-| **A6** | One verdict engine for a borrow and a vault, and books mixing borrow, PT and vault pockets; p\* and the conditional distribution for a borrow | K21, M6 | M | `decide.py`, `vault_book.py`, `conditional.py` |
+| **A6** | ~~Books mixing borrow and vault pockets, one rule~~ **done** (plan `2026-10-11-mixed-book`); left: the PT verdict's horizon to maturity and tail budget (K12, K13), the conditional distribution for a borrow, PT holdings without a borrow | K21, M6 | M | `decide.py`, `vault_book.py`, `conditional.py` |
 | **Z4** | Zama batcher and wrapper alerts (a confidential run forming, a batch cancelled, decryption delayed, a wrapper paused), after the fork demo's `watch.py` lands; then Z6 (a user's confidential position) and Z7 (a prior) | — | M | `zama.py`, the watches |
 | **A5** | The web page for vault and book incidents on `POST /api/incident` (the front end's) | demo | S | `web/` |
 | B4 | Oracle structure, the rest: the pool-move event (the backtest's mechanism), split constant-price, drain priority by class | K7, K8 | M | `oracle_class.py`, `engine.py` |
-| B5 | Priors: decayed window, survivorship, two-part depeg, protocol multiplier, the RockawayX issuers; calibrate the conditional draw | K1–K5, K17, K18 | M | `priors.py`, `registry.json` |
+| B5 | *Secondary: the priors feed only `analyze --demo`'s ex-ante view; no known-incident answer uses them.* Priors: decayed window, survivorship, two-part depeg, protocol multiplier, the RockawayX issuers; calibrate the conditional draw | K1–K5, K17, K18 | M | `priors.py`, `registry.json` |
 | B6 | Liquidity returned by liquidations; the squeeze at a past date (the pool's curve from its reserves) | K9, K27 | M | `engine.py`, `backtest.py` |
 | B3 | Horizon to maturity, stressed exit cost | K12 | S | Pendle quotes at several sizes |
 | B7 | A tail budget for EXIT (the sampling interval is shown) | K13 | S | `decide.py` |
@@ -90,7 +91,7 @@ If time is short before the judging: **A3, then A6**, then B4. `IMPROVEMENT.md` 
 
 **Why.** A borrow (`decide.py`) and a vault (`vault_incident`, `vault_book`) reach STAY / REDUCE / EXIT by different code and wording, and a book holds vaults only. The brief's book of pockets can hold a borrow or a PT.
 
-**How.** One `verdict_given(stay, leave, cost, …)` used by both; book pockets of kind `borrow` and `pt` through `scenario.assess`; p\* and the conditional distribution for a borrow; each shared (event, node) drawn once per path in a book's ex-ante simulation (M6). Agree first with the shock engine's author: its planned step 2 is a verdict too, and there should be one.
+**Done:** borrow pockets in a book, by the vault pocket's rule (plan `2026-10-11-mixed-book`). **Left, how:** the PT verdict's horizon to maturity (hold to maturity against exit now, K12) and a tail budget (K13); then one `verdict_given(stay, leave, cost, …)` used by `decide.py` too; book pockets of kind `borrow` and `pt` through `scenario.assess`; p\* and the conditional distribution for a borrow; each shared (event, node) drawn once per path in a book's ex-ante simulation (M6). Agree first with the shock engine's author: its planned step 2 is a verdict too, and there should be one.
 
 ### A5. The web page for incidents
 

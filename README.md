@@ -44,6 +44,10 @@ What to read in the output:
 
 The impact given the incident is right to within 1 % where positions were liquidated in full. Not tested: the oracle's fall itself, and the squeeze (the Pendle pool's curve at that date is not served by the quote API). Recorded through an archive RPC (`keys.ini`), it replays offline with no key.
 
+The brief's book with its own worked example, the PT-sUSDe loop on Morpho, as one pocket next to nine vaults: `analyze --book examples/brief-mixed-book.json --shock token=sUSDe:0.08 --exit-cost 0.11` ("leaving it costs 110,000 USD … for sure and saves 776,708 if the incident comes": EXIT).
+
+**No hack probability in these answers.** The brief starts from a known incident, so every answer above takes the incident as given; p\* replaces a probability by the threshold above which leaving pays. The hack-history priors (DefiLlama's hack record, `priors.py`) feed only `analyze --demo`'s ex-ante Monte Carlo, a secondary view.
+
 The same runs are served over HTTP (`POST /api/incident`, below). A borrower's view of the brief's PT example: `analyze --demo --shock issuer_depeg=0.08`.
 
 How the system is built (components, data sources, data flow, state, testing): `docs/analysis/ARCHITECTURE.md`.

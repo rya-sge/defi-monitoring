@@ -852,6 +852,16 @@
             ],
             "title": "Amount",
             "description": "`pocket` weighting: the book's position, in USD."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "vault",
+              "borrow"
+            ],
+            "title": "Kind",
+            "description": "`borrow`: a Morpho Blue borrow; `address` is then the market id.",
+            "default": "vault"
           }
         },
         "type": "object",

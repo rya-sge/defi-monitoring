@@ -37,6 +37,9 @@ class BookVault:
     label: str | None = None
     depositor: str | None = None
     amount: float | None = None  # D152: `pocket` weighting: the book's position in this vault, in USD
+    kind: str = (
+        "vault"  # D177: "vault" (a Vault V2 deposit) or "borrow" (a Morpho Blue borrow: `address` is the market)
+    )
 
 
 @dataclass
@@ -126,16 +129,28 @@ def parse(d: dict, where: str = "book") -> Book:
     vaults, seen = [], set()
     for i, v in enumerate(d["vaults"]):
         v = {"address": v} if isinstance(v, str) else v
-        a = str(v.get("address", "")).lower()
-        if not (a.startswith("0x") and len(a) == 42):
-            raise ValueError(f'{where}: vault #{i + 1} has no valid "address"')
+        kind = v.get("kind", "vault")
+        if kind not in ("vault", "borrow"):
+            raise ValueError(f'{where}: pocket #{i + 1}: "kind" is "vault" or "borrow"')
+        if kind == "borrow":
+            # D177: a Morpho Blue borrow, e.g. the brief's PT loop: the market id, and the borrower as "depositor"
+            a = str(v.get("market") or v.get("address") or "").lower()
+            if not (a.startswith("0x") and len(a) == 66):
+                raise ValueError(f'{where}: pocket #{i + 1} (borrow) needs the Blue "market" id')
+            v = {**v, "depositor": v.get("user") or v.get("depositor")}
+        else:
+            a = str(v.get("address", "")).lower()
+            if not (a.startswith("0x") and len(a) == 42):
+                raise ValueError(f'{where}: vault #{i + 1} has no valid "address"')
         if a in seen:
             raise ValueError(f"{where}: vault {a} is listed twice")
         seen.add(a)
         dep, amount = v.get("depositor"), v.get("amount")
         if weighting == "pocket" and not (isinstance(amount, (int, float)) and amount > 0):
             raise ValueError(f'{where}: vault #{i + 1} needs a positive "amount" (USD) in the "pocket" weighting')
-        vaults.append(BookVault(a, v.get("label"), dep.lower() if dep else None, amount))
+        # a borrower keeps its spelling: the Morpho API request, and so its recording, is keyed by it
+        dep = (dep if kind == "borrow" else dep.lower()) if dep else None
+        vaults.append(BookVault(a, v.get("label"), dep, amount, kind))
     return Book(d.get("name") or f"{len(vaults)} vault(s)", weighting, vaults)
 
 
@@ -244,15 +259,60 @@ def line(inc: VaultIncident, label: str | None, weighting: str, amount: float | 
     )
 
 
-def aggregate(book: Book, shocks: list[tuple], incidents: list[VaultIncident]) -> BookIncident:
-    """D123, pure: add the vaults up, and write the headline. `shocks` as `vault_incident.parse_shocks` gives them."""
+def borrow_line(
+    label: str,
+    weighting: str,
+    amount: float | None,
+    equity_usd: float,
+    loss_usd: float,
+    exit_cost_usd: float,
+    rate: float | None,
+    days: float,
+    hit: bool,
+) -> VaultLine:
+    """D178, pure: a borrow pocket (the brief's PT loop) under the book's incident, by the same rule as a vault pocket:
+    staying loses the incident's loss; leaving now avoids it and costs the exit (its swap quote, or `rate` × what
+    leaves); EXIT when the loss avoided exceeds that certain cost; p* = cost / loss avoided. In the `pocket` weighting
+    the position is scaled to the pocket's amount."""
+    k = (amount / equity_usd) if weighting == "pocket" and amount and equity_usd else 1.0
+    value, stay = equity_usd * k, loss_usd * k
+    cost = rate * value if rate is not None else exit_cost_usd * k
+    p = cost / stay if stay > 0 else None
+    verdict = "EXIT" if hit and stay > cost else "STAY"
+    return VaultLine(
+        label,
+        label,
+        value,
+        stay,
+        value if hit else 0.0,
+        verdict,
+        [label] if hit else [],
+        True,
+        p if p is not None and p < 1 else None,
+        (1 - (1 - p) ** (365 / days)) if p is not None and p < 1 else None,
+        cost,
+        stay,
+        reason(hit, stay, stay, cost, p, days, None),
+    )
+
+
+def aggregate(
+    book: Book,
+    shocks: list[tuple],
+    incidents: list[VaultIncident],
+    extra: list[VaultLine] | None = None,
+    extra_names: dict[str, str] | None = None,
+) -> BookIncident:
+    """D123, pure: add the vaults up, and write the headline. `shocks` as `vault_incident.parse_shocks` gives them;
+    `extra` are the borrow pockets' lines (D178)."""
     labels = {v.address: v.label for v in book.vaults}
     amounts = {v.address: v.amount for v in book.vaults}
     names = {k.lower(): k for i in incidents for k in i.shocks}  # the symbol as the vaults' markets name it
     for i in incidents:
         names.update(i.labels)
+    names.update(extra_names or {})
     shocks = [describe(s, names) for s in shocks]
-    lines = [line(i, labels.get(i.vault), book.weighting, amounts.get(i.vault)) for i in incidents]
+    lines = [line(i, labels.get(i.vault), book.weighting, amounts.get(i.vault)) for i in incidents] + list(extra or [])
     days = incidents[0].horizon_days if incidents else 30.0
     value = sum(ln.value_usd for ln in lines)
     loss = sum(ln.loss_usd for ln in lines)
@@ -271,7 +331,7 @@ def aggregate(book: Book, shocks: list[tuple], incidents: list[VaultIncident]) -
         act = [ln for ln in hit if ln.p_star is not None]
         first = min(act, key=lambda x: x.p_star) if act else None
         headline = (
-            f"{shock}: the book loses {loss:,.0f} USD ({loss / value:.2%} of {value:,.0f}) in {len(hit)} vault(s); "
+            f"{shock}: the book loses {loss:,.0f} USD ({loss / value:.2%} of {value:,.0f}) in {len(hit)} {'pocket(s)' if book.weighting == 'pocket' else 'vault(s)'}; "
             f"largest in {worst.name} ({worst.loss_usd:,.0f}). "
             + (
                 f"Act first on {first.name}: leaving it costs {first.exit_cost_usd:,.0f} USD "

@@ -17,7 +17,7 @@ Needs Foundry (`anvil`, `cast`, `forge`), `uv`, network access (the fork's upstr
 | Start | fork at block 26,165,572 | `watch` on RockawayX Tori Ecosystem (`VAULT_TORI`, 69 % strUSD) and Huma USDC Main (`VAULT_HUMA`, 100 % PST); start-up findings stay in the terminal | an intro message, marked as a scenario |
 | Act 1 | nothing yet | `analyze --book examples/rockawayx-ethereum.json --shock token=strUSD:0.32`, offline: the book loses 2.80M USD, 1.83M in Tori and 0.97M in USDC Yield; act first on Tori | the prediction's headline |
 | Act 2 | RedStone's 2-of-3 Safe upgrades the strUSD feed (`alt-redstone.sh`): the oracle −32 % in one transaction | Tori's watch: the feed upgrade, the oracle move, liquidations | each warn and critical alert |
-| Act 3 | a CCIP pool mints 10M unbacked PST (`alt-pst-mint.sh`); the oracle does not move | Huma's watch: the mint | each warn and critical alert |
+| Act 3 | a CCIP pool mints 15M unbacked PST, +7.0 % of the supply (`alt-pst-mint.sh 15000000`; the script's default 10M is 4.7 %, under the 5 % critical threshold); the oracle does not move | Huma's watch: the mint | each warn and critical alert |
 | End | the fork stops | alert counts per vault | — |
 
 Act 1 predicts the same −32 % that act 2 then causes, so the audience sees the forecast before the event.

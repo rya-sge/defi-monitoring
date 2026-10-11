@@ -269,7 +269,7 @@ def incident(
     if conditional and not any(k == "token" for k, *_ in parsed):
         raise ValueError("the conditional distribution draws the size of a markdown: it needs a token=… shock")
     ph, nx = pharos_snapshot(mode), nexus_prices(mode)
-    sources = [(v, *vault_source(v.address, mode), vault_graph(v.address)) for v in book.vaults]
+    sources = [(v, *vault_source(v.address, mode), vault_graph(v.address)) for v in book.vaults if v.kind == "vault"]
 
     def run_all(scaled):
         return [
@@ -290,10 +290,59 @@ def incident(
         ]
 
     incidents = run_all(parsed)
-    result = vault_book.aggregate(book, parsed, incidents)
+    borrows, names = [], {}
+    for v in book.vaults:
+        if v.kind == "borrow":
+            ln, n = borrow_pocket(v, parsed, book.weighting, horizon, mode, exit_cost)
+            borrows.append(ln)
+            names.update(n)
+    result = vault_book.aggregate(book, parsed, incidents, borrows, names)
+    if conditional and any(ln.hit_markets for ln in borrows):
+        result.notes.append(
+            "the conditional distribution covers the vault pockets; a borrow pocket keeps its one figure"
+        )
     if conditional:
         conditional_distribution(book, parsed, incidents, result, run_all)
     return VaultIncidentResult(book, incidents, result)
+
+
+def borrow_pocket(v, parsed, weighting: str, horizon: float, mode: str, exit_cost: float | None):
+    """D177–D178: a Morpho Blue borrow in a book (the brief's PT loop). A token shock that names its collateral or the
+    collateral's underlying is, for the position, a loss of backing every oracle sees (`issuer_hack`); the incident
+    module of `analyze --shock` gives its loss and its exit cost. Offline from the analyze snapshot."""
+    f = S.Fetcher("offline") if mode == "offline" else S.Fetcher("direct")
+    as_of = clock.as_of()
+    if mode == "offline":
+        clock.set_as_of(json.loads((S.SNAPSHOT_DIR / "as_of.json").read_text())["as_of"])
+    try:
+        pos = discover.discover_morpho_position(f, v.address, v.depositor)
+        names = {
+            x.lower()
+            for x in (pos.collateral_symbol, pos.collateral_address, pos.underlying_symbol, pos.underlying_address)
+            if x
+        }
+        fall = max((s for k, t, s, _ in parsed if k == "token" and t in names), default=0.0)
+        label = v.label or pos.label
+        shown = {
+            t: (
+                pos.underlying_symbol
+                if t in {(pos.underlying_symbol or "").lower(), pos.underlying_address}
+                else pos.collateral_symbol
+            )
+            for k, t, _, _ in parsed
+            if k == "token" and t in names
+        }
+        if not fall:
+            line = vault_book.borrow_line(label, weighting, v.amount, pos.equity_usd, 0.0, 0.0, None, horizon, False)
+            return line, shown
+        res = analyze(f, market=v.address, user=v.depositor, horizon=horizon, paths=2000, shocks={"issuer_hack": fall})
+        inc = res.incident
+        line = vault_book.borrow_line(
+            label, weighting, v.amount, pos.equity_usd, inc.loss_usd, inc.exit_cost_usd, exit_cost, horizon, True
+        )
+        return line, shown
+    finally:
+        clock.set_as_of(as_of)
 
 
 def conditional_distribution(book, parsed, incidents, result, run_all) -> None:

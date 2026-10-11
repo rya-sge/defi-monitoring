@@ -129,7 +129,7 @@ WATCH_LOG="$LOG_TORI" sync_watch
 pause
 
 caption "Act 3 — unbacked PST minted through a Chainlink CCIP pool; the oracle does not see it"
-"$HERE/alt-pst-mint.sh"
+"$HERE/alt-pst-mint.sh" 15000000  # +7.0 % of the supply: past watch.mint_share_critical (5 %); the default 10M is 4.7 %
 WATCH_LOG="$LOG_HUMA" sync_watch
 sleep "${NOTIFY_DRAIN:-8}"  # the last alerts leave the queue (3 s apart)
 pause

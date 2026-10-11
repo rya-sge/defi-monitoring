@@ -4,6 +4,8 @@
 
 Needs Foundry (`anvil`, `cast`, `forge`) and the project's `uv` environment. No key: the fork's upstream is `keys.ini [rpc] url` when set, else a keyless archive endpoint.
 
+What each line of the output means: `DEMO-EXPLAINED.md`.
+
 ## One command
 
 ```bash
