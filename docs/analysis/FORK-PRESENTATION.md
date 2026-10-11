@@ -108,7 +108,7 @@ export RISKDEP_FORK=1          # see §4
 | Exit gates with a 0 s timelock | an event alert only | a startup finding: "withdrawals can be gated with no delay by <curator>" |
 | Administered feed band | not read | read `minAnswer` / `maxAnswer` of custom aggregators; report "the oracle cannot fall below X without an upgrade (48 h)" |
 
-The first four changes are what make the demo run. The last three are findings from `ROCK-VAULT-DEP.md` that the demo puts on screen, and the product needs them anyway. Each gets its row in `docs/alert-runbook.md` and its threshold in `registry.json`, as the conventions require.
+The first four changes are what make the demo run. The last three are findings from `ROCK-VAULT-DEP.md` that the demo puts on screen, and the product needs them anyway. Each gets its row in `docs/reference/alert-runbook.md` and its threshold in `registry.json`, as the conventions require.
 
 ## 5. Files to add
 

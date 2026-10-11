@@ -265,7 +265,7 @@ The 0.13 % is a parameter of the method, applied to every Morpho market Credora 
 - **`PROVIDERS.md` in the same commit:** each new endpoint gets its row (endpoint, query, limits, key).
 - **Keys:** a `[pharos]` and a `[credora]` section, with names and no values, in `keys.example.ini`; the values in `keys.ini` only. Nexus needs none.
 - **Tests stay offline:** cache the responses under `fixtures/snapshot/` once, so tests and the demo run without the network.
-- **New thresholds and mappings** (grade → multiplier, cover price → bound) go in `registry.json` with their basis, and in `docs/registry-reference.md`.
+- **New thresholds and mappings** (grade → multiplier, cover price → bound) go in `registry.json` with their basis, and in `docs/reference/registry-reference.md`.
 - **The docs themselves:** done. The three folders are in `docs/external/risk-assessment/`, git-ignored and listed in `CLAUDE.md` and `AGENTS.md`.
 
 ### Order
@@ -421,4 +421,4 @@ Steps 1–3 need no key, and together they turn §5's comparison into a number t
 
 ### Project files
 
-`GAP.md` (gap ids), `riskdep/registry.json` (our priors and severities), `riskdep/priors.py` (snapshot exploit priors), `docs/how-risk-is-computed.md` (demo position and exit cost), `PROVIDERS.md` and `CLAUDE.md` (project rules on providers and keys).
+`GAP.md` (gap ids), `riskdep/registry.json` (our priors and severities), `riskdep/priors.py` (snapshot exploit priors), `docs/model/how-risk-is-computed.md` (demo position and exit cost), `PROVIDERS.md` and `CLAUDE.md` (project rules on providers and keys).

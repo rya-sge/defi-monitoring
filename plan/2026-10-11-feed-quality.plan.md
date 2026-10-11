@@ -48,7 +48,7 @@ The brief names two scope items the tool did not measure: "oracle dependency and
 - **`graph.py`**: base feed nodes get `updated_at`, `freshness`, `stale`; `annotate_tvl` adds protocol nodes.
 - **`vault_incident.py`**: `market_feeds` (pure); `MarketHit.feeds`, `stale_feed`; a note when a hit feed is stale.
 - **`pipeline.py`**: `llama_protocols(mode)`. **`cli.py`**: `graph` annotates TVL.
-- **`registry.json`**: `feeds`, `tvl`. **`docs/shock-trace-example.json`**: regenerated (its graph carries the new details).
+- **`registry.json`**: `feeds`, `tvl`. **`docs/model/shock-trace-example.json`**: regenerated (its graph carries the new details).
 
 ## 8. Decisions
 
@@ -68,7 +68,7 @@ The brief names two scope items the tool did not measure: "oracle dependency and
 | Slice | Done when | Went on |
 |---|---|---|
 | S1 | Belem's mGLOeuro feed flagged on the recorded graph and in the incident | a 2-round cadence hid the stale NAV: D156 requires the classification's minimum of rounds |
-| S2 | the RockawayX USDC Yield graph has 7 protocol nodes; 293 tests pass | the committed trace example embeds feed details: regenerated as `docs/shock-trace.md` says; `web/src/mocks/shock-trace.json` (a copy of it) left to the front end |
+| S2 | the RockawayX USDC Yield graph has 7 protocol nodes; 293 tests pass | the committed trace example embeds feed details: regenerated as `docs/model/shock-trace.md` says; `web/src/mocks/shock-trace.json` (a copy of it) left to the front end |
 
 ## Interview log
 

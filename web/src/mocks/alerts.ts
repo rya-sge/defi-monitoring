@@ -6,7 +6,7 @@ import type { Alert, WatchTick } from '../api/types';
  * The `info` and `warn` entries are verbatim copies of recorded CLI output
  * (`out/watch-*.jsonl`). The two `critical` entries are FABRICATED: no recorded
  * run contains a critical alert, so their wording is modelled on the rows of
- * `docs/alert-runbook.md` (`HealthFactor` · liquidatable now, `Admin.Upgraded`)
+ * `docs/reference/alert-runbook.md` (`HealthFactor` · liquidatable now, `Admin.Upgraded`)
  * rather than taken from real output. Treat their `data` keys as illustrative.
  */
 export const MOCK_ALERTS: readonly Alert[] = [

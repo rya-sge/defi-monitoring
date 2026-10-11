@@ -932,6 +932,22 @@
           25842830
         ],
         "source": "GAP.md K8: trading in YT-reUSD pushed PT-reUSD's implied yield from about 11 % to over 20 % in nine minutes; the min(TWAP, linear) oracle fell; 33 positions liquidated, no bad debt. 33 Liquidate events confirmed on-chain on 2026-10-11 (blocks 25,829,868 to 25,829,936)."
+      },
+      "crash-2025-10-10": {
+        "title": "The 2025-10-10 market crash on Morpho, main wave (20:50–22:00 UTC)",
+        "markets": [
+          "0x3f1d5c88c72432b04f2074499fe217468af49ddaa98bcb6ec80b08f76a82c6ec",
+          "0x5ffdf15c5a4d7c6affb3f12634eeda1a20e60b92c0eb547f61754f656b55841e",
+          "0xc7d717f4052ac4e5463dcc58cea0f6b05dd7d8c67e0aee68ebe30a8af09b259f",
+          "0xa921ef34e2fc7a27ccc50ae7e4b154e16c9799d3387076c421423ef52ac4df99",
+          "0xb323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc",
+          "0x3a85e619751152991742810df6ec69ce473daef99e28a64ab2340d7b7ccfee49"
+        ],
+        "window": [
+          23549800,
+          23550200
+        ],
+        "source": "Liquidate events on Morpho Blue read through Etherscan on 2026-10-11: 258 liquidations in 29 markets between 2025-10-10 12:00 and 10-11 12:00 UTC, led by memecoin collateral (Mog, PEPE, SPX) and WBTC; the six markets with the most, in the crash's main wave. USDe itself barely reached Morpho that night (2 liquidations in sUSDe/USDT): its −35 % print was on a centralized exchange."
       }
     }
   },

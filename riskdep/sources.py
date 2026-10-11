@@ -143,7 +143,7 @@ class Fetcher:
                 msg = msg.replace(str(v), "***")
             hint = (
                 " (sent through RISKDEP_RPC_URL: is the proxy running? Unset the variable to call the public RPC directly,"
-                " see docs/erpc.md)"
+                " see docs/setup/erpc.md)"
                 if target != url and url in ROUTES
                 else ""
             )

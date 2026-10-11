@@ -15,7 +15,7 @@
       "layout": "title",
       "title": "How riskdep computes probabilities",
       "subtitle": "Priors per layer, Monte Carlo, breakeven p*, outside views",
-      "notes": "Sources: docs/how-risk-is-computed.md; riskdep/priors.py, simulate.py, decide.py, vault_incident.py (breakeven), nexus.py (implied); riskdep/registry.json (frequency, oracle, issuers, nexus). Demo figures: the offline analyze demo, PT-sUSDE-26NOV2026 / USDC on Morpho Blue, data of 2026-10-10."
+      "notes": "Sources: docs/model/how-risk-is-computed.md; riskdep/priors.py, simulate.py, decide.py, vault_incident.py (breakeven), nexus.py (implied); riskdep/registry.json (frequency, oracle, issuers, nexus). Demo figures: the offline analyze demo, PT-sUSDE-26NOV2026 / USDC on Morpho Blue, data of 2026-10-10."
     },
     {
       "layout": "two-column",

@@ -2,7 +2,7 @@
 
 This document challenges how `riskdep analyze` computes risk: the priors, the propagation, the simulation and the verdict. It is checked against the code, the project docs, the teammates' notes and outside evidence (incidents from 2022 to 2026, and the methods of risk firms and academic work). It sits next to `ANALYSIS_MONITORING.md`, which lists the known gaps (M1–M7, R1–R7). Status notes marked *(update 2026-10-10)* record what the `graph` work of plan `2026-10-10-sibling-markets` (sibling markets, oracle classes, liquidation curves per market, an optional eRPC proxy) changed for each gap. This file questions the model's assumptions themselves. Each gap gets an id `K<n>`, and a gap that extends an existing one names it.
 
-Numbers for the demo position come from `docs/how-risk-is-computed.md` and the offline snapshot (`fixtures/snapshot/`, as of 2026-10-10). The position holds PT-sUSDE-26NOV2026 against USDC on Morpho Blue: collateral $3.93M, debt $3.41M, equity $0.52M, leverage 7.6×, LLTV 91.5 %, liquidation distance 5.16 %, verdict REDUCE.
+Numbers for the demo position come from `docs/model/how-risk-is-computed.md` and the offline snapshot (`fixtures/snapshot/`, as of 2026-10-10). The position holds PT-sUSDE-26NOV2026 against USDC on Morpho Blue: collateral $3.93M, debt $3.41M, equity $0.52M, leverage 7.6×, LLTV 91.5 %, liquidation distance 5.16 %, verdict REDUCE.
 
 ## Contents
 
@@ -365,7 +365,7 @@ The `tail_budget` of 50 % of equity is a stated choice, but nothing ties it to t
 `comparison_team.md` §4.3 already calls this the largest gap against the track's "impact" criterion. The exit queue model and the drain threshold are done; one piece is not.
 
 1. ~~**A depositor loss under a scenario**~~ **done 2026-10-11** (`analyze --vault --shock token=…`, plan `2026-10-11-vault-incident`; a book of vaults in plan `2026-10-11-vault-book`). Original text: Σ over the vault's markets of its share of supply × the market's bad debt at that drop. `market_risk.value()` already returns bad debt at a given drop. **Still missing.**
-2. ~~**The fixed-oracle drain d\*** (Team 2)~~ **done** in the watches (`riskdep/drain.py`, `DrainWindow` alert, `docs/drain-threshold.md`). With a linear-discount, hardcoded or NAV oracle, a depeg never liquidates, and borrowers can loop the depegged asset in until caps are full; that is what happened on wstUSR, where the oracle marked $1.13 while the market was near $0.63. What remains is to feed it into `analyze`: the drained amount is a loss channel for a depositor, and the probability of crossing d\* comes from the depeg prior (K5).
+2. ~~**The fixed-oracle drain d\*** (Team 2)~~ **done** in the watches (`riskdep/drain.py`, `DrainWindow` alert, `docs/watch/drain-threshold.md`). With a linear-discount, hardcoded or NAV oracle, a depeg never liquidates, and borrowers can loop the depegged asset in until caps are full; that is what happened on wstUSR, where the oracle marked $1.13 while the market was near $0.63. What remains is to feed it into `analyze`: the drained amount is a loss channel for a depositor, and the probability of crossing d\* comes from the depeg prior (K5).
 
 Incidents add a third: the **realisation rule** depends on the vault version.
 - V1.0 realises bad debt for every holder at once.
@@ -456,7 +456,7 @@ The brief's worked example marks layer 3, the oracle, with "incident". Its quest
 
 The brief's example is about a book: ten pockets of 10 %, one affected, an 11 % unwinding cost. Three things are missing to reproduce it:
 1. **A book.** A list of positions with their weights, so the loss and the exit cost read as a share of the book, and two pockets that share a layer are combined (M6).
-2. **The breakeven probability** p\* = exit cost ÷ L(s) (Team 2, `docs/scenarios-and-breakeven.md`). On the brief's numbers, an 11 % exit cost against a total loss of the pocket gives p\* = 11 %: exit if you believe the incident wipes out the pocket with more than 11 % probability over the horizon. That's the trade-off "made explicit", and it does not depend on a base rate.
+2. **The breakeven probability** p\* = exit cost ÷ L(s) (Team 2, `docs/model/scenarios-and-breakeven.md`). On the brief's numbers, an 11 % exit cost against a total loss of the pocket gives p\* = 11 %: exit if you believe the incident wipes out the pocket with more than 11 % probability over the horizon. That's the trade-off "made explicit", and it does not depend on a base rate.
 3. **One headline number.** For example "expected loss X % of the book; exit pays above p\* = Y %", above the verdict.
 
 ### K22. "How fast" is not an output of `analyze`
@@ -555,8 +555,8 @@ The order recommended on 2026-10-10 put K20 and K21 first; both are now done or 
 | `riskdep/decide.py` | carry, exit cost, verdict, de-lever sizing |
 | `riskdep/discover.py` | oracle inference (`infer_oracle`), exit quote |
 | `riskdep/registry.json` | depeg and hack severities, frequency parameters, PT stress, tail budget |
-| `docs/how-risk-is-computed.md` | demo numbers, stated limits |
-| `docs/scenarios-and-breakeven.md` | breakeven probability, horizon conversion |
+| `docs/model/how-risk-is-computed.md` | demo numbers, stated limits |
+| `docs/model/scenarios-and-breakeven.md` | breakeven probability, horizon conversion |
 | `ANALYSIS_MONITORING.md` | existing gaps M1–M7, C2, G4 |
 | `comparison_team.md`, `teammate/team1.md`, `teammate/team2.md` | teammates' positions: breakeven p\*, scenarios first, cascade, run model, fixed-oracle drain |
 | `PROVIDERS.md` | demo oracle identification (`MetaOracleDeviationTimelock`) |

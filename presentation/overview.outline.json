@@ -143,7 +143,7 @@
         "Cursor saved last: a restart misses no block",
         "Cross-checks: a second RPC, the API against the chain"
       ],
-      "notes": "watch.py, rules.py, market_risk.py, drain.py, exit_queue.py, admin.py. What each alert means and what to do: docs/alert-runbook.md. Thresholds in registry.json (watch)."
+      "notes": "watch.py, rules.py, market_risk.py, drain.py, exit_queue.py, admin.py. What each alert means and what to do: docs/reference/alert-runbook.md. Thresholds in registry.json (watch)."
     },
     {
       "layout": "table",

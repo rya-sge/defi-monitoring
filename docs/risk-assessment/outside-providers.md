@@ -170,4 +170,4 @@ The implied probability is price ÷ (loading × severity): a price is the expect
 - **Optional.** It is never needed to produce a number. When it cannot be read, the run prints "not checked".
 - **Shown, not blended.** An outside number appears next to ours, with its date and source. It only enters a computation through a mapping stated in `registry.json`, with its basis.
 - **Recorded.** Responses go through `sources.Fetcher` into a committed fixture. Tests never call the network.
-- **Documented in the same change.** That means a row in `docs/analysis/PROVIDERS.md`, a section in this document, and the registry keys in `docs/registry-reference.md`.
+- **Documented in the same change.** That means a row in `docs/analysis/PROVIDERS.md`, a section in this document, and the registry keys in `docs/reference/registry-reference.md`.

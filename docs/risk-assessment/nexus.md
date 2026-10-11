@@ -35,7 +35,7 @@ api.nexusmutual.io/v2/capacity ─┴─ nexus.load ── pipeline.nexus_prices
 4. **Convert** (`nexus.implied`, pure): see §3.
 5. **Print** (`nexus.outside_line`): price, capacity, implied range, and what the cover does **not** pay on.
 
-Mapped today (`registry.json`, see `docs/registry-reference.md#nexus`):
+Mapped today (`registry.json`, see `docs/reference/registry-reference.md#nexus`):
 
 | Token | Product (id) | Kind | Yearly price (2026-10-11) |
 |---|---|---|---|
@@ -112,6 +112,6 @@ Reading: if the markdown is certain, EXIT. If it is not, leaving pays only if it
 ## 7. Maintenance
 
 - **Refresh prices**: run the incident with `--record` (or `--refresh`) and commit the new files under `fixtures/replay/nexus/`. Without them, tests that run offline in CI fail.
-- **Add a product**: find its id in `/v2/products`, read its wording (the IPFS annex) to set `kind`, add `"<token address>": {"product": <id>, "kind": "protocol" | "depeg", "token": "<symbol>"}` to `registry.json` `nexus.products`, and update `docs/registry-reference.md`.
+- **Add a product**: find its id in `/v2/products`, read its wording (the IPFS annex) to set `kind`, add `"<token address>": {"product": <id>, "kind": "protocol" | "depeg", "token": "<symbol>"}` to `registry.json` `nexus.products`, and update `docs/reference/registry-reference.md`.
 - **Tests**: `tests/test_breakeven.py` (`test_nexus_covers_and_implied_probability`, `test_recorded_nexus_offline`, `test_vault_breakeven_offline`).
-- **Related docs**: `docs/risk-assessment/outside-providers.md` §2, `docs/analysis/PROVIDERS.md` (endpoints and limits), `docs/scenarios-and-breakeven.md`, `plan/2026-10-11-breakeven.plan.md`.
+- **Related docs**: `docs/risk-assessment/outside-providers.md` §2, `docs/analysis/PROVIDERS.md` (endpoints and limits), `docs/model/scenarios-and-breakeven.md`, `plan/2026-10-11-breakeven.plan.md`.

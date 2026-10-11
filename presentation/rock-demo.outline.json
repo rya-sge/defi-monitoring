@@ -117,7 +117,7 @@
         "width_cm": 25.2,
         "height_cm": 8.4
       },
-      "notes": "Levels: docs/alert-runbook.md (critical: money is being lost now, or can be lost in the next block; warn: the risk changed, a decision may be needed)."
+      "notes": "Levels: docs/reference/alert-runbook.md (critical: money is being lost now, or can be lost in the next block; warn: the risk changed, a decision may be needed)."
     },
     {
       "layout": "two-column",

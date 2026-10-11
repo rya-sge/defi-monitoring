@@ -12,7 +12,7 @@ Every edge comes from an on-chain attribute or a role getter, with the amount it
 Sibling markets (plan 2026-10-10-sibling-markets, D76–D85): Blue markets no actor holds that share a held market's
 collateral, underlying or base price input, or lend that collateral. They join the held market through the shared
 asset, oracle or feed node, never through a market → market edge. Every Blue market carries its oracle class and its
-liquidation curve, the data the propagation engine of docs/graph-propagation.md needs.
+liquidation curve, the data the propagation engine of docs/model/graph-propagation.md needs.
 """
 
 from __future__ import annotations

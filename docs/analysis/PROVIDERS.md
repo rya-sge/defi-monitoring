@@ -26,7 +26,7 @@ Every external service the project calls, what it is used for, and what is known
 | publicnode | `https://ethereum-rpc.publicnode.com` | Ethereum JSON-RPC (HTTP) | no | all on-chain data | `riskdep/sources.py` (`RPC`) |
 | dRPC | `https://eth.drpc.org` | Ethereum JSON-RPC (HTTP) | no | cross-check only (block hash) | `riskdep/crosscheck.py` (`SECOND_RPCS`) |
 | 1RPC | `https://1rpc.io/eth` | Ethereum JSON-RPC (HTTP) | no | cross-check fallback; answers 410 "discontinued" since at least 2026-10-10 | `riskdep/crosscheck.py` (`SECOND_RPCS`) |
-| eRPC (optional) | `http://127.0.0.1:4000/main/evm/1`, run locally | RPC proxy over 6 free endpoints | no | the main RPC's requests, when `RISKDEP_RPC_URL` points at it | `erpc.yaml`, `docs/erpc.md` |
+| eRPC (optional) | `http://127.0.0.1:4000/main/evm/1`, run locally | RPC proxy over 6 free endpoints | no | the main RPC's requests, when `RISKDEP_RPC_URL` points at it | `erpc.yaml`, `docs/setup/erpc.md` |
 | anvil fork (demo) | `http://127.0.0.1:8545`, run locally by `scripts/fork/start-fork.sh` | Ethereum JSON-RPC (anvil) | no | the main RPC's requests during the fork demo (`RISKDEP_RPC_URL` + `RISKDEP_FORK=1`) | `scripts/fork/addresses.env` (`FORK_RPC`, `FORK_UPSTREAMS`) |
 | Morpho | `https://blue-api.morpho.org/graphql` | GraphQL API | no | discovery: positions, borrowers, lenders, vault roles | `riskdep/sources.py` (`MORPHO`) |
 | Pendle | `https://api-v2.pendle.finance/core` | REST API | no | PT markets, implied yield, swap quotes | `riskdep/sources.py` (`PENDLE`) |
@@ -63,7 +63,7 @@ Every request to the data providers goes through the cached fetcher of `riskdep/
 - **Rate limit.** A burst gets HTTP 429 with a `-32005 Rate limit exceeded` error on every item of the batch: 15 of 36 parallel 60-call batches on 2026-10-10. A local eRPC whose upstreams are all busy answers HTTP 200 with the same kind of error per item. `sources.Fetcher` treats both alike (a 429, or a rate-limit message in any item, `sources._throttled`): it waits 2, 4 … 12 s and resends, up to 6 times (`THROTTLE_RETRIES`), then fails the request, and never caches such an answer. Before this, the body was passed on and every call read as reverted: a long `graph` run left 36 of 80 oracles `not classified` and could have recorded the errors. The fix for speed is eRPC, below.
 - **Batches.** JSON-RPC batches of up to about 200 calls were accepted in every run. `market_risk` and `sources.rpc_batch_methods` split at 200 calls; `sources.rpc_batch` sends a reader's calls in one request (the largest today is the admin-surface read, about 140 calls for 47 contracts).
 
-**Available but not used yet:** the WebSocket endpoint `wss://ethereum-rpc.publicnode.com` (`newHeads`, `logs`, `newPendingTransactions`, all verified) and `eth_simulateV1` (verified). See `docs/websocket-vs-polling.md`.
+**Available but not used yet:** the WebSocket endpoint `wss://ethereum-rpc.publicnode.com` (`newHeads`, `logs`, `newPendingTransactions`, all verified) and `eth_simulateV1` (verified). See `docs/watch/websocket-vs-polling.md`.
 
 **Routing (`RISKDEP_RPC_URL`).** When this environment variable is set, `sources.Fetcher` sends the main RPC's requests to its value instead of publicnode, for example a local node, a proxy or a paid endpoint with its key. Requests stay cached under the publicnode URL, so snapshots and replays keep working and the key never reaches a file; an error names the public URL only, says the request went through `RISKDEP_RPC_URL`, and keeps only the kind of failure (`ConnectionError`), since `requests` prints the routed host and path apart, where a key could sit. The cross-checks keep calling dRPC and 1RPC directly: routing the main RPC to one of them would make the block-hash check compare that node with itself.
 
@@ -73,7 +73,7 @@ Every request to the data providers goes through the cached fetcher of `riskdep/
 
 ## eRPC, optional local proxy
 
-**`http://127.0.0.1:4000/main/evm/1`**, [eRPC](https://github.com/erpc/erpc) 0.3.0 run by the user with the committed `erpc.yaml` (setup: `docs/erpc.md`). `RISKDEP_RPC_URL` sends the main RPC's requests to it; nothing is sent there otherwise. It spreads them over the upstreams below, retries a refused call on another upstream (4 attempts), and caches answers in memory (finalized blocks without expiry, recent blocks for 30 s). No rate budget is configured: in 0.3.0 a spent budget rejects calls with no queue (`waitTime` is ignored), which turned one 200-call batch into rate-limit errors in the first test.
+**`http://127.0.0.1:4000/main/evm/1`**, [eRPC](https://github.com/erpc/erpc) 0.3.0 run by the user with the committed `erpc.yaml` (setup: `docs/setup/erpc.md`). `RISKDEP_RPC_URL` sends the main RPC's requests to it; nothing is sent there otherwise. It spreads them over the upstreams below, retries a refused call on another upstream (4 attempts), and caches answers in memory (finalized blocks without expiry, recent blocks for 30 s). No rate budget is configured: in 0.3.0 a spent budget rejects calls with no queue (`waitTime` is ignored), which turned one 200-call batch into rate-limit errors in the first test.
 
 | Upstream | Endpoint | Batches | Probe 2026-10-10 (30-call `eth_call` batch 60 blocks back, `eth_getLogs`, `eth_getStorageAt`) |
 |---|---|---|---|
@@ -204,7 +204,7 @@ These are not data sources: the browser loads them when a report is opened, at a
 | Script | URL | Page |
 |---|---|---|
 | Mermaid 11.4.1 | `https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js` | `out/report.html` (`analyze`) |
-| Cytoscape.js 3.30.2 | `https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.2/cytoscape.min.js` | `out/graph.html`, `docs/graph-example.html` |
+| Cytoscape.js 3.30.2 | `https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.2/cytoscape.min.js` | `out/graph.html`, `docs/examples/graph-example.html` |
 
 ## Images loaded by the web frontend
 

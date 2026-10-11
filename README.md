@@ -72,11 +72,11 @@ Outside an activated virtualenv, prefix the `python3 -m riskdep …` commands be
 **Faster live runs: eRPC (optional).** The free RPC throttles long runs such as `graph`; riskdep then waits and resends, which is slow but loses nothing. A local eRPC proxy spreads the calls over six free endpoints instead (RockawayX graph: 43 s direct, 20 s through eRPC; the example graph: 8 to 12 min direct, 3 min through eRPC). It takes one binary, the committed `erpc.yaml`, and one variable:
 
 ```bash
-~/.local/bin/erpc erpc.yaml                                  # in its own terminal; setup in docs/erpc.md
+~/.local/bin/erpc erpc.yaml                                  # in its own terminal; setup in docs/setup/erpc.md
 export RISKDEP_RPC_URL=http://127.0.0.1:4000/main/evm/1      # unset it to go direct again
 ```
 
-Tests and replays never need it. Setup, checks and troubleshooting: `docs/erpc.md`.
+Tests and replays never need it. Setup, checks and troubleshooting: `docs/setup/erpc.md`.
 
 ## watch: Morpho Vault V2 depositor
 
@@ -90,7 +90,7 @@ python3 -m riskdep watch --vault <V2> --step 1             # one block per batch
 python3 -m riskdep watch --vault <V2> --replay --record-as fork-belem   # a recording kept under its own name
 ```
 
-At start it reads the vault's structure on-chain (vault → adapters → Blue markets: collateral, LLTV, the vault's share, utilisation, caps, the liquidity market). It reports what a plain withdrawal can pay (idle assets plus the liquidity adapter's market, per the Morpho docs) separately from what only `forceDeallocate` can reach, at the adapter's penalty, and prints standing findings such as concentration or an exit that can't be done in full. It also lists every borrower of the vault's markets (Morpho API, positions read on-chain) and prints each market's liquidation curve and unrealised bad debt; positions are re-read when an event touches them and fully refreshed every 300 blocks. It then prints each market's **drain threshold**: how far the collateral trades below its oracle, the depeg d\* past which the market's free liquidity can be borrowed in one block, and how much that is (`docs/drain-threshold.md`). It then prints the depositor's **exit queue**: what it recovers at par and what stays stuck if it exits first, behind the vault's contract holders, behind half of the other depositors, or last, and its loss in each case for the unrealised bad debt now and for every collateral falling 2 to 20 % at once (`docs/exit-queue.md`). A live batch with no event re-reads only what moves without one (oracle prices, `totalAssets`, `realAssets`, idle cash, the depositor's gates); the full state read runs on any event and at least every 25 blocks (D61). Finally it prints the **admin surface** of those markets: each oracle and the feeds it reads, the collateral and loan tokens, Pendle SY and yield tokens, whether each is upgradeable and who controls it, and each oracle's gap to DefiLlama's price. It then polls every 12 s, 2 blocks behind the head, and prints one line per relevant transaction. Each alert is also appended to `out/watch-<vault>.jsonl`, and the cursor in `out/watch-<vault>.cursor` lets a restart resume where it stopped.
+At start it reads the vault's structure on-chain (vault → adapters → Blue markets: collateral, LLTV, the vault's share, utilisation, caps, the liquidity market). It reports what a plain withdrawal can pay (idle assets plus the liquidity adapter's market, per the Morpho docs) separately from what only `forceDeallocate` can reach, at the adapter's penalty, and prints standing findings such as concentration or an exit that can't be done in full. It also lists every borrower of the vault's markets (Morpho API, positions read on-chain) and prints each market's liquidation curve and unrealised bad debt; positions are re-read when an event touches them and fully refreshed every 300 blocks. It then prints each market's **drain threshold**: how far the collateral trades below its oracle, the depeg d\* past which the market's free liquidity can be borrowed in one block, and how much that is (`docs/watch/drain-threshold.md`). It then prints the depositor's **exit queue**: what it recovers at par and what stays stuck if it exits first, behind the vault's contract holders, behind half of the other depositors, or last, and its loss in each case for the unrealised bad debt now and for every collateral falling 2 to 20 % at once (`docs/watch/exit-queue.md`). A live batch with no event re-reads only what moves without one (oracle prices, `totalAssets`, `realAssets`, idle cash, the depositor's gates); the full state read runs on any event and at least every 25 blocks (D61). Finally it prints the **admin surface** of those markets: each oracle and the feeds it reads, the collateral and loan tokens, Pendle SY and yield tokens, whether each is upgradeable and who controls it, and each oracle's gap to DefiLlama's price. It then polls every 12 s, 2 blocks behind the head, and prints one line per relevant transaction. Each alert is also appended to `out/watch-<vault>.jsonl`, and the cursor in `out/watch-<vault>.cursor` lets a restart resume where it stopped.
 
 | Level | What triggers it |
 |---|---|
@@ -98,13 +98,13 @@ At start it reads the vault's structure on-chain (vault → adapters → Blue ma
 | warn | an oracle ≥ 3 % away from DefiLlama's price; a change of proxy admin, owner or Chainlink aggregator of a dependency; a steep liquidation curve: a 5 % oracle fall would make ≥ 25 % of a held market's debt liquidatable (markets holding ≥ 10 % of the vault); risk-increasing functions that can change with no notice (timelock 0, not abdicated), listed at start; a timelocked change submitted (`Submit`, decoded, with its execution date and timelock) or made live (`Accept`), new adapter, cap raised, fee or gate change, shorter timelock, `ForceDeallocate`, new liquidity adapter, a market crossing 25 % of the vault, ≥ 99 % utilisation on a market holding ≥ 10 %, an oracle moving ≥ 5 %, you no longer able to exit in full with a plain withdrawal, a gate blocking your exit, a block range that could not be read; at least half of your position stuck if the vault's contract holders withdrew before you (`ExitQueue`); a market's collateral within 2 points of its drain threshold (`DrainWindow`); one borrower holding ≥ 50 % of a market's debt, or fewer than 5 borrowers, in a market holding ≥ 10 % of the vault (`BorrowerConcentration`); an upgrade, admin or owner change of a dependency scheduled on a timelock above it, with its delay (`Admin.CallScheduled`, D182); a custom feed that cannot report below a floor within 50 % of its answer without an upgrade (`FeedBand`, D183); an exit gate settable with no notice (`ExitGate`, D184); a vault market's oracle falling ≥ 2 % with no loss yet, with what is liquidatable and the verdict (`OracleImpact`); a feed of a watched oracle turning stale (`FeedStale`); for a Zama confidential vault, a day's confidential outflow ≥ 2 %, an instant exit ≥ 1 %, a batch canceled with money in it (`Zama.*`, critical for ≥ 10 % or a pause or upgrade) |
 | info | allocation moves, caps lowered, cancelled changes, liquidations without bad debt, your own and large (≥ 1 %) deposits and withdrawals; both exit gates abdicated (`ExitGate`); a `Submit` for an abdicated function; the timelocks found above the markets, and other calls queued on them |
 
-Thresholds live in `riskdep/registry.json` (`watch`), documented in `docs/registry-reference.md`. What to do about each alert: `docs/alert-runbook.md`. Terms: `docs/glossary.md`.
+Thresholds live in `riskdep/registry.json` (`watch`), documented in `docs/reference/registry-reference.md`. What to do about each alert: `docs/reference/alert-runbook.md`. Terms: `docs/reference/glossary.md`.
 
 **Cross-checks** (`riskdep/crosscheck.py`), at start and then every 300 blocks for `watch`, and once per `analyze` run:
 - the block hash from the main RPC is compared with an independent one (`eth.drpc.org`, then `1rpc.io`); a difference is a *critical* alert;
 - the Morpho API is compared with the chain: the vault's total assets for `watch`, the borrower's collateral and debt for `analyze` (0.5 % tolerance); a difference is a *warn*.
 
-A check that can't run prints "not checked" and never stops the run. Why polling rather than a WebSocket: `docs/websocket-vs-polling.md`.
+A check that can't run prints "not checked" and never stops the run. Why polling rather than a WebSocket: `docs/watch/websocket-vs-polling.md`.
 
 **Limits.** The free RPC serves state only ~64–90 blocks back, so for older ranges the state-based rules start at the oldest servable block; rules that use the event's own data stay exact. Reorgs deeper than 2 blocks are not handled. Underwater borrowers in the held markets (bad debt Blue has not yet written off, the window in which early exits shift a loss onto others) are not followed. A V1 vault held through `MorphoVaultV1Adapter` is watched as one opaque layer. The mempool is not watched.
 
@@ -127,7 +127,7 @@ The Morpho API (`userByAddress`) finds the positions: Blue markets where the add
 | warn | HF below the second level (default 1.05); a steep liquidation curve in a borrowed market (≥ 25 % of the other borrowers' debt liquidatable at a 5 % fall); one lender funding ≥ 50 % of a borrowed market, at start; a main lender withdrawing ≥ 5 % of a borrowed market's supply; a borrow or collateral withdrawal made on your behalf by another address; a `SetAuthorization` by the address; the borrow APY 50 % above its value at start; utilisation ≥ 99 %; an oracle move ≥ 5 % or an oracle that stops answering |
 | info | HF below the first level (default 1.10), and once when it recovers above it; your own borrows, repays and collateral moves; a repay or added collateral by another address, which lowers your risk |
 
-Alerts go to `out/watch-user-<address>.jsonl`, and a restart resumes from `out/watch-user-<address>.cursor`. Each Vault V2 deposit gets the same tables as `watch --vault`, the drain threshold and the exit queue included. Every 300 blocks the tool looks for new positions and refreshes the exit quotes. A Blue `Borrow` on your behalf in a market not yet watched is picked up at once. Not covered: direct Blue supply, Vault V1 deposits, exit quotes for collateral other than a PT, and Morpho's opt-in pre-liquidation contracts. Authorising one of them still raises the `SetAuthorization` alert. The options behind these choices are in `docs/user-watcher-options.md`.
+Alerts go to `out/watch-user-<address>.jsonl`, and a restart resumes from `out/watch-user-<address>.cursor`. Each Vault V2 deposit gets the same tables as `watch --vault`, the drain threshold and the exit queue included. Every 300 blocks the tool looks for new positions and refreshes the exit quotes. A Blue `Borrow` on your behalf in a market not yet watched is picked up at once. Not covered: direct Blue supply, Vault V1 deposits, exit quotes for collateral other than a PT, and Morpho's opt-in pre-liquidation contracts. Authorising one of them still raises the `SetAuthorization` alert. The options behind these choices are in `docs/watch/user-watcher-options.md`.
 
 ## graph: draw the dependency graph
 
@@ -139,7 +139,7 @@ python3 -m riskdep graph --vault <vault> --record                    # save ever
 python3 -m riskdep graph --vault 0xE0181090c22579B6A217f1522cbf8c9f1F0C1965 --replay   # RockawayX USDC Yield, offline
 ```
 
-Builds the graph of `docs/analysis/ANALYSIS_MONITORING.md` §1 from live data. Actors are addresses, vaults, and the main lenders of the borrowed markets. Pools are Blue markets and Pendle pools. It also draws assets, oracles with the feeds they read, and vault admins. The output is an interactive HTML page (Cytoscape.js from cdnjs) plus the same data as JSON. `docs/graph-example.html` is a rendered example, built before sibling markets existed.
+Builds the graph of `docs/analysis/ANALYSIS_MONITORING.md` §1 from live data. Actors are addresses, vaults, and the main lenders of the borrowed markets. Pools are Blue markets and Pendle pools. It also draws assets, oracles with the feeds they read, and vault admins. The output is an interactive HTML page (Cytoscape.js from cdnjs) plus the same data as JSON. `docs/examples/graph-example.html` is a rendered example, built before sibling markets existed.
 
 **Sibling markets** (plan `2026-10-10-sibling-markets`). For every Blue market an address or vault of the graph holds, `graph` also adds the other Blue markets that can move its collateral's price or share its price inputs, drawn dashed:
 
@@ -156,7 +156,7 @@ Siblings come from the Morpho API (Ethereum markets with at least $1M supplied, 
 
 **Feed quality and TVL concentration.** Each base feed of an oracle carries how old its last update is against its own rhythm, read from the rounds the classification already reads (`updated 17.5 days ago; 2 rounds, too few to learn its rhythm: STALE, past 7.0 days` for Belem's mGLOeuro NAV feed); a vault incident lists the feeds of each hit market. Each Blue market, PT and issuer token points to its DefiLlama protocol, with its share of DeFi and of its category, flagged when it is a concentration (`Pendle V2: 1,208M USD, 0.20% of DeFi, 25.3% of Yield (#2): CONCENTRATED`). Thresholds in `registry.json` `feeds` and `tvl`.
 
-**Market state.** Every Blue market node, held or sibling, carries its supply, borrow, the collateral of its borrowers and its liquidation curve at −2/−5/−10/−20 % (debt, positions, bad debt, collateral that would be sold); the `takes as collateral` edge carries the collateral amount, and an ERC-4626 asset has a `wraps` edge to the token it redeems into. That is the data the propagation engine of `docs/graph-propagation.md` needs.
+**Market state.** Every Blue market node, held or sibling, carries its supply, borrow, the collateral of its borrowers and its liquidation curve at −2/−5/−10/−20 % (debt, positions, bad debt, collateral that would be sold); the `takes as collateral` edge carries the collateral amount, and an ERC-4626 asset has a `wraps` edge to the token it redeems into. That is the data the propagation engine of `docs/model/graph-propagation.md` needs.
 
 ## shock: what a vault loses when a node fails
 
@@ -188,9 +188,9 @@ Past a market's capacity the rest cannot be sold, and those liquidations do not 
 
 Each oracle moves only with what it actually tracks. PT-reUSD's oracle prices the PT against reUSD, so a reUSD depeg liquidates nobody there: it leaves insolvent debt and a drain.
 
-Losses reach the vault by its share of each market, and a depositor (`--user`) by its share of the vault. The output gives the consequences per market and the path each loss took. `out/shock-<vault>.trace.json` holds the same propagation as data, every step tied to an edge of the graph, for a front end to animate: format in `docs/shock-trace.md`, a committed example in `docs/shock-trace-example.json`.
+Losses reach the vault by its share of each market, and a depositor (`--user`) by its share of the vault. The output gives the consequences per market and the path each loss took. `out/shock-<vault>.trace.json` holds the same propagation as data, every step tied to an edge of the graph, for a front end to animate: format in `docs/model/shock-trace.md`, a committed example in `docs/model/shock-trace-example.json`.
 
-How a shock crosses each edge is an ordered list of rules in `registry.json` (`engine`), with criteria on the edge, its two nodes and the effect. Change them, or pass a file with `--rules`, to propagate differently without touching the code. Everything, with worked examples and the rule format: `docs/shock-engine.md`.
+How a shock crosses each edge is an ordered list of rules in `registry.json` (`engine`), with criteria on the edge, its two nodes and the effect. Change them, or pass a file with `--rules`, to propagate differently without touching the code. Everything, with worked examples and the rule format: `docs/model/shock-engine.md`.
 
 ## analyze: Pendle PT on Morpho Blue
 
@@ -270,7 +270,7 @@ A separate process next to `watch`: it reads the alert files and posts to a priv
 
 ## web: the browser UI
 
-A React single-page app in `web/`, one page per CLI mode: **Vault** (the vault picked in the top bar: total assets, liquidity, its Blue markets by allocation, and the liquidations of their borrowers by collateral price drop — debt per 0.5 % bucket and its running total, weighted by the vault's share of each market), **Market** (one of those markets, opened from the vault's table: supply, borrow, utilization, rate, and the same liquidation chart for its borrowers), **Dependency graph** (the `graph` output in React Flow: shape by role, icon and amount inside each node, arrows; filterable by node kind, searchable, and a selection lights the node's whole upstream and downstream flow and opens a risk panel), **Impact** (a `shock` trace in six tabs — summary tables, the graph with reached nodes ringed, the path behind a loss, the liquidation sales as a Sankey, the losses round by round, a node × round matrix; for now always the committed example, `docs/shock-trace-example.json`) and **Alerts** (the `watch` stream, newest first, with level counts and a minimum-level filter).
+A React single-page app in `web/`, one page per CLI mode: **Vault** (the vault picked in the top bar: total assets, liquidity, its Blue markets by allocation, and the liquidations of their borrowers by collateral price drop — debt per 0.5 % bucket and its running total, weighted by the vault's share of each market), **Market** (one of those markets, opened from the vault's table: supply, borrow, utilization, rate, and the same liquidation chart for its borrowers), **Dependency graph** (the `graph` output in React Flow: shape by role, icon and amount inside each node, arrows; filterable by node kind, searchable, and a selection lights the node's whole upstream and downstream flow and opens a risk panel), **Impact** (a `shock` trace in six tabs — summary tables, the graph with reached nodes ringed, the path behind a loss, the liquidation sales as a Sankey, the losses round by round, a node × round matrix; for now always the committed example, `docs/model/shock-trace-example.json`) and **Alerts** (the `watch` stream, newest first, with level counts and a minimum-level filter).
 
 Tailwind CSS v4 with stock shadcn/ui primitives: a light radius on every control, faint table rules. Colour is reserved for severity — `info`, `warn`, `critical`, `ok` — and is carried by a word, never by a number, so an alert reads the same without it. The one other colour on screen is the dependency graph's six node kinds, which are data and are mirrored from `riskdep/graph.py`. Numbers are set in the UI face with tabular figures; only identifiers (addresses, hashes, market ids) are monospace.
 
@@ -284,7 +284,7 @@ pnpm lint         # eslint + prettier --check
 pnpm format       # prettier --write
 ```
 
-**It runs with no backend.** `VITE_USE_MOCKS` in `web/.env` defaults to true, and the hooks then resolve fixtures copied from real CLI output (`out/report.json`, `out/graph.json`, `out/watch-*.jsonl`) into `web/src/mocks/`. The alert stream is replayed one entry every 1.5 s, then ends. Two `critical` alerts in that fixture are **fabricated** — no recorded run has one, so their wording is modelled on `docs/alert-runbook.md`; everything else is verbatim recorded output.
+**It runs with no backend.** `VITE_USE_MOCKS` in `web/.env` defaults to true, and the hooks then resolve fixtures copied from real CLI output (`out/report.json`, `out/graph.json`, `out/watch-*.jsonl`) into `web/src/mocks/`. The alert stream is replayed one entry every 1.5 s, then ends. Two `critical` alerts in that fixture are **fabricated** — no recorded run has one, so their wording is modelled on `docs/reference/alert-runbook.md`; everything else is verbatim recorded output.
 
 **The backend.** `riskdep/api/` is a FastAPI app serving the routes below; Vite proxies `/api` to it. With `VITE_USE_MOCKS=false` the hooks hit it for real.
 
@@ -319,8 +319,9 @@ uv run python -c "import json,riskdep.api as a; print(json.dumps(a.app.openapi()
 
 ```
 plan/        the charrette plans (design, decisions, tracker, interview log)
-docs/        alert-runbook.md · glossary.md · registry-reference.md · how-risk-is-computed.md · how-a-block-is-analysed.md
-             websocket-vs-polling.md · user-watcher-options.md · exit-queue.md · drain-threshold.md · graph-example.html/.json
+docs/        README.md (the index) · model/ (risk, probabilities, Monte Carlo, incidents, shock engine) · watch/ (detection,
+             monitoring) · reference/ (alert runbook, registry reference, glossary) · setup/ · examples/ · img/
+             analysis/ (assessments, architecture, providers, next steps) · external/ (third-party docs) · risk-assessment/
 riskdep/     sources · abi · vault · poller · rules · market_risk · drain · exit_queue · admin · watch (watch --vault)
              positions · borrower · borrower_rules · watch_user (watch --user) · graph
              discover · priors · propagate · simulate · decide · report (analyze)
