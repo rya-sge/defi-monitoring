@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # The RockawayX demo in one command: a mainnet fork, riskdep watching two RockawayX vaults, two crises caused by the
-# roles that could really cause them, and every warn/critical alert posted to the Telegram channel as it happens.
+# roles that could really cause them, and what riskdep says about each one, posted to the Telegram channel as it happens.
 # Reuses scripts/fork/ as it is (lib.sh, alt-redstone.sh, alt-pst-mint.sh; its fork start is copied here): nothing there is modified.
 #
-#   scripts/demo-rock/demo-rock.sh                  the full demo (≈ 5 min), pausing 4 s between steps
+#   scripts/demo-rock/demo-rock.sh                  the full demo (≈ 4 min), pausing 4 s between steps
 #   scripts/demo-rock/demo-rock.sh --manual         wait for Enter between steps (presenting live)
 #   scripts/demo-rock/demo-rock.sh --no-telegram    the same, nothing sent to Telegram (rehearsal)
 #   scripts/demo-rock/demo-rock.sh --block N        fork at block N (default 26165572, where the facts were checked)
@@ -66,7 +66,7 @@ start_fork() {
   say "fork at block $(cast block-number --rpc-url "$R")"
 }
 
-offline() { (cd "$ROOT" && env -u RISKDEP_RPC_URL -u RISKDEP_FORK uv run python -m riskdep "$@"); }  # recordings
+offline() { (cd "$ROOT" && env -u RISKDEP_RPC_URL -u RISKDEP_FORK uv run python -m riskdep "$@"); }  # no fork
 post() {  # post <json with name and headline>: one scenario message to the channel
   [[ -n "$TELEGRAM" ]] && offline notify --post "$1" | sed 's/^/  /' || true
 }
@@ -120,6 +120,11 @@ start_watches() {
   say "watching RockawayX Tori Ecosystem and Huma USDC Main (ready in $((SECONDS - t0)) s)"
 }
 
+caption "riskdep — RockawayX vaults under attack, on a mainnet fork"
+say "building the demo contracts and forking Ethereum mainnet at block $BLOCK…"
+(cd "$HERE" && forge build >/dev/null 2>&1) || fail "forge build failed in scripts/fork/"
+start_fork
+
 say "starting riskdep watch on two RockawayX vaults (one block per batch, polling every 2 s)…"
 say "(each one reads its vault's full state through the fork first: about a minute; start before you present)"
 start_watches
@@ -134,19 +139,12 @@ if [[ -n "$TELEGRAM" ]]; then
 fi
 pause
 
-caption "Act 1 — before anything happens: what would a strUSD markdown cost the book?"
-say "riskdep analyze --book examples/rockawayx-ethereum.json --shock token=strUSD:0.32   (offline, recorded vaults)"
-offline analyze --book examples/rockawayx-ethereum.json --shock token=strUSD:0.32 --out "$OUT/predict-strusd" \
-  | grep -E '^  strUSD|^    (vault|RockawayX Tori|RockawayX USDC Yield|book)' | cut -c1-150 || true
-post "$OUT/predict-strusd/book-incident.json"
-pause
-
-caption "Act 2 — RedStone's 2-of-3 Safe rewrites the strUSD feed, no timelock"
+caption "Act 1 — RedStone's 2-of-3 Safe rewrites the strUSD feed, no timelock"
 "$HERE/alt-redstone.sh"
 WATCH_LOG="$LOG_TORI" sync_watch
 pause
 
-caption "Act 3 — unbacked PST minted through a Chainlink CCIP pool; the oracle does not see it"
+caption "Act 2 — unbacked PST minted through a Chainlink CCIP pool; the oracle does not see it"
 "$HERE/alt-pst-mint.sh" 15000000  # +7.0 % of the supply: past watch.mint_share_critical (5 %); the default 10M is 4.7 %
 WATCH_LOG="$LOG_HUMA" sync_watch
 sleep "${NOTIFY_DRAIN:-8}"  # the last alerts leave the queue (3 s apart)

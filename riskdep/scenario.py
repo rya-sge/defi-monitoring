@@ -53,6 +53,7 @@ class OracleProfile:
     deviation_threshold: float | None = None
     on_primary: bool | None = None  # a meta-oracle reading its primary source
     challenged: bool | None = None
+    constant_kind: str | None = None  # D205: a constant-price oracle's kind (`oracle_class.KINDS`)
     live: OracleProfile | None = None  # a meta-oracle's source in use, classified like any oracle
     other: OracleProfile | None = None  # the source it would switch to
 
@@ -222,10 +223,12 @@ def time_to_impact(profile: OracleProfile | None, shocks: dict[str, float]) -> T
             )
         return Timing(live.seconds, False, f"{live.text} (through the {side} source); {switch}")
     if p.kind == OC.CONSTANT_PRICE:
+        loss = f"; a loss the issuer records reaches it {OC.MOVES[p.constant_kind]}" if p.constant_kind else ""
         return Timing(
             None,
             True,
-            "never: the oracle does not follow the market, so nobody is liquidated; the loss stays with the lenders",
+            "never: the oracle does not follow the market, so nobody is liquidated; the loss stays with the lenders"
+            + (f" ({p.constant_kind}{loss})" if p.constant_kind else ""),
         )
     if p.twap_s:
         return Timing(
@@ -275,8 +278,10 @@ def oracle_profile(f: S.Fetcher, oracle: str, block="latest") -> OracleProfile:
                 live=live,
                 other=other,
             )
-        cls, basis, base, _, _ = OC.classify_market_oracle(f, oracle, block)
-        return OracleProfile(cls, basis, name, twap_s=_twap(base))
+        cls, basis, base, _, standard = OC.classify_market_oracle(f, oracle, block)
+        return OracleProfile(
+            cls, basis, name, twap_s=_twap(base), constant_kind=OC.oracle_constant_kind(base, standard)
+        )
     except (S.SourceError, S.CacheMiss, ValueError) as e:
         return OracleProfile(OC.NOT_CLASSIFIED, f"not read: {str(e)[:80]}")
 

@@ -289,9 +289,11 @@
         "getter": "baseDiscountPerYear()",
         "when": "answers",
         "class": "constant-price",
+        "kind": "linear discount",
         "basis": "Pendle linear-discount oracle: a deterministic discount to maturity, no market input"
       }
     ],
+    "constant_kinds_basis": "D205: a constant-price input moves on an issuer's loss in one of four ways: an exchange rate (on-chain accounting, ERC-4626 or a computed rate) at once when the issuer records the loss; a published value (NAV or fundamental rounds pushed by a transaction) at its next round; a linear discount (a schedule to maturity) or a fixed value never. A pushed round history is published, even flat so far (the next round can carry a loss); exactly 1.0 with no round, or no base input, is fixed; a rule's kind decides otherwise.",
     "oracle_patterns": [
       {
         "match": "PendleChainlinkOracle",
@@ -301,46 +303,55 @@
       {
         "match": "PendleSparkLinearDiscountOracle",
         "class": "constant-price",
+        "kind": "linear discount",
         "basis": "Pendle linear discount to maturity (contract name)"
       },
       {
         "match": "NetAssetValueChainlinkAdapter",
         "class": "constant-price",
+        "kind": "published",
         "basis": "net asset value reported by the issuer (contract name)"
       },
       {
         "match": "CustomAggregator",
         "class": "constant-price",
+        "kind": "published",
         "basis": "Midas custom aggregator feed: the issuer's admin publishes the NAV by transaction (contract name, e.g. MGloEuroCustomAggregatorFeed behind an upgradeable proxy; mGLOeuro read 100,000 EUR on 2026-08-04 and 2026-09-23, its only two rounds)"
       },
       {
         "match": "TranchesChainlinkOracle",
         "class": "constant-price",
+        "kind": "exchange rate",
         "basis": "Idle tranche exchange rate (contract name)"
       },
       {
         "match": "LossAdjustedPTFeed",
         "class": "constant-price",
+        "kind": "linear discount",
         "basis": "PT discount lowered only by the SY's own accounting losses (exchangeRate against pyIndexStored), no market input (verified source, 2026-10-10)"
       },
       {
         "match": "FUNDAMENTAL",
         "class": "constant-price",
+        "kind": "published",
         "basis": "RedStone fundamental feed: the issuer's redemption value, not a market price"
       },
       {
         "match": "exchange rate",
         "class": "constant-price",
+        "kind": "exchange rate",
         "basis": "an exchange rate between a token and its underlying, not a market price"
       },
       {
         "match": "net asset value",
         "class": "constant-price",
+        "kind": "published",
         "basis": "net asset value reported by the issuer"
       },
       {
         "match": "discount",
         "class": "constant-price",
+        "kind": "linear discount",
         "basis": "a discount schedule or a discounted NAV, not a market price"
       }
     ],

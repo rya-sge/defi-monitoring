@@ -57,7 +57,7 @@ def test_belem_nav_cut(tmp_path, capsys, cut, bad_low, bad_high):
     out = capsys.readouterr().out
     inc = json.loads((tmp_path / f"vault-incident-{BELEM}.json").read_text())
     (hit,) = inc["hits"]
-    assert hit["oracle_class"] == OC.CONSTANT_PRICE and "publishes" in hit["timing"]
+    assert hit["oracle_class"] == OC.CONSTANT_PRICE and "next published round" in hit["timing"]
     assert bad_low <= hit["bad_debt"] <= bad_high and hit["vault_share"] == pytest.approx(1.0, abs=0.01)
     assert inc["verdict"] == "STAY" and "INCIDENT" in out  # a 99.46 % depositor loses about the same either way
 
@@ -168,6 +168,9 @@ def test_markdown_in_engine_terms():
     sh = {(nodes[s.node], s.mode, s.size) for s in VI.engine_shocks(g, [("token", "prime", 0.3, 0)])}
     assert sh == {("PRIME", "price", -0.3), ("PRIME / WYLDS Exchange Rate", "reads-low", 0.3)}
     assert VI.engine_shocks(g, [("borrower", "prime", 0.5, 1)]) == []  # a default has no engine form
+    # D205: a PT priced by a linear discount: its oracle does not read the markdown, only its market price falls
+    pt = {(nodes[s.node], s.mode) for s in VI.engine_shocks(g, [("token", "pt-trusd-26nov2026", 0.3, 0)])}
+    assert pt == {("PT-trUSD-26NOV2026", "price")}
 
 
 def test_engine_and_incident_agree_without_a_squeeze(tmp_path):

@@ -119,6 +119,7 @@ def _oracle(g: Graph, f, oracle: str, block) -> str:
         price_raw=str(price) if price is not None else "reverts",
         oracle_class=cls,
         class_basis=basis,
+        constant_kind=OC.oracle_constant_kind(base, standard),
         tracks_market=base[0].pendle_market() if not standard and base else None,
         source="price() and getters read on-chain; class from the base-side inputs (D82–D84)",
     )
@@ -157,6 +158,7 @@ def _oracle(g: Graph, f, oracle: str, block) -> str:
                 role_in_oracle=name,
                 oracle_class=fcls[0],
                 class_basis=fcls[1],
+                constant_kind=OC.constant_kind(probes[addr]) if addr in probes else None,
                 tracks_market=probes[addr].pendle_market() if addr in probes else None,
                 updated_at=probes[addr].updated_at if addr in probes else None,
                 freshness=fresh.text if fresh else None,

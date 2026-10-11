@@ -41,6 +41,7 @@ def position_depth(graph: dict, market_id: str, tokens: list[str], admin: list[d
                     "address": e["target"],
                     "role": e.get("details", {}).get("role"),
                     "class": d.get("oracle_class"),
+                    "kind": d.get("constant_kind"),
                     "freshness": d.get("freshness"),
                     "stale": bool(d.get("stale")),
                 }
@@ -123,6 +124,7 @@ def lines(depth: dict) -> list[str]:
     for f in depth["feeds"]:
         out.append(
             f"oracle input {f['label']} ({f['role'] or 'feed'}): {f['class'] or 'not classified'}"
+            + (f", {f['kind']}" if f.get("kind") else "")
             + (f"; {f['freshness']}" if f["freshness"] else "")
         )
     for a in depth["admin"]:
