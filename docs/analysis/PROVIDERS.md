@@ -15,6 +15,7 @@ Every external service the project calls, what it is used for, and what is known
 - [Pharos](#pharos)
 - [Nexus Mutual](#nexus-mutual)
 - [KyberSwap](#kyberswap)
+- [Ethena](#ethena)
 - [Scripts loaded by the HTML outputs](#scripts-loaded-by-the-html-outputs)
 - [Defined but unused](#defined-but-unused)
 - [Trust model](#trust-model)
@@ -35,6 +36,7 @@ Every external service the project calls, what it is used for, and what is known
 | DefiLlama Coins | `https://coins.llama.fi` | REST API | no | token prices, price history | `riskdep/sources.py` (`LLAMA_COINS`) |
 | Nexus Mutual | `https://api.nexusmutual.io/v2` | REST API | no | cover prices and capacity per product: an outside probability next to the breakeven p\* (optional) | `riskdep/nexus.py` (`API`) |
 | Pharos | `https://api.pharos.watch` | REST API | no | issuer grades, off-chain backing, common-mode groups of stablecoins (optional) | `riskdep/pharos.py` (`URL`) |
+| Ethena | `https://app.ethena.fi/api` | REST API (transparency dashboard) | no | USDe's backing by venue and asset, the reserve fund, the yields (optional) | `riskdep/ethena.py` (`API`) |
 | KyberSwap | `https://aggregator-api.kyberswap.com/ethereum/api/v1/routes` | REST API (DEX aggregator) | no | exit liquidity of a hit collateral into its loan token, in vault incidents | `riskdep/exit_liquidity.py` (`KYBER`) |
 | Etherscan | `https://api.etherscan.io/v2/api` | REST API | yes, `keys.ini` `[etherscan]` | whether an oracle's source is verified; an unclassified oracle input's contract name | `riskdep/sources.py` (`ETHERSCAN`) |
 | Telegram Bot API | `https://api.telegram.org/bot<token>/sendMessage` | REST API (outbound push) | yes, `keys.ini` `[alerts]` | posts watch alerts to a private channel (`notify`, optional) | `riskdep/notify.py` (`API`) |
@@ -192,6 +194,18 @@ Anvil fetches the state it needs from an upstream at the fork block, which must 
 **`https://aggregator-api.kyberswap.com/ethereum/api/v1/routes`**, REST, keyless (plan `2026-10-11-exit-liquidity`, D212–D214). `?tokenIn=<collateral>&tokenOut=<loan token>&amountIn=<raw>` at each size of `exit_liquidity.sizes`; only `routeSummary.amountOut`, `code` and `message` are kept. A refusal (HTTP 400: `4008` route not found, `4011` token not found) is cached like an answer. Optional: no quote leaves the registry's hand-measured route in place.
 
 **Recording.** Under each vault's `fixtures/replay/incident-<vault>/`, read 2026-10-11. **Limits.** None published for light use; the optional `x-client-id` header is not sent.
+
+## Ethena
+
+**`https://app.ethena.fi/api`**, REST, keyless: the backend of Ethena's transparency dashboard (plan `2026-10-11-venues`, D218). The documented `public.api.ethena.fi` serves minting and redeeming only.
+
+| Path | Used for | Code |
+|---|---|---|
+| `/positions/current/collateral` | the backing by asset and by venue (each exchange, `Unallocated`) | `ethena.load` |
+| `/solvency/reserve-fund` | the reserve fund's value (hourly since 2024; only the last point is kept) | `ethena.load` |
+| `/yields/protocol-and-staking-yield` | the protocol's and sUSDe's 30-day average yields | `ethena.load` |
+
+**Recording.** `fixtures/replay/ethena/`, read 2026-10-11. **Limits.** None published; an undocumented dashboard backend, so its shape may change: a failure leaves the venue layer out.
 
 ## Telegram Bot API
 

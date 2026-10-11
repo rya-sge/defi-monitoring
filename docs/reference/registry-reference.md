@@ -22,6 +22,7 @@ Rules for editing:
 - [`watch`](#watch)
 - [`graph`](#graph)
 - [`engine`](#engine)
+- [`ethena`](#ethena)
 - [`exit_liquidity`](#exit_liquidity)
 - [`pharos`](#pharos)
 - [`nexus`](#nexus)
@@ -216,6 +217,17 @@ The shock engine's propagation rules and settings (plan `2026-10-10-propagation-
 | `basis` | text | — | why |
 
 **Changing a rule.** Prefer a `--rules` file for a study: the registry's rules are the defaults everyone gets. A change here keeps its `basis` honest and is followed by `python3 -m pytest -q tests/test_engine.py`. The drain threshold uses `watch.drain_buy_cost`.
+
+## `ethena`
+
+USDe's backing venues (plan `2026-10-11-venues`, D218–D221). Read by `ethena.py` and `graph.py`.
+
+| Key | Unit | Default | What it controls |
+|---|---|---|---|
+| `usde`, `susde` | address | USDe, sUSDe on Ethereum | the tokens a venue incident marks down; USDe is the graph node the venues hang from |
+| `custodians` | list | Copper, Ceffu | the off-exchange settlement providers named in Ethena's docs (no share published) |
+| `funding_stress` | fraction a year | −0.10 | the negative funding rate of the funding-stress line |
+| `basis`, `funding_basis` | text | — | the sources and the method |
 
 ## `exit_liquidity`
 

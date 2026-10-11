@@ -359,6 +359,14 @@
     ],
     "oracle_basis": "D82-D84. One oracle input, first rule that applies: a base vault is an exchange rate; a composite (FEED_1/FEED_2) or wrapper (innerOracle) takes its children's class, price-tracking if one is; a structural getter of oracle_getters; at least oracle_history_min past rounds readable over the last oracle_history_rounds: price-tracking when falls are at least oracle_fall_share of the changes (probe 2026-10-10: USDC/USD, USDS/USD and ETH/USD fell 9-14 times in 24 rounds, three exchange-rate and NAV feeds never fell); no history and an answer of exactly 1.0: pegged; a case-insensitive pattern of oracle_patterns in description() or the verified contract name (Etherscan, optional); otherwise not classified."
   },
+  "ethena": {
+    "usde": "0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
+    "susde": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+    "custodians": ["Copper", "Ceffu"],
+    "funding_stress": -0.1,
+    "funding_basis": "D221: a sustained funding rate of -10 %/yr on the hedged notional, which Ethena pays from its reserve fund; the hedged notional is taken as the margin on exchanges (delta-neutral: about one for one). A stated scenario, not a forecast: funding was negative for weeks in 2022 and in parts of 2025.",
+    "basis": "D218-D221: Ethena's transparency dashboard (app.ethena.fi/api, keyless): the backing by asset and by venue, the reserve fund, the yields. Custody: collateral held by off-exchange settlement providers (Copper, Ceffu; docs.ethena.fi backing-asset-custody) and delegated to exchanges as margin, PnL settled daily (Copper); the dashboard gives the split by exchange, not by custodian. A venue incident loses a share of what sits at that venue; the reserve fund absorbs it first; the rest marks USDe down, and sUSDe (a claim on USDe) by the same fraction."
+  },
   "exit_liquidity": {
     "basis": "KyberSwap aggregator quotes of a sale into USDC on Ethereum, measured 2026-10-11 (docs/analysis/ROCK-VAULT-DEP.md §7). route: none = no route at 0.1M USD, thin = price impact above thin_impact at 1M USD, deep = otherwise. impact: the price impact at each sale size in USD (null: no route). A liquidator who cannot sell the collateral does not liquidate (D131). Re-measure before relying on it; add any token by address.",
     "thin_impact": 0.05,

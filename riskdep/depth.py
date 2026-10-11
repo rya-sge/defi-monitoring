@@ -149,6 +149,7 @@ def lines(depth: dict) -> list[str]:
         )
     out += [f"concentration: {s}" for s in depth.get("supply", [])]
     out += [f"concentration: {s}" for s in depth.get("position_share", [])]
+    out += [f"external venue: {s}" for s in depth.get("venues", [])]
     for t, g in depth["grades"].items():
         out.append(f"issuer grade (Pharos): {t} {g}")
     for b in depth["backing"]:

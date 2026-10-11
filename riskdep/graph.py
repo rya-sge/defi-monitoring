@@ -770,6 +770,45 @@ def annotate_supply(g: Graph, f: S.Fetcher, block: int) -> int:
     return n
 
 
+def annotate_ethena(g: Graph, snap) -> int:
+    """D221: behind USDe, where Ethena's backing sits: one External node per exchange holding margin, one for what is
+    not on an exchange, and the off-exchange settlement providers; the reserve fund on USDe. Returns the venues drawn
+    (0 when the graph has no USDe)."""
+    from . import ethena as ET
+
+    usde = next(
+        (nid for nid, n in g.nodes.items() if nid == ET.E["usde"] or n["details"].get("address") == ET.E["usde"]),
+        None,
+    ) or next((nid for nid, n in g.nodes.items() if n["kind"] == "Asset" and n["label"] == "USDe"), None)
+    if usde is None or snap is None:
+        return 0
+    n = g.nodes[usde]
+    g.node(usde, n["kind"], n["label"], ethena_backing_usd=round(snap.total_usd), reserve_fund_usd=snap.reserve_usd)
+    cust = g.node(
+        "venue:off-exchange-settlement",
+        "External",
+        "Off-exchange settlement: " + ", ".join(ET.E["custodians"]),
+        source="docs.ethena.fi, backing-asset-custody: custody of the backing, delegated to exchanges as margin",
+    )
+    g.edge(usde, cust, "custodied by (Ethena)")
+    drawn = 0
+    for venue, usd in sorted(snap.venues.items(), key=lambda x: -x[1]):
+        if usd <= 0:
+            continue
+        label = "Liquid stablecoins (not on an exchange)" if venue == "Unallocated" else f"{venue} (Ethena margin)"
+        vid = g.node(
+            f"venue:{venue.lower()}",
+            "External",
+            label,
+            usd=round(usd),
+            share_of_backing=round(snap.share(venue), 4),
+            source="Ethena transparency API /positions/current/collateral (D218)",
+        )
+        g.edge(usde, vid, "backing held at (Ethena)", round(usd), "USD")
+        drawn += 1
+    return drawn
+
+
 def annotate_tvl(g: Graph, protocols: list[dict]) -> int:
     """D160: each Blue market, PT and issuer token of the graph points to the DefiLlama protocol it belongs to, an
     External node carrying that protocol's TVL, its share of DeFi and of its category, and whether that is a

@@ -73,7 +73,7 @@ Sizes: **S** about a day, **M** a few days, **L** more.
 | C2+ | ~~`FeedStale` in the watches; one feed under several markets~~ **done** (plan `2026-10-11-shared-and-supply`) | K23 | S | `feeds.py` |
 | C3+ | ~~A collateral's share of its supply held in Morpho~~ **done** (plan `2026-10-11-shared-and-supply`) | K25 | S | `graph.py` |
 | C6 | Bridges as graph nodes, issuer and oracle registry entries, PT expiry in incidents | K19, K23 | M | `graph.py`, registry |
-| C4, C5 | External venues; Vault V1, other chains | K24, C5 | M–L | registry, `metamorpho-v1.1` |
+| C4, C5 | ~~External venues~~ **done for USDe** (plan `2026-10-11-venues`); left: non-Morpho Vault V2 adapters; Vault V1, other chains | K24, C5 | M–L | registry, `metamorpho-v1.1` |
 | D | Validate on your positions; Slack/Discord/email alerts; infrastructure; execution | — | — | — |
 
 Exit liquidity is now quoted live on KyberSwap (plan `2026-10-11-exit-liquidity`). If time is short before the judging: the demo pass; then B6's rest (the engine's squeeze on the rebuilt pool). B6's pool at a past block is done: the backtest's oracle fall traces to a 5.4M PT sale, and from that sale alone the model predicts the same liquidated borrowers. B4 and A6's conditional draw for a borrow are done (PT holdings without a borrow are left). C1 is done. `IMPROVEMENT.md` advises against more documentation and against phase D.
@@ -112,7 +112,7 @@ Exit liquidity is now quoted live on KyberSwap (plan `2026-10-11-exit-liquidity`
 - **C2+. `FeedStale` (K23).** The freshness rule as a watch alert, with a runbook row; one feed under several markets. After the fork demo's `admin.py`. **S.**
 - **C3+. Supply share (K25).** A collateral's share of its supply held in Morpho markets (`totalSupply` at the recorded block). **S.**
 - **C6. The rest of `ROCK-VAULT-DEP.md` §11.** Done by the fork demo: the exit-gate standing finding, the feed band, the timelock queue. Left: bridges as graph nodes (CCIP for PST, LayerZero for etrUSD); registry entries for issuers, RedStone, Ojo, CCIP; PT expiry in incidents (`alt-fxsave-expiry.sh` scripts it on the fork). **M.**
-- **C4. External venues (K24).** A venue node (perp or CEX) with custody, withdrawal delay and a prior. **M–L.**
+- **C4. External venues (K24).** *Done for USDe* (plan `2026-10-11-venues`): the exchanges and custodians behind it, the reserve fund, `venue=<exchange>:<loss>`, the funding stress. Left: Vault V2 adapters into non-Morpho venues. **M–L.**
 - **C5. Vault V1, other chains.** A Vault V1 reader; the chain as a parameter. **M–L.**
 
 ## 7. Phase D: operations

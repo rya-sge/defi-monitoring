@@ -328,6 +328,7 @@ The design decisions are numbered across twelve plans, in the order the incremen
 | `plan/2026-10-11-zama.plan.md` | Zama confidential vaults: the cShare pool, the two exits, the hidden layer | D171–D176 |
 | `plan/2026-10-11-pt-channels.plan.md` | the PT loop's implied-yield and borrow-rate incidents | D169–D170 |
 | `plan/2026-10-11-conditional.plan.md` | the loss of staying given the incident, drawn, against the certain cost of leaving | D165–D168 |
+| `plan/2026-10-11-venues.plan.md` | the venues behind USDe: backing by exchange, reserve fund, venue incidents, funding stress | D218–D221 |
 | `plan/2026-10-11-shared-and-supply.plan.md` | shared feeds and oracles; supply concentration; the position's share of its market and pool | D215–D217 |
 | `plan/2026-10-11-exit-liquidity.plan.md` | exit liquidity live from KyberSwap in vault incidents | D212–D214 |
 | `plan/2026-10-11-pendle-pool.plan.md` | a Pendle pool rebuilt at a past block; the sale behind the backtest's fall and the squeeze; the backtest from the sale alone; `pool_move` on the pool's math | D207–D211 |

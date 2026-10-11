@@ -1,0 +1,1 @@
+{"method": "GET", "url": "https://app.ethena.fi/api/yields/protocol-and-staking-yield", "body": null, "fetched": "2026-10-11T04:50:44Z", "response": {"avg30dProtocolYield": {"lastUpdated": "7 Oct 26", "value": 4.961538461538462}, "avg30dSusdeYield": {"lastUpdated": "7 Oct 26", "value": 4.833846153846154}}}

@@ -52,6 +52,7 @@ def analyze(
     horizon: float = 30.0,
     paths: int = 20000,
     shocks: dict[str, float] | None = None,
+    venue: dict | None = None,
 ) -> AnalyzeResult:
     """Analyse one position. With no market and no pendle_market, analyse the demo position.
 
@@ -142,7 +143,8 @@ def analyze(
     depth = position_depth(pos, profile)
     incident = None
     if shocks:
-        recovery = next((p.recovery for p in prs if p.event == "issuer_depeg"), 0.0)
+        # D220: a venue's loss of backing is permanent: nothing of the markdown is recovered
+        recovery = 0.0 if venue else next((p.recovery for p in prs if p.event == "issuer_depeg"), 0.0)
         moved = None
         if "pool_move" in shocks:
             shocks, moved = pool_move_shocks(f, pos, shocks)
@@ -159,6 +161,8 @@ def analyze(
         if moved:
             incident.pool_move = moved
             incident.notes.insert(0, moved["text"])
+        if venue:
+            incident.notes.insert(0, venue["text"])
 
     # a failed cross-check leads the reasons: the numbers below it are suspect
     bad = [c for c in checks if c.ok is False]
@@ -281,6 +285,7 @@ def position_depth(pos, profile=None) -> dict:
         GR.annotate_tvl(g, protocols)
     GR.annotate_shared(g)
     GR.annotate_supply(g, S.Fetcher("offline", rdir), block)
+    eth = ethena_snapshot("offline")
     try:
         aw = AD.AdminWatch(S.Fetcher("offline", rdir), [pos.morpho_market], block)
         admin = DP.admin_rows(aw.contracts, aw.timelock_over)
@@ -291,6 +296,8 @@ def position_depth(pos, profile=None) -> dict:
     d = DP.position_depth(gd, pos.morpho_market, tokens, admin)
     if d:
         d["position_share"] = position_share(pos, g.nodes.get(pos.morpho_market, {}).get("details", {}))
+        on_usde = any(b["backed_by"] == "USDe" for b in d["backing"]) or any("usde" in t for t in d["grades"].keys())
+        d["venues"] = eth.lines() if eth and on_usde else []  # D221
     if d and profile is not None:
         d["oracle_profile"] = DP.profile_text(profile)  # D200: what the graph cannot see inside a meta-oracle
     if d:
@@ -350,6 +357,36 @@ def pharos_snapshot(mode: str = "offline"):
     return pharos.load(_outside_fetcher("pharos", mode))
 
 
+def ethena_snapshot(mode: str = "offline"):
+    from . import ethena
+
+    return ethena.load(_outside_fetcher("ethena", mode))
+
+
+def venue_shocks(items: list[str] | None, mode: str, target: str) -> tuple[list[str], dict | None]:
+    """D220: `venue=<exchange>:<loss>` replaced by the USDe markdown it leaves once the reserve fund absorbed what it
+    can: `issuer_depeg=<markdown>` for `analyze` (`target` "position"), `token=` markdowns of USDe and sUSDe for a
+    vault or a book. Returns (the shocks, the venue loss or None). Raises ValueError (unknown venue, no Ethena data)."""
+    from . import ethena as ET
+
+    rest, venues = ET.parse_venue(items)
+    if not venues:
+        return list(items or []), None
+    snap = ethena_snapshot(mode)
+    if snap is None:
+        raise ValueError("a venue incident needs Ethena's backing: no recording under fixtures/replay/ethena/")
+    losses = [ET.venue_loss(snap, v, loss) for v, loss in venues]
+    m = min(0.99, sum(x["markdown"] for x in losses))
+    info = {"losses": losses, "markdown": m, "text": "; ".join(x["text"] for x in losses)}
+    if target == "position":
+        rest = [x for x in rest if not x.startswith("issuer_depeg=")] + [f"issuer_depeg={m}"]
+    elif m > 0:
+        rest += [f"token=USDe:{m}", f"token=sUSDe:{m}"]
+    else:
+        raise ValueError(info["text"])
+    return rest, info
+
+
 def nexus_prices(mode: str = "offline"):
     from . import nexus
 
@@ -403,6 +440,7 @@ def incident(
         raise ValueError("exit_cost is a share of what leaves, between 0 and 1 (0.11 for 11 %)")
     if mode not in MODES:
         raise ValueError(f"mode must be one of {', '.join(MODES)}")
+    shocks, venue = venue_shocks(shocks, mode, "vault")
     parsed = vault_incident.parse_shocks(shocks)
     if not parsed:
         raise ValueError(
@@ -437,19 +475,21 @@ def incident(
     pockets = [v for v in book.vaults if v.kind == "borrow"]
 
     def run_borrows(scaled):
-        return [borrow_pocket(v, scaled, book.weighting, horizon, mode, exit_cost)[0] for v in pockets]
+        return [borrow_pocket(v, scaled, book.weighting, horizon, mode, exit_cost, venue)[0] for v in pockets]
 
     for v in pockets:
-        ln, n = borrow_pocket(v, parsed, book.weighting, horizon, mode, exit_cost)
+        ln, n = borrow_pocket(v, parsed, book.weighting, horizon, mode, exit_cost, venue)
         borrows.append(ln)
         names.update(n)
     result = vault_book.aggregate(book, parsed, incidents, borrows, names)
+    if venue:
+        result.notes.insert(0, venue["text"])
     if conditional:
         conditional_distribution(book, parsed, incidents, result, run_all, borrows, run_borrows)
     return VaultIncidentResult(book, incidents, result)
 
 
-def borrow_pocket(v, parsed, weighting: str, horizon: float, mode: str, exit_cost: float | None):
+def borrow_pocket(v, parsed, weighting: str, horizon: float, mode: str, exit_cost: float | None, venue=None):
     """D177–D178: a Morpho Blue borrow in a book (the brief's PT loop). A token shock that names its collateral or the
     collateral's underlying is, for the position, a loss of backing every oracle sees (`issuer_hack`); the incident
     module of `analyze --shock` gives its loss and its exit cost. Offline from the analyze snapshot."""
@@ -478,7 +518,11 @@ def borrow_pocket(v, parsed, weighting: str, horizon: float, mode: str, exit_cos
         if not fall:
             line = vault_book.borrow_line(label, weighting, v.amount, pos.equity_usd, 0.0, 0.0, None, horizon, False)
             return line, shown
-        res = analyze(f, market=v.address, user=v.depositor, horizon=horizon, paths=2000, shocks={"issuer_hack": fall})
+        # D220: a venue's loss of USDe backing is a depeg the oracle's class decides on, as in `analyze`
+        event = "issuer_depeg" if venue else "issuer_hack"
+        res = analyze(
+            f, market=v.address, user=v.depositor, horizon=horizon, paths=2000, shocks={event: fall}, venue=venue
+        )
         inc = res.incident
         line = vault_book.borrow_line(
             label, weighting, v.amount, pos.equity_usd, inc.loss_usd, inc.exit_cost_usd, exit_cost, horizon, True

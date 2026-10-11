@@ -301,7 +301,8 @@ class IncidentRequest(BaseModel):
     shocks: list[str] = Field(
         min_length=1,
         description="As `analyze --shock`: `token=<collateral>:<fall>` (an issuer markdown), "
-        "`borrower=<collateral, market id or all>:<recovery>[:<n>]` (the n largest borrowers default).",
+        "`borrower=<collateral, market id or all>:<recovery>[:<n>]` (the n largest borrowers default), "
+        "`venue=<exchange>:<loss>` (a share of USDe's backing at that venue lost; Ethena).",
         examples=[["token=PST:0.30"]],
     )
     user: str | None = Field(default=None, description="Depositor address, for every vault without its own.")
