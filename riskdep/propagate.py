@@ -34,6 +34,12 @@ class LossBreakdown:
     path: list[str] = field(default_factory=list)
 
 
+def pt_stress(implied_apy: float, pt_years: float, spike: float) -> float:
+    """D236, pure: the PT's extra fall in a depeg, from a spike of its implied yield as LPs and holders leave the
+    pool: 1 − ((1 + y) / (1 + y + spike))^T; none at maturity."""
+    return 1 - ((1 + implied_apy) / (1 + implied_apy + spike)) ** pt_years if pt_years > 0 else 0.0
+
+
 def loss(
     collateral_usd: float,
     debt_usd: float,
@@ -42,7 +48,7 @@ def loss(
     oracle_mode: str,
     shocks: dict[str, float],
     recovery: float = 0.0,
-    pt_stress_extra: float = 0.5,
+    pt_stress_spike: float = 0.098,
     pt_years: float = 0.0,
     implied_apy: float = 0.0,
     borrow_apy: float = 0.0,
@@ -82,7 +88,7 @@ def loss(
     if s:
         v_true *= 1 - s * (1 - recovery)
         if oracle_mode == "market-tracking":
-            trough = min(0.99, s * (1 + pt_stress_extra))
+            trough = min(0.99, 1 - (1 - s) * (1 - pt_stress(implied_apy, pt_years, pt_stress_spike)))
             v_oracle *= 1 - trough
             path.append(f"depeg −{s:.1%}, PT market trough −{trough:.1%} seen by the oracle, {recovery:.0%} recovers")
         else:

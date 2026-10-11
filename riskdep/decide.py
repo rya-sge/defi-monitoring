@@ -6,6 +6,7 @@ import copy
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
+from . import propagate as PG
 from .discover import REGISTRY, Position
 from .simulate import SimResult
 
@@ -50,9 +51,9 @@ def stress_drop(pos: Position, depeg_mean: float | None) -> float:
     """The oracle fall a leveraged PT position should survive: the larger of twice the
     underlying's worst 1-year drawdown and the mean depeg as the oracle would see it."""
     dd = 2 * (pos.underlying_drawdown_1y or 0)
-    seen = (depeg_mean or 0) * (
-        (1 + REGISTRY["pt_stress_extra_discount"]) if pos.oracle_mode == "market-tracking" else 0
-    )
+    # D236: the oracle sees the depeg and the PT's own stress, a spike of its implied yield over its time to maturity
+    stress = PG.pt_stress(pos.implied_apy, (pos.days_to_maturity or 0) / 365, REGISTRY["pt_stress_yield_spike"])
+    seen = 1 - (1 - (depeg_mean or 0)) * (1 - stress) if pos.oracle_mode == "market-tracking" else 0.0
     return max(dd, seen, 0.05)
 
 

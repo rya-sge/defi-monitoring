@@ -112,12 +112,15 @@ How an exploit probability is derived from DefiLlama's hack record (details in `
 | `min_tvl_usd` | USD | protocols below this size are ignored in the counts |
 | `tiers_usd` | USD | size bands: under 10M, 10M to 100M, over 100M |
 | `category_multiplier_clip` | [min, max] | bounds of the category adjustment (0.5 to 2) |
-| `age_factor` | multipliers | 2 for a protocol listed less than a year ago, 1 between one and three years, 0.7 beyond |
+| `age_factor` | multipliers | 2 for a protocol listed less than a year ago, 1 between one and three years, 0.7 beyond; a judgement, stated in `age_factor_basis` (D235) |
+| `half_life_years` | years | each hack weighs 2^(−age / this) in the counts, and the window's protocol-years the same (2; D234, `decay_basis`) |
 | `floor`, `cap` | probability per year | the result is kept between 0.5 % and 15 % |
 
 Read by `priors.py`.
 
 ## `unknown_issuer`
+
+An `issuers` entry of kind `synthetic-dollar` also has `depeg.collapse` (`p_year`, `severity`, `basis`): a rare, near-total loss of backing next to the frequent wick (D237).
 
 The conservative default for a yield token not in `issuers`: a 15 % yearly depeg chance with 60 % recovery, and a heavy exploit severity (mean 33 %). Same fields as an `issuers` entry, plus `category` (`Yield`). Read by `priors.py`.
 
@@ -125,7 +128,7 @@ The conservative default for a yield token not in `issuers`: a 15 % yearly depeg
 
 | Key | Unit | Meaning | Read by |
 |---|---|---|---|
-| `pt_stress_extra_discount` | multiplier | during a depeg, an oracle that follows the PT market sees the depeg × (1 + this), because the PT trades below its backing as the Pendle pool drains (0.5) | `propagate.py`, `simulate.py`, `decide.py` |
+| `pt_stress_yield_spike` | implied-yield points | during a depeg, an oracle that follows the PT market also sees the PT fall from a spike of its implied yield, over its time to maturity (0.098, measured on the PT-reUSD pool on 2026-08-25; D236, `pt_stress_basis`) | `propagate.py`, `simulate.py`, `decide.py` |
 | `gas_exit_usd` | USD | gas cost added to every exit and de-lever estimate (25) | `decide.py` |
 | `tail_budget` | fraction of equity | REDUCE when CVaR 99 % exceeds this share of the equity (0.5) | `decide.py` |
 | `incident.exit_min_gain` | fraction of the loss | vault incident mode: EXIT only when leaving first cuts the depositor's loss by at least this share (0.05) | `vault_incident.py` |

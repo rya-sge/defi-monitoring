@@ -137,11 +137,11 @@ for i in np.flatnonzero(any_hit):
 | Event | True value | Oracle value |
 |---|---|---|
 | `chain`, `issuer_hack`, `amm` | × (1 − s) | × (1 − s) |
-| `issuer_depeg` | × (1 − s × (1 − recovery)) | market-tracking oracle: × (1 − min(0.99, s × 1.5)); otherwise unchanged |
+| `issuer_depeg` | × (1 − s × (1 − recovery)) | market-tracking oracle: × (1 − s) × (1 − PT stress); otherwise unchanged |
 | `oracle` | unchanged | × (1 − s) |
 | `lending` | × (1 − s) | unchanged |
 
-The factor 1.5 is `pt_stress_extra_discount` (0.5): during a depeg the PT trades below its underlying as liquidity providers leave the pool, so a market-tracking oracle sees a deeper fall than the underlying.
+The PT stress (D236) is the PT's extra fall as liquidity providers and holders leave the pool: a spike of its implied yield, `pt_stress_yield_spike` (+9.79 points, measured on the PT-reUSD pool on 2026-08-25), over its time to maturity: 1 − ((1 + y) / (1 + y + spike))^T. A PT 47 days from maturity falls about 1.1 % more than its underlying, a one-year PT about 8.5 %. It replaces a flat ×1.5. A synthetic dollar's issuer also has a rare collapse (`issuer_collapse`, D237): near total, not recovered, applied as a loss of backing every oracle sees.
 
 Then, with $V^{o}$ the oracle value, $V^{t}$ the true value, $D$ the debt, $\lambda$ the LLTV and $\phi$ the liquidation incentive factor:
 
@@ -378,7 +378,7 @@ Two positions backed by the same issuer, or priced by the same feed, fail togeth
 - `riskdep/decide.py`: `verdict`, `carry_usd`, `exit_cost_usd`, `sale_to_reach`.
 - `riskdep/cli.py`: the `analyze` flow, `--horizon`, `--paths`, the oracle-sensitivity rerun.
 - `riskdep/report.py`: `histogram_svg`, the layer table.
-- `riskdep/registry.json`: priors, `pt_stress_extra_discount`, `tail_budget`.
+- `riskdep/registry.json`: priors, `pt_stress_yield_spike`, `tail_budget`.
 - `tests/test_demo_snapshot.py`: the attribution check.
 
 ### Project documents

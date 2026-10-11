@@ -1,6 +1,6 @@
 # How the risk of a position is computed
 
-> **Figures updated 2026-10-11 (D232–D233, GAP K3 and K4).** Oracle exploits are now counted by the oracle layer only, and Morpho Blue's core prior is the top band's rate without the Lending multiplier: 2.50 %/yr instead of 5.03 %. The demo's expected loss over 30 days is now **5,671 USD** (it was 6,265), its CVaR99 499,259 USD; the worked figures below were computed before, and their reasoning is unchanged.
+> **Figures updated 2026-10-11 (D232–D237, GAP K3, K4, K5, K15, K17).** Oracle exploits are counted by the oracle layer only; Morpho Blue's core prior drops the Lending multiplier; hacks are weighted by age (half-life 2 years), which puts the top band at 3.29 %/yr; a synthetic dollar can collapse (2 %/yr, near total); the PT's stress in a depeg follows its time to maturity (a measured +9.79-point yield spike) instead of ×1.5. The demo's expected loss over 30 days is now **6,327 USD** (it was 6,265), its CVaR99 502,576 USD, the stress it should survive 9.2 % (was 12.2 %); the worked figures below were computed before, and their reasoning is unchanged.
 
 
 This document explains how `python3 -m riskdep analyze` turns one position into a verdict: **STAY**, **REDUCE** or **EXIT**. It follows the code (`riskdep/discover.py`, `priors.py`, `propagate.py`, `simulate.py`, `decide.py`) and uses the offline demo as a worked example: the largest borrower of the Morpho Blue market PT-sUSDE-26NOV2026 / USDC, with data as of 2026-10-10 10:30 UTC.

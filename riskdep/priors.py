@@ -6,6 +6,7 @@ Severity and market (non-exploit) events: registry.json, each with its basis (D1
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 
 from . import clock
@@ -53,9 +54,17 @@ def hack_stats(f: S.Fetcher) -> dict:
             if p.get("category"):
                 cat_n[p["category"]] = cat_n.get(p["category"], 0) + 1
             tier_n[_tier(tvl)] += 1
-    cat_h: dict[str, int] = {}
-    tier_h = {0: 0, 1: 0, 2: 0}
+    cat_h: dict[str, float] = {}
+    tier_h = {0: 0.0, 1: 0.0, 2: 0.0}
     oracle_moved: dict[str, int] = {}
+    # D234 (K17): a hack weighs 2^(-age / half-life); the window's protocol-years are weighted the same, so the
+    # rates stay rates while the recent attack mix weighs more
+    half = cfg["half_life_years"]
+    now = clock.now()
+
+    def weight(h: dict) -> float:
+        return 0.5 ** ((now - h.get("date", now)) / (365 * 86400) / half)
+
     for h in hacks:
         p = by_id.get(str(h.get("defillamaId")))
         if not p or (p.get("tvl") or 0) < cfg["min_tvl_usd"]:
@@ -64,10 +73,11 @@ def hack_stats(f: S.Fetcher) -> dict:
             # D232 (K3): an oracle exploit is the oracle layer's (`oracle_prior`), not the protocol's: counted once
             oracle_moved[p.get("category") or "?"] = oracle_moved.get(p.get("category") or "?", 0) + 1
             continue
+        w = weight(h)
         if p.get("category"):
-            cat_h[p["category"]] = cat_h.get(p["category"], 0) + 1
-        tier_h[_tier(p.get("tvl"))] += 1
-    yrs = cfg["years"]
+            cat_h[p["category"]] = cat_h.get(p["category"], 0) + w
+        tier_h[_tier(p.get("tvl"))] += w
+    yrs = (1 - 0.5 ** (cfg["years"] / half)) * half / math.log(2)  # ∫ 2^(-t/half) dt over the window, in years
     overall = sum(cat_h.values()) / (sum(cat_n.values()) * yrs)
     return {
         "years": yrs,
@@ -81,6 +91,7 @@ def hack_stats(f: S.Fetcher) -> dict:
         "tier_rate": {t: tier_h[t] / (tier_n[t] * yrs) if tier_n[t] else overall for t in tier_n},
         "cat_rate": {c: cat_h.get(c, 0) / (n * yrs) for c, n in cat_n.items()},
         "oracle_moved": oracle_moved,
+        "weight": weight,
     }
 
 
@@ -122,17 +133,18 @@ def exploit_p_year(st: dict, slug: str | None, category: str) -> tuple[float, st
     factor, age = _age_factor(proto.get("listedAt") if proto else None)
     p = min(cfg["cap"], max(cfg["floor"], base * mult * factor))
     note = (
-        f"tier {TIER_LABEL[tier]}: {st['tier_h'][tier]} hacks / {st['tier_n'][tier]} protocols / {st['years']}y "
+        f"tier {TIER_LABEL[tier]}: {st['tier_h'][tier]:.1f} hacks / {st['tier_n'][tier]} protocols / {st['years']:.2f}y "
+        f"(weighted, half-life {REGISTRY['frequency']['half_life_years']}y) "
         f"= {base:.2%}/yr; "
         + (
             f"category '{category}' not applied (isolated markets: their oracle and configuration risk is the oracle "
             "layer's, per market) "
             if isolated
-            else f"× category '{category}' {mult:.2f} ({st['cat_h'].get(category, 0)} hacks / "
+            else f"× category '{category}' {mult:.2f} ({st['cat_h'].get(category, 0):.1f} hacks / "
             f"{st['cat_n'].get(category, 0)} protocols) "
         )
         + f"(oracle exploits, {sum(st.get('oracle_moved', {}).values())} in the window, counted by the oracle layer only); "
-        f"× age {factor} ({age}) → {p:.2%}/yr"
+        f"× age {factor} ({age}; a judgement) → {p:.2%}/yr"
     )
     if not proto:
         note = f"protocol '{slug}' not found on DefiLlama, smallest tier assumed; " + note
@@ -173,6 +185,20 @@ def layer_priors(f: S.Fetcher, pos: Position) -> list[Prior]:
             recovery=dp["recovery"],
         )
     )
+    if dp.get("collapse"):
+        # D237 (K5): a synthetic dollar can collapse, not only wick: a rare, near-total loss of backing
+        c = dp["collapse"]
+        out.append(
+            Prior(
+                "issuer_collapse",
+                f"issuer:{und}",
+                f"{name}: collapse",
+                c["p_year"],
+                c["severity"]["a"],
+                c["severity"]["b"],
+                c["basis"],
+            )
+        )
     p, note = exploit_p_year(st, reg.get("llama_slug"), reg.get("category", "Yield"))
     out.append(
         Prior(
@@ -225,7 +251,8 @@ def oracle_prior(node: str, verified: bool | None, st: dict) -> Prior:
     """Pure: the oracle layer's prior. `verified` comes from Etherscan (D68): True, False, or None when it could not
     be checked, which is treated as unverified (conservative)."""
     o = REGISTRY["oracle"]
-    n_oracle = sum(1 for h in st["hacks"] if h.get("technique") in o["techniques"])
+    weight = st.get("weight", lambda h: 1.0)
+    n_oracle = sum(weight(h) for h in st["hacks"] if h.get("technique") in o["techniques"])
     users = st["cat_n"].get("Lending", 0) + st["cat_n"].get("CDP", 0)
     base = n_oracle / (max(1, users) * st["years"])
     factor = 1.0 if verified is True else o["unverified_factor"]
@@ -238,6 +265,6 @@ def oracle_prior(node: str, verified: bool | None, st: dict) -> Prior:
         p,
         o["severity"]["a"],
         o["severity"]["b"],
-        f"{n_oracle} misconfigured/stale-oracle hacks / {users} Lending+CDP protocols / {st['years']}y "
+        f"{n_oracle:.1f} misconfigured/stale-oracle hacks (weighted) / {users} Lending+CDP protocols / {st['years']:.2f}y "
         f"= {base:.2%}/yr; × {factor} ({status} on Etherscan) → {p:.2%}/yr. Severity: {o['basis']}",
     )

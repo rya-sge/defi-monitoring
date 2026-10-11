@@ -25,6 +25,8 @@ Usage of every mode is in the repository's `README.md`; how the code is built is
 | `shock-engine.md` | The shock engine: what happens to a vault when a node fails, and its rules |
 | `shock-trace.md`, `shock-trace-example.json` | The propagation as data, for a front end |
 | `graph-propagation.md` (+ pdf) | The dependency graph as a propagation engine |
+| `midas.md` | Midas (mGLOeuro): the published NAV feed, its band and timelock, the Belem incident, and what is not computed |
+| `fx-protocol.md` | f(x) Protocol (fxSAVE, PT-fxSAVE): what backs fxSAVE, the RockawayX f(x) incident, exits, and what is not computed |
 | `ethena.md` | Ethena (USDe, sUSDe): the backing by venue, the priors, a venue failure, funding stress, contagion, and what is not computed |
 | `zama-confidential-vaults.md` | Zama confidential vaults: the hidden layer, who loses, the two exits, contagion, alerts, and what is not computed |
 
