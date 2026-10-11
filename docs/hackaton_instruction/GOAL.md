@@ -35,7 +35,7 @@ A **working prototype**, not an architecture or a slide deck. It operates on **r
 
 | Criterion | Main answer | Documents |
 |---|---|---|
-| Dependency discovery | `analyze` discovers a Pendle PT position's layers; both watches discover a vault's or an address's markets, their borrowers and lenders, and the admin surface (oracles, feeds, tokens, issuers); `graph` draws it | `docs/analysis/ARCHITECTURE.md`, `docs/graph-propagation.md` |
-| Impact estimation | incident priors and a Monte Carlo through the stack (`analyze`); unrealised bad debt, liquidation curves, the exit queue and the drain threshold (watches) | `docs/how-risk-is-computed.md`, `docs/vault-depositor-scenarios.md`, `docs/exit-queue.md`, `docs/drain-threshold.md` |
-| Decision usefulness | STAY / REDUCE / EXIT with carry, exit cost from a real quote, and a de-lever size; block-by-block alerts with a runbook | `docs/scenarios-and-breakeven.md`, `docs/alert-runbook.md` |
+| Dependency discovery | `analyze` discovers a Pendle PT position's layers; both watches discover a vault's or an address's markets, their borrowers and lenders, and the admin surface (oracles, feeds, tokens, issuers); `graph` draws it | `docs/analysis/ARCHITECTURE.md`, `docs/model/graph-propagation.md` |
+| Impact estimation | incident priors and a Monte Carlo through the stack (`analyze`); unrealised bad debt, liquidation curves, the exit queue and the drain threshold (watches) | `docs/model/how-risk-is-computed.md`, `docs/model/vault-depositor-scenarios.md`, `docs/watch/exit-queue.md`, `docs/watch/drain-threshold.md` |
+| Decision usefulness | STAY / REDUCE / EXIT with carry, exit cost from a real quote, and a de-lever size; block-by-block alerts with a runbook | `docs/model/scenarios-and-breakeven.md`, `docs/reference/alert-runbook.md` |
 | Working demo on real data | live runs on public sources (`docs/analysis/PROVIDERS.md`); offline demo and replays recorded from mainnet (`fixtures/`) | `README.md` |

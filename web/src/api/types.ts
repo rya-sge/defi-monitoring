@@ -286,7 +286,7 @@ export type Report = {
 
 /* ------------------------------------------------------------- shock trace */
 
-/** `riskdep shock`'s trace (`docs/shock-trace.md`, format `riskdep.shock-trace/1`). */
+/** `riskdep shock`'s trace (`docs/model/shock-trace.md`, format `riskdep.shock-trace/1`). */
 export type ShockStatus = 'shocked' | 'loss' | 'liquidations' | 'moved' | 'reached';
 
 export type ShockStep = {

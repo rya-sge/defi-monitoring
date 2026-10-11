@@ -1,4 +1,4 @@
-# eRPC: a local RPC proxy for riskdep (optional). See docs/erpc.md for why and how to run it.
+# eRPC: a local RPC proxy for riskdep (optional). See docs/setup/erpc.md for why and how to run it.
 #
 # It spreads riskdep's requests over several free Ethereum endpoints, retries a refused or throttled call on another
 # one, and caches what it has already answered. No rate budget is set on purpose: in eRPC 0.3.0 a spent budget rejects
@@ -17,7 +17,7 @@
 logLevel: warn
 
 server:
-  httpHostV4: "127.0.0.1"  # local only; the Docker recipe in docs/erpc.md rewrites it to 0.0.0.0 inside the container
+  httpHostV4: "127.0.0.1"  # local only; the Docker recipe in docs/setup/erpc.md rewrites it to 0.0.0.0 inside the container
   httpPortV4: 4000
   listenV6: false
   maxTimeout: 60s

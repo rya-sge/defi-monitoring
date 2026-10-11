@@ -36,6 +36,41 @@ import { badDebt } from '../lib/risk';
 
 // registry.json thresholds, which the frontend cannot read: watch.lender_concentration_warn,
 // watch.concentration_top1_warn and watch.concentration_min_borrowers.
+const COLUMNS = [
+  { name: 'Market', why: 'Collateral / loan token of the Morpho Blue market the vault lends to' },
+  { name: 'Allocation', right: true, why: 'USD the vault lends in this market' },
+  {
+    name: 'Of vault',
+    right: true,
+    why: "Allocation ÷ the vault's total: the higher, the more a problem here reaches your position",
+  },
+  {
+    name: 'Of market',
+    why: "The vault's share of the market's lenders. Main lender at 50%: the vault takes most of any loss and is drained first",
+  },
+  {
+    name: 'Oracle',
+    why: 'Tracks price: a collateral fall liquidates borrowers. Constant price: fixed, NAV or exchange rate; nobody is liquidated on a depeg and lenders take the loss. A red ring marks a stale feed',
+  },
+  {
+    name: 'Cushion',
+    why: "Light mark: 1 − LLTV, the fall that brings a borrower at max leverage to collateral = debt. Grey or red mark: the collateral's worst 1-year fall. Red: history already went past the cushion. The liquidation incentive makes bad debt start slightly earlier",
+  },
+  {
+    name: 'Top borrower',
+    why: "The largest borrower's share of the market's debt. Warns at 50% or under 5 borrowers: the loss is not spread",
+  },
+  {
+    name: 'Utilization',
+    right: true,
+    why: 'Borrowed ÷ supplied. Near 100%, almost nothing can be withdrawn from this market',
+  },
+  {
+    name: 'LLTV',
+    right: true,
+    why: 'Loan-to-value at which a borrower is liquidated. The higher, the thinner the cushion',
+  },
+];
 const MAIN_LENDER = 0.5;
 const TOP1_WARN = 0.5;
 const MIN_BORROWERS = 5;
@@ -152,15 +187,16 @@ function VaultRisksView({ vault }: { vault: Vault }) {
       <Table className="text-[0.86rem] tabular-nums">
         <TableHeader>
           <TableRow>
-            <TableHead>Market</TableHead>
-            <TableHead className="text-right">Allocation</TableHead>
-            <TableHead className="text-right">Of vault</TableHead>
-            <TableHead>Of market</TableHead>
-            <TableHead>Oracle</TableHead>
-            <TableHead>Cushion</TableHead>
-            <TableHead>Top borrower</TableHead>
-            <TableHead className="text-right">Utilization</TableHead>
-            <TableHead className="text-right">LLTV</TableHead>
+            {COLUMNS.map(({ name, right, why }) => (
+              <TableHead key={name} className={right ? 'text-right' : undefined}>
+                <HoverTooltip>
+                  <TooltipTrigger asChild>
+                    <span className="cursor-help">{name}</span>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-72">{why}</TooltipContent>
+                </HoverTooltip>
+              </TableHead>
+            ))}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -469,7 +505,7 @@ function ExitPanel({ exit: e, symbol }: { exit: VaultExit; symbol: string }) {
         <section aria-label="Exit queue">
           <h3>Your deposit recovered at par, by assets leaving ahead</h3>
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={data} margin={{ left: 8, right: 16, top: 8, bottom: 4 }}>
+            <LineChart data={data} margin={{ left: 8, right: 16, top: 20, bottom: 4 }}>
               <CartesianGrid stroke="var(--line)" vertical={false} />
               <XAxis
                 dataKey="q"

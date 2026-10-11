@@ -1,0 +1,207 @@
+{
+  "output": "/home/ryan/Pictures/charrette/defi-monitoring/presentation/fork-demo.odp",
+  "export": [
+    "pdf",
+    "pptx"
+  ],
+  "theme": {
+    "title_color": "0x1F4E79",
+    "text_color": "0x222222",
+    "font": "Liberation Sans",
+    "background": "0xF7F9FC"
+  },
+  "slides": [
+    {
+      "layout": "title",
+      "title": "riskdep: a crisis on a mainnet fork",
+      "subtitle": "Belem RWA EURCV vault · 2-minute demo · scripts/fork/demo.sh --short",
+      "notes": "Sources: scripts/fork/DEMO-EXPLAINED.md, docs/analysis/FORK-PRESENTATION.md, plan/2026-10-11-fork-demo.plan.md; run measured 2026-10-11 (112 s)."
+    },
+    {
+      "layout": "bullets",
+      "title": "Why a mainnet fork",
+      "bullets": [
+        "A local copy of Ethereum at block 26,165,572 (anvil)",
+        "Real vault, real positions, real oracles and roles",
+        "The crisis is caused by roles the protocols grant",
+        [
+          "Issuer's feed admin, Midas timelock, a liquidator",
+          "No exploit; nothing reaches the real network"
+        ],
+        "riskdep watches the vault live, block by block"
+      ],
+      "notes": "A recorded mainnet range shows what happened; a fork shows what the tool does in a crisis. anvil --auto-impersonate lets the script send transactions from any address."
+    },
+    {
+      "layout": "bullets",
+      "title": "The vault: three fragilities",
+      "bullets": [
+        "Belem RWA EURCV: 4.71M EURCV, curated by RockawayX",
+        "86 % lent in one market, against mGLOeuro (LLTV 77 %)",
+        "One EOA writes the mGLOeuro price (NAV)",
+        [
+          "Fixed band 90,000 - 110,000 EUR; below needs new code",
+          "New code passes a 48 h timelock"
+        ],
+        "One borrower holds all 3.68M EURCV of debt, LTV 0.70"
+      ],
+      "notes": "mGLOeuro: Midas token for a Fasanara private-credit fund, ~100,000 EUR per token. The feed admin is 0xa301…600c, the only holder of feedAdminRole. Borrower 0xa122…E7c6 posted 52.58 mGLOeuro."
+    },
+    {
+      "layout": "table",
+      "title": "What each mGLOeuro price means",
+      "table": [
+        [
+          "mGLOeuro price (EUR)",
+          "Change",
+          "What happens"
+        ],
+        [
+          "100,000",
+          "today",
+          "Borrower LTV 0.70: safe"
+        ],
+        [
+          "90,857",
+          "-9.1 %",
+          "Borrower becomes liquidatable (LTV 77 %)"
+        ],
+        [
+          "90,000",
+          "-10 %",
+          "Lowest price the feed accepts today"
+        ],
+        [
+          "75,142",
+          "-24.9 %",
+          "Below this, liquidation leaves bad debt"
+        ],
+        [
+          "70,000",
+          "-30 %",
+          "251,761 EURCV of bad debt for the vault"
+        ]
+      ],
+      "notes": "Liquidatable: 100,000 x 0.70 / 0.77. Bad debt: debt x LIF / collateral, LIF = 1 / (0.3 x 0.77 + 0.7) = 1.074, i.e. a 7.4 % liquidation bonus."
+    },
+    {
+      "layout": "two-column",
+      "title": "Prediction, before the crisis",
+      "left_title": "Markdown -10 %",
+      "left": [
+        "Vault loss: 0 EURCV",
+        "Borrower liquidatable",
+        "Collateral still covers the debt",
+        "Verdict: STAY"
+      ],
+      "right_title": "Markdown -30 %",
+      "right": [
+        "Vault loss: 251,761 EURCV (5.34 %)",
+        "Largest depositor: 250,399",
+        "Leaving first saves only 382",
+        "Verdict: STAY"
+      ],
+      "font_size": 26,
+      "notes": "riskdep analyze --vault ... --shock token=mGLOeuro:0.10 / 0.30, offline from fixtures/replay/incident-0xd6d4…. Why STAY at -30 %: the depositor holds 99.5 % of the vault, and only ~8 % can be withdrawn at 91 % utilisation, so the loss falls on it whatever it does."
+    },
+    {
+      "layout": "bullets",
+      "title": "What riskdep finds at start-up",
+      "bullets": [
+        "Feed band: mGLOeuro cannot fall below 90,000 without an upgrade",
+        [
+          "A larger loss stays invisible to the market until then"
+        ],
+        "Timelock: the upgrade must pass Midas's 48 h timelock",
+        [
+          "riskdep watches its queue"
+        ],
+        "Exit gates abdicated: the curator can never lock withdrawals"
+      ],
+      "notes": "Alerts FeedBand (warn), AdminSurface timelock (info), ExitGate (info). Found from the vault address alone: vault -> market -> oracle -> feed -> proxy admin -> timelock."
+    },
+    {
+      "layout": "bullets",
+      "title": "The crisis, act by act",
+      "ordered": true,
+      "bullets": [
+        "Issuer sets the NAV to 90,000: one transaction, no delay",
+        "Real loss is 30 %: Midas schedules a feed upgrade",
+        "48 hours later (fork clock moved): upgrade executed, NAV 70,000",
+        "A liquidator seizes the rest: bad debt written off"
+      ],
+      "notes": "Act 2: setRoundData(9e12) from the feed-admin EOA. Act 6: schedule on MidasTimelockController by its proposer Safe, evm_increaseTime 48 h, execute, setRoundData(7e12). MGloEuroFeedV2 is a demo implementation, not Midas code. Act 7: liquidate the remaining collateral."
+    },
+    {
+      "layout": "table",
+      "title": "What riskdep says, and when",
+      "table": [
+        [
+          "Moment",
+          "Alert",
+          "Level"
+        ],
+        [
+          "NAV -10 %",
+          "Oracle moved -10 %; liquidation curve",
+          "warn"
+        ],
+        [
+          "Upgrade scheduled",
+          "Executable in 48 h: the window to act",
+          "warn"
+        ],
+        [
+          "Upgrade executed",
+          "Feed code changed",
+          "critical"
+        ],
+        [
+          "NAV 70,000",
+          "Unrealised bad debt 252,236 EURCV",
+          "critical"
+        ],
+        [
+          "Liquidation",
+          "Bad debt realised 252,914 EURCV",
+          "critical"
+        ]
+      ],
+      "notes": "Totals for the short run: 5 critical, 13 warn. The key alert is the scheduled upgrade: without watching the timelock queue, the first sign would be the upgrade itself, 48 h too late."
+    },
+    {
+      "layout": "text",
+      "title": "Predicted against observed",
+      "notes": "Gap 0.5 %: the interest the debt accrued during the 48 h time jump. The prediction ran before anything happened, on a recording of the vault.",
+      "font_size": 32,
+      "text": "Predicted before the crisis:   251,761 EURCV\nObserved on the fork:           252,914 EURCV\n\nGap 0.5 %: interest accrued during the 48 h jump"
+    },
+    {
+      "layout": "two-column",
+      "title": "What the demo proves",
+      "left_title": "Brief's criteria",
+      "left": [
+        "Discovery: feed, its admin, band, timelock",
+        "Impact: 251,761 predicted, confirmed",
+        "Decision: 48 h warning; STAY explained",
+        "Real data: mainnet state at a real block"
+      ],
+      "right_title": "Limits",
+      "right": [
+        "Crisis is played, not observed",
+        "Feed upgrade is demo code",
+        "Keyless upstreams can throttle",
+        "One vault, one scenario"
+      ],
+      "font_size": 24,
+      "notes": "Judging weights: discovery 30 %, impact 30 %, decision 25 %, demo on real data 15 %. Alternative crises scripted: alt-redstone.sh, alt-pst-mint.sh, alt-fxsave-expiry.sh."
+    },
+    {
+      "layout": "text",
+      "title": "Run it",
+      "text": "scripts/fork/demo.sh --short      (about 2 minutes)\nscripts/fork/demo.sh --record     (asciinema video)\nscripts/fork/demo.sh --stop       (stop everything)\n\nOffline, no fork:\nriskdep watch --vault 0xD6d4… --replay --record-as fork-belem",
+      "font_size": 24,
+      "notes": "Needs Foundry (anvil, cast, forge) and uv; no API key. Explanation of every output line: scripts/fork/DEMO-EXPLAINED.md."
+    }
+  ]
+}

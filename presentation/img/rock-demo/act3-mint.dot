@@ -1,0 +1,14 @@
+digraph G { rankdir=LR; newrank=true;
+#include "common.inc"
+pool [label="Bridge pool (CCIP)\nallowed to create PST", fillcolor="#FDECEA", color="#B03A2E"];
+pst [label="PST token\nsupply +15M (+7.0 %)\nnothing backs the new coins"];
+oracle [label="Oracle\nstill says 1.138\n(it does not see the supply)"];
+market [label="Huma USDC Main vault\n100 % lent against PST"];
+riskdep [label="riskdep: Admin.Mint, critical\n\"7.0 % of the supply\nminted in one transaction\"", fillcolor="#E9F7EF", color="#1E8449"];
+pool -> pst [label="mints"];
+pst -> market [label="new coins could be\nposted at full price"];
+oracle -> market [label="prices PST"];
+pst -> riskdep [label="seen at once", color="#1E8449", fontcolor="#1E8449"];
+{rank=same; pst; riskdep}
+{rank=same; market; oracle}
+}

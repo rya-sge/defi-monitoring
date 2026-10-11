@@ -49,3 +49,62 @@ def test_graph_draws_the_hidden_layer():
     assert ("cShare (confidential vault shares)", "decrypted by", "Zama Protocol (KMS, coprocessors)") in rels
     assert any(r == "accepts deposits only from" for _, r, _ in rels)  # the deposit gate
     assert pipeline.vault_graph(RWA) is not None  # the incident's graph is not annotated: the engine never sees it
+
+
+def _recorded_events(vault):
+    """The vault's real Zama events since its deployment, recorded through Etherscan (fixtures/replay/zama-events)."""
+    from riskdep import sources as S
+    from riskdep.abi import EVENTS, decode_log
+
+    f = S.Fetcher("offline", cli.REPLAY_DIR / "zama-events")
+    e = ZM.entry(vault)
+    tp = {s.name: s.topic0 for s in EVENTS if s.contract == "zama"}
+    rows = [
+        (e["cshare"], x)
+        for x in S.etherscan_logs(f, e["cshare"], tp["UnwrapFinalized"], None, e["deploy_block"], 26165600)
+    ]
+    rows += [
+        (e["redeem_batcher"], x)
+        for x in S.etherscan_logs(f, e["redeem_batcher"], tp["BatchCanceled"], None, e["deploy_block"], 26165600)
+    ]
+    logs = [
+        {
+            "address": a,
+            "topics": x["topics"],
+            "data": x["data"],
+            "blockNumber": hex(x["block"]),
+            "transactionHash": x["tx"],
+            "logIndex": "0x0",
+        }
+        for a, x in rows
+    ]
+    return e, [decode_log(log, ZM.kinds(e)) for log in logs]
+
+
+def test_z4_alerts_on_the_real_history_of_the_rwa_vault():
+    """D191–D192 on Confidential RWA's real batches: two days with a large confidential outflow (5.6 % and 3.0 % of
+    the vault), three instant exits above 1 %; the empty days (a zero aggregate, then a cancel) stay silent."""
+    e, events = _recorded_events(RWA)
+    supply = 26_340_839 * 10**18
+    alerts = ZM.assess_events(events, e, supply, 10**12, 1)
+    batches = [a for a in alerts if a.data.get("batch")]
+    instant = [a for a in alerts if a.event == "Zama.Unwrap" and not a.data["batch"]]
+    assert sorted(round(a.data["share_of_vault"], 3) for a in batches if a.level == "warn") == [0.030, 0.056]
+    assert sum(1 for a in instant if a.level == "warn") == 3 and len(instant) == 14
+    assert not [a for a in alerts if a.event == "Zama.BatchCanceled"]  # every cancel followed an empty day
+    assert not [a for a in alerts if a.data.get("share_of_vault") == 0]
+
+
+def test_z4_rules_on_admin_events():
+    from riskdep.abi import Event
+
+    e = ZM.entry(RWA)
+    ev = [
+        Event("Paused", "zama", e["redeem_batcher"], 1, "0xa", 0, {"account": "0x1"}),
+        Event(
+            "BatchCanceled", "zama", e["redeem_batcher"], 1, "0xb", 0, {"batchId": 29}
+        ),  # no empty unwrap: a deadline
+        Event("Upgraded", "zama", e["cshare"], 1, "0xc", 0, {"implementation": "0x" + "2" * 40}),
+    ]
+    got = {a.event: a.level for a in ZM.assess_events(ev, e, 10**24, 10**12, 1)}
+    assert got == {"Zama.Paused": "critical", "Zama.BatchCanceled": "warn", "Zama.Upgraded": "critical"}

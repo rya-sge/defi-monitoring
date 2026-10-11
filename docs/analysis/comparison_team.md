@@ -97,7 +97,7 @@ This document compares the two teammate notes in `teammate/` with what `riskdep`
 
 | | Team 1 / ChatGPT | Team 2 | Implementation |
 |---|---|---|---|
-| Transport | WebSocket + reconciliation by polling | — | Polling (`docs/websocket-vs-polling.md` documents the choice); the WS hybrid is planned (next step 6) |
+| Transport | WebSocket + reconciliation by polling | — | Polling (`docs/watch/websocket-vs-polling.md` documents the choice); the WS hybrid is planned (next step 6) |
 | Cadence | Event processor + incremental risk engine | Topology on events, state every block or minute through Multicall3 | Events + **one batched state read per batch at one block**; topology and lenders refreshed every 300 blocks |
 | Fast vs deep engine | Separate them | — | In practice yes: `watch` is the fast path, `analyze` the deep one. They do not share a graph (gap R1) |
 | Signals | Depeg (oracle vs market), LLTV / oracle change, liquidatable spike, `maxWithdraw` drop, allocation concentration, admin / timelock changes, utilisation | Oracle gap, pending timelocked changes, whale HF, withdrawable liquidity | **All covered** except whale behaviour on the vault side: timelocked `Submit` decoded with its date; zero-timelock risk functions; upgrades (EIP-1967), owners, aggregators, pauses, outsized mints; unrealised bad debt; liquidation curve; exit capacity; lender concentration |
@@ -135,7 +135,7 @@ This document compares the two teammate notes in `teammate/` with what `riskdep`
 | Scope of `analyze` | Team 2: any vault, many markets, aggregated | One PT borrower position | The Belem use case (a fund *depositing* in vaults) is served by `watch --vault`, not by `analyze`. There is no loss number for a vault depositor under a scenario. **This is the largest gap against the track's "impact" criterion.** |
 | Graph as engine | Team 2: one graph with generic propagation | The graph is a rendering; rules use their own structures | Documented as gap R1 (L). It limits the "adding a protocol = one adapter" claim Team 2 wanted to demo. |
 | Liquidity source | Team 2: an aggregator, generic for any token | Pendle API only | Next step 2 needs it; NEXT_STEP notes that no keyless aggregator has been verified. |
-| Transport | ChatGPT: WebSocket | Polling | Argued in `docs/websocket-vs-polling.md`; the hybrid is planned. Latency is 25–40 s. |
+| Transport | ChatGPT: WebSocket | Polling | Argued in `docs/watch/websocket-vs-polling.md`; the hybrid is planned. Latency is 25–40 s. |
 | UI | Both: interactive (sliders, click a node, pick a shock) | Static reports | Weak for the demo (15 % of the score). |
 
 ### 4.1 Language: Python instead of TypeScript
@@ -157,7 +157,7 @@ Two pieces are deliberately *not* re-implemented: the vault's accrual (it reads 
 
 ### 4.2 Probabilities: base rates and Monte Carlo instead of a breakeven probability
 
-Detailed, with a worked example on the demo position and a learn section: `docs/scenarios-and-breakeven.md`.
+Detailed, with a worked example on the demo position and a learn section: `docs/model/scenarios-and-breakeven.md`.
 
 **What was proposed.** Team 2 warns that probabilities are "the weakest part of any such model" and proposes the **breakeven probability** p\* = exit cost ÷ L(severe case): exit if you believe the severe case is more likely than p\*. Team 1's Claude thread asks for named scenarios first and Monte Carlo later; its ChatGPT thread lists the trade-off: deterministic is explainable, Monte Carlo gives distributions but rests on hard-to-calibrate assumptions.
 
@@ -171,7 +171,7 @@ Detailed, with a worked example on the demo position and a learn section: `docs/
 
 ### 4.3 Scope of `analyze`: one borrower, not a vault depositor
 
-Detailed, with a worked example on real data and a learn section: `docs/vault-depositor-scenarios.md`.
+Detailed, with a worked example on real data and a learn section: `docs/model/vault-depositor-scenarios.md`.
 
 **What was proposed.** Team 2 frames the use case as the track's: a fund *depositing* in vaults, with the loss aggregated over every market the vault allocates to (Σ over markets of the vault's share of supply × bad debt), and an exit cost that comes from withdrawal liquidity, not from a swap.
 
@@ -188,7 +188,7 @@ Detailed, with a worked example on real data and a learn section: `docs/vault-de
 
 ### 4.4 The graph: a rendering, not the engine
 
-Detailed, with a worked example on real data and a learn section: `docs/graph-propagation.md`.
+Detailed, with a worked example on real data and a learn section: `docs/model/graph-propagation.md`.
 
 **What was proposed.** Team 2 makes the graph the engine. Each edge type carries a **transmission function** (how a shock on the child becomes a loss on the parent): `allocates_to` passes the vault's share of a market's bad debt; `collateral` is zero until the LLTV buffer is used up, then non-linear; `priced_by` depends on the failure mode (overpricing, underpricing, freeze). Shocks spread with **DebtRank** (Battiston et al., 2012): each node passes a shock once (which handles cycles), paths below ε of the position are pruned, and terminal nodes stop the spread. Adding a protocol then means producing edges of existing types. Team 1 asks for the same in other words: look-through exposure and blast radius.
 
@@ -219,7 +219,7 @@ Detailed, with a worked example on real data and a learn section: `docs/graph-pr
 
 **What was proposed.** Team 1's ChatGPT thread: a WebSocket RPC subscribed to new blocks and logs, event-driven engines, eventually one's own node for detection in seconds.
 
-**What the implementation does.** Polling every 12 seconds, 2 blocks behind the head, with a saved cursor. The reasons are in `docs/websocket-vs-polling.md`: a WebSocket loses whatever is pushed while it is disconnected and needs the same `eth_getLogs` to fill the gap, while polling never misses a block. The latency is 25 to 40 seconds.
+**What the implementation does.** Polling every 12 seconds, 2 blocks behind the head, with a saved cursor. The reasons are in `docs/watch/websocket-vs-polling.md`: a WebSocket loses whatever is pushed while it is disconnected and needs the same `eth_getLogs` to fill the gap, while polling never misses a block. The latency is 25 to 40 seconds.
 
 **What it costs.** For a borrower close to liquidation, 25 to 40 seconds can be too late; for the depositor signals (timelocked changes, unrealised bad debt) it is not.
 
@@ -264,8 +264,8 @@ Ranked by value for the track and by effort, given the existing code.
 
 | # | Idea | From | Value | Effort | Fits on top of |
 |---|---|---|---|---|---|
-| 1 | ~~**Run / queue model for vault exit**: loss as a function of queue position, depositor concentration, φ~~ **done**: `exit_queue.py`, `ExitQueue` alert, `docs/exit-queue.md` | Team 2 | High: it is the decision for a vault depositor | M | `vault.withdrawable()`, `force_withdrawable()`, unrealised bad debt in `market_risk.py` |
-| 2 | ~~**Fixed-oracle drain threshold d\*** per market, plus the drainable amount (idle + Public Allocator `maxIn` + cap headroom)~~ **done**: `drain.py`, `DrainWindow` alert, `docs/drain-threshold.md` | Team 2 | High: an early, computable exit trigger | S–M | Oracle mode inference, caps already read in `vault.py`; Public Allocator not read yet |
+| 1 | ~~**Run / queue model for vault exit**: loss as a function of queue position, depositor concentration, φ~~ **done**: `exit_queue.py`, `ExitQueue` alert, `docs/watch/exit-queue.md` | Team 2 | High: it is the decision for a vault depositor | M | `vault.withdrawable()`, `force_withdrawable()`, unrealised bad debt in `market_risk.py` |
+| 2 | ~~**Fixed-oracle drain threshold d\*** per market, plus the drainable amount (idle + Public Allocator `maxIn` + cap headroom)~~ **done**: `drain.py`, `DrainWindow` alert, `docs/watch/drain-threshold.md` | Team 2 | High: an early, computable exit trigger | S–M | Oracle mode inference, caps already read in `vault.py`; Public Allocator not read yet |
 | 3 | **Shared-node exposure and alert** (accumulation risk / blast radius) | Team 1, Team 2 | High for discovery; directly visible in the graph example | S once there is a shared graph (R3 after R1); a first version can be computed from `graph.json` | `graph.py` output |
 | 4 | **Scenario library** (named shocks) with the loss per vault depositor | Team 1 / Claude, Team 2 (failure modes) | High: answers "how much do we lose if…" | M | `propagate.loss()` + `market_risk` curves |
 | 5 | **Push alerts and deduplication** | Team 1 / ChatGPT | High in production | S | Alert objects already complete (next step 1) |

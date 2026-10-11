@@ -258,7 +258,13 @@
     "drain_basis": "D70, D72. drain_buy_cost: the cost c of buying the collateral at the drain's size, in d* = 1 - LLTV / (1 + c); 0.5 % is low on purpose (a lower cost gives an earlier, more conservative threshold) and is not measured per token. drain_margin: warn when the collateral's discount to the oracle is within 2 points of d*. drain_check_every_blocks: DefiLlama's prices are re-read every 25 blocks (~5 min); oracle prices come with every state read.",
     "exit_queue_basis": "D64, D66. exit_queue_phi: the share of the other depositors' assets assumed to leave before you in a run, Team 2's single parameter phi; 0.5 is a middle case with no data behind it. exit_queue_stuck_warn: warn when at least half of the position would be stuck if every contract holder (vault, fund, multisig) withdrew first; critical when, in addition, the vault already carries unrealised bad debt.",
     "feed_band_report_floor": 0.5,
-    "feed_band_basis": "D183 (plan/2026-10-11-fork-demo.plan.md). A custom feed whose minAnswer/maxAnswer are readable on the feed is reported (FeedBand) when its floor lies within this fraction below its latest answer. mGLOeuro/EUR (Midas, read 2026-10-11) has a band of 90,000-110,000 EUR around 100,000 and no setter, so a fund loss above 10 % reaches the Belem market's oracle only after an upgrade behind a 48 h timelock. Chainlink OCR bands are not exposed on the proxy and never trigger."
+    "feed_band_basis": "D183 (plan/2026-10-11-fork-demo.plan.md). A custom feed whose minAnswer/maxAnswer are readable on the feed is reported (FeedBand) when its floor lies within this fraction below its latest answer. mGLOeuro/EUR (Midas, read 2026-10-11) has a band of 90,000-110,000 EUR around 100,000 and no setter, so a fund loss above 10 % reaches the Belem market's oracle only after an upgrade behind a 48 h timelock. Chainlink OCR bands are not exposed on the proxy and never trigger.",
+    "impact_oracle_fall": 0.02,
+    "impact_basis": "D187: a vault market's oracle falling at least this much within a batch (an issuer marking its NAV down, a feed rewritten) is an incident that has landed: the watch states its impact on the vault and the depositor with the verdict, as analyze --vault would. 2 %: below it the move is a NAV's usual drift; the existing Oracle alert stays at oracle_move_warn.",
+    "zama_redeem_warn": 0.02,
+    "zama_redeem_critical": 0.1,
+    "zama_instant_warn": 0.01,
+    "zama_basis": "D191: the redeem batcher's daily aggregate is the public measure of confidential outflows: warn from 2 % of the vault in one batch, critical from 10 % (a confidential run forming); an instant exit (a cShare unwrap to anyone but the batcher) reveals its amount: warn from 1 % of the vault (an informed holder leaving fast)."
   },
   "graph": {
     "sibling_min_tvl_usd": 1000000,
@@ -926,6 +932,22 @@
           25842830
         ],
         "source": "GAP.md K8: trading in YT-reUSD pushed PT-reUSD's implied yield from about 11 % to over 20 % in nine minutes; the min(TWAP, linear) oracle fell; 33 positions liquidated, no bad debt. 33 Liquidate events confirmed on-chain on 2026-10-11 (blocks 25,829,868 to 25,829,936)."
+      },
+      "crash-2025-10-10": {
+        "title": "The 2025-10-10 market crash on Morpho, main wave (20:50–22:00 UTC)",
+        "markets": [
+          "0x3f1d5c88c72432b04f2074499fe217468af49ddaa98bcb6ec80b08f76a82c6ec",
+          "0x5ffdf15c5a4d7c6affb3f12634eeda1a20e60b92c0eb547f61754f656b55841e",
+          "0xc7d717f4052ac4e5463dcc58cea0f6b05dd7d8c67e0aee68ebe30a8af09b259f",
+          "0xa921ef34e2fc7a27ccc50ae7e4b154e16c9799d3387076c421423ef52ac4df99",
+          "0xb323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc",
+          "0x3a85e619751152991742810df6ec69ce473daef99e28a64ab2340d7b7ccfee49"
+        ],
+        "window": [
+          23549800,
+          23550200
+        ],
+        "source": "Liquidate events on Morpho Blue read through Etherscan on 2026-10-11: 258 liquidations in 29 markets between 2025-10-10 12:00 and 10-11 12:00 UTC, led by memecoin collateral (Mog, PEPE, SPX) and WBTC; the six markets with the most, in the crash's main wave. USDe itself barely reached Morpho that night (2 liquidations in sUSDe/USDT): its −35 % print was on a centralized exchange."
       }
     }
   },
@@ -1123,5 +1145,7 @@
         "deploy_block": 25976153
       }
     }
-  }
+  },
+  "tail_exit_budget": 0.9,
+  "tail_exit_budget_basis": "D195 (K13): EXIT when the worst 1 % of outcomes still costs at least this share of equity after the proposed de-lever: reducing does not make the tail survivable. 0.9: a position that loses nearly everything in its worst month even after de-levering should be left; below it, REDUCE stands."
 }

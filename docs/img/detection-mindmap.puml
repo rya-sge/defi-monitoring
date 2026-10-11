@@ -1,0 +1,51 @@
+@startmindmap
+<style>
+mindmapDiagram {
+  node {
+    BackgroundColor #FDEEEE
+    LineColor #B54A4A
+  }
+  :depth(1) {
+    BackgroundColor #B54A4A
+    FontColor white
+  }
+}
+</style>
+* How riskdep detects\nan incident
+** Three detectors
+*** Events in a block
+*** State differences between reads
+*** Standing findings at start-up
+** Timing
+*** Poll 12 s, 2 confirmations
+*** About 24 to 36 s after the block
+*** Full read every 25 blocks, refresh 300
+** Price
+*** Oracle move >= 5 %
+*** Divergence from market >= 3 %
+*** Feed band at start-up
+** Solvency
+*** Unrealised bad debt 0.01 % / 0.1 %
+*** Liquidation curve
+*** Bad debt realised, pending loss
+*** Drain window d*
+left side
+** Issuer and token
+*** Mint >= 5 % of supply
+*** Pause, upgrade, owner change
+** Governance
+*** Submit with no notice: critical
+*** Timelock queue: CallScheduled
+*** Abdicated exit gates
+** Liquidity and exit
+*** Utilisation >= 99 %
+*** Exit queue, gates
+** OracleImpact
+*** Fall >= 2 %: loss now, liquidatable
+*** Depositor's loss and verdict
+*** Fork: 215,003 stated, 217,286 realised
+** Not detected
+*** Off-chain before publication
+*** Mempool, other chains
+*** A frozen feed (FeedStale planned)
+@endmindmap

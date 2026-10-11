@@ -24,7 +24,7 @@ flowchart TB
   end
 
   subgraph SL3["Slice 3 · US14, US15 · tests and docs"]
-    S3.1["✅ S3.1 holders cached in the two Sentora replays,<br/>docs/exit-queue.md, runbook, registry reference<br/>went on: pytest 121 passed"]
+    S3.1["✅ S3.1 holders cached in the two Sentora replays,<br/>docs/watch/exit-queue.md, runbook, registry reference<br/>went on: pytest 121 passed"]
   end
 
   ST ~~~ S1.1

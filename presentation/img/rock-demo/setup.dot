@@ -1,0 +1,19 @@
+digraph G { rankdir=LR; newrank=true;
+#include "common.inc"
+mainnet [label="Ethereum mainnet\nblock 26,165,572"];
+fork [label="Local fork\na private copy\non the laptop", fillcolor="#E8F0FA"];
+acts [label="Crisis scripts\nact as the real roles\n(RedStone Safe, CCIP pool)", fillcolor="#FDECEA", color="#B03A2E"];
+watch [label="riskdep watch\nreads every block\nTori + Huma vaults"];
+file [label="Alert file\nwatch-*.jsonl"];
+notify [label="riskdep notify\nwarn + critical only"];
+phone [label="Private Telegram\nchannel", fillcolor="#E9F7EF", color="#1E8449"];
+mainnet -> fork [label="copied"];
+acts -> fork [label="send\ntransactions"];
+fork -> watch [label="new blocks"];
+watch -> file [label="alerts"];
+file -> notify [label="new lines"];
+notify -> phone [label="posts"];
+{rank=same; mainnet; acts}
+{rank=same; fork; notify}
+{rank=same; watch; file}
+}

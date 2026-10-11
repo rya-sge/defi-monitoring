@@ -1,0 +1,32 @@
+@startuml
+title riskdep - from a block to an alert
+skinparam shadowing false
+skinparam activity {
+  BackgroundColor #FDEEEE
+  BorderColor #B54A4A
+}
+start
+:Poll the head every 12 s;
+if (a block has 2 confirmations?) then (no)
+  :Wait for the next poll;
+  stop
+else (yes)
+endif
+:Fetch the logs of the watched contracts;
+if (any event, gap or refresh due?) then (yes)
+  :Full state read at one block;
+else (no)
+  :Light read: oracle prices,
+total assets, idle, gates;
+endif
+:Event rules on the decoded logs;
+:State rules: compare with the previous read;
+if (a vault oracle fell >= 2 %?) then (yes)
+  :OracleImpact: the loss now,
+what is liquidatable, the verdict;
+else (no)
+endif
+:Write the alerts (terminal, JSON);
+:Save the cursor last;
+stop
+@enduml

@@ -37,7 +37,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 /**
- * The impact of a shock (`riskdep shock`'s trace, `docs/shock-trace.md`), one view per tab.
+ * The impact of a shock (`riskdep shock`'s trace, `docs/model/shock-trace.md`), one view per tab.
  * A first, minimal pass to compare the views: the data is the committed example trace.
  */
 

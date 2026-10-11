@@ -140,7 +140,7 @@ If Pharos is removed or unreadable, the loss falls back to the hits found on-cha
 ## 8. Maintenance
 
 - **Refresh the snapshot**: run with `--record` (or `--refresh`) and commit the new file under `fixtures/replay/pharos/`. Re-check `pharos.ids` when Pharos's methodology version changes (10.16, model v9 when recorded).
-- **Add a token** under an ambiguous symbol: find its id in the recording or on pharos.watch, read the token's `symbol()` on-chain, and add `"<address in lower case>": {"id": "<pharos id>", "symbol": "<symbol>"}` to `registry.json` `pharos.ids`. Update `docs/registry-reference.md` too.
+- **Add a token** under an ambiguous symbol: find its id in the recording or on pharos.watch, read the token's `symbol()` on-chain, and add `"<address in lower case>": {"id": "<pharos id>", "symbol": "<symbol>"}` to `registry.json` `pharos.ids`. Update `docs/reference/registry-reference.md` too.
 - **Thresholds** (`registry.json` `pharos`): `min_exposure` (1 %), `common_mode_kinds`, `max_group_members` (12), each with its basis.
 - **Tests**: `tests/test_pharos.py` (parse and resolve, exposure along paths, narrow groups, offline snapshot, the book reaching iUSD through Pharos backing, the Tori common-mode note, the annotated graph).
 - **Related docs**: `docs/risk-assessment/outside-providers.md` §1, `docs/analysis/PROVIDERS.md`, `plan/2026-10-11-pharos.plan.md`, `nexus.md`.

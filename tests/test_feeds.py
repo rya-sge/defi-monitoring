@@ -29,7 +29,7 @@ def test_recorded_belem_graph_flags_the_midas_nav_feed():
     """ROCK-VAULT-DEP.md: mGLOeuro's NAV feed was 17.5 days old on 2026-10-11."""
     g = pipeline.vault_graph(BELEM)
     by = {n["label"]: n["details"] for n in g["nodes"] if n["details"].get("freshness")}
-    assert by["mGLOeuro/EUR"]["stale"] and "17.6 days" in by["mGLOeuro/EUR"]["freshness"]
+    assert by["mGLOeuro/EUR"]["stale"] and "17.5 days" in by["mGLOeuro/EUR"]["freshness"]
     assert not by["WBTC / BTC"]["stale"]
 
 
@@ -66,3 +66,22 @@ def test_recorded_graph_carries_protocol_concentration():
     assert 0.018 < prot["Morpho Blue"]["share_of_defi"] < 0.02
     runs_on = [e for e in g.edges if e["rel"] == "runs on" and e["target"] == "protocol:morpho-blue"]
     assert len(runs_on) >= 10  # every Blue market of the graph
+
+
+def test_feedstale_in_the_watch_flags_the_midas_nav_feed():
+    """D193: the watch's feed check on Belem's recorded graph block: the mGLOeuro NAV feed, 17.5 days old, is stale."""
+    from types import SimpleNamespace
+
+    from riskdep import sources as S
+    from riskdep.admin import Contract
+
+    rdir = cli.REPLAY_DIR / f"graph-{BELEM}"
+    block = json.loads((rdir / "meta.json").read_text())["block"]
+    feed = "0x8b7b1689396ef4468df1c0fab181d29b47089609"
+    aw = SimpleNamespace(
+        contracts={feed: Contract(feed, ["feed of the oracle of mGLOeuro/EURCV"], symbol="mGLOeuro/EUR")}
+    )
+    fw = FD.FeedWatch(S.Fetcher("offline", rdir), aw, block)
+    (al,) = fw.startup(lambda _: None, block)
+    assert al.event == "FeedStale" and "17.5 days" in al.title and al.level == "warn"
+    assert fw.step(S.Fetcher("offline", rdir), block) == []  # already stale: no new alert
