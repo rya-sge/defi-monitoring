@@ -35,6 +35,10 @@ THROTTLE_RETRIES = 6  # HTTP 429 resent after 2, 4 … 12 s: at most ~42 s of wa
 # to another endpoint (a local node or proxy, a paid endpoint with its key) while cache keys, snapshots and replays
 # keep the public URL, so the offline fixtures stay valid and a key never reaches a committed file.
 ROUTES: dict[str, str] = {RPC: os.environ["RISKDEP_RPC_URL"]} if os.environ.get("RISKDEP_RPC_URL") else {}
+# RISKDEP_FORK=1: the main RPC is a local mainnet fork (anvil, scripts/fork/). Its blocks after the fork point exist
+# nowhere else and the Morpho API still describes mainnet, so the cross-checks against them are skipped (plan
+# 2026-10-11-fork-demo, D1); every on-chain read is unchanged. A replay recorded on a fork sets it from its meta.
+FORK: bool = os.environ.get("RISKDEP_FORK", "") not in ("", "0")
 
 
 class CacheMiss(RuntimeError):

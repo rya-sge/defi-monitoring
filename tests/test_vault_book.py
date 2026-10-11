@@ -50,6 +50,7 @@ def _inc(vault, total, loss, dep, stay, exposure, verdict="STAY", usd=1.0, hit=T
 
 def test_aggregate_in_both_weightings():
     incs = [_inc(A, 100, 10, 50, 5, 40, "EXIT"), _inc(B, 200, 0, 20, 0, 0, hit=False)]
+    incs[0].p_star, incs[0].p_star_year = 0.05, 0.46  # leaving A pays from a 5 % chance over the horizon
     v = VB.aggregate(VB.parse({"vaults": [A, B]}), [("x", 0.3)], incs)
     assert (v.value_usd, v.loss_usd, v.exposure_usd) == (300, 10, 40)
     assert v.headline.startswith("X −30%") and "Act first on" in v.headline
@@ -87,3 +88,10 @@ def test_book_borrower_default_reaches_every_vault(tmp_path, capsys):
     r = json.loads((tmp_path / "book-incident.json").read_text())
     assert all(ln["hit_markets"] for ln in r["lines"]) and r["loss_usd"] > 10e6
     assert r["shocks"] == ["the largest borrower of every market defaults, collateral recovered at 50%"]
+
+
+def test_book_contagion_skips_markets_the_book_holds(tmp_path):
+    """PRIME/USDC is a sibling in the NUVA vault's graph, but RockawayX USDC Yield holds it: not contagion."""
+    assert cli.main(["analyze", "--book", str(BOOK), "--shock", "token=PRIME:0.30", "--out", str(tmp_path)]) == 0
+    note = next(n for n in json.loads((tmp_path / "book-incident.json").read_text())["notes"] if "contagion" in n)
+    assert "PRIME/PYUSD" in note and "PRIME/USDC" not in note

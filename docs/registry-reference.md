@@ -24,6 +24,7 @@ Rules for editing:
 - [`engine`](#engine)
 - [`exit_liquidity`](#exit_liquidity)
 - [`pharos`](#pharos)
+- [`nexus`](#nexus)
 - [How to add a yield issuer](#how-to-add-a-yield-issuer)
 
 ## `chain`
@@ -115,6 +116,7 @@ The conservative default for a yield token not in `issuers`: a 15 % yearly depeg
 | `gas_exit_usd` | USD | gas cost added to every exit and de-lever estimate (25) | `decide.py` |
 | `tail_budget` | fraction of equity | REDUCE when CVaR 99 % exceeds this share of the equity (0.5) | `decide.py` |
 | `incident.exit_min_gain` | fraction of the loss | vault incident mode: EXIT only when leaving first cuts the depositor's loss by at least this share (0.05) | `vault_incident.py` |
+| `incident.breakeven_basis` | text | the breakeven probability p\* of vault and book incidents: yield forgone on what can leave over `--horizon`, divided by the loss leaving first saves (D142–D144) | `vault_incident.py`, `vault_book.py` |
 | `incident.reduce_margin` | fraction | incident mode: the partial sale puts liquidation this far beyond the incident's oracle drop (0.01) | `scenario.py` |
 
 ## `watch`
@@ -218,6 +220,19 @@ How Pharos's keyless dependency graph is read (plan `2026-10-11-pharos`, D133–
 | `common_mode_kinds` | list | `mint-control`, `upgrade-control`, `reserve-issuer`, `redemption-rail` | the group kinds that mean "fails together" |
 | `max_group_members` | count | 12 | wider groups (a chain, a DEX, LayerZero) are dropped |
 | `groups_basis` | text | — | why |
+
+## `nexus`
+
+Nexus Mutual's cover prices as an outside view next to the breakeven p\* (plan `2026-10-11-breakeven`, D145–D146; `docs/risk-assessment/outside-providers.md` §2). Read by `nexus.py` and `vault_incident.py`. Shown, never used in a verdict.
+
+| Key | Unit | Default | What it controls |
+|---|---|---|---|
+| `basis` | text | — | the source and what the products pay on |
+| `loading` | [low, high] | [2, 5] | the implied yearly probability is price ÷ (loading × severity), given for this range |
+| `loading_basis` | text | — | why 2–5 |
+| `products` | address → `{product, kind, token}` | trUSD, strUSD, etrUSD (Tori 446), fxSAVE (f(x) 137), fxUSD (depeg 311), iUSD, siUSD (infiniFi 308), mGLOeuro (Midas 356) | which Nexus product covers a collateral's protocol; `kind` is `protocol` (pays on an exploit) or `depeg` |
+
+**Adding a product.** Find the product id in `https://api.nexusmutual.io/v2/products`, read its wording (the IPFS annex in its metadata) to set `kind`, and add `"<token address>": {"product": <id>, "kind": "protocol" | "depeg", "token": "<symbol>"}`.
 
 ## How to add a yield issuer
 

@@ -101,7 +101,7 @@ flowchart TB
 |---|---|
 | `cli` | `clock`, `crosscheck`, `decide`, `discover`, `engine`, `graph`, `pharos`, `priors`, `report`, `scenario`, `shock`, `simulate`, `sources`, `vault_book`, `vault_incident`, `watch`, `watch_user` |
 | `scenario` | `decide`, `discover`, `oracle_class`, `propagate`, `sources`, `vault` |
-| `vault_incident` | `discover`, `exit_queue`, `market_risk`, `oracle_class`, `scenario`, `sources`, `vault` |
+| `vault_incident` | `discover`, `engine`, `exit_queue`, `market_risk`, `nexus`, `oracle_class`, `pharos`, `scenario`, `sources`, `vault` |
 | `vault_book` | `vault_incident` |
 | `watch` | `admin`, `crosscheck`, `discover`, `drain`, `exit_queue`, `market_risk`, `poller`, `rules`, `sources`, `vault` |
 | `watch_user` | `abi`, `admin`, `borrower`, `borrower_rules`, `crosscheck`, `discover`, `drain`, `exit_queue`, `market_risk`, `poller`, `positions`, `rules`, `scenario`, `sources`, `vault`, `watch` |
@@ -167,6 +167,7 @@ Every source is public and needs no API key. The exact endpoints, queries and me
 | Morpho API `blue-api.morpho.org/graphql` | finding things the chain cannot list cheaply: a user's positions, a market's borrowers and top suppliers, a vault's allocators, sentinels and holders, a default depositor, every market above a TVL floor (sibling search) | `positions`, `borrower`, `market_risk`, `exit_queue`, `graph`, `siblings`, `vault` |
 | Pendle API `api-v2.pendle.finance/core` | PT markets, implied yield, real swap quotes for exit costs, a PT's underlying | `discover`, `watch_user`, `siblings` |
 | DefiLlama `api.llama.fi`, `coins.llama.fi` | protocol list and hack record (incident base rates), token prices and one-year price history, the independent price oracles are compared with | `priors`, `discover`, `admin` |
+| Nexus Mutual `api.nexusmutual.io/v2` (optional, keyless) | cover prices per protocol: an outside probability next to the breakeven p\* | `nexus`, `vault_incident` |
 | Pharos `api.pharos.watch` (optional, keyless) | issuer grades, off-chain backing and common-mode groups of stablecoins; shown next to our numbers, and the backing as a path an incident follows (`docs/risk-assessment/outside-providers.md`) | `pharos`, `vault_incident`, `graph` |
 | Etherscan `api.etherscan.io/v2/api`, key in `keys.ini` (optional) | whether the `analyze` oracle's source is verified; the contract name of an oracle input no other rule classifies; without the key, "not checked" / "not classified" | `discover`, `oracle_class` (via `sources.contract_source`) |
 
@@ -310,6 +311,9 @@ The design decisions are numbered across twelve plans, in the order the incremen
 | `plan/2026-10-11-wrapped-collateral.plan.md` | a token shock reaches the markets whose collateral wraps it | D126–D127 |
 | `plan/2026-10-11-borrower-concentration.plan.md` | borrower concentration and default; exit liquidity; the no-liquidator branch | D128–D132 |
 | `plan/2026-10-11-pharos.plan.md` | Pharos, keyless: grades, off-chain backing, common-mode groups | D133–D138 |
+| `plan/2026-10-11-one-number.plan.md` | the shock engine as the impact core of vault and book incidents | D139–D141 |
+| `plan/2026-10-11-breakeven.plan.md` | the breakeven probability p\* of vault and book incidents; Nexus as an outside view | D142–D146 |
+| `plan/2026-10-11-incident-api.plan.md` | `POST /api/incident`, `GET /api/books`; the incident run moved to `pipeline` | D147–D149 |
 
 A change that departs from a decision is recorded in that plan's table.
 

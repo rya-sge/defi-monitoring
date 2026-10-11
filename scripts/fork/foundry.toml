@@ -1,0 +1,11 @@
+# The two demo contracts of the fork crisis (docs/analysis/FORK-PRESENTATION.md §5). Build outputs are git-ignored.
+[profile.default]
+src = "src"
+out = "out"
+cache_path = "cache"
+libs = []
+solc_version = "0.8.28"
+optimizer = true
+optimizer_runs = 200
+remappings = ["vault-v2/=../../docs/external/morpho/lib/vault-v2/src/"]
+allow_paths = ["../../docs/external/morpho/lib/vault-v2"]

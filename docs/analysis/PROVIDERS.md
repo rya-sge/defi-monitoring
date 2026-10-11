@@ -12,6 +12,7 @@ Every external service the project calls, what it is used for, and what is known
 - [DefiLlama](#defillama)
 - [Etherscan](#etherscan)
 - [Pharos](#pharos)
+- [Nexus Mutual](#nexus-mutual)
 - [Scripts loaded by the HTML outputs](#scripts-loaded-by-the-html-outputs)
 - [Defined but unused](#defined-but-unused)
 - [Trust model](#trust-model)
@@ -29,6 +30,7 @@ Every external service the project calls, what it is used for, and what is known
 | Pendle | `https://api-v2.pendle.finance/core` | REST API | no | PT markets, implied yield, swap quotes | `riskdep/sources.py` (`PENDLE`) |
 | DefiLlama | `https://api.llama.fi` | REST API | no | protocol list, hack record | `riskdep/sources.py` (`LLAMA`) |
 | DefiLlama Coins | `https://coins.llama.fi` | REST API | no | token prices, price history | `riskdep/sources.py` (`LLAMA_COINS`) |
+| Nexus Mutual | `https://api.nexusmutual.io/v2` | REST API | no | cover prices and capacity per product: an outside probability next to the breakeven p\* (optional) | `riskdep/nexus.py` (`API`) |
 | Pharos | `https://api.pharos.watch` | REST API | no | issuer grades, off-chain backing, common-mode groups of stablecoins (optional) | `riskdep/pharos.py` (`URL`) |
 | Etherscan | `https://api.etherscan.io/v2/api` | REST API | yes, `keys.ini` `[etherscan]` | whether an oracle's source is verified; an unclassified oracle input's contract name | `riskdep/sources.py` (`ETHERSCAN`) |
 | jsDelivr | `https://cdn.jsdelivr.net` | CDN (browser) | no | Mermaid in the `analyze` report | `riskdep/report.py` |
@@ -92,7 +94,7 @@ Every request to the data providers goes through the cached fetcher of `riskdep/
 | `userByAddress` | an address's Blue positions and Vault V2 deposits | `positions.py` |
 | `marketPositions` | a market's borrowers (`borrowShares_gte`), its main suppliers (ordered by supply shares), the largest borrower of a market, every borrower's health factor and debt (the dashboard's liquidation chart, first 1000 per market) | `market_risk.py`, `borrower.py`, `discover.py`, `dashboard.py` |
 | `marketById`, `marketPosition` | the `analyze` position and its market | `discover.py` |
-| `vaultV2ByAddress` | the largest depositor of a vault; its holders, first 100 by size, for the exit queue; its allocators and sentinels (graph); its total assets (cross-check); its name, total assets, liquidity and each Blue market adapter's supply per market (dashboard) | `vault.py`, `exit_queue.py`, `graph.py`, `crosscheck.py`, `dashboard.py` |
+| `vaultV2ByAddress` | the vault's average net APY, rewards included (`avgNetApy`): the yield a depositor gives up by leaving, for the breakeven p\* (`vault_incident.vault_apy`); the largest depositor of a vault; its holders, first 100 by size, for the exit queue; its allocators and sentinels (graph); its total assets (cross-check); its name, total assets, liquidity and each Blue market adapter's supply per market (dashboard) | `vault.py`, `exit_queue.py`, `graph.py`, `crosscheck.py`, `dashboard.py` |
 | `markets` | every Ethereum Blue market with at least `graph.sibling_min_tvl_usd` supplied (its TVL, `supplyAssetsUsd_gte`): collateral, loan token, oracle and its base feeds and vault, borrow in USD; pages of 500 (136 markets at $1M on 2026-10-10); by id (`uniqueKey_in`), a vault's markets: LLTV, collateral price, supply, borrow, liquidity, utilization, borrow rate (dashboard) | `siblings.py`, `dashboard.py` |
 
 **Notes.** One page holds up to 1,000 items; `list_borrowers` pages with `skip`. Indexed data can lag the chain; the API-vs-chain cross-check warns beyond 0.5 %.
@@ -152,6 +154,17 @@ Every request to the data providers goes through the cached fetcher of `riskdep/
 | `/api/dependency-graph/v1` | each coin's Safety Score and grade, what backs it (wrapper or reserve share, with weights), its common-mode groups; slimmed to about 170 KB before caching | `pharos.load`, `vault_incident.py`, `graph.annotate_pharos` |
 
 **Recording.** `fixtures/replay/pharos/`, one response, re-read by `--record` or `--refresh` and read without saving by `--live`. **Limits.** No published rate limit for the keyless endpoints; no SLA (run by one person, best effort). Methodology 10.16, model v9 when recorded.
+
+## Nexus Mutual
+
+**`https://api.nexusmutual.io/v2`**, REST, keyless. Optional: a failure prints nothing and the outside view is left out. How it is used: `docs/risk-assessment/outside-providers.md` §2.
+
+| Path | Used for | Code |
+|---|---|---|
+| `/products` | product names (478), slimmed to id, name, type | `nexus.load` |
+| `/capacity` | each product's yearly price range (`minAnnualPrice`, `maxAnnualPrice`) and its capacity in USDC | `nexus.load`, `vault_incident.py` |
+
+**Recording.** `fixtures/replay/nexus/`, read 2026-10-11. **Limits.** None published; a price of 0 means the product is not sold.
 
 ## Scripts loaded by the HTML outputs
 

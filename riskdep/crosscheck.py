@@ -4,7 +4,8 @@ Everything else trusts one RPC and the Morpho/Pendle APIs. These checks compare:
   - the main RPC with a second, independent keyless RPC (same block, same hash);
   - the Morpho API with the chain (position, vault total assets).
 A check that cannot run (offline snapshot without it, endpoint down) says "not checked"; it
-never stops the analysis.
+never stops the analysis. On a local fork (`sources.FORK`) both are "not checked": the fork's new blocks exist on no
+other node, and the API still describes mainnet.
 """
 
 from __future__ import annotations
@@ -18,6 +19,7 @@ from .abi import MORPHO_BLUE, selector
 
 SECOND_RPCS = ["https://eth.drpc.org", "https://1rpc.io/eth"]
 TOLERANCE = 0.005
+ON_FORK = "running on a local fork (RISKDEP_FORK): no other source has these blocks"
 
 
 @dataclass
@@ -39,6 +41,8 @@ def _rpc_at(f: S.Fetcher, url: str, method: str, params: list):
 
 def second_rpc(f: S.Fetcher, block: int | None = None) -> Check:
     """Same block hash from the main RPC and an independent one (default: head − 5)."""
+    if S.FORK:
+        return Check("second RPC", None, ON_FORK)
     try:
         if block is None:
             block = int(_rpc_at(f, S.RPC, "eth_blockNumber", []), 16) - 5
@@ -72,6 +76,8 @@ def morpho_position(
     api_borrow_raw: int,
 ) -> Check:
     """Morpho API position vs Morpho Blue `position(id, user)` and `market(id)` on-chain."""
+    if S.FORK:
+        return Check("Morpho API vs chain", None, ON_FORK)
     mid = bytes.fromhex(market_id[2:])
     calls = [
         (MORPHO_BLUE, "0x" + selector("position(bytes32,address)") + encode(["bytes32", "address"], [mid, user]).hex()),
@@ -100,6 +106,8 @@ def morpho_position(
 
 
 def vault_total_assets(f: S.Fetcher, vault: str, chain_total: int, decimals: int) -> Check:
+    if S.FORK:
+        return Check("Morpho API vs chain", None, ON_FORK)
     try:
         d = S.morpho(f, "query($a:String!){ vaultV2ByAddress(address:$a, chainId:1){ totalAssets } }", {"a": vault})
         api = int(d["vaultV2ByAddress"]["totalAssets"])

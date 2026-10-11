@@ -14,6 +14,7 @@ from .vault import VaultState, VaultView, cap_ids
 
 W = REGISTRY["watch"]
 LEVELS = {"info": 0, "warn": 1, "critical": 2}
+EXIT_GATES = ("setSendSharesGate(address)", "setReceiveAssetsGate(address)")  # VaultV2.sol: "can lock users out"
 
 
 @dataclass
@@ -556,6 +557,37 @@ def startup_findings(view: VaultView, st: VaultState) -> list[Alert]:
                 {},
             )
         )
+    exit_gates = {sig: view.timelocks.get((view.address, sig)) for sig in EXIT_GATES}
+    if all(v is not None for v in exit_gates.values()):
+        open_now = [s.split("(")[0] for s, (t, ab) in exit_gates.items() if t == 0 and not ab]
+        if open_now:
+            out.append(
+                Alert(
+                    "warn",
+                    st.block,
+                    None,
+                    "ExitGate",
+                    "The curator can gate withdrawals with no notice",
+                    f"{', '.join(open_now)}: timelock 0, not abdicated. Set to a gate that refuses you, it locks "
+                    "your shares in the vault from the next block (fork-demo D5)",
+                    None,
+                    {"functions": open_now},
+                )
+            )
+        elif all(ab for _, ab in exit_gates.values()):
+            out.append(
+                Alert(
+                    "info",
+                    st.block,
+                    None,
+                    "ExitGate",
+                    "Withdrawals cannot be gated: both exit gates are abdicated",
+                    "setSendSharesGate and setReceiveAssetsGate can never be called again; what can still stop "
+                    "an exit is liquidity, not the curator",
+                    None,
+                    {},
+                )
+            )
     no_notice = [
         sig.split("(")[0] + ("" if c == view.address else " (adapter)")
         for (c, sig), (t, ab) in view.timelocks.items()
