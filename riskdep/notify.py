@@ -210,6 +210,15 @@ def format_incident(alerts: list[dict], label: str) -> tuple[str, list[tuple[str
     return _cap("\n".join(lines)), buttons
 
 
+def web_buttons(web: str, target: str) -> list[tuple[str, str]]:
+    """Buttons to riskdep's web app (`web/`, `?target=` selects the watch target): its live alerts, its vault page."""
+    base = web.rstrip("/")
+    out = [("Alerts in riskdep", f"{base}/watch?target={target}")]
+    if not target.startswith("user-"):
+        out.append(("Vault", f"{base}/?target={target}"))
+    return out
+
+
 def _cap(text: str) -> str:
     if len(text) <= MAX_LEN:
         return text
@@ -233,7 +242,7 @@ def select(rows: list[tuple[dict, int]], level: str, seen: dict[str, int], targe
     return out
 
 
-def messages(rows: list[tuple[dict, int]], label: str) -> list[Message]:
+def messages(rows: list[tuple[dict, int]], label: str, target: str = "", web: str | None = None) -> list[Message]:
     """The selected alerts as messages: one per block (an incident and its consequences arrive together), and past
     `burst_max` messages the rest as one."""
     groups: list[list[tuple[dict, int]]] = []
@@ -248,6 +257,8 @@ def messages(rows: list[tuple[dict, int]], label: str) -> list[Message]:
     for g in groups:
         alerts = [a for a, _ in g]
         text, buttons = format_incident(alerts, label)
+        if web:  # the web app first (this target's alerts, its vault page), then the runbook and Etherscan
+            buttons = web_buttons(web, target) + buttons
         out.append(Message(text, not any(a["level"] == "critical" for a in alerts), g[-1][1], buttons))
     return out
 
@@ -285,7 +296,8 @@ def send(creds: tuple[str, str], text: str, silent: bool, session=requests, butt
         "disable_web_page_preview": True,
     }
     if buttons:
-        body["reply_markup"] = {"inline_keyboard": [[{"text": t, "url": u} for t, u in buttons]]}
+        keys = [{"text": t, "url": u} for t, u in buttons]
+        body["reply_markup"] = {"inline_keyboard": [keys[i : i + 2] for i in range(0, len(keys), 2)]}  # two a row
     for _ in range(N["max_retries"]):
         try:
             r = session.post(API.format(token=token), json=body, timeout=30)
@@ -307,7 +319,9 @@ def send(creds: tuple[str, str], text: str, silent: bool, session=requests, butt
 
 
 class Notifier:
-    def __init__(self, out_dir: Path, level: str, from_start: bool, creds, session=requests, gap: float | None = None):
+    def __init__(
+        self, out_dir: Path, level: str, from_start: bool, creds, session=requests, gap: float | None = None, web=None
+    ):
         self.out_dir, self.level, self.from_start = out_dir, level, from_start
         self.creds, self.session = creds, session
         self.gap = N["min_gap_seconds"] if gap is None else gap
@@ -316,6 +330,7 @@ class Notifier:
         self.state.setdefault("offsets", {})
         self.state.setdefault("seen", {})
         self.names = target_names()
+        self.web = web
         self.last_send = 0.0
 
     def save(self) -> None:
@@ -334,7 +349,7 @@ class Notifier:
                 self.state["offsets"][key] = end
                 continue
             seen = dict(self.state["seen"])
-            msgs = messages(select(rows, self.level, seen, target), target_label(target, self.names))
+            msgs = messages(select(rows, self.level, seen, target), target_label(target, self.names), target, self.web)
             for m in msgs:
                 time.sleep(max(0.0, self.last_send + self.gap - time.monotonic()))  # only between alerts
                 if not send(self.creds, m.text, m.silent, self.session, m.buttons):
@@ -370,7 +385,7 @@ def run(args) -> int:
         ok = send(creds, headline(Path(args.post)), False)
         print("telegram: posted" if ok else "telegram: post failed")
         return 0 if ok else 1
-    n = Notifier(Path(args.out), args.level, args.from_start, creds)
+    n = Notifier(Path(args.out), args.level, args.from_start, creds, web=args.web_url)
     print(f"notify: following {n.out_dir}/watch-*.jsonl, level ≥ {args.level}; Ctrl-C to stop", flush=True)
     try:
         while True:

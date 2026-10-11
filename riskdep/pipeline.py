@@ -16,7 +16,7 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import clock, crosscheck, decide, discover, priors, scenario, simulate, vault_book, vault_incident
+from . import clock, crosscheck, decide, discover, pendle_amm, priors, scenario, simulate, vault_book, vault_incident
 from . import sources as S
 from .decide import Decision
 from .discover import Position
@@ -139,6 +139,7 @@ def analyze(
             + (" — holding to maturity is the cheaper path." if cheaper else " — leaving now is the cheaper path.")
         )
 
+    depth = position_depth(pos, profile)
     incident = None
     if shocks:
         recovery = next((p.recovery for p in prs if p.event == "issuer_depeg"), 0.0)
@@ -153,6 +154,7 @@ def analyze(
             profile,
             quote_for=lambda q, fr: discover.partial_exit_quote(f, q, fr),
             horizon_days=horizon,
+            stressed=lambda drop, now: stressed_exit(f, pos, depth.get("market_curve"), drop, now),
         )
         if moved:
             incident.pool_move = moved
@@ -163,7 +165,6 @@ def analyze(
     if bad:
         dec.reasons.insert(0, "DATA CHECK FAILED — " + "; ".join(c.detail for c in bad))
 
-    depth = position_depth(pos, profile)
     if incident and depth.get("siblings"):
         # D202: the same incident reaches the markets that sell the same collateral or read the same price
         s = depth["siblings"][:3]
@@ -186,26 +187,43 @@ def analyze(
     )
 
 
+def stressed_exit(f: S.Fetcher, pos, curve, drop: float, cost_now: float) -> dict | None:
+    """D206: the exit cost after the incident's own liquidations sell first: what the market's other borrowers are
+    liquidated for at the incident's oracle fall (the borrower's recorded graph), then real Pendle quotes (the
+    aggregator into the loan token, as `discover.exit_quote`) for the position's sale on top of theirs. None when the
+    incident liquidates no one else, or the graph is not recorded."""
+    if not curve or not pos.pendle_market or not pos.collateral_units:
+        return None
+    ahead = round(scenario.sold_ahead(curve, drop, pos.liquidation_drop, pos.debt_usd, pos.lltv), -3)
+    if ahead <= 0:
+        return None
+    x = round(pos.collateral_usd, -3)
+    small = min(10_000.0, round(x / 100, -3) or 1_000.0)
+    sizes = sorted({small, x, ahead, *(round(ahead + k * x, -3) for k in (0.1, 0.25, 0.5, 0.75)), ahead + x})
+    try:
+        ladder, refused = discover.quote_ladder(
+            f,
+            pos.pendle_market,
+            pos.collateral_address,
+            pos.loan_address or pos.underlying_address,
+            pos.collateral_decimals,
+            pos.collateral_usd / pos.collateral_units,
+            True,
+            sizes,
+        )
+    except S.CacheMiss:
+        return None
+    return scenario.stressed_exit(cost_now, dict(ladder), small, ahead, x, refused)
+
+
 def pool_move_shocks(f: S.Fetcher, pos, shocks: dict[str, float]) -> tuple[dict[str, float], dict]:
-    """D204: a sale into the PT's Pendle pool, measured on a ladder of real pool-only quotes (no aggregator: the
-    oracle's TWAP reads the pool), turned into the implied-yield rise the `pt_yield` channel prices."""
+    """D204, D211: a sale into the PT's Pendle pool, priced by the pool's math on its state at the position's block
+    (`pendle_amm`; recorded through the archive route), turned into the implied-yield rise the `pt_yield` channel
+    prices."""
     if not pos.pendle_market or not pos.amm_liquidity_usd:
         raise ValueError("pool_move needs a Pendle PT position with a known pool liquidity")
-    x = shocks["pool_move"]
-    sizes = sorted({*discover.ladder_sizes(pos.amm_liquidity_usd), round(x * pos.amm_liquidity_usd, -3)})
-    usd_per_unit = pos.collateral_usd / pos.collateral_units if pos.collateral_units else 0.0
-    ladder, refused = discover.quote_ladder(
-        f,
-        pos.pendle_market,
-        pos.collateral_address,
-        pos.underlying_address,
-        pos.collateral_decimals,
-        usd_per_unit,
-        False,
-        sizes,
-    )
-    curve, _ = discover.marginal_curve(ladder, 0.0)
-    rise, moved = scenario.pool_move(pos, curve, sizes[len(ladder)] if refused else None, x)
+    block = int(S.rpc(f, "eth_blockNumber", []), 16)
+    rise, moved = scenario.pool_move(pos, pendle_amm.read(f, pos.pendle_market, block), shocks["pool_move"])
     rest = {k: v for k, v in shocks.items() if k != "pool_move"}
     rest["pt_yield"] = rest.get("pt_yield", 0.0) + rise
     moved["implied_yield_rise"] = rise
