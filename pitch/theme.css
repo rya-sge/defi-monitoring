@@ -1,0 +1,307 @@
+/* @theme agencetousrisk */
+/* The web app's palette and type (web/src/index.css), on 16:9 slides. */
+
+@import 'default';
+
+@font-face {
+  font-family: 'Figtree';
+  src: url('../web/public/fonts/figtree.ttf') format('truetype');
+  font-weight: 300 900;
+}
+
+:root {
+  --bg: #050505;
+  --surface: #0e0e10;
+  --fg: #f4f4f5;
+  --muted: #92929d;
+  --line: #242429;
+  --edge: #92929d;
+  --node: color-mix(in srgb, var(--fg) 12%, var(--bg));
+  --chart-1: #38d9f5;
+  --chart-2: #a78bfa;
+  --chart-3: #fb7185;
+  --chart-4: #fbbf24;
+  --chart-5: #34e5a5;
+  --warn: var(--chart-4);
+  --critical: var(--chart-3);
+  --ok: var(--chart-5);
+}
+
+section {
+  width: 1280px;
+  height: 720px;
+  padding: 72px 88px 56px;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: 'Figtree', sans-serif;
+  font-size: 26px;
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 0;
+}
+
+/* The app's inset: a 1px border, 6px radius, 4px off the edge. */
+section::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  pointer-events: none;
+}
+
+h1,
+h2,
+h3 {
+  color: var(--fg);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  margin: 0;
+}
+h1 {
+  font-size: 64px;
+  line-height: 1.1;
+}
+h2 {
+  font-size: 40px;
+  line-height: 1.2;
+  margin-bottom: 36px;
+}
+h3 {
+  font-size: 22px;
+  margin-bottom: 8px;
+}
+p {
+  margin: 0 0 16px;
+}
+strong {
+  color: var(--fg);
+}
+a {
+  color: inherit;
+}
+
+.m,
+.muted {
+  color: var(--muted);
+}
+.eyebrow {
+  color: var(--muted);
+  font-size: 20px;
+  margin-bottom: 12px;
+}
+.small {
+  font-size: 20px;
+}
+
+header {
+  top: 30px;
+  left: 88px;
+  right: auto;
+  padding: 0;
+}
+header img {
+  height: 20px;
+  filter: invert(1);
+}
+section::after {
+  color: var(--muted);
+  font-size: 16px;
+  right: 40px;
+  bottom: 28px;
+}
+
+/* Cover and closing: one block, vertically centred. */
+section.center {
+  justify-content: center;
+}
+.logo {
+  width: 560px;
+  filter: invert(1);
+  margin-bottom: 48px;
+}
+
+/* Stats: a muted label over a figure; `prominent` once per slide at most. */
+.stats {
+  display: flex;
+  gap: 56px;
+}
+.stat .label {
+  color: var(--muted);
+  font-size: 18px;
+}
+.stat .value {
+  font-size: 34px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.stat.prominent .value {
+  font-size: 120px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.cols {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 40px;
+}
+.split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 64px;
+  align-items: center;
+}
+
+/* Verdicts: tinted pills in the severity colours. */
+.verdict {
+  display: inline-block;
+  padding: 2px 14px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.8em;
+  letter-spacing: 0.02em;
+}
+.stay {
+  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 14%, transparent);
+}
+.reduce {
+  color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 14%, transparent);
+}
+.exit {
+  color: var(--critical);
+  background: color-mix(in srgb, var(--critical) 14%, transparent);
+}
+
+/* Tables as in the app: muted headers, foreground cells, hairlines, no fills. */
+table {
+  display: table;
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 22px;
+  background: none;
+}
+table tr,
+table tr:nth-child(2n) {
+  background: none;
+}
+table th,
+table td {
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  padding: 10px 16px 10px 0;
+  text-align: left;
+  vertical-align: top;
+  background: none;
+}
+th {
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 18px;
+}
+td {
+  color: var(--fg);
+}
+
+/* Bars as in the app's charts: rounded ends, muted axis labels. */
+.bars {
+  display: grid;
+  grid-template-columns: 300px 1fr 170px;
+  gap: 18px 20px;
+  align-items: center;
+  font-size: 20px;
+}
+.bars .label {
+  color: var(--muted);
+}
+.bar {
+  height: 28px;
+  border-radius: 4px;
+}
+.bars .num {
+  text-align: right;
+  font-weight: 600;
+}
+
+/* Dependency graph, drawn like GraphCanvas: neutral nodes, kind colour on the glyph. */
+.graph {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.graph .node {
+  fill: var(--node);
+}
+.graph .edge {
+  fill: none;
+  stroke: var(--edge);
+  stroke-opacity: 0.45;
+  stroke-width: 1.5;
+}
+.graph text {
+  fill: var(--fg);
+  font-size: 13px;
+  text-anchor: middle;
+}
+.graph .faint {
+  opacity: 0.35;
+}
+.graph .warn-ring {
+  fill: none;
+  stroke: var(--warn);
+  stroke-width: 2;
+}
+.graph .tag {
+  font-size: 12px;
+  font-weight: 700;
+}
+.graph .warn {
+  fill: var(--warn);
+}
+.graph .crit {
+  fill: var(--critical);
+}
+.graph .shock-ring {
+  fill: none;
+  stroke: none;
+  stroke-width: 2;
+}
+.graph .shock-only {
+  display: none;
+}
+/* The closing slide lights the shock's path. */
+section.shock .graph .shock-path {
+  stroke: var(--critical);
+  stroke-opacity: 1;
+  stroke-width: 2.5;
+}
+section.shock .graph .shock-ring {
+  stroke: var(--critical);
+}
+section.shock .graph .shock-only {
+  display: inline;
+}
+/* A full graph takes the height the slide has left. */
+.graph.fill {
+  flex: 1 1 0;
+  min-height: 0;
+}
+/* Label → figure tables. */
+table.kv {
+  font-size: 28px;
+}
+table.kv td {
+  padding-block: 18px;
+}
+table.kv td:last-child {
+  text-align: right;
+  white-space: nowrap;
+  font-weight: 600;
+}

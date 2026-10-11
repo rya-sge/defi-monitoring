@@ -17,15 +17,21 @@ import type {
   Vault,
   Market,
   WatchQuery,
+  BookSummary,
+  IncidentRequest,
+  IncidentResponse,
+  PositionIncident,
 } from './types';
 import graphFixture from '../mocks/graph.json';
 import shockTraceFixture from '../mocks/shock-trace.json';
 import reportFixture from '../mocks/report.json';
+import { MOCK_ALERTS } from '../mocks/alerts';
 
 /** `VITE_USE_MOCKS` defaults to true: the frontend runs with no backend at all. */
 export const USE_MOCKS = import.meta.env.VITE_USE_MOCKS !== 'false';
 
 const MOCK_LATENCY_MS = 250;
+const MOCK_ALERTS_TARGET = '0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf';
 
 const MOCK_GRAPH = graphFixture as unknown as GraphResponse;
 const MOCK_SHOCK_TRACE = shockTraceFixture as unknown as ShockTrace;
@@ -80,8 +86,14 @@ async function post<T>(path: string, body: unknown, signal?: AbortSignal): Promi
     headers: { 'content-type': 'application/json', accept: 'application/json' },
     body: JSON.stringify(body),
   });
-  if (!res.ok)
-    throw new ApiError(res.status, `POST ${path} failed: ${res.status} ${res.statusText}`);
+  if (!res.ok) {
+    const error: unknown = await res.json().catch(() => null);
+    const detail =
+      error && typeof error === 'object' && 'detail' in error && typeof error.detail === 'string'
+        ? error.detail
+        : `${res.status} ${res.statusText}`;
+    throw new ApiError(res.status, detail);
+  }
   return (await res.json()) as T;
 }
 
@@ -95,6 +107,37 @@ function queryString(params: Record<string, string | number | undefined>): strin
 }
 
 export const api = {
+  async books(signal?: AbortSignal): Promise<BookSummary[]> {
+    if (USE_MOCKS) return delay((await import('../mocks/books.json')).default as BookSummary[]);
+    return get<BookSummary[]>('/api/books', signal);
+  },
+
+  async incident(body: IncidentRequest, signal?: AbortSignal): Promise<IncidentResponse> {
+    if (USE_MOCKS) {
+      // JSON infers tuples (`liquidity`, `sibling_losses`) as arrays: hence the `unknown` step
+      const cases = (await import('../mocks/incidents.json')).default as unknown as {
+        request: IncidentRequest;
+        response: IncidentResponse;
+      }[];
+      const match = cases.find(
+        ({ request }) =>
+          !body.live &&
+          request.example === body.example &&
+          JSON.stringify(request.vaults?.map((v) => v.toLowerCase())) ===
+            JSON.stringify(body.vaults?.map((v) => v.toLowerCase())) &&
+          request.horizon === body.horizon &&
+          JSON.stringify(request.shocks) === JSON.stringify(body.shocks),
+      );
+      if (!match)
+        throw new ApiError(
+          404,
+          'No fixture for this scenario. Try PST −30%, fxSAVE −30%, or the largest borrower of all markets with 50% collateral recovery, over 30 days, on the RockawayX book or one of its vaults. Other scenarios need the offline API with VITE_USE_MOCKS=false.',
+        );
+      return delay(match.response, 900);
+    }
+    return post<IncidentResponse>('/api/incident', body, signal);
+  },
+
   health(signal?: AbortSignal): Promise<Health> {
     if (USE_MOCKS) {
       return delay<Health>({
@@ -107,7 +150,15 @@ export const api = {
     return get<Health>('/api/health', signal);
   },
 
-  graph(query: GraphQuery = {}, signal?: AbortSignal): Promise<GraphResponse> {
+  async graph(query: GraphQuery = {}, signal?: AbortSignal): Promise<GraphResponse> {
+    if (USE_MOCKS && query.vault) {
+      // Each Vault V2's own graph, built live; loaded on demand, it is a large fixture.
+      const graphs = (await import('../mocks/graphs.json')).default as unknown as Record<
+        string,
+        GraphResponse
+      >;
+      return fixture(graphs[query.vault], `graph of ${query.vault}`);
+    }
     if (USE_MOCKS) return delay(MOCK_GRAPH);
     return get<GraphResponse>(`/api/graph${queryString({ ...query })}`, signal);
   },
@@ -176,8 +227,23 @@ export const api = {
     return get<Report>('/api/report', signal);
   },
 
-  analyze(body: AnalyzeRequest, signal?: AbortSignal): Promise<Report> {
-    if (USE_MOCKS) return delay(MOCK_REPORT, 900);
+  async analyze(body: AnalyzeRequest, signal?: AbortSignal): Promise<Report> {
+    if (USE_MOCKS) {
+      // The demo report, with the incident recorded offline for each shock of the fixture.
+      const shock = body.shocks?.[0];
+      if (!shock) return delay(MOCK_REPORT, 900);
+      const incidents = (await import('../mocks/position-incidents.json')).default as Record<
+        string,
+        PositionIncident
+      >;
+      const incident = incidents[shock];
+      if (!incident)
+        throw new ApiError(
+          404,
+          `No fixture for ${shock}. Try ${Object.keys(incidents).join(', ')}, or the API with VITE_USE_MOCKS=false.`,
+        );
+      return delay({ ...MOCK_REPORT, incident }, 900);
+    }
     return post<Report>('/api/analyze', body, signal);
   },
 
@@ -196,7 +262,17 @@ export const api = {
   },
 
   /** One page of alerts after a block cursor. Pass the returned `cursor` back as `since`. */
-  alerts(query: WatchQuery & { since?: number } = {}, signal?: AbortSignal): Promise<AlertPage> {
+  async alerts(
+    query: WatchQuery & { since?: number } = {},
+    signal?: AbortSignal,
+  ): Promise<AlertPage> {
+    if (USE_MOCKS) {
+      // The fixture alerts are the recorded run of one vault; every other target has none.
+      const alerts = query.target === MOCK_ALERTS_TARGET ? [...MOCK_ALERTS] : [];
+      const counts = { info: 0, warn: 0, critical: 0 };
+      for (const alert of alerts) counts[alert.level] += 1;
+      return delay({ target: query.target ?? '', cursor: 0, counts, alerts });
+    }
     return get<AlertPage>(
       `/api/alerts${queryString({
         target: query.target,

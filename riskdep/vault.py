@@ -397,6 +397,13 @@ def read_light(f: S.Fetcher, view: VaultView, block: int, before: VaultState) ->
 def largest_depositor(f: S.Fetcher, vault: str, exclude: frozenset[str] | set[str] = frozenset()) -> str | None:
     """Default depositor via the Morpho API (D24): the largest share holder, skipping `exclude` (D172: a Zama cShare,
     which pools every confidential depositor)."""
+    shares = holder_shares(f, vault)
+    items = [(a, n) for a, n in shares if a not in exclude]
+    return max(items, key=lambda i: i[1])[0] if items else None
+
+
+def holder_shares(f: S.Fetcher, vault: str) -> list[tuple[str, int]]:
+    """The vault's first 100 holders and their shares (Morpho API); empty if the API cannot answer."""
     try:
         d = S.morpho(
             f,
@@ -404,11 +411,11 @@ def largest_depositor(f: S.Fetcher, vault: str, exclude: frozenset[str] | set[st
               positions(first:100){ items{ user{ address } shares } } } }""",
             {"a": vault},
         )
-        items = [i for i in d["vaultV2ByAddress"]["positions"]["items"] if i["user"]["address"].lower() not in exclude]
-        top = max(items, key=lambda i: int(i["shares"] or 0), default=None)
-        return top["user"]["address"].lower() if top else None
+        return [
+            (i["user"]["address"].lower(), int(i["shares"] or 0)) for i in d["vaultV2ByAddress"]["positions"]["items"]
+        ]
     except (S.SourceError, S.CacheMiss, KeyError, TypeError):
-        return None
+        return []
 
 
 def cap_ids(adapter: str, mp: MarketParams) -> dict[str, str]:

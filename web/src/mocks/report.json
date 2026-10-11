@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-10 23:00 UTC",
+  "generated": "2026-10-11 07:03 UTC",
   "data_as_of": "2026-10-10 10:30 UTC",
   "mode": "offline",
   "position": {
@@ -370,11 +370,12 @@
         "basis": "No fund-losing consensus failure since the Merge; finality was lost twice for ~1h on 2023-05-11/12. Modelled as a 1%/yr liveness event costing ~0.5% (stuck exit, gas spike)."
       }
     ],
-    "interaction_usd": -189.54308412300543
+    "interaction_usd": -189.54308412300543,
+    "expected_loss_se": 380.3136381489711
   },
   "decision": {
     "verdict": "REDUCE",
-    "headline": "REDUCE: a full exit costs more than it saves, but the carry ($5,697) does not cover the expected loss ($6,265); in the worst 1% of outcomes it loses $510,184 on average (98% of equity); a 5.2% oracle drop liquidates it, less than the 12.2% stress.",
+    "headline": "REDUCE: a full exit costs more than it saves, but the carry ($5,697) and the expected loss ($6,265 \u00b1 $745) are about equal: the simulation cannot tell which is larger; in the worst 1% of outcomes it loses $510,184 on average (98% of equity); a 5.2% oracle drop liquidates it, less than the 12.2% stress.",
     "carry_usd": 5697.150222309612,
     "exit_cost_usd": 78945.6861831538,
     "expected_loss_usd": 6264.688340259679,
@@ -393,14 +394,15 @@
       "source": "Pendle swap quote"
     },
     "reasons": [
-      "Over 30 days: expected loss $6,265 vs carry $5,697 (net $-568); leaving now costs $78,946 (1.99% price impact + fees, Pendle swap quote).",
+      "Over 30 days: expected loss $6,265 \u00b1 $745 (95 %, 20,000 paths) vs carry $5,697 (net $-568); leaving now costs $78,946 (1.99% price impact + fees, Pendle swap quote).",
       "Driver: sUSDe issuer (Ethena): depeg: $3,760 of expected loss (1.05% chance over the horizon, $359,761 if it happens, liquidates 76% of the time).",
       "Driver: Morpho Blue exploit: $1,066 of expected loss (0.42% chance over the horizon, $251,746 if it happens).",
       "A 5.16% fall in the oracle price liquidates the position (HF 1.053); the stress it should survive is 12.2% (underlying's worst 1-year drawdown 2.25%).",
       "The oracle is treated as following the PT market within the horizon (basis in the notes), so a temporary depeg turns into a realised loss through liquidation.",
       "De-lever: sell $1,293,969 of PT (33%) and repay debt \u2192 HF 1.140, liquidation at \u221212.2%; costs $1,023; expected loss $6,265 \u2192 $4,308, CVaR99 $510,184 \u2192 $410,778, carry $5,697 \u2192 $4,350.",
       "A full exit would only pay if incident probabilities were 13.5\u00d7 the estimates.",
-      "Oracle sensitivity: if the oracle were fundamental, expected loss $3,363 (vs $6,265), P(liquidation) 0.27% (vs 1.07%), verdict REDUCE \u2014 the same."
+      "Oracle sensitivity: if the oracle were fundamental, expected loss $3,363 (vs $6,265), P(liquidation) 0.27% (vs 1.07%), verdict REDUCE \u2014 the same.",
+      "Held to maturity (47 days), the PT redeems at par: expected loss $9,607 against $8,842 of carry, while leaving now costs $78,946 once \u2014 holding to maturity is the cheaper path."
     ]
   },
   "exit_quote": {
@@ -417,5 +419,171 @@
     "cvar99_usd": 300214.83752869634,
     "p_liquidation": 0.00275
   },
-  "incident": null
+  "incident": null,
+  "discovery": {
+    "market": "PT-sUSDE-26NOV2026/USDC",
+    "market_curve": [
+      {
+        "oracle_fall": 0.02,
+        "liquidatable_debt": 2941926.701331,
+        "positions": 1,
+        "bad_debt": 0.0,
+        "collateral_liquidatable": 3272383.785063586
+      },
+      {
+        "oracle_fall": 0.05,
+        "liquidatable_debt": 3414342.774748,
+        "positions": 4,
+        "bad_debt": 0.0,
+        "collateral_liquidatable": 3815633.717740093
+      },
+      {
+        "oracle_fall": 0.1,
+        "liquidatable_debt": 6961703.830918,
+        "positions": 8,
+        "bad_debt": 95442.615419,
+        "collateral_liquidatable": 7936880.293561557
+      },
+      {
+        "oracle_fall": 0.2,
+        "liquidatable_debt": 6984055.205675,
+        "positions": 10,
+        "bad_debt": 821194.172703,
+        "collateral_liquidatable": 7965280.7609487865
+      },
+      {
+        "oracle_fall": 0.3,
+        "liquidatable_debt": 6984634.370118,
+        "positions": 11,
+        "bad_debt": 1591506.541148,
+        "collateral_liquidatable": 7966158.37255472
+      },
+      {
+        "oracle_fall": 0.5,
+        "liquidatable_debt": 6992653.800172,
+        "positions": 12,
+        "bad_debt": 3132575.010853,
+        "collateral_liquidatable": 7982358.346812969
+      }
+    ],
+    "oracle": "not classified",
+    "oracle_shared": null,
+    "supply": [
+      "PT-sUSDE-26NOV2026: 34.8% of its supply is posted as collateral in 1 Morpho market(s) of this graph",
+      "sUSDe: 9.4% of its supply is posted as collateral in 3 Morpho market(s) of this graph"
+    ],
+    "feeds": [],
+    "admin": [
+      {
+        "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "role": "loan of PT-sUSDE-26NOV2026/USDC",
+        "upgradeable": true,
+        "admin": "0x807a96288a1a408dbc13de2b1d087d10356395d2",
+        "timelock_h": null,
+        "text": "USDC (loan of PT-sUSDE-26NOV2026/USDC): upgradeable by 0x807a9628\u2026, with no timelock seen"
+      },
+      {
+        "address": "0xbf98480425a29197e5d99d003017f63a1e595d02",
+        "role": "Pendle SY of PT-sUSDE-26NOV2026",
+        "upgradeable": false,
+        "admin": "0x2ad631f72fb16d91c4953a7f4260a97c2fe2f31e",
+        "timelock_h": null,
+        "text": "SY-sUSDe (Pendle SY of PT-sUSDE-26NOV2026): owned by 0x2ad631f7\u2026, with no timelock seen"
+      },
+      {
+        "address": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+        "role": "yield token of PT-sUSDE-26NOV2026",
+        "upgradeable": false,
+        "admin": "0xe8dc0fab349ea169283c48ccfd09d797e6db7c94",
+        "timelock_h": 24.0,
+        "text": "sUSDe (yield token of PT-sUSDE-26NOV2026): owned by 0xe8dc0fab\u2026, through a 24 h timelock"
+      }
+    ],
+    "siblings": [
+      {
+        "label": "sUSDe/PYUSD",
+        "linked_by": "same underlying with PT-sUSDE-26NOV2026/USDC (LLTV 91.5%)",
+        "borrow": 96963609.184074,
+        "unit": "PYUSD",
+        "liquidatable_at_fall": 96963152.281318,
+        "bad_debt_at_fall": 522670.126763,
+        "oracle_class": "price-tracking"
+      },
+      {
+        "label": "sUSDe/DAI",
+        "linked_by": "same underlying with PT-sUSDE-26NOV2026/USDC (LLTV 91.5%)",
+        "borrow": 1289404.929032964,
+        "unit": "DAI",
+        "liquidatable_at_fall": 964052.63489124,
+        "bad_debt_at_fall": 0.0,
+        "oracle_class": "constant-price"
+      },
+      {
+        "label": "sUSDe/USDtb",
+        "linked_by": "same underlying with PT-sUSDE-26NOV2026/USDC (LLTV 91.5%)",
+        "borrow": 916480.5818047482,
+        "unit": "USDtb",
+        "liquidatable_at_fall": 911975.8751629123,
+        "bad_debt_at_fall": 2726.1464687387506,
+        "oracle_class": "constant-price"
+      }
+    ],
+    "sibling_fall": 0.1,
+    "grades": {
+      "sUSDe": "C 55"
+    },
+    "backing": [
+      {
+        "token": "sUSDe",
+        "backed_by": "USDe",
+        "share": 1.0
+      }
+    ],
+    "protocols": {
+      "Morpho Blue": {
+        "concentration": "Morpho Blue: 11,227M USD, 1.89% of DeFi, 21.2% of Lending (#2)",
+        "concentrated": false
+      },
+      "Pendle V2": {
+        "concentration": "Pendle V2: 1,208M USD, 0.20% of DeFi, 25.3% of Yield (#2): CONCENTRATED",
+        "concentrated": true
+      },
+      "Ethena USDe": {
+        "concentration": "Ethena USDe: 4,779M USD, 0.81% of DeFi, 61.1% of Basis Trading (#1): CONCENTRATED",
+        "concentrated": true
+      }
+    },
+    "position_share": [
+      "the position is 50% of its market's collateral and 49% of its debt",
+      "the market holds 7,982,359 PT as collateral, 8.2\u00d7 the PT in its Pendle pool (971,271); the pool accepts at most 2,704,737 more"
+    ],
+    "venues": [
+      "USDe's backing (Ethena, 4,769M USD): 79.5% not on an exchange (liquid stablecoins, held with off-exchange settlement providers such as Copper and Ceffu); margin on exchanges: Binance 13.4%, OKX 4.2%, Bybit 2.3%, Deribit 0.4%, CDE 0.2%",
+      "Ethena's reserve fund: 62.1M USD, 1.30% of the backing, absorbs a loss before USDe holders",
+      "yields (30-day average): protocol 4.96 %, sUSDe 4.83 %; negative funding on the hedges is paid from the reserve fund",
+      "funding at -10%/yr on the 975M hedged costs 267k USD a day: the reserve fund covers 232 days, then the loss reaches USDe holders"
+    ],
+    "oracle_profile": "a meta-oracle reading its primary source (constant-price, MorphoChainlinkOracleV2); a divergence above 0.75% can switch it, after 16 h, to the other (price-tracking)",
+    "graph_block": 26166434,
+    "lines": [
+      "oracle: a meta-oracle reading its primary source (constant-price, MorphoChainlinkOracleV2); a divergence above 0.75% can switch it, after 16 h, to the other (price-tracking)",
+      "who can change it: USDC (loan of PT-sUSDE-26NOV2026/USDC): upgradeable by 0x807a9628\u2026, with no timelock seen",
+      "who can change it: SY-sUSDe (Pendle SY of PT-sUSDE-26NOV2026): owned by 0x2ad631f7\u2026, with no timelock seen",
+      "who can change it: sUSDe (yield token of PT-sUSDE-26NOV2026): owned by 0xe8dc0fab\u2026, through a 24 h timelock",
+      "3 sibling market(s) sell the same collateral or read the same price; at a 10% fall: sUSDe/PYUSD 96,963,152 PYUSD liquidatable; sUSDe/DAI 964,053 DAI liquidatable; sUSDe/USDtb 911,976 USDtb liquidatable",
+      "concentration: PT-sUSDE-26NOV2026: 34.8% of its supply is posted as collateral in 1 Morpho market(s) of this graph",
+      "concentration: sUSDe: 9.4% of its supply is posted as collateral in 3 Morpho market(s) of this graph",
+      "concentration: the position is 50% of its market's collateral and 49% of its debt",
+      "concentration: the market holds 7,982,359 PT as collateral, 8.2\u00d7 the PT in its Pendle pool (971,271); the pool accepts at most 2,704,737 more",
+      "external venue: USDe's backing (Ethena, 4,769M USD): 79.5% not on an exchange (liquid stablecoins, held with off-exchange settlement providers such as Copper and Ceffu); margin on exchanges: Binance 13.4%, OKX 4.2%, Bybit 2.3%, Deribit 0.4%, CDE 0.2%",
+      "external venue: Ethena's reserve fund: 62.1M USD, 1.30% of the backing, absorbs a loss before USDe holders",
+      "external venue: yields (30-day average): protocol 4.96 %, sUSDe 4.83 %; negative funding on the hedges is paid from the reserve fund",
+      "external venue: funding at -10%/yr on the 975M hedged costs 267k USD a day: the reserve fund covers 232 days, then the loss reaches USDe holders",
+      "issuer grade (Pharos): sUSDe C 55",
+      "off-chain backing (Pharos): sUSDe backed by USDe (100%)",
+      "protocol: Morpho Blue: 11,227M USD, 1.89% of DeFi, 21.2% of Lending (#2)",
+      "protocol: Pendle V2: 1,208M USD, 0.20% of DeFi, 25.3% of Yield (#2): CONCENTRATED",
+      "protocol: Ethena USDe: 4,779M USD, 0.81% of DeFi, 61.1% of Basis Trading (#1): CONCENTRATED"
+    ]
+  }
 }

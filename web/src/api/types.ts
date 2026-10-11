@@ -282,6 +282,109 @@ export type Report = {
   exit_quote: ExitQuote;
   /** Only present when the oracle's behaviour is ambiguous. */
   oracle_sensitivity: OracleSensitivity | null;
+  /** With `shocks`: the known incident and the verdict given it. */
+  incident?: PositionIncident | null;
+  /** The layers the borrower's recorded graph adds (plan 2026-10-11-depth). */
+  discovery?: ReportDiscovery | null;
+};
+
+/** One rung of the market's liquidation curve: what a fall of the oracle liquidates. */
+export type MarketCurvePoint = {
+  oracle_fall: number;
+  liquidatable_debt: number;
+  positions: number;
+  bad_debt: number;
+  collateral_liquidatable: number;
+};
+
+export type DiscoveryAdmin = {
+  address: string;
+  role: string;
+  upgradeable?: boolean;
+  admin?: string | null;
+  timelock_h: number | null;
+  text: string;
+};
+
+export type DiscoverySibling = {
+  label: string;
+  linked_by: string;
+  borrow: number;
+  unit: string;
+  liquidatable_at_fall: number;
+  bad_debt_at_fall: number;
+  oracle_class: string | null;
+};
+
+/** `report.discovery`; every key may be absent on an older report. */
+export type ReportDiscovery = {
+  market?: string;
+  market_curve?: MarketCurvePoint[];
+  oracle?: string;
+  oracle_shared?: string | null;
+  oracle_profile?: string | null;
+  supply?: string[];
+  feeds?: Record<string, unknown>[];
+  admin?: DiscoveryAdmin[];
+  siblings?: DiscoverySibling[];
+  sibling_fall?: number;
+  grades?: Record<string, string>;
+  backing?: { token: string; backed_by: string; share: number }[];
+  protocols?: Record<string, { concentration: string; concentrated: boolean }>;
+  position_share?: string[];
+  venues?: string[];
+  graph_block?: number;
+  lines?: string[];
+};
+
+/** `report.incident`: a known incident on the PT position (`analyze --shock`). */
+export type PositionIncident = {
+  shocks: Record<string, number>;
+  loss_usd: number;
+  loss_share_of_equity: number;
+  liquidated: boolean;
+  oracle_drop: number;
+  path: string[];
+  timing: { seconds: number | null; never: boolean; text: string };
+  exit_cost_usd: number;
+  exit_source: string;
+  verdict: Verdict;
+  reason: string;
+  reduction: {
+    sell_usd: number;
+    share: number;
+    cost_usd: number;
+    loss_after_usd: number;
+    liquidated_after: boolean;
+    source: string;
+  } | null;
+  notes: string[];
+  after_switch: {
+    after: string;
+    loss_usd: number;
+    loss_share_of_equity: number;
+    liquidated: boolean;
+    path: string[];
+  } | null;
+  pool_move: {
+    sold_usd: number;
+    pool_liquidity_usd: number;
+    pool_fall: number;
+    liquidation_fall: number;
+    liquidating_sale_usd: number | null;
+    beyond_pool: boolean;
+    max_sale_usd: number;
+    text: string;
+  } | null;
+  stressed_exit: {
+    ahead_usd: number;
+    slippage_now: number;
+    sellable_usd: number;
+    cost_usd: number | null;
+    slippage_after: number;
+    full_exit: boolean;
+    text: string;
+  } | null;
 };
 
 /* ------------------------------------------------------------- shock trace */
@@ -445,14 +548,24 @@ export type Backtest = {
 
 /* ----------------------------------------------------------------- dashboard */
 
-/** One borrower: the oracle fall that liquidates it, and its debt (the vault's part, in a vault). */
-export type Liquidation = { drop: number; debt_usd: number; market?: string | null };
+/** One borrower: the oracle fall that liquidates it, its debt and collateral (the vault's part, in a vault). */
+export type Liquidation = {
+  drop: number;
+  debt_usd: number;
+  collateral_usd: number;
+  /** The market id, in a vault's list. */
+  market?: string | null;
+};
 
 export type MarketSummary = {
   id: string;
   label: string;
   lltv: number;
   collateral_price_usd: number | null;
+  /** Worst 1-year drawdown of the collateral's USD price (DefiLlama); null without history. */
+  collateral_drawdown_1y: number | null;
+  /** Liquidation incentive factor: a liquidator repays at most collateral / LIF. */
+  lif: number;
   supply_usd: number;
   borrow_usd: number;
   liquidity_usd: number;
@@ -463,7 +576,32 @@ export type MarketSummary = {
 /** `GET /api/market/{id}`. */
 export type Market = MarketSummary & { borrowers: number; liquidations: Liquidation[] };
 
-export type VaultMarket = MarketSummary & { allocation_usd: number; share_of_vault: number };
+export type VaultMarket = MarketSummary & {
+  allocation_usd: number;
+  share_of_vault: number;
+  share_of_market: number;
+  borrowers: number;
+  /** The largest borrower's share of the market's debt; null without borrowers. */
+  top1_share: number | null;
+  top3_share: number | null;
+  /** From the vault's recorded graph (`oracle_class.py`); null when there is none. */
+  oracle_class: 'price-tracking' | 'constant-price' | 'not classified' | null;
+  feeds: { label: string; freshness: string | null; stale: boolean | null }[];
+};
+
+/** A depositor's exit, in the vault's asset units, from a recorded state (`exit_queue.py`, `drain.py`). */
+export type VaultExit = {
+  block: number;
+  total: number;
+  plain: number;
+  forced: number;
+  /** forceDeallocate penalty on the forced part, as a fraction. */
+  penalty: number;
+  public_allocator: number | null;
+  depositor: string | null;
+  position: number;
+  holders: { address: string; assets: number; fast: boolean | null }[];
+};
 
 /** `GET /api/vault/{address}`. Liquidations are weighted by the vault's share of each market. */
 export type Vault = {
@@ -474,6 +612,8 @@ export type Vault = {
   liquidity_usd: number;
   markets: VaultMarket[];
   liquidations: Liquidation[];
+  /** Null when the vault has no recorded state. */
+  exit: VaultExit | null;
 };
 
 /* ----------------------------------------------------------------- requests */
@@ -484,6 +624,8 @@ export type AnalyzeRequest = {
   horizon?: number;
   paths?: number;
   live?: boolean;
+  /** As `analyze --shock`: `issuer_depeg=0.08`, `pool_move=1.5`, `venue=Binance:0.5`. */
+  shocks?: string[];
 };
 
 export type GraphQuery = {
@@ -496,4 +638,145 @@ export type WatchQuery = {
   /** A watch target from `GET /api/targets`: a vault address, or "user-<address>". */
   target?: string;
   min_level?: AlertLevel;
+};
+
+/* --------------------------------------------------------------- incidents */
+
+export type BookVault = {
+  address: string;
+  label: string | null;
+  depositor: string | null;
+  /** A borrow pocket's address is a Morpho market id, not a vault. */
+  kind?: 'vault' | 'borrow';
+  amount?: number | null;
+};
+export type BookSummary = {
+  name: string;
+  title: string;
+  weighting: 'vault' | 'depositor' | 'pocket';
+  vaults: BookVault[];
+};
+export type IncidentRequest = {
+  example?: string;
+  vaults?: string[];
+  shocks: string[];
+  horizon: number;
+  /** The loss of staying given the incident; needs a token= (or venue=) shock. */
+  conditional?: boolean;
+  live?: boolean;
+};
+/** Given the incident: the loss of staying against leaving, in USD. */
+export type Conditional = {
+  paths: number;
+  stay_mean: number;
+  stay_p50: number;
+  stay_p95: number;
+  stay_p99: number;
+  leave_mean: number;
+  p_stay_worse: number;
+  no_liquidator_share: number;
+  text: string;
+};
+export type MarketHit = {
+  market_id: string;
+  label: string;
+  drop: number;
+  borrowers: number;
+  total_borrow: number;
+  liquidatable_debt: number;
+  bad_debt: number;
+  vault_share: number;
+  vault_loss: number;
+  oracle_class: string;
+  timing: string;
+  vault_exposure: number;
+  via: string;
+  seen: boolean;
+  event: 'markdown' | 'default';
+  defaulters: string[];
+  defaulted_debt: number;
+  exit_route: 'none' | 'thin' | 'deep' | null;
+  no_liquidator_shortfall: number;
+  top1_share: number;
+  top3_share: number;
+  grade: string | null;
+  pharos_exposure: number;
+  source: 'incident' | 'engine';
+  engine: string;
+  /** Slippage against the oracle selling what the liquidations seize (KyberSwap). */
+  exit_impact?: number | null;
+  exit_capacity?: number | null;
+  exit_source?: string;
+  exit_text?: string;
+};
+export type VaultIncident = {
+  vault: string;
+  name: string;
+  symbol: string;
+  block: number;
+  depositor: string | null;
+  shocks: Record<string, number>;
+  hits: MarketHit[];
+  vault_total: number;
+  vault_loss: number;
+  depositor_assets: number;
+  loss_if_stay: number;
+  can_leave_now: number;
+  stuck: number;
+  loss_if_exit_first: number;
+  verdict: 'STAY' | 'REDUCE' | 'EXIT';
+  reason: string;
+  notes: string[];
+  asset: string;
+  asset_usd: number | null;
+  events: string[];
+  labels: Record<string, string>;
+  pharos: string | null;
+  common_mode: string[];
+  engine_block: number | null;
+  sibling_losses: [string, string, number, string][];
+  apy: number | null;
+  horizon_days: number;
+  exit_cost: number;
+  p_star: number | null;
+  p_star_year: number | null;
+  outside: string[];
+  liquidity?: [number, number, number];
+  exit_cost_rate?: number | null;
+  conditional?: Conditional | null;
+  zama?: string[];
+};
+export type VaultLine = {
+  vault: string;
+  name: string;
+  value_usd: number;
+  loss_usd: number;
+  exposure_usd: number;
+  verdict: VaultIncident['verdict'];
+  hit_markets: string[];
+  priced: boolean;
+  p_star: number | null;
+  p_star_year: number | null;
+  exit_cost_usd: number;
+  saved_usd: number;
+  /** Why the verdict, in one clause. */
+  reason: string;
+};
+export type IncidentResponse = {
+  book: {
+    name: string;
+    weighting: 'vault' | 'depositor' | 'pocket';
+    shocks: string[];
+    lines: VaultLine[];
+    value_usd: number;
+    loss_usd: number;
+    exposure_usd: number;
+    headline: string;
+    notes: string[];
+    p_star: number | null;
+    p_star_year: number | null;
+    horizon_days: number;
+    conditional: Conditional | null;
+  };
+  vaults: VaultIncident[];
 };

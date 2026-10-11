@@ -608,7 +608,33 @@ def build_all(f: S.Fetcher, block: int, users: list[str], vaults: list[str], sib
             g.node(n["id"], n["kind"], n["label"], **n["details"])
         for e in part.edges:
             g.edge(e["source"], e["target"], e["rel"], e["amount"], e["unit"], **e["details"])
+    _curators(g, f)
     return g
+
+
+def _curators(g: Graph, f: S.Fetcher) -> None:
+    """Each vault's curator, name and logo, from the Morpho API in one query (optional: the graph draws without)."""
+    vaults = [
+        n["details"]["address"] for n in g.nodes.values() if n["details"].get("actor_type", "").startswith("Vault")
+    ]
+    if not vaults:
+        return
+    try:
+        d = S.morpho(
+            f,
+            """query($a:[String!], $n:Int){
+                vaultV2s(first:$n, where:{address_in:$a, chainId_in:[1]}){ items{ address curators{ items{ name image } } } }
+                vaults(first:$n, where:{address_in:$a, chainId_in:[1]}){ items{ address state{ curators{ name image } } } } }""",
+            {"a": vaults, "n": len(vaults)},
+        )
+        found = [(v["address"], v["curators"]["items"]) for v in d["vaultV2s"]["items"]] + [
+            (v["address"], v["state"]["curators"]) for v in d["vaults"]["items"]
+        ]
+    except (S.SourceError, S.CacheMiss, KeyError, TypeError):
+        return
+    for address, curators in found:
+        if curators and address.lower() in g.nodes:
+            g.nodes[address.lower()]["details"].update(curator=curators[0]["name"], curator_image=curators[0]["image"])
 
 
 def load(
@@ -735,6 +761,62 @@ def annotate_shared(g: Graph) -> int:
     return shared
 
 
+def annotate_issuers(g: Graph, infinifi=None, fx=None, bridges=None) -> int:
+    """D246, D248: behind siUSD, infiniFi's loss order (the safety buffer, liUSD, then siUSD, then iUSD); behind fxSAVE,
+    what fxSP's NAV is made of (fxUSD, USDC idle and lent on Aave). D250: behind a bridged token, its bridge and what
+    bounds an unbacked mint. Returns the nodes drawn."""
+    from . import infinifi as IF
+
+    drawn = 0
+    for nid, n in list(g.nodes.items()):
+        addr = n["details"].get("address") or nid
+        if infinifi and addr == IF.K["siusd"]:
+            for key, label, usd, rel in (
+                (
+                    "buffer",
+                    "infiniFi safety buffer (only if it covers the whole loss)",
+                    infinifi.buffer,
+                    "loss absorbed first by",
+                ),
+                ("liusd", "liUSD (locked iUSD, first loss after the buffer)", infinifi.locked, "loss absorbed next by"),
+            ):
+                x = g.node(
+                    f"infinifi:{key}", "External", label, usd=round(usd), source="infiniFi YieldSharingV3 (D246)"
+                )
+                g.edge(nid, x, rel, round(usd), "iUSD")
+                drawn += 1
+        if fx and n["kind"] == "Asset" and n["label"] == "fxSAVE":
+            for comp, label in (
+                ("fxusd", "fxUSD held by fxSP"),
+                ("usdc", "USDC held by fxSP"),
+                ("aave", "USDC lent on Aave by fxSP"),
+            ):
+                share = fx.share(comp)
+                x = g.node(
+                    f"fx:{comp}",
+                    "External",
+                    f"{label} ({share:.1%})",
+                    share_of_nav=round(share, 4),
+                    source="f(x) FxUSDBasePool (D248)",
+                )
+                g.edge(nid, x, "NAV made of", round(share * fx.total), "USD")
+                drawn += 1
+        for r in (bridges or {}).values():
+            if addr != r.token:
+                continue
+            x = g.node(
+                f"bridge:{r.symbol}",
+                "External",
+                r.lines()[0],
+                bridge="CCIP" if r.kind == "ccip" else "LayerZero",
+                holders=[f"{', '.join(h.roles)}: {h.label}" for h in r.holders],
+                source="bridge pools and peers read on-chain (D250)",
+            )
+            g.edge(nid, x, "minted by", round(r.supply), r.symbol)
+            drawn += 1
+    return drawn
+
+
 def annotate_roles(g: Graph, f: S.Fetcher, block: int) -> int:
     """D245 (GAPV2 G2): each admin node labelled with what holds the role (one key, a Safe n/m, a timelock, a contract);
     skipped when the reads are not recorded. Returns the holders held by one key."""
@@ -742,8 +824,8 @@ def annotate_roles(g: Graph, f: S.Fetcher, block: int) -> int:
 
     admins = {
         n["details"]["address"]: n["label"].rsplit(" ", 1)[0].split(" + ")
-        for n in g.nodes.values()
-        if n["kind"] == "Admin" and n["details"].get("address")
+        for nid, n in g.nodes.items()
+        if n["kind"] == "Admin" and nid.startswith("admin:") and n["details"].get("address")  # the vault's roles
     }
     if not admins:
         return 0

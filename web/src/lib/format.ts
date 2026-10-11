@@ -1,6 +1,6 @@
 const EM_DASH = '—';
 
-export function usd(value: number | null | undefined, digits = 0): string {
+export function usd(value: number | null | undefined, digits = 2): string {
   if (value == null || !Number.isFinite(value)) return EM_DASH;
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -11,7 +11,7 @@ export function usd(value: number | null | undefined, digits = 0): string {
 }
 
 /** Signed, for a depositor impact: a loss keeps its minus sign. */
-export function signedUsd(value: number | null | undefined, digits = 0): string {
+export function signedUsd(value: number | null | undefined, digits = 2): string {
   if (value == null || !Number.isFinite(value)) return EM_DASH;
   const formatted = usd(Math.abs(value), digits);
   return value < 0 ? `-${formatted}` : `+${formatted}`;
@@ -27,9 +27,9 @@ export function compactUsd(value: number | null | undefined): string {
   }).format(value);
 }
 
-export function percent(fraction: number | null | undefined, digits = 2): string {
+export function percent(fraction: number | null | undefined): string {
   if (fraction == null || !Number.isFinite(fraction)) return EM_DASH;
-  return `${(fraction * 100).toFixed(digits)}%`;
+  return `${(fraction * 100).toFixed(0)}%`;
 }
 
 export function num(value: number | null | undefined, digits = 2): string {
@@ -52,10 +52,10 @@ export function days(value: number | null | undefined): string {
   return `${value.toFixed(1)} d`;
 }
 
-export function shortHash(hash: string | null | undefined, lead = 8, tail = 6): string {
+export function shortHash(hash: string | null | undefined, lead = 5, tail = 3): string {
   if (!hash) return EM_DASH;
   if (hash.length <= lead + tail + 1) return hash;
-  return `${hash.slice(0, lead)}…${hash.slice(-tail)}`;
+  return `${hash.slice(0, lead)}...${hash.slice(-tail)}`;
 }
 
 export const isAddress = (value: string): boolean => /^0x[0-9a-fA-F]{40}$/.test(value);
@@ -74,8 +74,9 @@ export function blockNumber(value: number): string {
 /** Renders an unknown `details` value as a single readable line. */
 export function detailValue(value: unknown): string {
   if (value == null) return EM_DASH;
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number') return Number.isInteger(value) ? String(value) : num(value, 4);
+  if (typeof value === 'string')
+    return isAddress(value) || isTxHash(value) ? shortHash(value) : value;
+  if (typeof value === 'number') return num(value, Number.isInteger(value) ? 0 : 2);
   if (typeof value === 'boolean') return value ? 'yes' : 'no';
   return JSON.stringify(value);
 }

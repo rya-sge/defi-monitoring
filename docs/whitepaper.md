@@ -179,9 +179,9 @@ flowchart TD
     style K4 fill:#F0F2F5,stroke:#78909C
 ```
 
-**Feed quality.** Each feed's freshness is measured against its own update rhythm, learned from its past rounds. Feeds read by several markets are marked as shared, because a fault there hits all of them at once. A custom feed whose answer is bounded by a fixed band is reported with how far it can fall before it needs new code.
+**Feed quality.** Each feed's freshness is measured against its own update rhythm, learned from its past rounds. Feeds read by several markets are marked as shared, because a fault there hits all of them at once. A custom feed whose answer is bounded by a fixed band is reported with how far it can fall before it needs new code. A feed that computes its answer when it is read, such as f(x)'s NAV or infiniFi's iUSD price, carries no update time; it is reported as computed on read rather than as fresh.
 
-**Who can change what.** For every contract in the stack, the system reads whether it is upgradeable, who administers it, who owns it, and whether a timelock stands in front of that admin, with its delay. On the vault itself it reads which risk-increasing functions are timelocked, which are abdicated (permanently disabled), and whether the exit gates can lock depositors in.
+**Who can change what.** For every contract in the stack, the system reads whether it is upgradeable, who administers it, who owns it, and whether a timelock stands in front of that admin, with its delay. On the vault itself it reads which risk-increasing functions are timelocked, which are abdicated (permanently disabled), and whether the exit gates can lock depositors in. For each role holder it reads what the holder is: a single key, a multisig with its threshold, or a timelock with its delay. A single key matters most for the owner, who can replace the curator at once, and for the allocators, who can move money within the caps at once.
 
 **Siblings.** Other Morpho markets that take the same collateral or read the same price are drawn as siblings. They are not in the vault, but they sell into the same market when liquidations start, and their lenders lose from the same incident.
 
@@ -233,7 +233,7 @@ The market's collateral depends, two layers down, on two other issuers of the Ro
 
 - the oracle's reading after the shock decides which borrowers become liquidatable;
 - liquidators repay debt and seize collateral at the oracle price plus an incentive;
-- the seized collateral is sold into the market, which can push its price down further (the squeeze);
+- the seized collateral is sold into the market, which can push its price down further (the squeeze); for a Pendle principal token, the seized tokens are sold into its pool, re-priced, and the liquidations that the new price triggers are added, until nothing changes (the cascade);
 - what the collateral cannot cover becomes bad debt, borne by the market's lenders in proportion to their supply;
 - where the oracle keeps reading a price the market no longer pays, the market can be drained before anyone is liquidated.
 
@@ -290,6 +290,10 @@ flowchart LR
     style T5 fill:#F0F2F5,stroke:#78909C
 ```
 
+When a markdown exceeds a feed's band, the incident is given in two stages: what happens now, with the oracle held at the floor, and what happens once the feed is upgraded, with the timelock's delay between the two.
+
+**Exposure up to the caps.** An allocator can move the vault's money into any enabled market up to its caps at once, with no timelock. Each incident therefore states two losses: at the current allocation, and at the caps. The caps are combined as the vault applies them: one per market, one per collateral shared by the markets on it, one per adapter.
+
 **Exit liquidity.** Whether liquidators act depends on whether they can sell what they seize. For each collateral, the system measures the route available through a DEX aggregator at the incident's size, or records that only the issuer's redemption remains. A collateral with no route means liquidations may not happen, and the bad debt stays unrealised while the market's liquidity stays locked.
 
 **Books of vaults.** A book is a list of vaults, or of borrow positions, with a weighting: the vaults whole, a given depositor's share, or a fixed amount per pocket. One incident is run on every vault of the book, and the losses are added in USD. Losses in different vaults from the same incident add up; they do not offset.
@@ -302,7 +306,7 @@ flowchart LR
 | What absorbs it first | Ethena's reserve fund, 62.1M USD (1.30 % of 4,769M of backing) | Sky's surplus, then debt auctions that mint and sell SKY, up to about 450M USD (a quarter of SKY's market value) |
 | What remains | marks USDe and sUSDe down, over the total backing | marks USDS, DAI and sUSDS down, over the USDS and DAI in circulation |
 | Example | half of Binance's margin (638M) lost: 319M, of which 62.1M absorbed: USDe and sUSDe −5.39 % | Spark's allocation (3,611M) loses 20 %: 722M, nothing from the surplus (it is 51.7M below the system's bad debt), 450M from debt auctions: USDS, DAI and sUSDS −2.36 % |
-| On a position | the challenge's leveraged PT-sUSDe position: 211,960 USD lost at once, 403,965 USD once its meta-oracle switches after 16 h; EXIT | the Spark Blue Chip USDT vault's sUSDS market: 1.72M USDT becomes liquidatable, no bad debt; STAY |
+| On a position | the challenge's leveraged PT-sUSDe position: 211,960 USD lost at once, 341,397 USD once its meta-oracle switches after 16 h; EXIT | the Spark Blue Chip USDT vault's sUSDS market: 1.72M USDT becomes liquidatable, no bad debt; STAY |
 
 ```mermaid
 flowchart TD
@@ -329,17 +333,56 @@ Two cautions come with these figures. Ethena's design keeps the backing with off
 
 **Layer priors.** For a leveraged position, each layer gets a yearly probability, a severity distribution and a recovery:
 
-- exploits come from a hack base rate: hacks per protocol per year for protocols of the same size, adjusted by the protocol's category and its age;
-- an issuer depeg comes from that issuer's own history where there is one (Ethena's USDe, for instance), stated with its basis;
-- oracle failures come from the record of misconfigured and stale-oracle exploits on lending protocols.
+- exploits come from a hack base rate: hacks per protocol per year for protocols of the same size, adjusted by the protocol's category and its age. Recent hacks weigh more than old ones (a two-year half-life), since attack techniques and defences change. Morpho's core, whose markets are isolated, gets the rate for its size without the lending category's multiplier, which comes from pooled lending protocols with spot-price oracles;
+- oracle failures come from the record of misconfigured and stale-oracle exploits on lending protocols, counted once, in the oracle layer, and left out of the exploit counts;
+- an issuer depeg comes from that issuer's own history where there is one (Ethena's USDe, for instance), stated with its basis. A synthetic dollar also has a collapse event, rare and deep (2 % a year, 83 % on average), from the failures of comparable tokens in 2025 and 2026;
+- a principal token's stress during a depeg is calibrated on a measured event: the PT-reUSD pool's implied yield rising from 10.6 % to 20.4 % on 25 August 2026.
 
 A Monte Carlo simulation draws incidents from these priors over the chosen horizon, propagates each draw through the position, and gives the expected loss, the probability of liquidation, each layer's contribution, and the tail: value at risk and expected shortfall at 95 % and 99 %.
+
+```mermaid
+flowchart TD
+    H1["Hack base rate: by size, × category, × age, recent hacks weighted more"] --> PY["A yearly probability, a severity and a recovery per layer"]
+    H2["Issuer's own depeg history; collapse for synthetic dollars"] --> PY
+    H3["Record of oracle exploits on lending protocols"] --> PY
+    PY --> PH["Over the horizon: 1 − (1 − p) to the power horizon ÷ 365"]
+    PH --> MC["Monte Carlo: draw incidents, propagate each through the position"]
+    MC --> OUT["Expected loss, probability of liquidation, each layer's share, 95 % and 99 % tail"]
+    OUT --> V["Weighed against the carry of staying and the cost of leaving"]
+    style H1 fill:#F0F2F5,stroke:#78909C
+    style H2 fill:#F0F2F5,stroke:#78909C
+    style H3 fill:#F0F2F5,stroke:#78909C
+    style PY fill:#E8EEF9,stroke:#3A5FA0
+    style PH fill:#E8EEF9,stroke:#3A5FA0
+    style MC fill:#E8EEF9,stroke:#3A5FA0
+    style OUT fill:#E8EEF9,stroke:#3A5FA0
+    style V fill:#E8F5E9,stroke:#2E7D32
+```
 
 **The breakeven probability.** For most RockawayX collateral there is no history to base a prior on: the issuers are young and none has failed yet. Rather than invent a number, the system turns the question around. Leaving costs something for sure: the yield given up, or an explicit unwind cost. It saves something only if the incident happens: the loss avoided. The ratio of the two is the probability above which leaving pays:
 
 > p\* = cost of leaving ÷ loss avoided
 
 The portfolio manager compares p\* with their own view of the issuer. A p\* of 2 % over 30 days says "leave if you think this has more than a 2 % chance this month"; a p\* above 100 % says that leaving never pays, whatever happens.
+
+```mermaid
+flowchart LR
+    C["Cost of leaving, for sure: 1,938 USD of yield over 30 days"] --> P["p* = 1,938 ÷ 29,194 = 6.64 % over 30 days"]
+    L["Loss avoided, if the incident happens: 29,194 USD"] --> P
+    P --> J{"The manager's view of the issuer"}
+    N["Outside view: implied by cover prices"] -.-> J
+    J -->|"Above p*"| E["Leave"]
+    J -->|"Below p*"| S["Stay"]
+    style C fill:#F0F2F5,stroke:#78909C
+    style L fill:#FDEEEE,stroke:#B54A4A
+    style P fill:#E8EEF9,stroke:#3A5FA0
+    style J fill:#F0F2F5,stroke:#78909C
+    style N fill:#F0F2F5,stroke:#78909C
+    style E fill:#FDEEEE,stroke:#B54A4A
+    style S fill:#E8F5E9,stroke:#2E7D32
+```
+
+The figures are those of the Confidential RWA vault's depositor under the PST incident of section 9.
 
 **Outside views.** Next to p\*, the system shows what the market charges for the same risk where it can. A Nexus Mutual cover price, divided by a loading for capital cost and margin, implies a yearly probability of an exploit. It is shown, never used in the verdict, because cover pays on an exploit, not on an issuer's markdown.
 
@@ -382,7 +425,7 @@ flowchart TD
 
 **Value at risk.** Each incident ends with one block a manager can read in a minute: the money in the markets the incident hits, the loss if it happens, the cost of leaving now against what it saves, the liquidity that liquidations would return, and the losses beyond the book in sibling markets.
 
-**For a leveraged position**, the verdict weighs the expected loss over the horizon against the carry earned by staying and the cost of exiting, priced by a live quote. On the challenge's own example, a leveraged Pendle principal-token position on sUSDe, the expected loss over 30 days is 6,265 USD against 5,697 USD of carry; the two are too close to call, a 5.16 % fall in the oracle liquidates the position, and the verdict is REDUCE, with the size of the de-levering that moves the liquidation point beyond the stress.
+**For a leveraged position**, the verdict weighs the expected loss over the horizon against the carry earned by staying and the cost of exiting, priced by a live quote. On the challenge's own example, a leveraged Pendle principal-token position on sUSDe, the expected loss over 30 days is 6,327 USD against 5,697 USD of carry; the two are too close to call, a 5.16 % fall in the oracle liquidates the position, and the verdict is REDUCE, with the size of the de-levering that moves the liquidation point beyond the stress.
 
 ## 8. Detection and monitoring
 
@@ -394,7 +437,7 @@ What it alerts on, by family:
 |---|---|
 | Losses | unrealised bad debt in a market; bad debt written off; a depositor's position falling |
 | Oracles and feeds | an oracle falling, with what becomes liquidatable and the verdict; a feed turning stale; a feed near the floor of its band; an oracle diverging from market prices |
-| Admin changes | a timelocked change submitted, with its decoded content and execution date; a change accepted; caps raised; adapters added; fees changed; an upgrade scheduled on a timelock above a dependency, 48 hours before it can execute |
+| Admin changes | a timelocked change submitted, with its decoded content and execution date, classified by what it can do to money already deposited: hit it directly (an exit gate, a market written off, a forced-exit penalty), only future money (a fee), or enable another change (a cap, an adapter, an allocator), with the amount at stake; a change accepted; an upgrade scheduled on a timelock above a dependency, 48 hours before it can execute; a role held by a single key |
 | Liquidity and exit | a depositor no longer able to exit in full with a plain withdrawal; a market close to its drain threshold; at least half of a position stuck in a run |
 | Concentration | one borrower holding most of a market's debt; a market crossing a quarter of the vault |
 | Confidential vaults | the day's confidential outflow, an instant exit, a canceled batch, a pause |
@@ -457,9 +500,19 @@ flowchart TD
 
 | Vault | Incident | Vault loss | Verdict | Why |
 |---|---|---|---|---|
-| Belem RWA EURCV | mGLOeuro −30 % | 251,761 EURCV, 5.34 % | STAY | The depositor holds 99.46 % of the vault: it bears the loss whether it leaves first or not. The collateral has no DEX route, so liquidators may not act at all |
+| Belem RWA EURCV | mGLOeuro −30 % | 0 now; 251,761 EURCV (5.34 %) after the feed's upgrade, 48 h at the earliest | STAY | The feed cannot report below −10 % without an upgrade, so the loss waits behind a 48 h timelock. The depositor holds 99.46 % of the vault and bears the loss whether it leaves first or not. The collateral has no DEX route, so liquidators may not act at all |
 | f(x) Protocol Ecosystem | fxSAVE −30 % | 1,806,122 USDC, 8.61 % | EXIT, above a 7.9 % chance | The fxSAVE market liquidates into a thin exit (a 34.5 % discount); the principal-token market's oracle does not move, so its loss is hidden |
-| USDC Yield | siUSD −30 % | 408,332 USDC, 2.21 % | EXIT, above a 29.8 % chance | One borrower holds 94 % of the market's debt; a sibling siUSD market loses 451,329 msUSD |
+| USDC Yield | siUSD −30 % | 397,639 USDC, 2.16 % | EXIT, above a 30.8 % chance | The oracle applies siUSD's share rate, so a booked loss moves it: 5.85M of debt is liquidated. One borrower holds 94 % of the market's debt; a sibling siUSD market loses 439,363 msUSD |
+
+**At the caps.** The same incidents, with the vault's money moved up to its caps, which an allocator can do at once:
+
+| Vault | Loss at the current allocation | Loss at the caps |
+|---|---|---|
+| Belem RWA EURCV | 251,761 EURCV | 623,129 EURCV |
+| f(x) Protocol Ecosystem | 1,806,122 USDC | 2,379,543 USDC |
+| USDC Yield | 397,639 USDC | 421,684 USDC |
+
+**Who can move the money.** On the three vaults above, read at their recorded blocks, the allocators are single keys: one externally owned account common to all three, a 1-of-1 Safe on two of them, and three more externally owned accounts on USDC Yield. Each can move the vault's money within the caps at once. The owner and curator, one address shared by every RockawayX Morpho vault, is not a single key.
 
 **Concentration.** Huma's 35 % share of the Morpho book, and 28 % of RockawayX's total once Kamino is counted, is the single largest dependency, and the PST incident shows its cost. The same issuers recur across venues: Huma on Morpho and Kamino, Tori on Morpho and Upshift. One issuer incident therefore hits several RockawayX vaults at once.
 
@@ -472,7 +525,7 @@ flowchart TD
 | PT-reUSD / USDC | 13 / 13 | 35.46M / 35.19M | 0 / 0 |
 | PT-reUSD / USDT | 7 / 7 | 1.89M / 0.96M | 0 / 0 |
 
-Every liquidated position was predicted and none was predicted in error. On the USDT market, liquidators repaid part of each position, which is why less debt was repaid than became liquidatable. A second episode, the market crash of 10 October 2025, is replayed the same way across six markets.
+Every liquidated position was predicted and none was predicted in error. The oracle's fall itself can be predicted too, from the 5.4 million principal tokens sold into the Pendle pool: the sale alone gives −2.36 %, and the cascade of liquidations selling into the same pool gives −2.46 %, against −2.45 % and −2.76 % observed on the two markets, with the same borrowers liquidated. On the USDT market, liquidators repaid part of each position, which is why less debt was repaid than became liquidatable. A second episode, the market crash of 10 October 2025, is replayed the same way across six markets.
 
 ```mermaid
 flowchart LR
@@ -586,9 +639,8 @@ Each source is used for what it can be trusted with. State comes from the chain 
 The system is explicit about what it does not compute.
 
 - **Young issuers have no prior.** For most RockawayX collateral, the probability of a markdown is not estimated; the breakeven probability and the outside views stand in for it.
-- **Some timing is approximated.** A feed bounded by a band is reported by the watch, but the incident model still applies a large markdown at once; an issuer's own redemption path (cooldowns, queues, fees) is not yet part of the exit.
+- **Issuers' own exits are not modelled.** An issuer's redemption path (cooldowns, queues, fees) is not yet part of the exit; only the DEX route is.
 - **Issuer internals are partly drawn.** Ethena's backing venues and Sky's debt sources are read, and a loss in them is turned into the markdown it causes. f(x)'s stability pool, infiniFi's loss waterfall and Midas's fund are not decomposed, so a loss inside them is entered as a markdown of the token rather than derived. Ethena's split is by exchange, not by custodian, so a custodian's failure cannot be stated on its own.
-- **Worst-case allocation is not yet stated.** Exposure follows the current allocation, while allocators can move money up to the caps at once.
 - **Scope.** Morpho Vault V2 on Ethereum is covered. Vault V1, other chains, and RockawayX's non-Morpho venues (Kamino on Solana, Upshift, Ember, Midas) are not.
 - **Confidential positions.** An individual confidential depositor's amount is encrypted; the system applies the vault's loss rate to an amount the depositor supplies, and does not find the position itself.
 
@@ -602,6 +654,24 @@ A vault's risk is the risk of its stack, and on the RockawayX book that stack en
 - **Impact** is computed for named incidents, with liquidations, bad debt, hidden losses and timing, and checked against a real liquidation episode and a replayed crisis.
 - **Decisions** come with a breakeven probability where no honest prior exists, and with outside market views beside it.
 - **Monitoring** alerts on the changes that precede a loss, such as an upgrade scheduled behind a timelock, not only on the loss itself.
+
+```mermaid
+flowchart LR
+    A["One address"] --> D["Discovery: the stack, who can change it, the siblings"]
+    D --> I["Impact: a named incident through the stack"]
+    PR["Probabilities: priors where history exists, p* where it does not"] --> DE
+    I --> DE["Decision: stay, reduce or exit, with its reason"]
+    D --> M["Monitoring: alerts before and during a loss"]
+    M --> DE
+    DE --> RX["On the RockawayX book: PST −30 % costs 5.2M USD; leave the Confidential RWA vault first, above a 6.6 % chance"]
+    style A fill:#F0F2F5,stroke:#78909C
+    style D fill:#E8EEF9,stroke:#3A5FA0
+    style I fill:#E8EEF9,stroke:#3A5FA0
+    style PR fill:#E8EEF9,stroke:#3A5FA0
+    style M fill:#E8EEF9,stroke:#3A5FA0
+    style DE fill:#E8F5E9,stroke:#2E7D32
+    style RX fill:#FDEEEE,stroke:#B54A4A
+```
 
 ## 14. Glossary
 
