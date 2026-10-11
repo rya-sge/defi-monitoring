@@ -6,6 +6,7 @@
 #   scripts/demo-rock/demo-rock.sh                  the full demo (≈ 4 min), pausing 4 s between steps
 #   scripts/demo-rock/demo-rock.sh --manual         wait for Enter between steps (presenting live)
 #   scripts/demo-rock/demo-rock.sh --no-telegram    the same, nothing sent to Telegram (rehearsal)
+#   scripts/demo-rock/demo-rock.sh --no-web         without the local web app (API on :8000, web/ on :5173)
 #   scripts/demo-rock/demo-rock.sh --block N        fork at block N (default 26165572, where the facts were checked)
 #
 # Stop it with Ctrl-C (it then stops its fork and watches); Ctrl-Z only pauses it and keeps the port taken.
@@ -18,11 +19,14 @@ source "$HERE/lib.sh"
 
 BLOCK=26165572
 TELEGRAM=1
+WEB=1
+WEB_URL="http://127.0.0.1:5173"
 export PAUSE="${PAUSE:-4}"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --manual) unset PAUSE ;;
     --no-telegram) TELEGRAM="" ;;
+    --no-web) WEB="" ;;
     --block) BLOCK="$2"; shift ;;
     *) sed -n 2,11p "$0"; exit 2 ;;
   esac
@@ -129,6 +133,33 @@ start_watches() {
   say "watching RockawayX Tori Ecosystem and Huma USDC Main (ready in $((SECONDS - t0)) s)"
 }
 
+port_taken() { (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null; }
+
+# riskdep's web app on this laptop, reading the fork's alerts: the API (riskdep/api) and web/ in live mode
+# (VITE_USE_MOCKS=false on the command line overrides web/.env). The API reads ./out, so it runs from out/demo-rock/web,
+# where `out` points back at out/demo-rock. The Telegram buttons open these pages.
+start_web() {
+  port_taken 8000 && fail "port 8000 is taken (an API already running?): stop it, or run with --no-web"
+  port_taken 5173 && fail "port 5173 is taken (pnpm dev already running?): stop it, or run with --no-web"
+  mkdir -p "$OUT/web" && ln -sfn .. "$OUT/web/out"
+  (cd "$OUT/web" && PYTHONPATH="$ROOT" exec "$ROOT/.venv/bin/python" -m uvicorn riskdep.api:app \
+    --host 127.0.0.1 --port 8000 >"$OUT/api.log" 2>&1) &
+  PIDS+=($!)
+  if [[ ! -d "$ROOT/web/node_modules" ]]; then
+    say "installing the web app's dependencies (once)…"
+    (cd "$ROOT/web" && pnpm install --frozen-lockfile >"$OUT/pnpm-install.log" 2>&1) \
+      || fail "pnpm install failed; see $OUT/pnpm-install.log"
+  fi
+  (cd "$ROOT/web" && VITE_USE_MOCKS=false exec ./node_modules/.bin/vite --port 5173 --strictPort >"$OUT/web.log" 2>&1) &
+  PIDS+=($!)
+  for _ in $(seq 1 60); do
+    port_taken 5173 && curl -s -m 2 -o /dev/null "http://127.0.0.1:8000/api/health" && break
+    sleep 1
+  done
+  port_taken 5173 || fail "the web app did not start; see $OUT/web.log and $OUT/api.log"
+  say "riskdep's web app, live on the fork: $WEB_URL/watch?target=${VAULT_TORI,,}"
+}
+
 caption "riskdep — RockawayX vaults under attack, on a mainnet fork"
 say "building the demo contracts and forking Ethereum mainnet at block $BLOCK…"
 (cd "$HERE" && forge build >/dev/null 2>&1) || fail "forge build failed in scripts/fork/"
@@ -137,10 +168,11 @@ start_fork
 say "starting riskdep watch on two RockawayX vaults (one block per batch, polling every 2 s)…"
 say "(each one first reads its vault's full state through the fork: seconds once anvil has cached it, longer the first time)"
 start_watches
+[[ -n "$WEB" ]] && start_web
 
 if [[ -n "$TELEGRAM" ]]; then
   # after the watches' start-up: the channel gets the crisis, not the standing findings (notify starts at the files' end)
-  (cd "$ROOT" && exec uv run python -m riskdep notify --out "$OUT" >"$OUT/notify.log" 2>&1) &
+  (cd "$ROOT" && exec uv run python -m riskdep notify --out "$OUT" ${WEB:+--web-url "$WEB_URL"} >"$OUT/notify.log" 2>&1) &
   PIDS+=($!)
   printf '{"name": "riskdep demo", "headline": "RockawayX vaults on a local mainnet fork at block %s. Watching RockawayX Tori Ecosystem and Huma USDC Main. The crises that follow are simulated on the fork, by the roles that could cause them on mainnet."}\n' "$BLOCK" >"$OUT/intro.json"
   post "$OUT/intro.json"

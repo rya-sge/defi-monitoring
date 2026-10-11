@@ -42,6 +42,8 @@ What to read in the output:
 | PT-reUSD/USDC | −2.45 % | 13 / 13, the same borrowers | 35.46M / 35.19M USDC (−0.8 %) | 927,975 / 920,781 | 0 / 0 |
 | PT-reUSD/USDT | −2.76 % | 7 / 7, the same borrowers | 1.89M / 0.96M USDT (liquidators repaid about half) | 49,378 / 25,015 | 0 / 0 |
 
+**Where the fall came from.** The backtest also rebuilds the Pendle pool the oracle reads, from its on-chain state before the episode (`pendle_amm.py`, Pendle's own pool math, matching its quotes to 1e-9): the implied APY went from 10.58 % to 20.37 % as 5.43M PT was sold into the pool, and the pool's math, from the state before, needs 5.52M (+1.7 %). At the first liquidation the pool accepted only 309k more PT, against 38.6M seized by the liquidations. Plan: `plan/2026-10-11-pendle-pool.plan.md`.
+
 A second episode tests a different mechanism, price-tracking oracles in a market-wide crash: `backtest --episode crash-2025-10-10`, the main wave of the 2025-10-10 crash on the six Morpho markets with the most liquidations (Mog, PEPE, SPX, WBTC, wstETH). No liquidated borrower is missed in any of them; WBTC/USDC's debt and incentive are within 2 %. The model over-predicts by count in a fast crash, and the backtest accounts for each case: 36 of Mog's 52 extra positions were liquidated later that night, a few were defended by their borrowers, and the rest owe little (under 3 % of the debt repaid, much of it dust no liquidator takes). The bad debt predicted at the low over-states the realised one (Mog: 403k against 22.7k), because liquidators reached many positions after the wick.
 
 The impact given the incident is right to within 1 % where positions were liquidated in full. Not tested: the oracle's fall itself, and the squeeze (the Pendle pool's curve at that date is not served by the quote API). Recorded through an archive RPC (`keys.ini`), it replays offline with no key.
@@ -268,6 +270,7 @@ python3 -m riskdep notify --test                         # one test message to t
 python3 -m riskdep notify                                # follow out/watch-*.jsonl, post warn and critical
 python3 -m riskdep notify --level critical --from-start  # only criticals, including what the files already hold
 python3 -m riskdep notify --post out/book-incident.json  # the headline of an incident run, as a scenario
+python3 -m riskdep notify --web-url http://127.0.0.1:5173  # buttons to the web app, next to the runbook
 ```
 
 A separate process next to `watch`: it reads the alert files and posts to a private Telegram channel (`keys.ini` `[alerts] telegram_bot_token`, `telegram_chat_id`). It sends **only when there is an alert** at or above the level, never a heartbeat. Standing findings, printed again at every watch start, are posted once per 1800 blocks. The alerts of one block come as one message: the cause in plain words, the loss and the decision (EXIT or STAY) on top, the details folded underneath, and a "What to do" button to the runbook; only criticals ring the phone. Offsets are saved in `out/notify.state.json` after each send, so a restart neither skips nor resends. Setup and design: `TELEGRAM_BOT.md`; thresholds: `registry.json` `notify`.

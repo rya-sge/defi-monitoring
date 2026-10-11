@@ -1,0 +1,7 @@
+{
+ "market": "0x47ad2cd1dd15739a7a035b9d3b7828d916fef77e",
+ "block": 26166743,
+ "pt": "0xb195b618ea52b77cb2a58846f452f59f8dfa9390",
+ "sy": "0xbf98480425a29197e5d99d003017f63a1e595d02",
+ "note": "plan 2026-10-11-pendle-pool D207: the pool's state at this block and Pendle's quotes taken at the same moment, to check the pool math"
+}

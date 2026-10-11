@@ -288,7 +288,7 @@ Past incidents replayed (plan `2026-10-11-backtest`, D161–D164). Read by `back
 | Key | Unit | Default | What it controls |
 |---|---|---|---|
 | `lead_blocks` | blocks | 60 | the state before is read this long before the first liquidation (12 minutes) |
-| `episodes.<name>` | object | `pt-reusd-2026-08-25`, `crash-2025-10-10` | `title`, `markets` (Blue market ids), `window` (first and last block to search for liquidations), `source`; optional `followup_to`, the last block in which a later liquidation explains an over-prediction (D197) |
+| `episodes.<name>` | object | `pt-reusd-2026-08-25`, `crash-2025-10-10` | `title`, `markets` (Blue market ids), `window` (first and last block to search for liquidations), `source`; optional `pendle_market` (D208: the Pendle pool the oracle's TWAP reads, rebuilt before the episode and at the first liquidation), optional `followup_to`, the last block in which a later liquidation explains an over-prediction (D197) |
 | `dust_debt` | loan units | 1,000 | a position left liquidatable that owes less is counted as dust: rarely worth a liquidator's gas (D197) |
 | `basis` | text | — | the method |
 

@@ -50,7 +50,7 @@ RedStone Price Feed for strUSD_FUNDAMENTAL (feed of the oracle of strUSD/USDC) w
 - The headline is the plain-words meaning of the **cause** (`PLAIN` in `riskdep/notify.py`, from the runbook's "What it means"); alerts are ordered cause first: a change of code or owner, data problems, the price, the losses, the exit.
 - The loss and the decision come from `OracleImpact`'s `data` (`vault_loss`, `loss_if_stay`, `loss_if_exit_first`, `can_leave_now`, `verdict`); without it, the depositor's share of the loss when an alert carries one.
 - Addresses shortened to `0x1234…abcd`, `(LLTV …)` left out of the headline.
-- Buttons: "What to do" opens the runbook section of the cause's alert family; "Etherscan" opens the transaction, and is left out on a fork (`RISKDEP_FORK`), whose transactions Etherscan does not have.
+- Buttons: with `--web-url <riskdep web app>`, "Alerts in riskdep" (`/watch?target=<vault>`) and "Vault" (`/?target=<vault>`) open the web app (`scripts/demo-rock/` starts one on `127.0.0.1:5173`, live on the fork); "What to do" opens the runbook section of the cause's alert family; two buttons a row; "Etherscan" opens the transaction, and is left out on a fork (`RISKDEP_FORK`), whose transactions Etherscan does not have.
 - `critical` with sound; `warn` and `info` with `disable_notification=true`.
 - If Telegram rejects the HTML (HTTP 400), the message is sent once as plain text, so one bad message cannot block the queue.
 

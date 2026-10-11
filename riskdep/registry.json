@@ -933,7 +933,7 @@
     "warn_category_min_usd": 1000000000.0
   },
   "backtest": {
-    "basis": "D161-D164: a past incident replayed: the markets' borrowers (their Borrow events up to the block before), their positions, the market totals and the oracle price read at that block through an archive RPC (keys.ini), the oracle's lowest price over the liquidation blocks applied as the shock, the liquidation model of market_risk.value predicting what becomes liquidatable, against the Liquidate events. lead_blocks: how far before the first liquidation the 'before' state is read (60 blocks, 12 minutes: the episode's yield spike took nine). followup_to (optional): liquidations after the window up to this block, to tell an over-prediction from a liquidation that came later; positions predicted but not liquidated are re-read at the window's last liquidation block, to tell a borrower who defended (repaid, added collateral) from one no liquidator reached (D197).",
+    "basis": "D161-D164: a past incident replayed: the markets' borrowers (their Borrow events up to the block before), their positions, the market totals and the oracle price read at that block through an archive RPC (keys.ini), the oracle's lowest price over the liquidation blocks applied as the shock, the liquidation model of market_risk.value predicting what becomes liquidatable, against the Liquidate events. lead_blocks: how far before the first liquidation the 'before' state is read (60 blocks, 12 minutes: the episode's yield spike took nine). pendle_market (optional, D208): the Pendle pool the oracle's TWAP reads, rebuilt from its state before the episode and at the first liquidation (plan 2026-10-11-pendle-pool). followup_to (optional): liquidations after the window up to this block, to tell an over-prediction from a liquidation that came later; positions predicted but not liquidated are re-read at the window's last liquidation block, to tell a borrower who defended (repaid, added collateral) from one no liquidator reached (D197).",
     "lead_blocks": 60,
     "episodes": {
       "pt-reusd-2026-08-25": {
@@ -942,6 +942,7 @@
           "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
           "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca"
         ],
+        "pendle_market": "0x13285bcbc27f92b47b4edb99d744c07b48c977c0",
         "window": [
           25821306,
           25842830

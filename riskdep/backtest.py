@@ -21,6 +21,7 @@ from eth_utils import keccak
 
 from . import borrower as B
 from . import market_risk as MR
+from . import pendle_amm as PA
 from . import sources as S
 from .abi import MORPHO_BLUE
 from .discover import REGISTRY
@@ -57,6 +58,56 @@ class MarketBacktest:
 
 
 @dataclass
+class PoolCheck:
+    """D208: the Pendle pool behind the oracle's fall, rebuilt from its state before the episode and at the first
+    liquidation (plan 2026-10-11-pendle-pool)."""
+
+    market: str
+    apy_before: float
+    apy_at_first: float
+    pt_sold: float  # the pool's PT grew by this between the two blocks: what was sold into it, net
+    asset_out: float  # what the pool paid out for it
+    model_sale: float | None  # the sale the pool's math needs, from the state before, to reach the APY at the first
+    model_asset_out: float | None
+    capacity_at_first: float  # the PT the pool still accepted at the first liquidation (its proportion at 96 %)
+    seized_pt: float  # the collateral the liquidations seized, PT
+
+    def text(self) -> list[str]:
+        out = [
+            f"the pool behind the oracle: implied APY {self.apy_before:.2%} before, {self.apy_at_first:.2%} at the "
+            f"first liquidation; {self.pt_sold:,.0f} PT sold into it, {self.asset_out:,.0f} paid out"
+        ]
+        if self.model_sale is not None:
+            out.append(
+                f"the pool's math from the state before: a sale of {self.model_sale:,.0f} PT reaches that APY and pays "
+                f"{self.model_asset_out:,.0f} ({self.model_sale / self.pt_sold - 1:+.1%} and "
+                f"{self.model_asset_out / self.asset_out - 1:+.1%} against the chain)"
+            )
+        out.append(
+            f"the squeeze: the liquidations seized {self.seized_pt:,.0f} PT, and the pool accepted only "
+            f"{self.capacity_at_first:,.0f} more at the first liquidation: liquidators held the rest or found other buyers"
+        )
+        return out
+
+
+def pool_check(before: PA.Pool, first: PA.Pool, seized_pt: float) -> PoolCheck:
+    """D208, pure."""
+    sale = PA.sale_for_apy(before, first.implied_apy)
+    out = PA.sell_pt(before, sale) if sale else None
+    return PoolCheck(
+        before.market,
+        before.implied_apy,
+        first.implied_apy,
+        first.total_pt - before.total_pt,
+        before.total_asset - first.total_asset,
+        sale,
+        out[0] if out else None,
+        PA.max_sale(first),
+        seized_pt,
+    )
+
+
+@dataclass
 class Backtest:
     episode: str
     title: str
@@ -64,6 +115,7 @@ class Backtest:
     blocks: tuple[int, int]  # first and last liquidation
     markets: list[MarketBacktest]
     notes: list[str]
+    pool: PoolCheck | None = None
 
     def lines(self) -> list[str]:
         out = [
@@ -94,6 +146,15 @@ class Backtest:
                     )
                 )
         out.append("    (each pair: predicted / realised)")
+        if self.pool:
+            out += [f"  {x}" for x in self.pool.text()]
+        back = {}
+        for m in self.markets:
+            back[m.loan_symbol] = back.get(m.loan_symbol, 0.0) + m.realised_repaid
+        out.append(
+            "  the debt the liquidators repaid came back to the markets as free liquidity: "
+            + ", ".join(f"{v:,.0f} {k}" for k, v in back.items())
+        )
         out += [f"  note: {n}" for n in self.notes]
         return out
 
@@ -213,10 +274,16 @@ def run(f: S.Fetcher, name: str) -> Backtest:
             ]
             mb.left_debt, mb.left_dust = sum(left), sum(1 for d in left if d < BT["dust_debt"])
         out.append(mb)
+    pool = None
+    if ep.get("pendle_market"):
+        # D208: the pool the oracle's TWAP reads, rebuilt from its state before the episode and at the first liquidation
+        p0, p1 = PA.read(f, ep["pendle_market"], before), PA.read(f, ep["pendle_market"], blocks[0])
+        seized = sum(e[3] for evs in events.values() for e in evs) / 10**p1.decimals
+        pool = pool_check(p0, p1, seized)
     notes = [
         ep["source"],
-        "the prediction is the liquidation model alone, at the oracle's lowest price of the episode: the shock "
-        "engine's squeeze needs the Pendle pool's curve at that date, which the quote API does not serve",
+        "the prediction is the liquidation model alone, at the oracle's lowest price of the episode"
+        + ("" if pool else ": the shock engine's squeeze needs the Pendle pool at that date (registry pendle_market)"),
         "a liquidator may repay part of a position: realised repaid debt ≤ the debt that became liquidatable",
     ]
-    return Backtest(name, ep["title"], before, (blocks[0], blocks[-1]), out, notes)
+    return Backtest(name, ep["title"], before, (blocks[0], blocks[-1]), out, notes, pool)

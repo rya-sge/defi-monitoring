@@ -6,7 +6,10 @@ One command: fork Ethereum mainnet, watch two RockawayX vaults with `riskdep`, c
 scripts/demo-rock/demo-rock.sh --no-telegram    # rehearsal: everything, nothing sent
 scripts/demo-rock/demo-rock.sh                  # the demo, alerts to Telegram (≈ 4 min, 4 s between steps)
 scripts/demo-rock/demo-rock.sh --manual         # wait for Enter between steps, for presenting live
+scripts/demo-rock/demo-rock.sh --no-web         # without the local web app
 ```
+
+**The web app, live on the fork.** The demo also starts `riskdep`'s web app on the laptop, reading the fork's alerts: the API on `127.0.0.1:8000` (run from `out/demo-rock/web`, where `out` points at `out/demo-rock`) and `web/` on `127.0.0.1:5173` with `VITE_USE_MOCKS=false` given on the command line, so `web/.env` is unchanged. Each Telegram message then carries **Alerts in riskdep** (the vault's Watch page) and **Vault** buttons, next to **What to do** (the runbook). The links point at `127.0.0.1`, so they open in Telegram Desktop on the demo laptop, not on a phone. The first run installs the web app's dependencies (`pnpm install`). The public site `belem.fuca.ch` runs on fixtures and does not see the fork.
 
 Needs Foundry (`anvil`, `cast`, `forge`), `uv`, network access (the fork's upstream and the Morpho API) and, for Telegram, `keys.ini` `[alerts]` (`TELEGRAM_BOT.md`).
 
@@ -21,7 +24,7 @@ Needs Foundry (`anvil`, `cast`, `forge`), `uv`, network access (the fork's upstr
 
 ## Files
 
-`out/demo-rock/` (git-ignored): `watch-tori.log`, `watch-huma.log` (each watch's full output), `watch-*.jsonl` (alerts as JSON, what `notify` reads), `notify.log`.
+`out/demo-rock/` (git-ignored): `api.log`, `web.log`, `watch-tori.log`, `watch-huma.log` (each watch's full output), `watch-*.jsonl` (alerts as JSON, what `notify` reads), `notify.log`.
 
 ## Before presenting
 
