@@ -187,7 +187,14 @@ flowchart TD
 
 **Outside views.** Three keyless providers add what the chain does not say. Pharos grades stablecoin issuers and records what backs each token, which links issuers to one another. Nexus Mutual's cover prices give an outside estimate of an exploit's probability. DefiLlama gives each protocol's TVL and its share of its category, which flags concentration.
 
-**Issuer layers.** Where an issuer publishes its backing, the system reads it. For Ethena, the venues holding USDe's backing and the reserve fund are drawn behind USDe. For a Zama confidential vault, the confidential share pool, the daily batchers and the decryption service every exit needs are drawn behind the vault.
+**Issuer layers.** Where an issuer publishes its backing, the system reads it, so the graph does not stop at a stablecoin's name:
+
+- **Ethena (USDe, sUSDe)**: from Ethena's transparency data, the backing by venue, the custodians, the reserve fund and the yields are drawn behind USDe. A venue is an exchange holding hedge margin, or the part kept in liquid stablecoins;
+- **Sky (USDS, DAI, sUSDS)**: from Sky's own on-chain registry, the debt behind USDS and DAI grouped by source, the surplus against the system's bad debt, and the savings rate. The sources are the peg module with the USDC it holds, each allocator such as Spark or Bloom, crypto vaults and real-world-asset vaults.
+
+Both matter to the RockawayX book indirectly. Re's reUSD, the collateral of the principal-token markets in two RockawayX vaults, keeps part of its on-chain buffer in USDe and sUSDe. And markets that lend USDS appear among the Belem vault's siblings, so Sky's sources appear in its graph.
+
+For a Zama confidential vault, the confidential share pool, the daily batchers and the decryption service every exit needs are drawn behind the vault.
 
 On the RockawayX USDC Yield vault, the graph holds the issuers' tokens, their oracles and feeds, the admin of each feed, the sibling markets on the same collateral, the Pharos backing of each stablecoin, and the protocols' TVL: 84 nodes, from one address.
 
@@ -286,6 +293,37 @@ flowchart LR
 **Exit liquidity.** Whether liquidators act depends on whether they can sell what they seize. For each collateral, the system measures the route available through a DEX aggregator at the incident's size, or records that only the issuer's redemption remains. A collateral with no route means liquidations may not happen, and the bad debt stays unrealised while the market's liquidity stays locked.
 
 **Books of vaults.** A book is a list of vaults, or of borrow positions, with a weighting: the vaults whole, a given depositor's share, or a fixed amount per pocket. One incident is run on every vault of the book, and the losses are added in USD. Losses in different vaults from the same incident add up; they do not offset.
+
+**Looking through a stablecoin: Ethena and Sky.** For these two issuers, an incident can be stated where it starts rather than as a markdown of the token, and the system works out the markdown from the issuer's own balance sheet and loss order:
+
+| | Ethena | Sky |
+|---|---|---|
+| The incident | an exchange loses part of the hedge margin delegated to it | one source of Sky's debt (an allocator, a vault type) loses part of its value |
+| What absorbs it first | Ethena's reserve fund, 62.1M USD (1.30 % of 4,769M of backing) | Sky's surplus, then debt auctions that mint and sell SKY, up to about 450M USD (a quarter of SKY's market value) |
+| What remains | marks USDe and sUSDe down, over the total backing | marks USDS, DAI and sUSDS down, over the USDS and DAI in circulation |
+| Example | half of Binance's margin (638M) lost: 319M, of which 62.1M absorbed: USDe and sUSDe −5.39 % | Spark's allocation (3,611M) loses 20 %: 722M, nothing from the surplus (it is 51.7M below the system's bad debt), 450M from debt auctions: USDS, DAI and sUSDS −2.36 % |
+| On a position | the challenge's leveraged PT-sUSDe position: 211,960 USD lost at once, 403,965 USD once its meta-oracle switches after 16 h; EXIT | the Spark Blue Chip USDT vault's sUSDS market: 1.72M USDT becomes liquidatable, no bad debt; STAY |
+
+```mermaid
+flowchart TD
+    E1["Ethena: an exchange loses hedge margin"] --> E2["Reserve fund absorbs first"]
+    E2 --> E3["The rest: USDe and sUSDe marked down"]
+    S1["Sky: one debt source loses value"] --> S2["Surplus absorbs first"]
+    S2 --> S3["Debt auctions mint and sell SKY"]
+    S3 --> S4["The rest: USDS, DAI and sUSDS marked down"]
+    E3 --> P["Every market on these tokens, and the positions and vaults on those markets"]
+    S4 --> P
+    style E1 fill:#FDEEEE,stroke:#B54A4A
+    style E2 fill:#E8F5E9,stroke:#2E7D32
+    style E3 fill:#FDEEEE,stroke:#B54A4A
+    style S1 fill:#FDEEEE,stroke:#B54A4A
+    style S2 fill:#E8F5E9,stroke:#2E7D32
+    style S3 fill:#F0F2F5,stroke:#78909C
+    style S4 fill:#FDEEEE,stroke:#B54A4A
+    style P fill:#E8EEF9,stroke:#3A5FA0
+```
+
+Two cautions come with these figures. Ethena's design keeps the backing with off-exchange custodians, so an exchange failure is expected to cost only the profit and loss not yet settled, at most a day's; the venue loss above is a stress bound for the case where that arrangement fails, not the expected outcome. And Sky's surplus was below its own bad debt at the recorded block, so it offered no buffer: the first loss goes to debt auctions.
 
 ## 6. Probabilities
 
@@ -500,9 +538,48 @@ flowchart LR
 
 ## 11. Data and trust
 
-All data comes from public sources: an Ethereum RPC node, the Morpho and Pendle APIs, DefiLlama, Pharos, Nexus Mutual, a DEX aggregator, and the issuers' own transparency endpoints where they exist. None needs a key. An Etherscan key, optional, adds the check that each oracle's source code is verified.
+All data comes from public sources: an Ethereum RPC node, the Morpho and Pendle APIs, DefiLlama, Pharos, Nexus Mutual, a DEX aggregator, and the issuers' own data where they publish it (Ethena's transparency endpoints, Sky's on-chain registry of its core contracts). None needs a key. An Etherscan key, optional, adds the check that each oracle's source code is verified.
 
 The chain is the source of truth for state: positions, prices, caps, roles and timelocks are read on-chain at a fixed block, and the APIs are used to find things (a vault's depositors, a protocol's TVL), then confirmed on-chain where possible. Every response is cached under a hash of the request, and a run can be recorded and replayed, so the results in this paper do not depend on the day they are read. The system never holds a key that can move funds, and never sends a transaction.
+
+```mermaid
+flowchart LR
+    subgraph T1["Source of truth for state"]
+        C1["Ethereum RPC: positions, prices, caps, roles, timelocks, Sky's registry"]
+        C2["Second, independent RPC: block hash check"]
+    end
+    subgraph T2["Used to find, then confirmed on-chain"]
+        A1["Morpho and Pendle APIs: depositors, markets, quotes"]
+    end
+    subgraph T3["Outside views, shown and labelled"]
+        O1["Pharos: grades, backing"]
+        O2["Nexus Mutual: cover prices"]
+        O3["DefiLlama: TVL, hacks record"]
+        O4["DEX aggregator: exit routes"]
+        O5["Ethena: backing by venue"]
+    end
+    T1 --> K["Cache keyed by request: recorded, replayed offline"]
+    T2 --> K
+    T3 --> K
+    K --> AN["Analysis: graph, incidents, verdicts, alerts"]
+    AN -.->|"no key that moves funds, no transaction"| X["Read-only"]
+    style C1 fill:#E8F5E9,stroke:#2E7D32
+    style C2 fill:#E8F5E9,stroke:#2E7D32
+    style A1 fill:#E8EEF9,stroke:#3A5FA0
+    style O1 fill:#F0F2F5,stroke:#78909C
+    style O2 fill:#F0F2F5,stroke:#78909C
+    style O3 fill:#F0F2F5,stroke:#78909C
+    style O4 fill:#F0F2F5,stroke:#78909C
+    style O5 fill:#F0F2F5,stroke:#78909C
+    style K fill:#E8EEF9,stroke:#3A5FA0
+    style AN fill:#E8EEF9,stroke:#3A5FA0
+    style X fill:#E8F5E9,stroke:#2E7D32
+```
+
+Each source is used for what it can be trusted with. State comes from the chain and is checked against a second node; the APIs point to addresses and amounts that are then read on-chain. The outside views split in two:
+
+- **entering a figure**, each with its source named next to the result: the exit routes (whether liquidators can sell), Ethena's backing (the markdown a venue loss causes), Pharos's backing links (which markets a shock on one stablecoin hits), and DefiLlama's hack record (the exploit base rates);
+- **shown only**: Pharos's grades, Nexus Mutual's cover prices and DefiLlama's TVL shares, which inform the reader but never change a verdict.
 
 ## 12. Limitations
 
@@ -510,7 +587,7 @@ The system is explicit about what it does not compute.
 
 - **Young issuers have no prior.** For most RockawayX collateral, the probability of a markdown is not estimated; the breakeven probability and the outside views stand in for it.
 - **Some timing is approximated.** A feed bounded by a band is reported by the watch, but the incident model still applies a large markdown at once; an issuer's own redemption path (cooldowns, queues, fees) is not yet part of the exit.
-- **Issuer internals are partly drawn.** Ethena's backing venues are read; f(x)'s stability pool, infiniFi's loss waterfall and Midas's fund are not decomposed, so a loss inside them is entered as a markdown of the token rather than derived.
+- **Issuer internals are partly drawn.** Ethena's backing venues and Sky's debt sources are read, and a loss in them is turned into the markdown it causes. f(x)'s stability pool, infiniFi's loss waterfall and Midas's fund are not decomposed, so a loss inside them is entered as a markdown of the token rather than derived. Ethena's split is by exchange, not by custodian, so a custodian's failure cannot be stated on its own.
 - **Worst-case allocation is not yet stated.** Exposure follows the current allocation, while allocators can move money up to the caps at once.
 - **Scope.** Morpho Vault V2 on Ethereum is covered. Vault V1, other chains, and RockawayX's non-Morpho venues (Kamino on Solana, Upshift, Ember, Midas) are not.
 - **Confidential positions.** An individual confidential depositor's amount is encrypted; the system applies the vault's loss rate to an amount the depositor supplies, and does not find the position itself.
@@ -541,4 +618,5 @@ A vault's risk is the risk of its stack, and on the RockawayX book that stack en
 | **Sibling market** | A market outside the vault that takes the same collateral or reads the same price |
 | **Breakeven probability (p\*)** | The probability of an incident above which leaving now costs less than staying |
 | **Timelock** | A delay between scheduling a change and executing it, which gives depositors time to react |
+| **Reserve fund, surplus, debt auction** | The buffers in front of a stablecoin's holders: Ethena's reserve fund; Sky's surplus, then its debt auctions, which mint and sell SKY to cover a loss |
 | **Principal token (PT)** | A Pendle token that redeems one unit of the underlying at maturity, bought at a discount |

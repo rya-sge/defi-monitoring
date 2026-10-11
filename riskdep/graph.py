@@ -735,6 +735,38 @@ def annotate_shared(g: Graph) -> int:
     return shared
 
 
+def annotate_roles(g: Graph, f: S.Fetcher, block: int) -> int:
+    """D245 (GAPV2 G2): each admin node labelled with what holds the role (one key, a Safe n/m, a timelock, a contract);
+    skipped when the reads are not recorded. Returns the holders held by one key."""
+    from . import roles as RL
+
+    admins = {
+        n["details"]["address"]: n["label"].rsplit(" ", 1)[0].split(" + ")
+        for n in g.nodes.values()
+        if n["kind"] == "Admin" and n["details"].get("address")
+    }
+    if not admins:
+        return 0
+    try:
+        holders = RL.read(f, admins, block)
+    except (S.CacheMiss, S.SourceError):
+        return 0
+    for h in holders:
+        nid = f"admin:{h.address}"
+        n = g.nodes[nid]
+        n["label"] = f"{n['label']} ({h.label})"  # `node` updates details only
+        g.node(
+            nid,
+            "Admin",
+            n["label"],
+            holder_kind=h.kind,
+            threshold=h.threshold,
+            one_key=h.one_key,
+            delay_s=h.delay_s,
+        )
+    return sum(1 for h in holders if h.one_key)
+
+
 def annotate_supply(g: Graph, f: S.Fetcher, block: int) -> int:
     """D216: each collateral of the graph's Blue markets, with what its borrowers post in them and that amount's share
     of the token's supply (`totalSupply()` at the graph's block, one batch; skipped when it cannot be read). The share

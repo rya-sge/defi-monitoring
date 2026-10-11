@@ -851,6 +851,20 @@ def run(
             "liquidating issuer-priced collateral needs a buyer of the issuer's token; if no liquidator acts, the bad "
             "debt stays unrealised and the market's liquidity stays locked"
         )
+    one_key = [
+        n
+        for n in (graph or {}).get("nodes", [])
+        if n["kind"] == "Admin"
+        and n["details"].get("one_key")
+        and any(r in n["label"] for r in ("owner", "curator", "allocator"))  # a sentinel can only de-risk
+    ]
+    if one_key:
+        # D245 (GAPV2 G2): a role held by one key can change the vault with no notice to its depositors
+        notes.append(
+            "held by one key: "
+            + "; ".join(n["label"] for n in one_key)
+            + " — an owner so held can replace the curator at once, an allocator move money within the caps at once"
+        )
     if any(h.exit_source == "KyberSwap" and h.exit_route != "deep" for h in hits):
         notes.append(
             "exit liquidity is what the DEX aggregator routes; an issuer redemption, a vault share's withdrawal or "

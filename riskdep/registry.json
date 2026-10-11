@@ -289,7 +289,90 @@
     "zama_redeem_warn": 0.02,
     "zama_redeem_critical": 0.1,
     "zama_instant_warn": 0.01,
-    "zama_basis": "D191: the redeem batcher's daily aggregate is the public measure of confidential outflows: warn from 2 % of the vault in one batch, critical from 10 % (a confidential run forming); an instant exit (a cShare unwrap to anyone but the batcher) reveals its amount: warn from 1 % of the vault (an informed holder leaving fast)."
+    "zama_basis": "D191: the redeem batcher's daily aggregate is the public measure of confidential outflows: warn from 2 % of the vault in one batch, critical from 10 % (a confidential run forming); an instant exit (a cShare unwrap to anyone but the batcher) reveals its amount: warn from 1 % of the vault (an informed holder leaving fast).",
+    "admin_impact": {
+      "setReceiveAssetsGate(address)": {
+        "class": "retroactive",
+        "reach": "all",
+        "basis": "VaultV2.sol: a receive-assets gate 'can lock users out of exiting the vault'"
+      },
+      "setSendSharesGate(address)": {
+        "class": "retroactive",
+        "reach": "all",
+        "basis": "VaultV2.sol: a send-shares gate 'can lock users out of exiting the vault'"
+      },
+      "setReceiveSharesGate(address)": {
+        "class": "retroactive",
+        "reach": "all",
+        "basis": "VaultV2.sol: 'can lock users out of getting back their shares deposited on an other contract'; a reverting gate can block all vault interactions"
+      },
+      "setSendAssetsGate(address)": {
+        "class": "future",
+        "reach": "none",
+        "basis": "VaultV2.sol: gates depositing assets, 'cannot block users' funds'"
+      },
+      "burnShares(bytes32)": {
+        "class": "retroactive",
+        "reach": "market",
+        "basis": "MorphoMarketV1AdapterV2.sol:155: sets supplyShares[marketId] to 0, the vault's position in that market written off"
+      },
+      "setForceDeallocatePenalty(address,uint256)": {
+        "class": "retroactive",
+        "reach": "forced_exit",
+        "basis": "VaultV2.sol:524: applies to every forceDeallocate made after it, up to MAX_FORCE_DEALLOCATE_PENALTY (2 %)"
+      },
+      "setPerformanceFee(uint256)": {
+        "class": "future",
+        "reach": "future_interest",
+        "basis": "VaultV2.sol:445: accrueInterest() runs before the new fee is set, so interest already earned is charged at the old rate"
+      },
+      "setManagementFee(uint256)": {
+        "class": "future",
+        "reach": "future_interest",
+        "basis": "VaultV2.sol: accrueInterest() first, as for the performance fee"
+      },
+      "setPerformanceFeeRecipient(address)": {
+        "class": "future",
+        "reach": "none",
+        "basis": "where future fees go"
+      },
+      "setManagementFeeRecipient(address)": {
+        "class": "future",
+        "reach": "none",
+        "basis": "where future fees go"
+      },
+      "increaseAbsoluteCap(bytes,uint256)": {
+        "class": "enabler",
+        "reach": "caps",
+        "basis": "VaultV2.sol:484: moves no money itself; lets an allocator move existing money further, at once"
+      },
+      "increaseRelativeCap(bytes,uint256)": {
+        "class": "enabler",
+        "reach": "caps",
+        "basis": "VaultV2.sol: as increaseAbsoluteCap, relative to the vault's assets"
+      },
+      "addAdapter(address)": {
+        "class": "enabler",
+        "reach": "none",
+        "basis": "VaultV2.sol: lets the allocators deploy into a new adapter"
+      },
+      "setAdapterRegistry(address)": {
+        "class": "enabler",
+        "reach": "none",
+        "basis": "VaultV2.sol: changes which adapters can be added"
+      },
+      "setIsAllocator(address,bool)": {
+        "class": "enabler",
+        "reach": "none",
+        "basis": "VaultV2.sol: changes who can move existing money within the caps, at once"
+      },
+      "setSkimRecipient(address)": {
+        "class": "future",
+        "reach": "none",
+        "basis": "MorphoMarketV1AdapterV2.sol: redirects only tokens sent to the adapter outside its positions (rewards)"
+      }
+    },
+    "admin_impact_basis": "D244 (GAPV2 G10): each risk-increasing admin function classified from the pinned Vault V2 source: retroactive (can reach money already deposited), future (only future money or fees), enabler (moves nothing itself, lets another role move existing money). reach: what it can touch (all, market, forced_exit, future_interest, caps, none). The level of a Submit follows the class, not a flat list."
   },
   "graph": {
     "sibling_min_tvl_usd": 1000000,

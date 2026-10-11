@@ -155,6 +155,7 @@ The thresholds of `watch --vault` and `watch --user`. Changing them changes when
 | `state_window_blocks` | blocks | 64 | how far back state is read; older ranges use the oldest servable block |
 | `full_state_every_blocks` | blocks | 25 | a live batch with no event reads only oracle prices, `totalAssets`, `realAssets`, idle cash and the depositor's gates; the full state read runs on any event and at least this often (D61) |
 | `crosscheck_every_blocks` | blocks | 300 | cadence of cross-checks, lender refresh, exit quotes, position rediscovery, the full refresh of every market's borrowers, and the admin-surface state and oracle-divergence checks |
+| `admin_impact` | signature → `class`, `reach`, `basis` | the risk-increasing Vault V2 and adapter functions | D244: what a timelocked change can do to money already deposited (`retroactive`, `future`, `enabler`), what it can reach (`all`, `market`, `forced_exit`, `future_interest`, `caps`, `none`), and the source line; the `Submit` alert's level and amount follow it (`admin_impact_basis`) |
 | `cap_exposure_warn` | fraction of the vault | 0.25 | `CapExposure` at start: the share of the vault that can sit behind one oracle within its caps (D243, `cap_exposure_basis`) |
 | `market_share_warn` | fraction of the vault | 0.25 | `Exposure` at start, and `Adapter.Allocate` raised to warn when a market crosses it |
 | `utilization_warn` | fraction | 0.99 | utilisation alerts, for vaults and borrows |

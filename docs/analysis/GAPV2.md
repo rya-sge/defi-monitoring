@@ -37,7 +37,7 @@ The brief judges dependency discovery (30 %) and impact estimation (30 %) first,
 | # | Gap | Criterion | Size | Order |
 |---|---|---|---|---|
 | G1 | Worst-case exposure up to the caps, per oracle and feed | discovery, impact | S | 4 · **done: `CapExposure` and the incident's loss at the caps (D243); graph nodes open** |
-| G2 | Who holds each role: EOA, Safe (threshold), timelock | discovery, decision | S | 6 |
+| G2 | Who holds each role: EOA, Safe (threshold), timelock | discovery, decision | S | 6 · **done: `RoleHolder`, the graph's admin nodes, the incident note (D245); re-reading on role events open** |
 | G3 | The protocol's hard limits next to the current settings | decision | S | later |
 | G4 | The Zama layer in the engine's graph, and a decryption halt | discovery, impact | S–M | 10 |
 | G5 | Ethena: the venue stress stated as a bound; custodians; the unstaking cooldown | impact, decision | S | 8 |
@@ -45,7 +45,7 @@ The brief judges dependency discovery (30 %) and impact estimation (30 %) first,
 | G7 | Vault V1 (MetaMorpho) as a watch and incident target | discovery | M | later |
 | G8 | Other chains | discovery | L | later |
 | G9 | Audits, bug bounty, licence as provenance | — | S | optional |
-| G10 | Each admin change classified: hits existing deposits, only future ones, or enables another change; with the funds it can move | impact, decision | S | 6 |
+| G10 | Each admin change classified: hits existing deposits, only future ones, or enables another change; with the funds it can move | impact, decision | S | 6 · **done (plan `2026-10-11-admin-impact`, D244)** |
 | G11 | Midas: the feed's band in the incident, the shock engine and `OracleImpact` | impact | S–M | 1 · **done in the incident (D241); the shock engine and `OracleImpact` open** |
 | G12 | f(x): the NAV oracle's timing (published or computed on-chain); the freshness of feeds computed on read | impact | S | 3 · **done (D242)** |
 | G13 | f(x): fxSAVE's NAV components, `fxusd=` / `aave=` shocks, the lower layers in the graph | discovery, impact | M | 5 |

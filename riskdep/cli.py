@@ -312,6 +312,7 @@ def main(argv: list[str] | None = None) -> int:
             else S.Fetcher("direct")
         )
         measured = GR.annotate_supply(g, fs, block)
+        one_key = GR.annotate_roles(g, fs, block)
         title = "Morpho dependency graph: " + ", ".join([u[:10] + "…" for u in users] + [v[:10] + "…" for v in vaults])
         hp, jp = GR.write(g, Path(args.out), title, GR.subtitle_for(block))
         kinds = {}
@@ -325,6 +326,11 @@ def main(argv: list[str] | None = None) -> int:
         if confidential:
             print(f"Zama: {confidential} vault(s) entered confidentially, their batchers and decryption drawn")
         print(f"shared feeds and oracles: {shared} read by more than one market")
+        print(
+            f"role holders: {one_key} held by one key"
+            if one_key
+            else "role holders: none held by one key, or not checked"
+        )
         if venues:
             print(f"Ethena: {venues} venue(s) holding USDe's backing drawn behind USDe")
         skies = GR.annotate_sky(

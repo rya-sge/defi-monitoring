@@ -472,6 +472,7 @@ def vault_graph(vault: str) -> dict | None:
     finally:
         clock.set_as_of(as_of)
     GR.annotate_shared(g)  # D215: a hit's feed read by other markets too
+    GR.annotate_roles(g, S.Fetcher("offline", rdir), block)  # D245: what holds each role
     return {"nodes": list(g.nodes.values()), "edges": g.edges, "block": block}
 
 
