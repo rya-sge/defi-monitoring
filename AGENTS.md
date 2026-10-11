@@ -227,7 +227,7 @@ Python ≥ 3.10; CI runs the suite on 3.10, the floor `requires-python` in `pypr
 
 ```bash
 uv sync
-uv run pytest -q tests                                 # 323 tests, offline
+uv run pytest -q tests                                 # 324 tests, offline
 uv run python -m riskdep analyze --demo                # cached snapshot, no network → out/report.html/.json
 uv run python -m riskdep watch --replay                # re-run the recorded vault range offline
 uv run python -m riskdep watch --blocks 1000 --record  # live range, saved for --replay

@@ -355,18 +355,18 @@ def incident(
 
     incidents = run_all(parsed)
     borrows, names = [], {}
-    for v in book.vaults:
-        if v.kind == "borrow":
-            ln, n = borrow_pocket(v, parsed, book.weighting, horizon, mode, exit_cost)
-            borrows.append(ln)
-            names.update(n)
+    pockets = [v for v in book.vaults if v.kind == "borrow"]
+
+    def run_borrows(scaled):
+        return [borrow_pocket(v, scaled, book.weighting, horizon, mode, exit_cost)[0] for v in pockets]
+
+    for v in pockets:
+        ln, n = borrow_pocket(v, parsed, book.weighting, horizon, mode, exit_cost)
+        borrows.append(ln)
+        names.update(n)
     result = vault_book.aggregate(book, parsed, incidents, borrows, names)
-    if conditional and any(ln.hit_markets for ln in borrows):
-        result.notes.append(
-            "the conditional distribution covers the vault pockets; a borrow pocket keeps its one figure"
-        )
     if conditional:
-        conditional_distribution(book, parsed, incidents, result, run_all)
+        conditional_distribution(book, parsed, incidents, result, run_all, borrows, run_borrows)
     return VaultIncidentResult(book, incidents, result)
 
 
@@ -409,18 +409,23 @@ def borrow_pocket(v, parsed, weighting: str, horizon: float, mode: str, exit_cos
         clock.set_as_of(as_of)
 
 
-def conditional_distribution(book, parsed, incidents, result, run_all) -> None:
+def conditional_distribution(book, parsed, incidents, result, run_all, borrows=(), run_borrows=None) -> None:
     """D165–D168: run the incident at each multiple of `conditional.grid`, build each vault's loss curve in its
-    depositor's terms (the book's pocket when it has one), and draw the distribution for each vault and the book."""
+    depositor's terms (the book's pocket when it has one), and draw the distribution for each vault and the book.
+    D203: a borrow pocket hit by the incident gets its curve the same way, from `borrow_pocket` at each multiple:
+    leaving now avoids the loss and costs the exit; no liquidator branch, the borrower's own loss is the position's."""
     from dataclasses import asdict
 
     from . import conditional as CD
 
     grid = [m for m in CD.C["grid"] if m != 1.0]
-    runs = {1.0: incidents}
+    runs, bruns = {1.0: incidents}, {1.0: list(borrows)}
+    hit_borrows = any(ln.hit_markets for ln in borrows)
     for m in grid:
         scaled = [(k, t, min(0.99, v * m), n) if k == "token" else (k, t, v, n) for k, t, v, n in parsed]
         runs[m] = run_all(scaled)
+        if hit_borrows:
+            bruns[m] = run_borrows(scaled)
     mults = [0.0] + sorted(runs)
     amounts = {v.address: v.amount for v in book.vaults}
     curves = []
@@ -452,6 +457,21 @@ def conditional_distribution(book, parsed, incidents, result, run_all) -> None:
             d = CD.simulate([c], fall)
             inc.conditional = {**asdict(d), "text": d.text()}
     hit = [c for inc, c in zip(incidents, curves) if inc.hits]
+    for i, ln in enumerate(borrows):
+        if not ln.hit_markets:
+            continue
+        c = CD.Curve(
+            ln.name,
+            mults,
+            [0.0] + [bruns[m][i].loss_usd for m in mults[1:]],
+            [0.0] * len(mults),
+            [1.0] * len(mults),
+            ln.exit_cost_usd,
+            0.0,
+        )
+        hit.append(c)
+        d = CD.simulate([c], fall)
+        result.notes.append(f"{ln.name}, given the incident: {d.text()}")
     if hit:
         d = CD.simulate(hit, fall)
         result.conditional = {**asdict(d), "text": d.text()}

@@ -53,6 +53,7 @@ The brief's worked example is a book of pockets where one pocket, a leveraged PT
 |---|---|---|---|---|---|
 | D177 | contract | A book pocket can be a Morpho Blue borrow: `kind: "borrow"`, the market id, the borrower (`user`, kept as spelled: the recording is keyed by it). A token shock that names its collateral or the collateral's underlying is, for the position, a loss of backing every oracle sees (`issuer_hack` at the same fall) | agreed, agent's default | `propagate.py` | S1 |
 | D178 | contract | A borrow pocket's line follows the vault pocket's rule: staying loses the incident's loss; leaving now avoids it and costs the exit (its swap quote, or `--exit-cost` × the pocket); EXIT when the loss avoided exceeds that cost; p\* and a one-clause reason; scaled to the pocket's amount in the `pocket` weighting | agreed, the brief's trade-off | D152–D153 | S1 |
+| D203 | contract | `--conditional` draws a borrow pocket too: `borrow_pocket` at each multiple of `conditional.grid` gives its loss curve (capped at the pocket); leaving now avoids it and costs the exit; no liquidator branch (the loss is the position's own). Its distribution is a note on the book and it joins the book's draw, sharing each path's multiple | agreed, the person: "Go next step now" (`NEXT_STEP.md` A6's rest) | D165–D168 | — |
 
 # Execution
 

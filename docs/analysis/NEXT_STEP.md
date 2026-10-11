@@ -62,7 +62,7 @@ Sizes: **S** about a day, **M** a few days, **L** more.
 
 | # | Step | Gaps | Size | Builds on |
 |---|---|---|---|---|
-| **A6** | ~~Books mixing borrow and vault pockets, one rule~~ **done** (plan `2026-10-11-mixed-book`); K12 and K13 **done** (plan `2026-10-11-alerts-and-verdict`); left: the conditional distribution for a borrow, PT holdings without a borrow | K21, M6 | M | `decide.py`, `vault_book.py`, `conditional.py` |
+| **A6** | ~~Books mixing borrow and vault pockets, one rule~~ **done** (plan `2026-10-11-mixed-book`); K12 and K13 **done** (plan `2026-10-11-alerts-and-verdict`); the conditional distribution for a borrow **done** (D203); left: PT holdings without a borrow | K21, M6 | M | `decide.py`, `vault_book.py`, `conditional.py` |
 | **A5** | The web page for vault and book incidents on `POST /api/incident` (the front end's) | demo | S | `web/` |
 | B4 | Oracle structure, the rest: the pool-move event (the backtest's mechanism), split constant-price, drain priority by class | K7, K8 | M | `oracle_class.py`, `engine.py` |
 | B5 | *Secondary: the priors feed only `analyze --demo`'s ex-ante view; no known-incident answer uses them.* Priors: decayed window, survivorship, two-part depeg, protocol multiplier, the RockawayX issuers; calibrate the conditional draw | K1–K5, K17, K18 | M | `priors.py`, `registry.json` |
@@ -76,7 +76,7 @@ Sizes: **S** about a day, **M** a few days, **L** more.
 | C4, C5 | External venues; Vault V1, other chains | K24, C5 | M–L | registry, `metamorpho-v1.1` |
 | D | Validate on your positions; Slack/Discord/email alerts; infrastructure; execution | — | — | — |
 
-If time is short before the judging: **A6's rest, then B4** (the pool move behind the backtest's oracle fall). C1 is done. `IMPROVEMENT.md` advises against more documentation and against phase D.
+If time is short before the judging: **B4** (A6's conditional draw for a borrow is done; PT holdings without a borrow are left) (the pool move behind the backtest's oracle fall). C1 is done. `IMPROVEMENT.md` advises against more documentation and against phase D.
 
 ## 4. Phase A: the brief's chain, the rest
 
