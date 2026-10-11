@@ -178,6 +178,9 @@ def main(argv: list[str] | None = None) -> int:
     nt.add_argument("--once", action="store_true", help="one pass over the alert files, then stop")
     nt.add_argument("--test", action="store_true", help="send one test message and stop")
     nt.add_argument("--post", metavar="JSON", help="post the headline of an incident run (out/book-incident.json)")
+    nt.add_argument(
+        "--web-url", metavar="URL", help="riskdep's web app (web/), linked from each message next to the runbook"
+    )
     nt.add_argument("--out", default=str(Path(__file__).resolve().parent.parent / "out"))
     args = ap.parse_args(argv)
 

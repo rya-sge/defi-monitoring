@@ -151,3 +151,19 @@ def test_rejected_html_falls_back_to_plain_text():
     assert NT.send(CREDS, "<b>a &amp; b</b>", True, s, [("What to do", "https://x")])
     assert s.posts[1]["text"] == "a & b" and "parse_mode" not in s.posts[1]
     assert s.posts[0]["reply_markup"]["inline_keyboard"][0][0]["url"] == "https://x"
+
+
+def test_web_app_buttons_and_the_runbook(monkeypatch):
+    monkeypatch.setattr(NT.S, "FORK", False)
+    rows = [(alert("critical", event="Admin.Upgraded", title="up"), 10)]
+    m = NT.messages(rows, "Tori", "0xvault", "http://127.0.0.1:5173/")[0]
+    assert m.buttons == [
+        ("Alerts in riskdep", "http://127.0.0.1:5173/watch?target=0xvault"),
+        ("Vault", "http://127.0.0.1:5173/?target=0xvault"),
+        ("What to do", NT.runbook_url(rows[0][0])),
+        ("Etherscan", "https://etherscan.io/tx/0xabc0000000000000"),
+    ]
+    s = Session()
+    assert NT.send(CREDS, "x", False, s, m.buttons)
+    assert [len(r) for r in s.posts[0]["reply_markup"]["inline_keyboard"]] == [2, 2]  # two buttons a row
+    assert NT.messages(rows, "Tori", "0xvault")[0].buttons[0][0] == "What to do"  # no web app: the runbook

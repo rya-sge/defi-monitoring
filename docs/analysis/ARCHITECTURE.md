@@ -328,6 +328,8 @@ The design decisions are numbered across twelve plans, in the order the incremen
 | `plan/2026-10-11-zama.plan.md` | Zama confidential vaults: the cShare pool, the two exits, the hidden layer | D171–D176 |
 | `plan/2026-10-11-pt-channels.plan.md` | the PT loop's implied-yield and borrow-rate incidents | D169–D170 |
 | `plan/2026-10-11-conditional.plan.md` | the loss of staying given the incident, drawn, against the certain cost of leaving | D165–D168 |
+| `plan/2026-10-11-pendle-pool.plan.md` | a Pendle pool rebuilt at a past block; the sale behind the backtest's fall and the squeeze; the backtest from the sale alone; `pool_move` on the pool's math | D207–D211 |
+| `plan/2026-10-11-stressed-exit.plan.md` | the exit cost after the incident's own liquidations | D206 |
 | `plan/2026-10-11-oracle-kinds.plan.md` | constant-price oracles split by kind; a markdown reaches only the kinds that move | D205 |
 | `plan/2026-10-11-pool-move.plan.md` | the pool move as a loss channel: a sale into the PT's Pendle pool through the oracle | D204 |
 | `plan/2026-10-11-depth.plan.md` | discovery depth for the PT position: the graph's layers in `analyze` | D199–D202 |

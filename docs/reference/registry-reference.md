@@ -124,6 +124,7 @@ The conservative default for a yield token not in `issuers`: a 15 % yearly depeg
 | `tail_budget` | fraction of equity | REDUCE when CVaR 99 % exceeds this share of the equity (0.5) | `decide.py` |
 | `incident.exit_min_gain` | fraction of the loss | vault incident mode: EXIT only when leaving first cuts the depositor's loss by at least this share (0.05) | `vault_incident.py` |
 | `incident.breakeven_basis` | text | the breakeven probability p\* of vault and book incidents: yield forgone on what can leave over `--horizon`, divided by the loss leaving first saves (D142–D144) | `vault_incident.py`, `vault_book.py` |
+| `incident.exit_window_s` | seconds | incident mode (D206): an incident that reaches the oracle sooner lets its liquidations sell first, so the verdict counts the exit cost after their sales (3600) | `scenario.py` |
 | `incident.reduce_margin` | fraction | incident mode: the partial sale puts liquidation this far beyond the incident's oracle drop (0.01) | `scenario.py` |
 
 ## `tail_exit_budget`
@@ -287,7 +288,7 @@ Past incidents replayed (plan `2026-10-11-backtest`, D161–D164). Read by `back
 | Key | Unit | Default | What it controls |
 |---|---|---|---|
 | `lead_blocks` | blocks | 60 | the state before is read this long before the first liquidation (12 minutes) |
-| `episodes.<name>` | object | `pt-reusd-2026-08-25`, `crash-2025-10-10` | `title`, `markets` (Blue market ids), `window` (first and last block to search for liquidations), `source`; optional `followup_to`, the last block in which a later liquidation explains an over-prediction (D197) |
+| `episodes.<name>` | object | `pt-reusd-2026-08-25`, `crash-2025-10-10` | `title`, `markets` (Blue market ids), `window` (first and last block to search for liquidations), `source`; optional `pendle_market` (D208: the Pendle pool the oracle's TWAP reads, rebuilt before the episode and at the first liquidation), optional `followup_to`, the last block in which a later liquidation explains an over-prediction (D197) |
 | `dust_debt` | loan units | 1,000 | a position left liquidatable that owes less is counted as dust: rarely worth a liquidator's gas (D197) |
 | `basis` | text | — | the method |
 
