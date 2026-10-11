@@ -1,6 +1,7 @@
 dist/
 node_modules/
 src/mocks/graph.json
+src/mocks/graphs.json
 src/mocks/report.json
 src/mocks/shock-trace.json
 src/mocks/vaults.json

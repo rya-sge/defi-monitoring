@@ -46,7 +46,10 @@ def notifier(tmp_path, session, level="warn"):
 
 
 def test_only_risk_is_posted(tmp_path):
-    write(tmp_path / "watch-0xvault.jsonl", [alert("info"), alert("warn", title="w"), alert("critical", title="c")])
+    write(
+        tmp_path / "watch-0xvault.jsonl",
+        [alert("info"), alert("warn", title="w", block=101), alert("critical", title="c", block=102)],
+    )
     s = Session()
     assert notifier(tmp_path, s).once() == 2
     assert [p["disable_notification"] for p in s.posts] == [True, False]  # sound for critical only
@@ -58,7 +61,7 @@ def test_standing_findings_grouped_and_sent_once(tmp_path):
     write(tmp_path / "watch-0xvault.jsonl", start)
     s = Session()
     assert notifier(tmp_path, s).once() == 1
-    assert "1 critical, 1 warn" in s.posts[0]["text"] and s.posts[0]["disable_notification"] is False
+    assert "Details: 2 alerts" in s.posts[0]["text"] and s.posts[0]["disable_notification"] is False
     # a watch restart prints them again a few blocks later: not resent
     write(tmp_path / "watch-0xvault.jsonl", [alert(tx=None, title="a", block=110)])
     assert notifier(tmp_path, Session()).once() == 0
@@ -69,14 +72,14 @@ def test_standing_findings_grouped_and_sent_once(tmp_path):
 
 def test_burst_collapses_to_digest(tmp_path):
     n = NT.N["burst_max"] + 5
-    write(tmp_path / "watch-0xvault.jsonl", [alert(title=f"t{i}", tx=f"0x{i:016x}") for i in range(n)])
+    write(tmp_path / "watch-0xvault.jsonl", [alert(title=f"t{i}", block=100 + i) for i in range(n)])
     s = Session()
     assert notifier(tmp_path, s).once() == NT.N["burst_max"]
-    assert "burst: 6 warn" in s.posts[-1]["text"]
+    assert "Details: 6 alerts" in s.posts[-1]["text"]
 
 
 def test_failed_send_keeps_offset(tmp_path):
-    write(tmp_path / "watch-0xvault.jsonl", [alert(title="one", tx="0x1"), alert(title="two", tx="0x2")])
+    write(tmp_path / "watch-0xvault.jsonl", [alert(title="one", tx="0x1"), alert(title="two", tx="0x2", block=101)])
     s = Session([Resp(), requests.ConnectionError()])
     assert notifier(tmp_path, s).once() == 1
     s2 = Session()
@@ -99,9 +102,11 @@ def test_partial_line_waits(tmp_path):
 
 
 def test_format_escapes_and_names(tmp_path):
-    text = NT.format_alert(alert(title="a < b & c", detail="<x>", depositor_impact=-12.5), "Vault")
-    assert "a &lt; b &amp; c" in text and "&lt;x&gt;" in text and "You: -12.50" in text
-    assert "etherscan.io/tx/0xabc" in text and len(NT.format_alert(alert(detail="x" * 5000), "V")) <= NT.MAX_LEN
+    text, buttons = NT.format_incident([alert(title="a < b & c", detail="<x> 12 USDC", depositor_impact=-12.5)], "V")
+    assert "a &lt; b &amp; c" in text and "&lt;x&gt;" in text and "Your share of the loss: 12 USDC" in text
+    long, _ = NT.format_incident([alert(detail="x" * 5000)], "V")
+    assert len(long) <= NT.MAX_LEN and long.endswith("</blockquote>")
+    assert NT._short("to 0x2222222222222222222222222222222222222222.") == "to 0x2222…2222."
     names = NT.target_names()
     assert NT.target_label("0xc207d3f66537d7f66456808379a0e560cf20da36", names) == "RockawayX Confidential RWA USDC"
     assert NT.target_label("user-0xdf81987465681d0515058fe0a47a3bd174012730", names) == "user 0xdf81…2730"
@@ -111,3 +116,38 @@ def test_headline_of_an_incident(tmp_path):
     p = tmp_path / "book-incident.json"
     p.write_text(json.dumps({"name": "Book", "headline": "PST −30%: the book loses 5,195,130 USD"}))
     assert "Scenario" in NT.headline(p) and "5,195,130" in NT.headline(p)
+
+
+def test_incident_cause_first_with_decision(monkeypatch):
+    upgrade = alert("critical", event="Admin.Upgraded", title="Feed of strUSD/USDC (LLTV 86.0%) was upgraded")
+    bad = alert("critical", tx=None, event="UnrealisedBadDebt", title="Bad debt", detail="1,902,392 USDC uncovered")
+    impact = alert(
+        "critical",
+        tx=None,
+        event="OracleImpact",
+        title="Oracle fell",
+        data={
+            "verdict": "EXIT",
+            "vault_loss": 1236933,
+            "loss_if_stay": 454103,
+            "loss_if_exit_first": 293378,
+            "can_leave_now": 2374262,
+        },
+    )
+    text, buttons = NT.format_incident([impact, bad, upgrade], "Tori")
+    head = text.split("<blockquote")[0]
+    assert head.startswith("🔴 <b>Tori</b> — The code behind a price") and "LLTV" not in head
+    assert "Decision: EXIT</b>. Withdraw the 2,374,262 USDC" in head and "from 454,103 to 293,378 USDC" in head
+    assert "The vault's loss: 1,236,933 USDC · yours 454,103 USDC" in head
+    assert text.index("code behind") < text.index("loans are no longer covered") < text.index("price drop")
+    assert buttons[0][0] == "What to do" and "#admin-surface" in buttons[0][1]
+    assert buttons[1] == ("Etherscan", "https://etherscan.io/tx/0xabc0000000000000")
+    monkeypatch.setattr(NT.S, "FORK", True)  # a fork's transactions are not on Etherscan
+    assert [b for b, _ in NT.format_incident([upgrade], "Tori")[1]] == ["What to do"]
+
+
+def test_rejected_html_falls_back_to_plain_text():
+    s = Session([Resp(400, {"ok": False, "description": "can't parse entities"}), Resp()])
+    assert NT.send(CREDS, "<b>a &amp; b</b>", True, s, [("What to do", "https://x")])
+    assert s.posts[1]["text"] == "a & b" and "parse_mode" not in s.posts[1]
+    assert s.posts[0]["reply_markup"]["inline_keyboard"][0][0]["url"] == "https://x"

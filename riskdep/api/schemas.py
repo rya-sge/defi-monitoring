@@ -212,6 +212,11 @@ class Report(BaseModel):
     decision: ReportDecision
     exit_quote: ExitQuote
     oracle_sensitivity: OracleSensitivity | None = None
+    discovery: dict[str, Any] | None = Field(
+        default=None,
+        description="The layers the borrower's recorded dependency graph adds: oracle inputs and who can change "
+        "them, sibling markets, the collateral's backing and grade, the protocols' share of DeFi (plan 2026-10-11-depth).",
+    )
 
 
 class AnalyzeRequest(BaseModel):

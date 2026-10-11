@@ -31,9 +31,10 @@ export function useBooks() {
 }
 
 /** Fixed detected event for the demo; the event feed will supply this request later. */
-export function useIncidentImpact(body: IncidentRequest) {
+export function useIncidentImpact(body: IncidentRequest, enabled = true) {
   return useQuery({
     queryKey: ['incident', body],
+    enabled,
     queryFn: ({ signal }) => api.incident(body, signal),
     staleTime: Infinity,
     retry: false,

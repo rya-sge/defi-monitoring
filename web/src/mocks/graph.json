@@ -1,6 +1,6 @@
 {
  "title": "Morpho dependency graph: 0xdf819874\u2026, 0xb03d620e\u2026, 0x6dc58a0f\u2026",
- "subtitle": "Ethereum mainnet, read at block 26,163,233 (2026-10-10 16:31 UTC). Positions found with the Morpho API; amounts, parameters, oracles and roles read on-chain.",
+ "subtitle": "Ethereum mainnet, read at block 26,166,713 (2026-10-11 04:10 UTC). Positions found with the Morpho API; amounts, parameters, oracles and roles read on-chain.",
  "nodes": [
   {
    "id": "user:0xdf81987465681d0515058fe0a47a3bd174012730",
@@ -20,7 +20,115 @@
     "market_id": "0x002278ea242ec722813b4fe3c8eeaa07dbc331c731cc0b4248a1bf0771f933ea",
     "lltv": "86.0%",
     "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
-    "source": "Morpho Blue idToMarketParams on-chain"
+    "source": "Morpho Blue idToMarketParams on-chain",
+    "oracle_class": "constant-price",
+    "oracle_tracks_bound": false,
+    "total_supply": 38044649.599455,
+    "total_borrow": 34393040.391319,
+    "loan_unit": "USDC",
+    "utilization": "90.4%",
+    "borrowers": 12,
+    "collateral_of_borrowers": 37805692.541938,
+    "collateral_unit": "PST",
+    "unrealised_bad_debt": 0.0,
+    "lltv_value": 0.86,
+    "free_liquidity": 3651609.208136,
+    "loan_usd": 1.0,
+    "_positions": [
+     [
+      2.276656,
+      0.9199
+     ],
+     [
+      17.036513,
+      13.272316
+     ],
+     [
+      4.3e-05,
+      3.3e-05
+     ],
+     [
+      17.797959,
+      11.826782
+     ],
+     [
+      4291390.704012,
+      3128234.312783
+     ],
+     [
+      12711839.532466,
+      10646867.800693
+     ],
+     [
+      1495333.674125,
+      1181887.77585
+     ],
+     [
+      10.218637,
+      1.8e-05
+     ],
+     [
+      20421860.197761,
+      16541649.981865
+     ],
+     [
+      1138330.276656,
+      612616.861506
+     ],
+     [
+      1401010.626198,
+      1100775.756823
+     ],
+     [
+      1575466.038847,
+      1180981.882745
+     ]
+    ],
+    "liquidation_curve": [
+     {
+      "oracle_fall": 0.02,
+      "liquidatable_debt": 0.0,
+      "positions": 0,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 0.0
+     },
+     {
+      "oracle_fall": 0.05,
+      "liquidatable_debt": 10646867.800693,
+      "positions": 1,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 11167114.867127
+     },
+     {
+      "oracle_fall": 0.1,
+      "liquidatable_debt": 29471194.587547,
+      "positions": 5,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 31651739.276436
+     },
+     {
+      "oracle_fall": 0.2,
+      "liquidatable_debt": 33780410.783108,
+      "positions": 8,
+      "bad_debt": 1857755.785753,
+      "collateral_liquidatable": 36805663.929878
+     },
+     {
+      "oracle_fall": 0.3,
+      "liquidatable_debt": 33780422.60989,
+      "positions": 9,
+      "bad_debt": 5684337.69975,
+      "collateral_liquidatable": 36805679.565055
+     },
+     {
+      "oracle_fall": 0.5,
+      "liquidatable_debt": 34393039.471396,
+      "positions": 10,
+      "bad_debt": 13779147.112688,
+      "collateral_liquidatable": 37805681.565055
+     }
+    ],
+    "state_source": "Morpho Blue market() and every borrower's position() on-chain, borrowers from the Morpho API"
    }
   },
   {
@@ -30,7 +138,10 @@
    "details": {
     "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
     "issuer": "Circle",
-    "source": "ERC-20 symbol() on-chain, issuer from registry.json"
+    "source": "ERC-20 symbol() on-chain, issuer from registry.json",
+    "pharos_id": "usdc-circle",
+    "pharos_grade": "A+ 89",
+    "pharos_as_of": "2026-10-11"
    }
   },
   {
@@ -49,8 +160,12 @@
    "details": {
     "address": "0xa5657b406fc4282039861c6fca64452aefec8ac0",
     "shape": "Morpho ChainlinkOracleV2",
-    "price_raw": "1138206000000000000000000000000000000",
-    "source": "price() and getters read on-chain"
+    "price_raw": "1138328000000000000000000000000000000",
+    "oracle_class": "constant-price",
+    "class_basis": "base side, none follows a market: PST-USDC Exchange Rate (Calculated): fell 0 times in 24 changes over 24 rounds, an accrual rate",
+    "constant_kind": "published",
+    "source": "price() and getters read on-chain; class from the base-side inputs (D82\u2013D84)",
+    "tracks_bound": false
    }
   },
   {
@@ -60,7 +175,13 @@
    "details": {
     "address": "0x4be50be32db1510240d542f77c5b36ca0d0965e6",
     "role_in_oracle": "BASE_FEED_1",
-    "source": "oracle getter, description() on-chain"
+    "oracle_class": "constant-price",
+    "class_basis": "PST-USDC Exchange Rate (Calculated): fell 0 times in 24 changes over 24 rounds, an accrual rate",
+    "constant_kind": "published",
+    "updated_at": 1791691355,
+    "freshness": "updated 5 min ago; usually every 1.0 h (25 rounds)",
+    "stale": false,
+    "source": "oracle getter, description() on-chain; freshness from its rounds (D155)"
    }
   },
   {
@@ -71,7 +192,9 @@
     "address": "0xc207d3f66537d7f66456808379a0e560cf20da36",
     "actor_type": "Vault V2 (capital provider)",
     "adapter": "0xedee08b242d4cd94127cec8a4c334cd2d0ca3f65",
-    "source": "market's top suppliers from the Morpho API; amounts on-chain"
+    "source": "market's top suppliers from the Morpho API; amounts on-chain",
+    "curator": "RockawayX",
+    "curator_image": "https://cdn.morpho.org/v2/assets/images/rkx.svg"
    }
   },
   {
@@ -82,7 +205,9 @@
     "address": "0x8ac91877b93330f52b2979a31a4879506021475c",
     "actor_type": "Vault V2 (capital provider)",
     "adapter": "0x30009fd0ec97cb7088812be8281795a4fd8b74e3",
-    "source": "market's top suppliers from the Morpho API; amounts on-chain"
+    "source": "market's top suppliers from the Morpho API; amounts on-chain",
+    "curator": "RockawayX",
+    "curator_image": "https://cdn.morpho.org/v2/assets/images/rkx.svg"
    }
   },
   {
@@ -93,7 +218,9 @@
     "address": "0xd95fe7adf5075fad9d6bf853e0f9fe53369e8d96",
     "actor_type": "Vault V2 (capital provider)",
     "adapter": "0x2972f23f56c31707eac4263765998fde9f51ab43",
-    "source": "market's top suppliers from the Morpho API; amounts on-chain"
+    "source": "market's top suppliers from the Morpho API; amounts on-chain",
+    "curator": "Galaxy Curation",
+    "curator_image": "https://cdn.morpho.org/v2/assets/images/galaxy.png"
    }
   },
   {
@@ -104,7 +231,375 @@
     "market_id": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
     "lltv": "91.5%",
     "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
-    "source": "Morpho Blue idToMarketParams on-chain"
+    "source": "Morpho Blue idToMarketParams on-chain",
+    "oracle_class": "price-tracking",
+    "oracle_tracks_bound": true,
+    "total_supply": 11344132.230931,
+    "total_borrow": 8641369.270495,
+    "loan_unit": "USDT",
+    "utilization": "76.2%",
+    "borrowers": 77,
+    "collateral_of_borrowers": 10386801.904236,
+    "collateral_unit": "PT-reUSD-10DEC2026",
+    "unrealised_bad_debt": 0.0,
+    "lltv_value": 0.915,
+    "free_liquidity": 2702762.960436,
+    "loan_usd": 1.0,
+    "_positions": [
+     [
+      36729.303327,
+      31653.01752
+     ],
+     [
+      4851.303499,
+      4252.916457
+     ],
+     [
+      221993.161708,
+      192523.745798
+     ],
+     [
+      98875.88409,
+      79011.036129
+     ],
+     [
+      473240.254535,
+      414932.823602
+     ],
+     [
+      46121.247277,
+      35991.598401
+     ],
+     [
+      183385.696436,
+      163262.319886
+     ],
+     [
+      18332.25883,
+      9122.724215
+     ],
+     [
+      1160.892522,
+      864.57689
+     ],
+     [
+      11777.168713,
+      9804.436713
+     ],
+     [
+      27.357544,
+      21.867173
+     ],
+     [
+      79401.534945,
+      59260.075658
+     ],
+     [
+      324.202246,
+      226.467434
+     ],
+     [
+      6986.492659,
+      5984.673916
+     ],
+     [
+      2474.625727,
+      2110.384559
+     ],
+     [
+      355.978315,
+      307.363842
+     ],
+     [
+      23493.485244,
+      20530.137669
+     ],
+     [
+      137461.70349,
+      102232.518799
+     ],
+     [
+      2030.076849,
+      1499.673701
+     ],
+     [
+      1301.556582,
+      1103.273286
+     ],
+     [
+      148.153711,
+      94.882104
+     ],
+     [
+      1411.959362,
+      1162.11275
+     ],
+     [
+      15207.730057,
+      11913.348374
+     ],
+     [
+      127127.552059,
+      105785.14566
+     ],
+     [
+      151968.034093,
+      127392.470297
+     ],
+     [
+      0.169687,
+      0.055836
+     ],
+     [
+      360786.839928,
+      260550.524994
+     ],
+     [
+      100212.034495,
+      87100.174556
+     ],
+     [
+      56617.583217,
+      46597.278703
+     ],
+     [
+      3413.520321,
+      2700.918049
+     ],
+     [
+      2607.354488,
+      2208.096333
+     ],
+     [
+      209575.518258,
+      181991.8881
+     ],
+     [
+      46678.062529,
+      40900.102051
+     ],
+     [
+      831682.244302,
+      733122.801966
+     ],
+     [
+      339989.554984,
+      270085.718423
+     ],
+     [
+      2901.756886,
+      2393.318242
+     ],
+     [
+      98196.421822,
+      83661.795942
+     ],
+     [
+      114864.728591,
+      97774.392903
+     ],
+     [
+      1237.183747,
+      738.818122
+     ],
+     [
+      8998.675951,
+      5446.21582
+     ],
+     [
+      49447.746053,
+      39488.435713
+     ],
+     [
+      87052.951073,
+      76992.285897
+     ],
+     [
+      2100.611252,
+      1401.275436
+     ],
+     [
+      91848.922578,
+      79461.637628
+     ],
+     [
+      232670.331346,
+      192961.574558
+     ],
+     [
+      116017.848914,
+      98644.827302
+     ],
+     [
+      14748.249496,
+      12275.024689
+     ],
+     [
+      6304.625227,
+      5507.017344
+     ],
+     [
+      668919.028446,
+      563600.976824
+     ],
+     [
+      28266.809982,
+      23522.675443
+     ],
+     [
+      59930.091363,
+      49857.656762
+     ],
+     [
+      3308.595209,
+      2814.786197
+     ],
+     [
+      334285.157268,
+      295141.048877
+     ],
+     [
+      197926.863759,
+      173182.177242
+     ],
+     [
+      15064.607647,
+      12093.516413
+     ],
+     [
+      29911.418855,
+      19918.116388
+     ],
+     [
+      3665.057475,
+      3110.710254
+     ],
+     [
+      352247.93545,
+      311725.419684
+     ],
+     [
+      262651.808027,
+      181203.347522
+     ],
+     [
+      33014.097551,
+      28027.957055
+     ],
+     [
+      15828.795731,
+      13829.87895
+     ],
+     [
+      0.573772,
+      0.384987
+     ],
+     [
+      9095.425431,
+      6938.201
+     ],
+     [
+      4.099052,
+      0.933507
+     ],
+     [
+      2996.867346,
+      1992.11554
+     ],
+     [
+      1388264.827968,
+      1204207.90096
+     ],
+     [
+      1287840.499807,
+      1119056.083164
+     ],
+     [
+      14388.252242,
+      12311.615196
+     ],
+     [
+      181700.413907,
+      156574.126391
+     ],
+     [
+      53127.031347,
+      45171.812384
+     ],
+     [
+      254171.063127,
+      215848.539337
+     ],
+     [
+      95138.107427,
+      80184.910359
+     ],
+     [
+      85374.647605,
+      73722.362218
+     ],
+     [
+      58912.158638,
+      51160.211361
+     ],
+     [
+      645.389515,
+      535.418233
+     ],
+     [
+      80417.748757,
+      70454.784039
+     ],
+     [
+      257244.103799,
+      222133.834729
+     ]
+    ],
+    "liquidation_curve": [
+     {
+      "oracle_fall": 0.02,
+      "liquidatable_debt": 0.0,
+      "positions": 0,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 0.0
+     },
+     {
+      "oracle_fall": 0.05,
+      "liquidatable_debt": 2323833.713664,
+      "positions": 13,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 2686095.89405
+     },
+     {
+      "oracle_fall": 0.1,
+      "liquidatable_debt": 7490812.532375,
+      "positions": 49,
+      "bad_debt": 11504.899181,
+      "collateral_liquidatable": 8815493.310025
+     },
+     {
+      "oracle_fall": 0.2,
+      "liquidatable_debt": 8160673.408551,
+      "positions": 64,
+      "bad_debt": 753756.265085,
+      "collateral_liquidatable": 9686614.155259
+     },
+     {
+      "oracle_fall": 0.3,
+      "liquidatable_debt": 8625965.640852,
+      "positions": 71,
+      "bad_debt": 1689232.662688,
+      "collateral_liquidatable": 10357551.024644
+     },
+     {
+      "oracle_fall": 0.5,
+      "liquidatable_debt": 8641368.281113,
+      "positions": 75,
+      "bad_debt": 3672159.994185,
+      "collateral_liquidatable": 10386797.556672
+     }
+    ],
+    "state_source": "Morpho Blue market() and every borrower's position() on-chain, borrowers from the Morpho API"
    }
   },
   {
@@ -114,7 +609,10 @@
    "details": {
     "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
     "issuer": "Tether",
-    "source": "ERC-20 symbol() on-chain, issuer from registry.json"
+    "source": "ERC-20 symbol() on-chain, issuer from registry.json",
+    "pharos_id": "usdt-tether",
+    "pharos_grade": "B- 69",
+    "pharos_as_of": "2026-10-11"
    }
   },
   {
@@ -123,7 +621,46 @@
    "label": "PT-reUSD-10DEC2026",
    "details": {
     "address": "0xecfafdc7741323a945a163ed068b5a3c43483957",
-    "source": "ERC-20 symbol() on-chain"
+    "source": "ERC-20 symbol() on-chain",
+    "impact_curve": [
+     [
+      621000.0,
+      1.0
+     ],
+     [
+      1862000.0,
+      0.9996787493397893
+     ],
+     [
+      3725000.0,
+      0.9984571382763533
+     ],
+     [
+      6208000.0,
+      0.9956897096820015
+     ],
+     [
+      9311000.0,
+      0.9942099498060429
+     ],
+     [
+      12415000.0,
+      0.9941992866654833
+     ],
+     [
+      18623000.0,
+      0.9941977248341511
+     ],
+     [
+      31038000.0,
+      0.9932182176347364
+     ],
+     [
+      62075000.0,
+      0.9915376972356074
+     ]
+    ],
+    "impact_source": "Pendle swap quotes: the PT sold into its pool for the underlying, no aggregator"
    }
   },
   {
@@ -133,8 +670,11 @@
    "details": {
     "address": "0x217d6ddcdb95112c51657f6270e8c079cfdb51f0",
     "shape": "Morpho ChainlinkOracleV2",
-    "price_raw": "981752072903977615000000000000000000",
-    "source": "price() and getters read on-chain"
+    "price_raw": "981869310644181631000000000000000000",
+    "oracle_class": "price-tracking",
+    "class_basis": "base side: Ojo PT Feed Pendle Chainlink-compatible Oracle combines 2 input(s): Pendle Chainlink-compatible Oracle: twapDuration() = 900, Pendle PendleChainlinkOracle: a TWAP of the Pendle AMM (900 s on PT-reUSD), so a pool move reaches the price",
+    "source": "price() and getters read on-chain; class from the base-side inputs (D82\u2013D84)",
+    "tracks_bound": true
    }
   },
   {
@@ -144,7 +684,13 @@
    "details": {
     "address": "0x77ee147391eac11c92817e771860ff4aad265d89",
     "role_in_oracle": "BASE_FEED_1",
-    "source": "oracle getter, description() on-chain"
+    "oracle_class": "price-tracking",
+    "class_basis": "Ojo PT Feed Pendle Chainlink-compatible Oracle combines 2 input(s): Pendle Chainlink-compatible Oracle: twapDuration() = 900, Pendle PendleChainlinkOracle: a TWAP of the Pendle AMM (900 s on PT-reUSD), so a pool move reaches the price",
+    "tracks_market": "0x13285bcbc27f92b47b4edb99d744c07b48c977c0",
+    "updated_at": 1791691631,
+    "freshness": "updated 1 min ago; no round history to learn its rhythm",
+    "stale": false,
+    "source": "oracle getter, description() on-chain; freshness from its rounds (D155)"
    }
   },
   {
@@ -154,6 +700,9 @@
    "details": {
     "address": "0x13285bcbc27f92b47b4edb99d744c07b48c977c0",
     "expiry": "2026-12-10",
+    "liquidity_usd": 12415007.330554405,
+    "implied_apy": 0.11809562821022612,
+    "days_to_maturity": 59.83,
     "source": "Pendle API markets"
    }
   },
@@ -163,7 +712,38 @@
    "label": "reUSD",
    "details": {
     "address": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
-    "source": "ERC-20 symbol() on-chain"
+    "source": "ERC-20 symbol() on-chain",
+    "impact_curve": [
+     [
+      621166.8977630001,
+      1.0
+     ],
+     [
+      1862101.6453175214,
+      0.9998003957145939
+     ],
+     [
+      3722727.2147148573,
+      0.9994826361922741
+     ],
+     [
+      6195689.209797977,
+      0.9990768427745117
+     ],
+     [
+      9281551.806728303,
+      0.9985672727328415
+     ],
+     [
+      12368375.773525085,
+      0.9978528021564963
+     ]
+    ],
+    "capacity_usd": 12368375.773525085,
+    "impact_source": "Pendle swap quotes: the underlying sold for USDT through the aggregator",
+    "pharos_id": "reusd-re-protocol",
+    "pharos_grade": "F 38",
+    "pharos_as_of": "2026-10-11"
    }
   },
   {
@@ -173,7 +753,9 @@
    "details": {
     "address": "0xa0804346780b4c2e3be118ac957d1db82f9d7484",
     "actor_type": "Vault V1 / MetaMorpho (capital provider)",
-    "source": "market's top suppliers from the Morpho API; amounts on-chain"
+    "source": "market's top suppliers from the Morpho API; amounts on-chain",
+    "curator": "Steakhouse Financial",
+    "curator_image": "https://cdn.morpho.org/v2/assets/images/steakhouse.svg"
    }
   },
   {
@@ -184,7 +766,9 @@
     "address": "0xb48c056c5608ba2ee4cd94af2bf4b1f25295bd7e",
     "actor_type": "Vault V2 (capital provider)",
     "adapter": "0x31313494de579734fde0b9b6ce7006a92b093c3c",
-    "source": "market's top suppliers from the Morpho API; amounts on-chain"
+    "source": "market's top suppliers from the Morpho API; amounts on-chain",
+    "curator": "Flowdesk",
+    "curator_image": "https://cdn.morpho.org/v2/assets/images/flowdesk.svg"
    }
   },
   {
@@ -195,7 +779,9 @@
     "address": "0x500ae64100d7dbdb640531085c2f5d40cdc8930d",
     "actor_type": "Vault V2 (capital provider)",
     "adapter": "0xbc27ac3864ebc1d469a23521c224a14182f381cb",
-    "source": "market's top suppliers from the Morpho API; amounts on-chain"
+    "source": "market's top suppliers from the Morpho API; amounts on-chain",
+    "curator": "Armitage by Wintermute",
+    "curator_image": "https://cdn.morpho.org/v2/assets/images/armitage.svg"
    }
   },
   {
@@ -216,7 +802,307 @@
     "market_id": "0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b",
     "lltv": "96.5%",
     "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
-    "source": "Morpho Blue idToMarketParams on-chain"
+    "source": "Morpho Blue idToMarketParams on-chain",
+    "oracle_class": "price-tracking",
+    "oracle_tracks_bound": false,
+    "total_supply": 13579475.713276,
+    "total_borrow": 10998385.555181,
+    "loan_unit": "USDT",
+    "utilization": "81.0%",
+    "borrowers": 60,
+    "collateral_of_borrowers": 10912241.146869732,
+    "collateral_unit": "sUSDS",
+    "unrealised_bad_debt": 0.0,
+    "lltv_value": 0.965,
+    "free_liquidity": 2581090.158095,
+    "loan_usd": 1.0,
+    "_positions": [
+     [
+      6793.307043,
+      6244.514944
+     ],
+     [
+      19.213088,
+      17.540629
+     ],
+     [
+      5.564445,
+      4.02817
+     ],
+     [
+      49136.418733,
+      42667.809275
+     ],
+     [
+      380.615836,
+      348.047832
+     ],
+     [
+      2.82673,
+      2.580994
+     ],
+     [
+      0.171497,
+      0.021592
+     ],
+     [
+      0.138595,
+      0.126908
+     ],
+     [
+      98.823074,
+      92.915269
+     ],
+     [
+      10.105033,
+      9.265006
+     ],
+     [
+      48524.564702,
+      40392.299553
+     ],
+     [
+      0.055644,
+      0.002632
+     ],
+     [
+      25.476339,
+      23.887239
+     ],
+     [
+      834672.754996,
+      765173.185927
+     ],
+     [
+      36198.010573,
+      34626.726724
+     ],
+     [
+      10.086477,
+      9.079045
+     ],
+     [
+      1.531556,
+      0.837653
+     ],
+     [
+      0.008635,
+      0.007855
+     ],
+     [
+      191606.146597,
+      184308.602762
+     ],
+     [
+      28.442924,
+      24.939745
+     ],
+     [
+      10.193454,
+      8.655397
+     ],
+     [
+      2e-06,
+      0.0
+     ],
+     [
+      719034.115129,
+      686499.936527
+     ],
+     [
+      0.131199,
+      0.120204
+     ],
+     [
+      13.911114,
+      12.730546
+     ],
+     [
+      3.830783,
+      0.000416
+     ],
+     [
+      1.014729,
+      0.506687
+     ],
+     [
+      18.704069,
+      15.295374
+     ],
+     [
+      0.222577,
+      0.202063
+     ],
+     [
+      70764.998859,
+      68033.805512
+     ],
+     [
+      2.225778,
+      2.038067
+     ],
+     [
+      289949.103876,
+      261180.946956
+     ],
+     [
+      10.929102,
+      9.85431
+     ],
+     [
+      1316.658397,
+      1214.592732
+     ],
+     [
+      0.222577,
+      0.202064
+     ],
+     [
+      102.108828,
+      93.48661
+     ],
+     [
+      781783.820084,
+      740703.13953
+     ],
+     [
+      6312311.260346,
+      5677428.958299
+     ],
+     [
+      0.133518,
+      0.001633
+     ],
+     [
+      20818.670588,
+      14598.877008
+     ],
+     [
+      6.465406,
+      6.077703
+     ],
+     [
+      96813.629144,
+      70916.3365
+     ],
+     [
+      70.26215,
+      56.564405
+     ],
+     [
+      0.370706,
+      0.003965
+     ],
+     [
+      5581.77526,
+      5363.555089
+     ],
+     [
+      26770.190238,
+      14306.047061
+     ],
+     [
+      57525.200397,
+      53721.505894
+     ],
+     [
+      3.863983,
+      0.000499
+     ],
+     [
+      2.560312,
+      0.486697
+     ],
+     [
+      1299629.860237,
+      1170233.218229
+     ],
+     [
+      0.000202,
+      0.00019
+     ],
+     [
+      2.225778,
+      2.029083
+     ],
+     [
+      1293969.670971,
+      1159957.353717
+     ],
+     [
+      2.225778,
+      0.0
+     ],
+     [
+      77.71678,
+      71.004281
+     ],
+     [
+      0.325483,
+      0.297245
+     ],
+     [
+      0.111288,
+      0.001014
+     ],
+     [
+      0.196664,
+      5.8e-05
+     ],
+     [
+      0.035824,
+      0.032797
+     ],
+     [
+      1.386302,
+      1.271036
+     ]
+    ],
+    "liquidation_curve": [
+     {
+      "oracle_fall": 0.02,
+      "liquidatable_debt": 1719535.766144,
+      "positions": 6,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 1621876.6207439075
+     },
+     {
+      "oracle_fall": 0.05,
+      "liquidatable_debt": 1780849.796157,
+      "positions": 15,
+      "bad_debt": 22819.926584,
+      "collateral_liquidatable": 1680981.7195712763
+     },
+     {
+      "oracle_fall": 0.1,
+      "liquidatable_debt": 10815417.779563,
+      "positions": 38,
+      "bad_debt": 216154.117468,
+      "collateral_liquidatable": 10694623.545272458
+     },
+     {
+      "oracle_fall": 0.2,
+      "liquidatable_debt": 10898558.403567,
+      "positions": 43,
+      "bad_debt": 1399603.427889,
+      "collateral_liquidatable": 10782467.105066758
+     },
+     {
+      "oracle_fall": 0.3,
+      "liquidatable_debt": 10984077.645245,
+      "positions": 46,
+      "bad_debt": 2591010.17491,
+      "collateral_liquidatable": 10888172.0317095
+     },
+     {
+      "oracle_fall": 0.5,
+      "liquidatable_debt": 10998385.036646,
+      "positions": 49,
+      "bad_debt": 4990091.032166,
+      "collateral_liquidatable": 10912228.998147232
+     }
+    ],
+    "state_source": "Morpho Blue market() and every borrower's position() on-chain, borrowers from the Morpho API"
    }
   },
   {
@@ -227,7 +1113,10 @@
     "address": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
     "issuer": "Sky",
     "source": "oracle getter, symbol() on-chain",
-    "role_in_oracle": "BASE_VAULT"
+    "role_in_oracle": "BASE_VAULT",
+    "pharos_id": "susds-sky",
+    "pharos_grade": "C+ 60",
+    "pharos_as_of": "2026-10-11"
    }
   },
   {
@@ -237,8 +1126,12 @@
    "details": {
     "address": "0x0c426d174fc88b7a25d59945ab2f7274bf7b4c79",
     "shape": "Morpho ChainlinkOracleV2",
-    "price_raw": "1112996127856490475195568",
-    "source": "price() and getters read on-chain"
+    "price_raw": "1112889133131467567548073",
+    "oracle_class": "price-tracking",
+    "class_basis": "base side: DAI / USD: fell 14 times in 24 changes over 24 rounds, a market price",
+    "constant_kind": "exchange rate",
+    "source": "price() and getters read on-chain; class from the base-side inputs (D82\u2013D84)",
+    "tracks_bound": false
    }
   },
   {
@@ -248,7 +1141,12 @@
    "details": {
     "address": "0xaed0c38402a5d19df6e4c03f4e2dced6e29c1ee9",
     "role_in_oracle": "BASE_FEED_1",
-    "source": "oracle getter, description() on-chain"
+    "oracle_class": "price-tracking",
+    "class_basis": "DAI / USD: fell 14 times in 24 changes over 24 rounds, a market price",
+    "updated_at": 1791688607,
+    "freshness": "updated 52 min ago; usually every 1.0 h (25 rounds)",
+    "stale": false,
+    "source": "oracle getter, description() on-chain; freshness from its rounds (D155)"
    }
   },
   {
@@ -258,7 +1156,7 @@
    "details": {
     "address": "0x3e7d1eab13ad0104d2750b8863b489d65364e32d",
     "role_in_oracle": "QUOTE_FEED_1",
-    "source": "oracle getter, description() on-chain"
+    "source": "oracle getter, description() on-chain; freshness from its rounds (D155)"
    }
   },
   {
@@ -269,7 +1167,9 @@
     "address": "0xb0c424116172b55cbb6dd3136f5989f7959e5b91",
     "actor_type": "Vault V2 (capital provider)",
     "adapter": "0xef4cb7e87f212f128f0b24cf35861e52b3c78a6a",
-    "source": "market's top suppliers from the Morpho API; amounts on-chain"
+    "source": "market's top suppliers from the Morpho API; amounts on-chain",
+    "curator": "SparkDAO",
+    "curator_image": "https://cdn.morpho.org/v2/assets/images/spark.svg"
    }
   },
   {
@@ -279,7 +1179,9 @@
    "details": {
     "address": "0xbeef047a543e45807105e51a8bbefcc5950fcfba",
     "actor_type": "Vault V1 / MetaMorpho (capital provider)",
-    "source": "market's top suppliers from the Morpho API; amounts on-chain"
+    "source": "market's top suppliers from the Morpho API; amounts on-chain",
+    "curator": "Steakhouse Financial",
+    "curator_image": "https://cdn.morpho.org/v2/assets/images/steakhouse.svg"
    }
   },
   {
@@ -290,7 +1192,9 @@
     "address": "0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9",
     "actor_type": "Vault V2 (capital provider)",
     "adapter": "0x1c87feac33e2ad0a81a250fa63db4b1c2687bb05",
-    "source": "market's top suppliers from the Morpho API; amounts on-chain"
+    "source": "market's top suppliers from the Morpho API; amounts on-chain",
+    "curator": "Steakhouse Financial",
+    "curator_image": "https://cdn.morpho.org/v2/assets/images/steakhouse.svg"
    }
   },
   {
@@ -301,7 +1205,119 @@
     "market_id": "0x5613b170ded221c588b6e9637b910f49e5508680ceede207f44aa72e5c46cb05",
     "lltv": "91.5%",
     "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
-    "source": "Morpho Blue idToMarketParams on-chain"
+    "source": "Morpho Blue idToMarketParams on-chain",
+    "oracle_class": "not classified",
+    "oracle_tracks_bound": false,
+    "total_supply": 7757170.494619,
+    "total_borrow": 6992654.071526,
+    "loan_unit": "USDC",
+    "utilization": "90.1%",
+    "borrowers": 13,
+    "collateral_of_borrowers": 7982359.346812969,
+    "collateral_unit": "PT-sUSDE-26NOV2026",
+    "unrealised_bad_debt": 0.0,
+    "lltv_value": 0.915,
+    "free_liquidity": 764516.423093,
+    "loan_usd": 1.0,
+    "_positions": [
+     [
+      409918.790372,
+      357147.515245
+     ],
+     [
+      18657.321093,
+      16114.869928
+     ],
+     [
+      15778.371206,
+      14082.580762
+     ],
+     [
+      3247731.522142,
+      2941926.701331
+     ],
+     [
+      871.000183,
+      579.164443
+     ],
+     [
+      12697.5383,
+      10327.97286
+     ],
+     [
+      15488.976251,
+      12023.401897
+     ],
+     [
+      16077.932941,
+      8019.430054
+     ],
+     [
+      0.992466,
+      0.271347
+     ],
+     [
+      19477.540979,
+      16495.364037
+     ],
+     [
+      120416.855389,
+      100407.713151
+     ],
+     [
+      3931647.749944,
+      3414343.109054
+     ],
+     [
+      113460.237626,
+      101185.97741
+     ]
+    ],
+    "liquidation_curve": [
+     {
+      "oracle_fall": 0.02,
+      "liquidatable_debt": 2941926.701331,
+      "positions": 1,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 3272383.785063586
+     },
+     {
+      "oracle_fall": 0.05,
+      "liquidatable_debt": 3414342.774748,
+      "positions": 4,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 3815633.717740093
+     },
+     {
+      "oracle_fall": 0.1,
+      "liquidatable_debt": 6961703.830918,
+      "positions": 8,
+      "bad_debt": 95423.606134,
+      "collateral_liquidatable": 7936880.293561557
+     },
+     {
+      "oracle_fall": 0.2,
+      "liquidatable_debt": 6984055.205675,
+      "positions": 10,
+      "bad_debt": 821154.695052,
+      "collateral_liquidatable": 7965280.7609487865
+     },
+     {
+      "oracle_fall": 0.3,
+      "liquidatable_debt": 6984634.370118,
+      "positions": 11,
+      "bad_debt": 1591471.930392,
+      "collateral_liquidatable": 7966158.37255472
+     },
+     {
+      "oracle_fall": 0.5,
+      "liquidatable_debt": 6992653.800172,
+      "positions": 12,
+      "bad_debt": 3132550.235878,
+      "collateral_liquidatable": 7982358.346812969
+     }
+    ],
+    "state_source": "Morpho Blue market() and every borrower's position() on-chain, borrowers from the Morpho API"
    }
   },
   {
@@ -310,7 +1326,35 @@
    "label": "PT-sUSDE-26NOV2026",
    "details": {
     "address": "0xb195b618ea52b77cb2a58846f452f59f8dfa9390",
-    "source": "ERC-20 symbol() on-chain"
+    "source": "ERC-20 symbol() on-chain",
+    "impact_curve": [
+     [
+      191000.0,
+      1.0
+     ],
+     [
+      573000.0,
+      0.9999056469762253
+     ],
+     [
+      1146000.0,
+      0.9996075875114785
+     ],
+     [
+      1910000.0,
+      0.9993618030936379
+     ],
+     [
+      2865000.0,
+      0.9976758966751383
+     ],
+     [
+      3820000.0,
+      0.9929649862528442
+     ]
+    ],
+    "capacity_usd": 3820000.0,
+    "impact_source": "Pendle swap quotes: the PT sold into its pool for the underlying, no aggregator"
    }
   },
   {
@@ -321,8 +1365,11 @@
     "address": "0xf8b29e7e9c00ce531434775f7923cc9fbca01b08",
     "shape": "custom (no ChainlinkOracleV2 getters)",
     "implementation": "0x9b4655239e91dc9e1f7599bb88fba41b4542de5b",
-    "price_raw": "992386938736681888000000",
-    "source": "price() and getters read on-chain"
+    "price_raw": "992466573439878235000000",
+    "oracle_class": "not classified",
+    "class_basis": "base side: MetaOracleDeviationTimelock: no round history, no known structure or name",
+    "source": "price() and getters read on-chain; class from the base-side inputs (D82\u2013D84)",
+    "tracks_bound": false
    }
   },
   {
@@ -332,6 +1379,9 @@
    "details": {
     "address": "0x47ad2cd1dd15739a7a035b9d3b7828d916fef77e",
     "expiry": "2026-11-26",
+    "liquidity_usd": 3820449.38228203,
+    "implied_apy": 0.05011040183341953,
+    "days_to_maturity": 45.83,
     "source": "Pendle API markets"
    }
   },
@@ -342,7 +1392,38 @@
    "details": {
     "address": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
     "issuer": "Ethena",
-    "source": "ERC-20 symbol() on-chain, issuer from registry.json"
+    "source": "ERC-20 symbol() on-chain, issuer from registry.json",
+    "impact_curve": [
+     [
+      191119.970408,
+      1.0
+     ],
+     [
+      573323.8457297765,
+      0.9998584896248605
+     ],
+     [
+      1146458.7633641947,
+      0.9996607880440777
+     ],
+     [
+      1910450.756300761,
+      0.9992654570797146
+     ],
+     [
+      2863829.6955473972,
+      0.9979025585878617
+     ],
+     [
+      3812706.889491516,
+      0.990447996291865
+     ]
+    ],
+    "capacity_usd": 3812706.889491516,
+    "impact_source": "Pendle swap quotes: the underlying sold for USDC through the aggregator",
+    "pharos_id": "susde-ethena",
+    "pharos_grade": "C 55",
+    "pharos_as_of": "2026-10-11"
    }
   },
   {
@@ -385,7 +1466,9 @@
     "address": "0x55c1b6e461a6334b567baf0feb5d728715446f05",
     "actor_type": "Vault V2 (capital provider)",
     "adapter": "0xa2f362079dbc570a6df5bd04ad91002d17c0db9a",
-    "source": "market's top suppliers from the Morpho API; amounts on-chain"
+    "source": "market's top suppliers from the Morpho API; amounts on-chain",
+    "curator": "Armitage by Wintermute",
+    "curator_image": "https://cdn.morpho.org/v2/assets/images/armitage.svg"
    }
   },
   {
@@ -396,7 +1479,127 @@
     "market_id": "0xae992849c5f544a32dfdfcc74c0695b73b8732f449727827af6ce3768e968382",
     "lltv": "91.5%",
     "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
-    "source": "Morpho Blue idToMarketParams on-chain"
+    "source": "Morpho Blue idToMarketParams on-chain",
+    "oracle_class": "constant-price",
+    "oracle_tracks_bound": false,
+    "total_supply": 1348625.961051,
+    "total_borrow": 1006561.565381,
+    "loan_unit": "USDC",
+    "utilization": "74.6%",
+    "borrowers": 15,
+    "collateral_of_borrowers": 1239375.123257785,
+    "collateral_unit": "PT-fxSAVE-29OCT2026",
+    "unrealised_bad_debt": 0.0,
+    "lltv_value": 0.915,
+    "free_liquidity": 342064.39567,
+    "loan_usd": 1.0,
+    "_positions": [
+     [
+      11077.752492,
+      8284.247528
+     ],
+     [
+      9.874958,
+      5.002682
+     ],
+     [
+      83920.312819,
+      59510.374932
+     ],
+     [
+      1.985346,
+      0.903637
+     ],
+     [
+      7734.308985,
+      6501.087284
+     ],
+     [
+      74751.923533,
+      61742.51354
+     ],
+     [
+      17353.114112,
+      10529.26876
+     ],
+     [
+      49372.730373,
+      40606.672898
+     ],
+     [
+      1.549217,
+      0.010343
+     ],
+     [
+      1581.943259,
+      1401.098977
+     ],
+     [
+      6220.660635,
+      5294.177816
+     ],
+     [
+      23081.890036,
+      18409.5104
+     ],
+     [
+      216184.148022,
+      184586.099614
+     ],
+     [
+      728871.146679,
+      601675.72692
+     ],
+     [
+      10131.231891,
+      8014.870042
+     ]
+    ],
+    "liquidation_curve": [
+     {
+      "oracle_fall": 0.02,
+      "liquidatable_debt": 0.0,
+      "positions": 0,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 0.0
+     },
+     {
+      "oracle_fall": 0.05,
+      "liquidatable_debt": 1401.098977,
+      "positions": 1,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 1593.6192574153554
+     },
+     {
+      "oracle_fall": 0.1,
+      "liquidatable_debt": 861200.704151,
+      "positions": 6,
+      "bad_debt": 13.655642,
+      "collateral_liquidatable": 1042985.7929463221
+     },
+     {
+      "oracle_fall": 0.2,
+      "liquidatable_debt": 936516.005019,
+      "positions": 10,
+      "bad_debt": 56693.542427,
+      "collateral_liquidatable": 1137340.7095203507
+     },
+     {
+      "oracle_fall": 0.3,
+      "liquidatable_debt": 996026.379951,
+      "positions": 11,
+      "bad_debt": 168627.511517,
+      "collateral_liquidatable": 1221880.4208877734
+     },
+     {
+      "oracle_fall": 0.5,
+      "liquidatable_debt": 1006560.651393,
+      "positions": 13,
+      "bad_debt": 407101.343234,
+      "collateral_liquidatable": 1239371.5626055298
+     }
+    ],
+    "state_source": "Morpho Blue market() and every borrower's position() on-chain, borrowers from the Morpho API"
    }
   },
   {
@@ -405,7 +1608,39 @@
    "label": "PT-fxSAVE-29OCT2026",
    "details": {
     "address": "0x079c3469143804af5d0d645a878c371dbe8d038e",
-    "source": "ERC-20 symbol() on-chain"
+    "source": "ERC-20 symbol() on-chain",
+    "impact_curve": [
+     [
+      72000.0,
+      1.0
+     ],
+     [
+      217000.0,
+      0.9999772995516503
+     ],
+     [
+      435000.0,
+      0.99997714817867
+     ],
+     [
+      724000.0,
+      0.9999749512256518
+     ],
+     [
+      1087000.0,
+      0.9999721881639757
+     ],
+     [
+      1449000.0,
+      0.9999701653503873
+     ],
+     [
+      2173000.0,
+      0.9986223622746853
+     ]
+    ],
+    "capacity_usd": 2173000.0,
+    "impact_source": "Pendle swap quotes: the PT sold into its pool for the underlying, no aggregator"
    }
   },
   {
@@ -415,8 +1650,12 @@
    "details": {
     "address": "0x5911530e5f62fff0a73e91ccd797d717e6d49fa9",
     "shape": "Morpho ChainlinkOracleV2",
-    "price_raw": "992474196156773212000000",
-    "source": "price() and getters read on-chain"
+    "price_raw": "992673282914764080000000",
+    "oracle_class": "constant-price",
+    "class_basis": "base side, none follows a market: 0x9105\u2026cd4d: baseDiscountPerYear() = 150000000000000000, Pendle linear-discount oracle: a deterministic discount to maturity, no market input",
+    "constant_kind": "linear discount",
+    "source": "price() and getters read on-chain; class from the base-side inputs (D82\u2013D84)",
+    "tracks_bound": false
    }
   },
   {
@@ -426,7 +1665,10 @@
    "details": {
     "address": "0x91058f5f2250d0a55d01ec9f4d77a98008fecd4d",
     "role_in_oracle": "BASE_FEED_1",
-    "source": "oracle getter, description() on-chain"
+    "oracle_class": "constant-price",
+    "class_basis": "0x9105\u2026cd4d: baseDiscountPerYear() = 150000000000000000, Pendle linear-discount oracle: a deterministic discount to maturity, no market input",
+    "constant_kind": "linear discount",
+    "source": "oracle getter, description() on-chain; freshness from its rounds (D155)"
    }
   },
   {
@@ -436,6 +1678,9 @@
    "details": {
     "address": "0x8308e53f584a7e5f0c581059d9ba971c0bec9454",
     "expiry": "2026-10-29",
+    "liquidity_usd": 1448884.9586049763,
+    "implied_apy": 0.08469572618811183,
+    "days_to_maturity": 17.83,
     "source": "Pendle API markets"
    }
   },
@@ -445,7 +1690,42 @@
    "label": "fxSAVE",
    "details": {
     "address": "0x7743e50f534a7f9f1791dde7dcd89f7783eefc39",
-    "source": "ERC-20 symbol() on-chain"
+    "source": "ERC-20 symbol() on-chain",
+    "impact_curve": [
+     [
+      72634.313574,
+      1.0
+     ],
+     [
+      218908.4300693453,
+      0.9953863176649795
+     ],
+     [
+      438823.96502748894,
+      0.9928588867792241
+     ],
+     [
+      730362.7263626645,
+      0.9928632920416935
+     ],
+     [
+      1096550.5393262529,
+      0.9938272691783624
+     ],
+     [
+      1461728.8317262956,
+      0.9936016722278684
+     ],
+     [
+      2191101.0103056137,
+      0.9930815001592916
+     ]
+    ],
+    "capacity_usd": 2191101.0103056137,
+    "impact_source": "Pendle swap quotes: the underlying sold for USDC through the aggregator",
+    "pharos_id": "fxsave-f-x-protocol",
+    "pharos_grade": "F 36",
+    "pharos_as_of": "2026-10-11"
    }
   },
   {
@@ -456,7 +1736,9 @@
     "address": "0x2ca22cb25558fa2018ecb1ce4ed8af92ee7ea423",
     "actor_type": "Vault V2 (capital provider)",
     "adapter": "0x516ecd770f9b6420e77cedd80ea7052ae65bf835",
-    "source": "market's top suppliers from the Morpho API; amounts on-chain"
+    "source": "market's top suppliers from the Morpho API; amounts on-chain",
+    "curator": "RockawayX",
+    "curator_image": "https://cdn.morpho.org/v2/assets/images/rkx.svg"
    }
   },
   {
@@ -467,7 +1749,991 @@
     "market_id": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
     "lltv": "91.5%",
     "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
-    "source": "Morpho Blue idToMarketParams on-chain"
+    "source": "Morpho Blue idToMarketParams on-chain",
+    "oracle_class": "price-tracking",
+    "oracle_tracks_bound": true,
+    "total_supply": 127267228.288151,
+    "total_borrow": 106879466.928018,
+    "loan_unit": "USDC",
+    "utilization": "84.0%",
+    "borrowers": 231,
+    "collateral_of_borrowers": 135306607.113726,
+    "collateral_unit": "PT-reUSD-10DEC2026",
+    "unrealised_bad_debt": 0.0,
+    "lltv_value": 0.915,
+    "free_liquidity": 20387761.360133,
+    "loan_usd": 1.0,
+    "_positions": [
+     [
+      127364.473297,
+      105941.460626
+     ],
+     [
+      2493075.332053,
+      1883676.896076
+     ],
+     [
+      53705.89175,
+      46357.288495
+     ],
+     [
+      4917604.196564,
+      4355674.281922
+     ],
+     [
+      504041.263082,
+      432033.243354
+     ],
+     [
+      187.134223,
+      137.743692
+     ],
+     [
+      120313.495781,
+      105355.883917
+     ],
+     [
+      104857.997657,
+      0.001396
+     ],
+     [
+      796892.901817,
+      692108.904683
+     ],
+     [
+      154482.46796,
+      138135.87241
+     ],
+     [
+      414462.435615,
+      357230.881146
+     ],
+     [
+      23254.085187,
+      20254.725432
+     ],
+     [
+      3380.298327,
+      2884.966921
+     ],
+     [
+      516442.471775,
+      453498.553412
+     ],
+     [
+      38821.815164,
+      33689.72821
+     ],
+     [
+      313499.904792,
+      277591.858262
+     ],
+     [
+      150.518612,
+      99.162938
+     ],
+     [
+      20636.299562,
+      17173.277599
+     ],
+     [
+      36807.792729,
+      32511.754193
+     ],
+     [
+      21.202734,
+      19.188902
+     ],
+     [
+      74948.22454,
+      52701.145275
+     ],
+     [
+      4988.998446,
+      3968.414408
+     ],
+     [
+      2.331393,
+      1.150808
+     ],
+     [
+      699.348657,
+      598.030582
+     ],
+     [
+      13549.637658,
+      10020.827515
+     ],
+     [
+      4558.84644,
+      3963.431732
+     ],
+     [
+      621515.932748,
+      541397.048996
+     ],
+     [
+      5223.293778,
+      4519.969797
+     ],
+     [
+      8769.87175,
+      7662.34886
+     ],
+     [
+      20533.770607,
+      18482.398506
+     ],
+     [
+      54757.942825,
+      44760.105486
+     ],
+     [
+      7121.125324,
+      5859.850386
+     ],
+     [
+      137648.812019,
+      117415.21844
+     ],
+     [
+      19935.173843,
+      17565.892092
+     ],
+     [
+      37954.633806,
+      32050.462751
+     ],
+     [
+      64745.544252,
+      55989.29997
+     ],
+     [
+      876163.964087,
+      226881.029413
+     ],
+     [
+      242147.179769,
+      214758.290296
+     ],
+     [
+      328844.963389,
+      287114.547689
+     ],
+     [
+      85945.133269,
+      75498.743988
+     ],
+     [
+      3145689.32284,
+      2062763.247827
+     ],
+     [
+      50934.635881,
+      39391.242673
+     ],
+     [
+      3143799.421418,
+      2582027.044223
+     ],
+     [
+      136810.007483,
+      116863.128597
+     ],
+     [
+      0.362888,
+      0.315066
+     ],
+     [
+      397548.116912,
+      355626.103061
+     ],
+     [
+      2017.154662,
+      1007.356301
+     ],
+     [
+      11483.03613,
+      10207.166277
+     ],
+     [
+      528.714903,
+      376.97737
+     ],
+     [
+      23842.600073,
+      20590.793386
+     ],
+     [
+      92437.402121,
+      80290.312929
+     ],
+     [
+      1117267.911933,
+      969754.649982
+     ],
+     [
+      3061244.825321,
+      2462057.613758
+     ],
+     [
+      194344.124002,
+      173224.831666
+     ],
+     [
+      3942640.856235,
+      3400768.95209
+     ],
+     [
+      38259.723867,
+      18077.024419
+     ],
+     [
+      244773.16937,
+      211285.996807
+     ],
+     [
+      1822.124487,
+      1582.239894
+     ],
+     [
+      588032.645433,
+      510778.309662
+     ],
+     [
+      960732.886833,
+      800773.231614
+     ],
+     [
+      359943.096807,
+      320572.749842
+     ],
+     [
+      43089.063191,
+      37176.843672
+     ],
+     [
+      891774.900649,
+      664705.006277
+     ],
+     [
+      101437.436739,
+      88237.882119
+     ],
+     [
+      95535.883925,
+      65794.071882
+     ],
+     [
+      133.875837,
+      63.668823
+     ],
+     [
+      0.620219,
+      0.500057
+     ],
+     [
+      49062.347075,
+      38355.376978
+     ],
+     [
+      83788.88891,
+      10392.807427
+     ],
+     [
+      63408.465768,
+      55403.324082
+     ],
+     [
+      109815.258068,
+      46809.014877
+     ],
+     [
+      355187.346257,
+      232627.894477
+     ],
+     [
+      248494.100248,
+      206884.057175
+     ],
+     [
+      6028121.843122,
+      4552801.39537
+     ],
+     [
+      81352.003119,
+      36178.003421
+     ],
+     [
+      20467.464082,
+      16359.068218
+     ],
+     [
+      16.179071,
+      6.074854
+     ],
+     [
+      943042.19125,
+      842050.303667
+     ],
+     [
+      1566819.061462,
+      1380883.850315
+     ],
+     [
+      40079.158736,
+      7052.700444
+     ],
+     [
+      334.162493,
+      256.226741
+     ],
+     [
+      2271496.785134,
+      1838461.130817
+     ],
+     [
+      468782.270024,
+      394091.763454
+     ],
+     [
+      2788150.988797,
+      2157661.5067
+     ],
+     [
+      5861759.788574,
+      5147724.075028
+     ],
+     [
+      750809.975289,
+      505326.517678
+     ],
+     [
+      67137.645739,
+      52225.256986
+     ],
+     [
+      8758.614368,
+      7992.75739
+     ],
+     [
+      909416.256735,
+      815367.728918
+     ],
+     [
+      3042047.19471,
+      2575586.54298
+     ],
+     [
+      5097.79984,
+      4429.089663
+     ],
+     [
+      437440.356468,
+      389344.118218
+     ],
+     [
+      0.030926,
+      0.026884
+     ],
+     [
+      135001.253844,
+      118552.022112
+     ],
+     [
+      3192388.113795,
+      2579585.572352
+     ],
+     [
+      372255.86468,
+      242552.410485
+     ],
+     [
+      368221.743405,
+      319964.112089
+     ],
+     [
+      794690.929007,
+      700391.435574
+     ],
+     [
+      83140.618974,
+      66558.79298
+     ],
+     [
+      67518.428791,
+      50891.910708
+     ],
+     [
+      301317.804232,
+      261665.054376
+     ],
+     [
+      17994.167039,
+      14180.771708
+     ],
+     [
+      196636.085063,
+      151468.963602
+     ],
+     [
+      6139.529517,
+      5234.78835
+     ],
+     [
+      11070.367713,
+      9792.32416
+     ],
+     [
+      270934.948314,
+      202541.237743
+     ],
+     [
+      174708.981965,
+      154465.410194
+     ],
+     [
+      1.523144,
+      1.018552
+     ],
+     [
+      0.490934,
+      0.303965
+     ],
+     [
+      0.537399,
+      0.037322
+     ],
+     [
+      897.510149,
+      595.84062
+     ],
+     [
+      0.034036,
+      0.00059
+     ],
+     [
+      258442.174513,
+      207466.241016
+     ],
+     [
+      3003.748736,
+      2499.391389
+     ],
+     [
+      390643.755025,
+      348173.189872
+     ],
+     [
+      680332.480208,
+      575089.036949
+     ],
+     [
+      7958.885643,
+      6576.378995
+     ],
+     [
+      215855.98402,
+      185923.609284
+     ],
+     [
+      5426.999236,
+      2526.469451
+     ],
+     [
+      1147965.203389,
+      1032270.473335
+     ],
+     [
+      2128872.797966,
+      1837164.560732
+     ],
+     [
+      147.21948,
+      97.276607
+     ],
+     [
+      48.55136,
+      42.843495
+     ],
+     [
+      10324.070565,
+      9016.098958
+     ],
+     [
+      297038.954043,
+      247057.669557
+     ],
+     [
+      788.822872,
+      588.153947
+     ],
+     [
+      695993.111561,
+      554243.445296
+     ],
+     [
+      966947.19919,
+      831882.545366
+     ],
+     [
+      65677.300104,
+      58138.881875
+     ],
+     [
+      6174.486923,
+      5126.579668
+     ],
+     [
+      37283.174812,
+      31904.809145
+     ],
+     [
+      3561376.703851,
+      3181660.722768
+     ],
+     [
+      6508081.832925,
+      5781551.714468
+     ],
+     [
+      0.81312,
+      0.445759
+     ],
+     [
+      1500.822438,
+      1000.321828
+     ],
+     [
+      425576.010191,
+      363501.597852
+     ],
+     [
+      0.73938,
+      0.022126
+     ],
+     [
+      51100.096802,
+      7564.139002
+     ],
+     [
+      139.407647,
+      89.773145
+     ],
+     [
+      1109898.192682,
+      970324.777678
+     ],
+     [
+      9675.656435,
+      7729.851764
+     ],
+     [
+      0.408101,
+      0.106767
+     ],
+     [
+      63194.578207,
+      51658.301443
+     ],
+     [
+      246615.886723,
+      215683.361435
+     ],
+     [
+      78487.827169,
+      68265.061217
+     ],
+     [
+      9216.841296,
+      7320.592632
+     ],
+     [
+      190.584056,
+      141.408779
+     ],
+     [
+      146102.928534,
+      126898.685291
+     ],
+     [
+      2939.902686,
+      1929.424216
+     ],
+     [
+      7939.868538,
+      7053.810613
+     ],
+     [
+      552004.732317,
+      454347.325925
+     ],
+     [
+      5705.533116,
+      4979.43358
+     ],
+     [
+      49220.733415,
+      39132.036479
+     ],
+     [
+      45406.018231,
+      39266.413764
+     ],
+     [
+      12659949.214607,
+      11058748.112234
+     ],
+     [
+      0.00265,
+      0.002297
+     ],
+     [
+      222191.164896,
+      189604.632876
+     ],
+     [
+      97.751222,
+      47.624019
+     ],
+     [
+      35.666283,
+      23.123585
+     ],
+     [
+      1.010807,
+      0.504883
+     ],
+     [
+      4e-06,
+      2e-06
+     ],
+     [
+      303174.706446,
+      259561.693507
+     ],
+     [
+      2432.12518,
+      1929.252768
+     ],
+     [
+      11723.727912,
+      10154.047443
+     ],
+     [
+      1.18649,
+      0.125197
+     ],
+     [
+      276844.141626,
+      240153.513758
+     ],
+     [
+      7187.778017,
+      6173.340743
+     ],
+     [
+      192487.503184,
+      168235.820355
+     ],
+     [
+      542725.18203,
+      401636.621826
+     ],
+     [
+      172489.362168,
+      132122.161963
+     ],
+     [
+      44810.620113,
+      34825.272641
+     ],
+     [
+      717876.026581,
+      610030.095761
+     ],
+     [
+      768571.41441,
+      672580.301953
+     ],
+     [
+      91635.67059,
+      66759.419961
+     ],
+     [
+      63645.673661,
+      56947.186626
+     ],
+     [
+      676912.244337,
+      588038.266652
+     ],
+     [
+      2240.212733,
+      1657.846315
+     ],
+     [
+      27219.772836,
+      22614.319425
+     ],
+     [
+      39023.132786,
+      31827.631338
+     ],
+     [
+      7704.096538,
+      6689.029918
+     ],
+     [
+      4042.249924,
+      2590.649866
+     ],
+     [
+      21335.058389,
+      17944.556704
+     ],
+     [
+      3300.864303,
+      2339.488189
+     ],
+     [
+      275.05578,
+      228.162316
+     ],
+     [
+      252745.108232,
+      223039.937336
+     ],
+     [
+      10152.396639,
+      8423.321528
+     ],
+     [
+      33888.871828,
+      26769.131677
+     ],
+     [
+      62032.564147,
+      51905.795246
+     ],
+     [
+      173436.296873,
+      155239.71806
+     ],
+     [
+      9799.05572,
+      8003.256992
+     ],
+     [
+      5138.764084,
+      4241.174948
+     ],
+     [
+      481.184094,
+      381.940822
+     ],
+     [
+      744047.646716,
+      643009.919185
+     ],
+     [
+      669364.557657,
+      545747.840255
+     ],
+     [
+      0.680865,
+      0.173398
+     ],
+     [
+      5265.358081,
+      4290.101087
+     ],
+     [
+      10987828.463034,
+      8550260.345407
+     ],
+     [
+      1967209.850214,
+      557806.348317
+     ],
+     [
+      3247588.31373,
+      332442.688663
+     ],
+     [
+      414035.181,
+      366355.117274
+     ],
+     [
+      4.099069,
+      0.934988
+     ],
+     [
+      2545.066046,
+      2020.095425
+     ],
+     [
+      9e-06,
+      1e-06
+     ],
+     [
+      570.310161,
+      471.233111
+     ],
+     [
+      0.102916,
+      0.002765
+     ],
+     [
+      14930.980297,
+      2052.241704
+     ],
+     [
+      4222664.837439,
+      3672579.724738
+     ],
+     [
+      304890.334192,
+      226011.351375
+     ],
+     [
+      177707.483921,
+      148554.499375
+     ],
+     [
+      2523.817833,
+      2101.36919
+     ],
+     [
+      2474.166353,
+      1967.370086
+     ],
+     [
+      38283.310211,
+      32200.083176
+     ],
+     [
+      39023.52301,
+      29261.182791
+     ],
+     [
+      570313.504316,
+      469444.458416
+     ],
+     [
+      2385.175767,
+      1982.600147
+     ],
+     [
+      209279.154204,
+      177940.553071
+     ],
+     [
+      131618.467819,
+      80910.878105
+     ],
+     [
+      36748.992227,
+      17092.604277
+     ],
+     [
+      12270.484165,
+      10933.265182
+     ],
+     [
+      30928.883285,
+      22050.954805
+     ],
+     [
+      211028.942179,
+      181757.022293
+     ],
+     [
+      9.820625,
+      0.071003
+     ],
+     [
+      2357011.377742,
+      2116084.019529
+     ],
+     [
+      14833.886217,
+      9823.856455
+     ],
+     [
+      1259.888166,
+      863.49702
+     ],
+     [
+      2975219.172794,
+      2584307.99393
+     ],
+     [
+      1014282.242986,
+      896276.562313
+     ],
+     [
+      181.597885,
+      158.139125
+     ],
+     [
+      428690.3669,
+      373486.711422
+     ],
+     [
+      720727.358033,
+      625814.243257
+     ],
+     [
+      4764.022847,
+      3759.048959
+     ]
+    ],
+    "liquidation_curve": [
+     {
+      "oracle_fall": 0.02,
+      "liquidatable_debt": 3174848.837662,
+      "positions": 5,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 3599552.537724
+     },
+     {
+      "oracle_fall": 0.05,
+      "liquidatable_debt": 48567145.915557,
+      "positions": 58,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 56095331.655116
+     },
+     {
+      "oracle_fall": 0.1,
+      "liquidatable_debt": 71049651.577766,
+      "positions": 126,
+      "bad_debt": 351550.394833,
+      "collateral_liquidatable": 82768147.212611
+     },
+     {
+      "oracle_fall": 0.2,
+      "liquidatable_debt": 102262146.300644,
+      "positions": 177,
+      "bad_debt": 8159713.907212,
+      "collateral_liquidatable": 123351862.089264
+     },
+     {
+      "oracle_fall": 0.3,
+      "liquidatable_debt": 105532552.373425,
+      "positions": 198,
+      "bad_debt": 19650781.501889,
+      "collateral_liquidatable": 128389975.911278
+     },
+     {
+      "oracle_fall": 0.5,
+      "liquidatable_debt": 105652280.404237,
+      "positions": 210,
+      "bad_debt": 44125560.98019,
+      "collateral_liquidatable": 128608240.815591
+     }
+    ],
+    "state_source": "Morpho Blue market() and every borrower's position() on-chain, borrowers from the Morpho API"
    }
   },
   {
@@ -478,7 +2744,9 @@
     "address": "0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757",
     "actor_type": "Vault V2 (capital provider)",
     "adapter": "0xbfe734baab130048e20a64e800c4c2ec25756284",
-    "source": "market's top suppliers from the Morpho API; amounts on-chain"
+    "source": "market's top suppliers from the Morpho API; amounts on-chain",
+    "curator": "Steakhouse Financial",
+    "curator_image": "https://cdn.morpho.org/v2/assets/images/steakhouse.svg"
    }
   },
   {
@@ -489,7 +2757,9 @@
     "address": "0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd",
     "actor_type": "Vault V2 (capital provider)",
     "adapter": "0x3b9e060a2b05588126fda01b95e9485687fc91d7",
-    "source": "market's top suppliers from the Morpho API; amounts on-chain"
+    "source": "market's top suppliers from the Morpho API; amounts on-chain",
+    "curator": "Armitage by Wintermute",
+    "curator_image": "https://cdn.morpho.org/v2/assets/images/armitage.svg"
    }
   },
   {
@@ -500,7 +2770,9 @@
     "address": "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
     "actor_type": "Vault V2 (capital provider)",
     "adapter": "0xce0b17e6e94c9068b760557ba11a7bb1943f5674",
-    "source": "market's top suppliers from the Morpho API; amounts on-chain"
+    "source": "market's top suppliers from the Morpho API; amounts on-chain",
+    "curator": "RockawayX",
+    "curator_image": "https://cdn.morpho.org/v2/assets/images/rkx.svg"
    }
   },
   {
@@ -520,11 +2792,14 @@
    "details": {
     "address": "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
     "actor_type": "Vault V2 (capital provider)",
-    "total_assets": "458,113,471 RLUSD",
-    "idle": "39,242,587 RLUSD",
-    "plain_withdrawal_capacity": "39,242,587 RLUSD",
+    "total_assets": "458,166,603 RLUSD",
+    "total_assets_value": 458166603.3123139,
+    "idle": "39,893,911 RLUSD",
+    "plain_withdrawal_capacity": "39,893,911 RLUSD",
     "adapters": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff (market)",
-    "source": "Vault V2 getters on-chain"
+    "source": "Vault V2 getters on-chain",
+    "curator": "Sentora",
+    "curator_image": "https://cdn.morpho.org/v2/assets/images/sentora.svg"
    }
   },
   {
@@ -533,7 +2808,10 @@
    "label": "RLUSD",
    "details": {
     "address": "0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
-    "source": "ERC-20 symbol() on-chain"
+    "source": "ERC-20 symbol() on-chain",
+    "pharos_id": "rlusd-ripple",
+    "pharos_grade": "B 73",
+    "pharos_as_of": "2026-10-11"
    }
   },
   {
@@ -544,7 +2822,174 @@
     "market_id": "0xffd010618ed3cb39bb2c5de0e3e58d3d2ec9f52187a180f29723c31756a939bc",
     "lltv": "86.0%",
     "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
-    "source": "Morpho Blue idToMarketParams on-chain"
+    "source": "Morpho Blue idToMarketParams on-chain",
+    "oracle_class": "price-tracking",
+    "oracle_tracks_bound": true,
+    "total_supply": 13050481.05561474,
+    "total_borrow": 11576091.81096802,
+    "loan_unit": "RLUSD",
+    "utilization": "88.7%",
+    "borrowers": 27,
+    "collateral_of_borrowers": 495.27723451,
+    "collateral_unit": "cbBTC",
+    "unrealised_bad_debt": 0.0,
+    "lltv_value": 0.86,
+    "free_liquidity": 1474389.244646718,
+    "_positions": [
+     [
+      4158.5291740805105,
+      2903.329209814816
+     ],
+     [
+      11260.914564439907,
+      6025.18463686739
+     ],
+     [
+      0.02400694864138479,
+      0.01473875861728092
+     ],
+     [
+      1036.416397184451,
+      405.0401075890018
+     ],
+     [
+      4.139129076100826,
+      0.9175629277848003
+     ],
+     [
+      552823.1456436763,
+      221940.27544071313
+     ],
+     [
+      16.556516304403303,
+      3.86861557536684
+     ],
+     [
+      2443865.3934737076,
+      1802041.184885482
+     ],
+     [
+      6538.632698891203,
+      1978.2251997957283
+     ],
+     [
+      41.6023863438894,
+      29.06391617896896
+     ],
+     [
+      702999.9415302923,
+      378985.3330933682
+     ],
+     [
+      49669.73931314741,
+      14150.371076293843
+     ],
+     [
+      35182761.882538594,
+      8196774.853592058
+     ],
+     [
+      397352.15780446026,
+      167074.76593559276
+     ],
+     [
+      14061.978278025652,
+      7305.0462824965525
+     ],
+     [
+      0.00165565163044033,
+      2.307041572688e-05
+     ],
+     [
+      393557.74450390105,
+      109219.83089574796
+     ],
+     [
+      34.14615922620137,
+      22.040396636328317
+     ],
+     [
+      54630.87790029067,
+      33093.829131692735
+     ],
+     [
+      10079.428315744643,
+      5363.4974649715
+     ],
+     [
+      0.00827825815220165,
+      4.198538803433e-06
+     ],
+     [
+      69905.7973245125,
+      33641.21106196596
+     ],
+     [
+      510591.49661243125,
+      203979.89246091232
+     ],
+     [
+      25705.946059335864,
+      10581.99061266302
+     ],
+     [
+      9068.768063149137,
+      3514.656461958884
+     ],
+     [
+      503078.1619308803,
+      350742.0792680172
+     ],
+     [
+      57084.6115644103,
+      26315.308892674417
+     ]
+    ],
+    "liquidation_curve": [
+     {
+      "oracle_fall": 0.02,
+      "liquidatable_debt": 0.0,
+      "positions": 0,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 0.0
+     },
+     {
+      "oracle_fall": 0.05,
+      "liquidatable_debt": 0.0,
+      "positions": 0,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 0.0
+     },
+     {
+      "oracle_fall": 0.1,
+      "liquidatable_debt": 0.0,
+      "positions": 0,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 0.0
+     },
+     {
+      "oracle_fall": 0.2,
+      "liquidatable_debt": 2155715.6572794933,
+      "positions": 4,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 35.64933145
+     },
+     {
+      "oracle_fall": 0.3,
+      "liquidatable_debt": 2188831.541546581,
+      "positions": 7,
+      "bad_debt": 176678.700800756,
+      "collateral_liquidatable": 36.30967626
+     },
+     {
+      "oracle_fall": 0.5,
+      "liquidatable_debt": 2646467.122978925,
+      "positions": 13,
+      "bad_debt": 793189.8692599385,
+      "collateral_liquidatable": 46.76347772
+     }
+    ],
+    "state_source": "Morpho Blue market() and every borrower's position() on-chain, borrowers from the Morpho API"
    }
   },
   {
@@ -564,7 +3009,10 @@
     "address": "0x8b36909dd84d310cbde90cb286d9dab285a245bd",
     "shape": "Morpho ChainlinkOracleV2",
     "price_raw": "827825815220165156366559935681415008869804864292985",
-    "source": "price() and getters read on-chain"
+    "oracle_class": "price-tracking",
+    "class_basis": "base side: cbBTC / USD: fell 12 times in 24 changes over 24 rounds, a market price",
+    "source": "price() and getters read on-chain; class from the base-side inputs (D82\u2013D84)",
+    "tracks_bound": true
    }
   },
   {
@@ -574,7 +3022,12 @@
    "details": {
     "address": "0x2665701293fcbeb223d11a08d826563edcce423a",
     "role_in_oracle": "BASE_FEED_1",
-    "source": "oracle getter, description() on-chain"
+    "oracle_class": "price-tracking",
+    "class_basis": "cbBTC / USD: fell 12 times in 24 changes over 24 rounds, a market price",
+    "updated_at": 1791632459,
+    "freshness": "updated 16.5 h ago; usually every 22.1 h (25 rounds)",
+    "stale": false,
+    "source": "oracle getter, description() on-chain; freshness from its rounds (D155)"
    }
   },
   {
@@ -584,7 +3037,7 @@
    "details": {
     "address": "0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a",
     "role_in_oracle": "QUOTE_FEED_1",
-    "source": "oracle getter, description() on-chain"
+    "source": "oracle getter, description() on-chain; freshness from its rounds (D155)"
    }
   },
   {
@@ -595,7 +3048,130 @@
     "market_id": "0xea4bfb18df0ee6bffb7b3f0270899a8adb92ab6b684709634c8276128813cfd4",
     "lltv": "86.0%",
     "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
-    "source": "Morpho Blue idToMarketParams on-chain"
+    "source": "Morpho Blue idToMarketParams on-chain",
+    "oracle_class": "price-tracking",
+    "oracle_tracks_bound": false,
+    "total_supply": 104951491.62283319,
+    "total_borrow": 88996575.97223356,
+    "loan_unit": "RLUSD",
+    "utilization": "84.8%",
+    "borrowers": 16,
+    "collateral_of_borrowers": 50633.47948390441,
+    "collateral_unit": "weETH",
+    "unrealised_bad_debt": 0.0,
+    "lltv_value": 0.86,
+    "free_liquidity": 15954915.650599629,
+    "_positions": [
+     [
+      0.13962825462550835,
+      0.000918272525369974
+     ],
+     [
+      1340406.1547248552,
+      1054178.3030746703
+     ],
+     [
+      13398642.233798249,
+      7638246.63205006
+     ],
+     [
+      49032.243726632194,
+      31702.617834417506
+     ],
+     [
+      675733.4239653377,
+      331977.95031942456
+     ],
+     [
+      1063630.9318078524,
+      655394.3836353566
+     ],
+     [
+      198475.25283920547,
+      90338.26090209425
+     ],
+     [
+      20444.78869146751,
+      14067.93803066766
+     ],
+     [
+      9020687.164983638,
+      5273906.731787938
+     ],
+     [
+      7707625.169105782,
+      4293937.163945536
+     ],
+     [
+      3228325.372338205,
+      2457518.4876470948
+     ],
+     [
+      255174.97388496294,
+      145395.33932463592
+     ],
+     [
+      335126.8397478476,
+      240620.45015588557
+     ],
+     [
+      52815597.48000062,
+      34319649.70176472
+     ],
+     [
+      49809618.21440063,
+      32223574.592209082
+     ],
+     [
+      329747.7521351556,
+      226067.41863370492
+     ]
+    ],
+    "liquidation_curve": [
+     {
+      "oracle_fall": 0.02,
+      "liquidatable_debt": 0.0,
+      "positions": 0,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 0.0
+     },
+     {
+      "oracle_fall": 0.05,
+      "liquidatable_debt": 0.0,
+      "positions": 0,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 0.0
+     },
+     {
+      "oracle_fall": 0.1,
+      "liquidatable_debt": 1054178.3030746703,
+      "positions": 1,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 483.92346256749255
+     },
+     {
+      "oracle_fall": 0.2,
+      "liquidatable_debt": 3766385.1789083183,
+      "positions": 4,
+      "bad_debt": 26891.02609354103,
+      "collateral_liquidatable": 1777.8087823178446
+     },
+     {
+      "oracle_fall": 0.3,
+      "liquidatable_debt": 71222773.8929856,
+      "positions": 9,
+      "bad_debt": 469086.0588802954,
+      "collateral_liquidatable": 39349.08226432528
+     },
+     {
+      "oracle_fall": 0.5,
+      "liquidatable_debt": 88996575.97131528,
+      "positions": 15,
+      "bad_debt": 21822386.986367114,
+      "collateral_liquidatable": 50633.47943349477
+     }
+    ],
+    "state_source": "Morpho Blue market() and every borrower's position() on-chain, borrowers from the Morpho API"
    }
   },
   {
@@ -614,8 +3190,12 @@
    "details": {
     "address": "0x6ab351ffde101bb24a97332f4f7162c1711f110b",
     "shape": "Morpho ChainlinkOracleV2",
-    "price_raw": "2770838798425915372718410194975710534368",
-    "source": "price() and getters read on-chain"
+    "price_raw": "2769872218249615451542819112479525450440",
+    "oracle_class": "price-tracking",
+    "class_basis": "base side: ETH / USD: fell 12 times in 24 changes over 24 rounds, a market price",
+    "constant_kind": "published",
+    "source": "price() and getters read on-chain; class from the base-side inputs (D82\u2013D84)",
+    "tracks_bound": false
    }
   },
   {
@@ -625,7 +3205,13 @@
    "details": {
     "address": "0x5c9c449bbc9a6075a2c061df312a35fd1e05ff22",
     "role_in_oracle": "BASE_FEED_1",
-    "source": "oracle getter, description() on-chain"
+    "oracle_class": "constant-price",
+    "class_basis": "weETH / ETH: fell 3 times in 24 changes over 24 rounds, an accrual rate",
+    "constant_kind": "published",
+    "updated_at": 1791606911,
+    "freshness": "updated 23.6 h ago; usually every 24.0 h (25 rounds)",
+    "stale": false,
+    "source": "oracle getter, description() on-chain; freshness from its rounds (D155)"
    }
   },
   {
@@ -635,7 +3221,12 @@
    "details": {
     "address": "0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419",
     "role_in_oracle": "BASE_FEED_1",
-    "source": "oracle getter, description() on-chain"
+    "oracle_class": "price-tracking",
+    "class_basis": "ETH / USD: fell 12 times in 24 changes over 24 rounds, a market price",
+    "updated_at": 1791690251,
+    "freshness": "updated 26 min ago; usually every 1.0 h (25 rounds)",
+    "stale": false,
+    "source": "oracle getter, description() on-chain; freshness from its rounds (D155)"
    }
   },
   {
@@ -646,7 +3237,134 @@
     "market_id": "0x88abdf8693e663144c3544b9442e9b04520016d6ebc57aa76424c00ab1683c9d",
     "lltv": "86.0%",
     "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
-    "source": "Morpho Blue idToMarketParams on-chain"
+    "source": "Morpho Blue idToMarketParams on-chain",
+    "oracle_class": "price-tracking",
+    "oracle_tracks_bound": false,
+    "total_supply": 1383163.3351694993,
+    "total_borrow": 1266285.3917122518,
+    "loan_unit": "RLUSD",
+    "utilization": "91.5%",
+    "borrowers": 17,
+    "collateral_of_borrowers": 1019.880838934621,
+    "collateral_unit": "wstETH",
+    "unrealised_bad_debt": 0.0,
+    "lltv_value": 0.86,
+    "free_liquidity": 116877.94345724744,
+    "_positions": [
+     [
+      0.3175362900247836,
+      8.533029751e-09
+     ],
+     [
+      746275.2779869857,
+      400119.73353640566
+     ],
+     [
+      4.221442323461913,
+      3.5658807103731807
+     ],
+     [
+      1.8731659873334137,
+      0.9168672958078693
+     ],
+     [
+      0.07963954925159086,
+      0.000487697475243968
+     ],
+     [
+      151145.2513472686,
+      65236.230482480925
+     ],
+     [
+      107733.57697463433,
+      46882.26726210276
+     ],
+     [
+      136326.61418027946,
+      62236.35712358279
+     ],
+     [
+      593169.2293222477,
+      190935.37942319692
+     ],
+     [
+      11594.251038902423,
+      5249.369897359233
+     ],
+     [
+      0.07782251945246813,
+      0.06291821765556185
+     ],
+     [
+      10415.223508686006,
+      6970.353281689105
+     ],
+     [
+      9735.682474627463,
+      177.45871300368768
+     ],
+     [
+      8475.530180658174,
+      4051.378761678271
+     ],
+     [
+      60486.02252224549,
+      22809.008828450293
+     ],
+     [
+      858826.7093830742,
+      287475.2804672942
+     ],
+     [
+      489820.2258493866,
+      174138.02778107813
+     ]
+    ],
+    "liquidation_curve": [
+     {
+      "oracle_fall": 0.02,
+      "liquidatable_debt": 3.5658807103731807,
+      "positions": 1,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 0.001352184169051064
+     },
+     {
+      "oracle_fall": 0.05,
+      "liquidatable_debt": 3.5658807103731807,
+      "positions": 1,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 0.001352184169051064
+     },
+     {
+      "oracle_fall": 0.1,
+      "liquidatable_debt": 3.6287989280287425,
+      "positions": 2,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 0.001377111757949874
+     },
+     {
+      "oracle_fall": 0.2,
+      "liquidatable_debt": 3.6287989280287425,
+      "positions": 2,
+      "bad_debt": 0.33384235241916116,
+      "collateral_liquidatable": 0.001377111757949874
+     },
+     {
+      "oracle_fall": 0.3,
+      "liquidatable_debt": 6973.982080617133,
+      "positions": 3,
+      "bad_debt": 0.7457119243703592,
+      "collateral_liquidatable": 3.3375118416585794
+     },
+     {
+      "oracle_fall": 0.5,
+      "liquidatable_debt": 590750.2360115226,
+      "positions": 10,
+      "bad_debt": 44636.925673524194,
+      "collateral_liquidatable": 375.39819927543033
+     }
+    ],
+    "state_source": "Morpho Blue market() and every borrower's position() on-chain, borrowers from the Morpho API"
    }
   },
   {
@@ -666,8 +3384,11 @@
    "details": {
     "address": "0x4e58cea93a5252547c99d04042de646b17531653",
     "shape": "Morpho ChainlinkOracleV2",
-    "price_raw": "3123032751835217625212245330602726740011",
-    "source": "price() and getters read on-chain"
+    "price_raw": "3121943312222355923269688066862529024361",
+    "oracle_class": "price-tracking",
+    "class_basis": "base side: ETH / USD: fell 12 times in 24 changes over 24 rounds, a market price",
+    "source": "price() and getters read on-chain; class from the base-side inputs (D82\u2013D84)",
+    "tracks_bound": false
    }
   },
   {
@@ -677,7 +3398,12 @@
    "details": {
     "address": "0x4f67e4d9bd67efa28236013288737d39aef48e79",
     "role_in_oracle": "BASE_FEED_1",
-    "source": "oracle getter, description() on-chain"
+    "oracle_class": "not classified",
+    "class_basis": "Custom price feed for wstETH / ETH: no round history, no known structure or name",
+    "updated_at": 1791608207,
+    "freshness": "updated 23.2 h ago; no round history to learn its rhythm",
+    "stale": false,
+    "source": "oracle getter, description() on-chain; freshness from its rounds (D155)"
    }
   },
   {
@@ -688,7 +3414,114 @@
     "market_id": "0xc0ae375fd761ff19b3f04de5534c0f1ec110f80e1c2ede27c42c1c43c3040394",
     "lltv": "91.5%",
     "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
-    "source": "Morpho Blue idToMarketParams on-chain"
+    "source": "Morpho Blue idToMarketParams on-chain",
+    "oracle_class": "price-tracking",
+    "oracle_tracks_bound": true,
+    "total_supply": 4745217.540791825,
+    "total_borrow": 4193201.3515963294,
+    "loan_unit": "RLUSD",
+    "utilization": "88.4%",
+    "borrowers": 12,
+    "collateral_of_borrowers": 4070626.913311,
+    "collateral_unit": "syrupUSDC",
+    "unrealised_bad_debt": 0.0,
+    "lltv_value": 0.915,
+    "free_liquidity": 552016.1891954961,
+    "_positions": [
+     [
+      604362.8799324408,
+      524080.7556591972
+     ],
+     [
+      1.4247153538490815,
+      0.9222686766426971
+     ],
+     [
+      3.231656904617179,
+      0.2504518996339609
+     ],
+     [
+      71.21071763474502,
+      47.85106999398301
+     ],
+     [
+      132281.49598174397,
+      114679.15484462478
+     ],
+     [
+      3701621.7998280968,
+      3215081.5922215516
+     ],
+     [
+      234798.63148824865,
+      202561.70821824716
+     ],
+     [
+      79075.2667396342,
+      70675.41757207198
+     ],
+     [
+      80687.164932988,
+      66073.03140471528
+     ],
+     [
+      0.001475767654028673,
+      0.000404685161580709
+     ],
+     [
+      0.7771917236270329,
+      0.6663309550476173
+     ],
+     [
+      0.001327359804669394,
+      0.00114971085187921
+     ]
+    ],
+    "liquidation_curve": [
+     {
+      "oracle_fall": 0.02,
+      "liquidatable_debt": 0.0,
+      "positions": 0,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 0.0
+     },
+     {
+      "oracle_fall": 0.05,
+      "liquidatable_debt": 70675.41757207198,
+      "positions": 1,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 66603.002369
+     },
+     {
+      "oracle_fall": 0.1,
+      "liquidatable_debt": 4127079.2959963586,
+      "positions": 7,
+      "bad_debt": 1322.4548780758087,
+      "collateral_liquidatable": 4002602.349712
+     },
+     {
+      "oracle_fall": 0.2,
+      "liquidatable_debt": 4193152.3274010736,
+      "positions": 8,
+      "bad_debt": 425479.6050186988,
+      "collateral_liquidatable": 4070563.011228
+     },
+     {
+      "oracle_fall": 0.3,
+      "liquidatable_debt": 4193201.1007397445,
+      "positions": 10,
+      "bad_debt": 896438.6953164964,
+      "collateral_liquidatable": 4070624.190129
+     },
+     {
+      "oracle_fall": 0.5,
+      "liquidatable_debt": 4193201.1007397445,
+      "positions": 10,
+      "bad_debt": 1838370.2576360367,
+      "collateral_liquidatable": 4070624.190129
+     }
+    ],
+    "state_source": "Morpho Blue market() and every borrower's position() on-chain, borrowers from the Morpho API"
    }
   },
   {
@@ -698,7 +3531,10 @@
    "details": {
     "address": "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
     "source": "oracle getter, symbol() on-chain",
-    "role_in_oracle": "BASE_VAULT"
+    "role_in_oracle": "BASE_VAULT",
+    "pharos_id": "syrupusdc-maple",
+    "pharos_grade": "C- 53",
+    "pharos_as_of": "2026-10-11"
    }
   },
   {
@@ -708,8 +3544,12 @@
    "details": {
     "address": "0xf766f4f1bcb0cbbf4eef5e26ff7c7f66a713c1b5",
     "shape": "Morpho ChainlinkOracleV2",
-    "price_raw": "1187185463960197201033128731167914305885270524048",
-    "source": "price() and getters read on-chain"
+    "price_raw": "1187262794874234576605090378011683742957654931591",
+    "oracle_class": "price-tracking",
+    "class_basis": "base side: USDC / USD: fell 10 times in 24 changes over 24 rounds, a market price",
+    "constant_kind": "exchange rate",
+    "source": "price() and getters read on-chain; class from the base-side inputs (D82\u2013D84)",
+    "tracks_bound": true
    }
   },
   {
@@ -719,7 +3559,12 @@
    "details": {
     "address": "0x8fffffd4afb6115b954bd326cbe7b4ba576818f6",
     "role_in_oracle": "BASE_FEED_1",
-    "source": "oracle getter, description() on-chain"
+    "oracle_class": "price-tracking",
+    "class_basis": "USDC / USD: fell 10 times in 24 changes over 24 rounds, a market price",
+    "updated_at": 1791639575,
+    "freshness": "updated 14.5 h ago; usually every 23.0 h (25 rounds)",
+    "stale": false,
+    "source": "oracle getter, description() on-chain; freshness from its rounds (D155)"
    }
   },
   {
@@ -730,7 +3575,150 @@
     "market_id": "0x15bb2a6af0c909eed19fb1f2ceeead34ecbdcba626de752c6b09389ee14eec32",
     "lltv": "86.0%",
     "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
-    "source": "Morpho Blue idToMarketParams on-chain"
+    "source": "Morpho Blue idToMarketParams on-chain",
+    "oracle_class": "price-tracking",
+    "oracle_tracks_bound": false,
+    "total_supply": 235131419.5717371,
+    "total_borrow": 212776296.3966393,
+    "loan_unit": "RLUSD",
+    "utilization": "90.5%",
+    "borrowers": 21,
+    "collateral_of_borrowers": 3845.25161412,
+    "collateral_unit": "kBTC",
+    "unrealised_bad_debt": 0.0,
+    "lltv_value": 0.86,
+    "free_liquidity": 22355123.175097805,
+    "_positions": [
+     [
+      221689269.25004038,
+      149421275.84105092
+     ],
+     [
+      7611.534597768232,
+      4312.363584547857
+     ],
+     [
+      3.2341023856538156,
+      0.8108761283666197
+     ],
+     [
+      664244.9732839895,
+      342926.8446596047
+     ],
+     [
+      621941.685949988,
+      400217.05210811703
+     ],
+     [
+      21837.403980740284,
+      7987.917746181029
+     ],
+     [
+      8292.570219625168,
+      3011.4663165831644
+     ],
+     [
+      95828.90911696458,
+      71113.92972347132
+     ],
+     [
+      77853712.62001024,
+      51122366.84285074
+     ],
+     [
+      11273962.009224823,
+      7556094.852772284
+     ],
+     [
+      1398.138948627111,
+      680.8456368726397
+     ],
+     [
+      41462.851098125844,
+      20054.635393736924
+     ],
+     [
+      3317028.0878500673,
+      2001752.5680981406
+     ],
+     [
+      22760.270023112997,
+      2713.3715725877255
+     ],
+     [
+      1658514.0439250336,
+      1003164.1204887365
+     ],
+     [
+      215606.82571025437,
+      91609.37056898355
+     ],
+     [
+      5804.799153737617,
+      1805.1583548333374
+     ],
+     [
+      1058554.8811053724,
+      557069.2265030853
+     ],
+     [
+      78660.11436646042,
+      41565.128341368196
+     ],
+     [
+      1256.2787791370051,
+      735.6679836960816
+     ],
+     [
+      232439.74068435392,
+      125838.38200868579
+     ]
+    ],
+    "liquidation_curve": [
+     {
+      "oracle_fall": 0.02,
+      "liquidatable_debt": 0.0,
+      "positions": 0,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 0.0
+     },
+     {
+      "oracle_fall": 0.05,
+      "liquidatable_debt": 0.0,
+      "positions": 0,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 0.0
+     },
+     {
+      "oracle_fall": 0.1,
+      "liquidatable_debt": 0.0,
+      "positions": 0,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 0.0
+     },
+     {
+      "oracle_fall": 0.2,
+      "liquidatable_debt": 71113.92972347132,
+      "positions": 1,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 1.15559961
+     },
+     {
+      "oracle_fall": 0.3,
+      "liquidatable_debt": 211575985.2070924,
+      "positions": 7,
+      "bad_debt": 763302.9452434639,
+      "collateral_liquidatable": 3816.79320432
+     },
+     {
+      "oracle_fall": 0.5,
+      "liquidatable_debt": 212669168.301204,
+      "positions": 15,
+      "bad_debt": 60061739.32921194,
+      "collateral_liquidatable": 3841.94377233
+     }
+    ],
+    "state_source": "Morpho Blue market() and every borrower's position() on-chain, borrowers from the Morpho API"
    }
   },
   {
@@ -749,8 +3737,11 @@
    "details": {
     "address": "0xbcc3d9834b84b32cf540dbe948ded4b47bec5ddb",
     "shape": "Morpho ChainlinkOracleV2",
-    "price_raw": "829214866621834319644967810708164420382751579465251",
-    "source": "price() and getters read on-chain"
+    "price_raw": "829257021962516824629858143120851341270492049174918",
+    "oracle_class": "price-tracking",
+    "class_basis": "base side: BTC / USD: fell 7 times in 24 changes over 24 rounds, a market price",
+    "source": "price() and getters read on-chain; class from the base-side inputs (D82\u2013D84)",
+    "tracks_bound": false
    }
   },
   {
@@ -760,7 +3751,12 @@
    "details": {
     "address": "0xf4030086522a5beea4988f8ca5b36dbc97bee88c",
     "role_in_oracle": "BASE_FEED_2",
-    "source": "oracle getter, description() on-chain"
+    "oracle_class": "price-tracking",
+    "class_basis": "BTC / USD: fell 7 times in 24 changes over 24 rounds, a market price",
+    "updated_at": 1791689771,
+    "freshness": "updated 34 min ago; usually every 1.0 h (25 rounds)",
+    "stale": false,
+    "source": "oracle getter, description() on-chain; freshness from its rounds (D155)"
    }
   },
   {
@@ -771,7 +3767,146 @@
     "market_id": "0xa128dddc761075df9a9a60689f3a41a989b245aad506352c509c0c3a76a9ec6b",
     "lltv": "86.0%",
     "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
-    "source": "Morpho Blue idToMarketParams on-chain"
+    "source": "Morpho Blue idToMarketParams on-chain",
+    "oracle_class": "price-tracking",
+    "oracle_tracks_bound": false,
+    "total_supply": 24336085.597031757,
+    "total_borrow": 17599337.85421846,
+    "loan_unit": "RLUSD",
+    "utilization": "72.3%",
+    "borrowers": 20,
+    "collateral_of_borrowers": 309.37259198,
+    "collateral_unit": "WBTC",
+    "unrealised_bad_debt": 0.0,
+    "lltv_value": 0.86,
+    "free_liquidity": 6736747.742813295,
+    "_positions": [
+     [
+      228223.12483734058,
+      132907.35366776388
+     ],
+     [
+      0.00745249139352604,
+      7.172320301565e-05
+     ],
+     [
+      1503269.1403871174,
+      1097150.9890538559
+     ],
+     [
+      32030.909032036034,
+      13430.902007676295
+     ],
+     [
+      7454.124317195822,
+      1927.5737890487358
+     ],
+     [
+      602515.9819111956,
+      318000.0859079044
+     ],
+     [
+      1160453.4184112106,
+      801089.4878532761
+     ],
+     [
+      28781.544119271748,
+      16230.172236116916
+     ],
+     [
+      115500.52340032981,
+      30058.816986911028
+     ],
+     [
+      8229.80694723579,
+      2518.0198803971925
+     ],
+     [
+      124208.18989210068,
+      40059.4913418298
+     ],
+     [
+      82890.995484009,
+      29403.249078251225
+     ],
+     [
+      20206131.085748326,
+      14289145.01145872
+     ],
+     [
+      22606.8353706601,
+      11744.093065086887
+     ],
+     [
+      3.5126076101486072,
+      0.8115845449181888
+     ],
+     [
+      64014.2322504152,
+      40484.55573699781
+     ],
+     [
+      465.3029245915926,
+      150.0539568471705
+     ],
+     [
+      316169.6677360305,
+      137471.65306926117
+     ],
+     [
+      21189.147932869644,
+      10825.603901785917
+     ],
+     [
+      1093602.2172801108,
+      626739.9295704627
+     ]
+    ],
+    "liquidation_curve": [
+     {
+      "oracle_fall": 0.02,
+      "liquidatable_debt": 0.0,
+      "positions": 0,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 0.0
+     },
+     {
+      "oracle_fall": 0.05,
+      "liquidatable_debt": 0.0,
+      "positions": 0,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 0.0
+     },
+     {
+      "oracle_fall": 0.1,
+      "liquidatable_debt": 0.0,
+      "positions": 0,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 0.0
+     },
+     {
+      "oracle_fall": 0.2,
+      "liquidatable_debt": 16187385.488365851,
+      "positions": 3,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 276.18774975
+     },
+     {
+      "oracle_fall": 0.3,
+      "liquidatable_debt": 16227870.04410285,
+      "positions": 4,
+      "bad_debt": 850861.6343328684,
+      "collateral_liquidatable": 276.96081752
+     },
+     {
+      "oracle_fall": 0.5,
+      "liquidatable_debt": 17481788.93552123,
+      "positions": 11,
+      "bad_debt": 5402470.439620933,
+      "collateral_liquidatable": 304.8948272
+     }
+    ],
+    "state_source": "Morpho Blue market() and every borrower's position() on-chain, borrowers from the Morpho API"
    }
   },
   {
@@ -790,8 +3925,11 @@
    "details": {
     "address": "0xf58725eb213161e9054c97f970dc80b2d0327e8d",
     "shape": "Morpho ChainlinkOracleV2",
-    "price_raw": "827830077794575856331160714464281785800712384327544",
-    "source": "price() and getters read on-chain"
+    "price_raw": "828054599280671175234144848813326106825649835703614",
+    "oracle_class": "price-tracking",
+    "class_basis": "base side: WBTC / BTC: fell 13 times in 24 changes over 24 rounds, a market price",
+    "source": "price() and getters read on-chain; class from the base-side inputs (D82\u2013D84)",
+    "tracks_bound": false
    }
   },
   {
@@ -801,7 +3939,12 @@
    "details": {
     "address": "0xfdfd9c85ad200c506cf9e21f1fd8dd01932fbb23",
     "role_in_oracle": "BASE_FEED_1",
-    "source": "oracle getter, description() on-chain"
+    "oracle_class": "price-tracking",
+    "class_basis": "WBTC / BTC: fell 13 times in 24 changes over 24 rounds, a market price",
+    "updated_at": 1791667379,
+    "freshness": "updated 6.8 h ago; usually every 24.0 h (25 rounds)",
+    "stale": false,
+    "source": "oracle getter, description() on-chain; freshness from its rounds (D155)"
    }
   },
   {
@@ -812,7 +3955,74 @@
     "market_id": "0x1749e02006bc6bd6a86af52d231511f6911d5e42318e028e51a28dfabc68dd47",
     "lltv": "91.5%",
     "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
-    "source": "Morpho Blue idToMarketParams on-chain"
+    "source": "Morpho Blue idToMarketParams on-chain",
+    "oracle_class": "price-tracking",
+    "oracle_tracks_bound": true,
+    "total_supply": 7.069909184401907,
+    "total_borrow": 4.09207307165379,
+    "loan_unit": "RLUSD",
+    "utilization": "57.9%",
+    "borrowers": 2,
+    "collateral_of_borrowers": 5.2159956476740374,
+    "collateral_unit": "PT-sUSDE-13AUG2026",
+    "unrealised_bad_debt": 0.0,
+    "lltv_value": 0.915,
+    "free_liquidity": 2.977836112748118,
+    "_positions": [
+     [
+      5.213651696686545,
+      4.092069854357775
+     ],
+     [
+      3.689546045242e-06,
+      3.217296013942e-06
+     ]
+    ],
+    "liquidation_curve": [
+     {
+      "oracle_fall": 0.02,
+      "liquidatable_debt": 0.0,
+      "positions": 0,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 0.0
+     },
+     {
+      "oracle_fall": 0.05,
+      "liquidatable_debt": 3.217296013942e-06,
+      "positions": 1,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 3.691202177401e-06
+     },
+     {
+      "oracle_fall": 0.1,
+      "liquidatable_debt": 3.217296013942e-06,
+      "positions": 1,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 3.691202177401e-06
+     },
+     {
+      "oracle_fall": 0.2,
+      "liquidatable_debt": 4.09207307165379,
+      "positions": 2,
+      "bad_debt": 0.02750733254686212,
+      "collateral_liquidatable": 5.2159956476740374
+     },
+     {
+      "oracle_fall": 0.3,
+      "liquidatable_debt": 4.09207307165379,
+      "positions": 2,
+      "bad_debt": 0.5355780499352285,
+      "collateral_liquidatable": 5.2159956476740374
+     },
+     {
+      "oracle_fall": 0.5,
+      "liquidatable_debt": 4.09207307165379,
+      "positions": 2,
+      "bad_debt": 1.5517194847119604,
+      "collateral_liquidatable": 5.2159956476740374
+     }
+    ],
+    "state_source": "Morpho Blue market() and every borrower's position() on-chain, borrowers from the Morpho API"
    }
   },
   {
@@ -821,7 +4031,10 @@
    "label": "PT-sUSDE-13AUG2026",
    "details": {
     "address": "0x5a19fa369f2895dcd8d2cee62e4ceae58ef92bbb",
-    "source": "ERC-20 symbol() on-chain"
+    "source": "ERC-20 symbol() on-chain",
+    "impact_curve": [],
+    "capacity_usd": 0.0,
+    "impact_source": "Pendle swap quotes: the PT sold into its pool for the underlying, no aggregator"
    }
   },
   {
@@ -831,8 +4044,11 @@
    "details": {
     "address": "0x968eb911db90bb8ea9e4792b05c94500bc1a62d7",
     "shape": "Morpho ChainlinkOracleV2",
-    "price_raw": "999574829353754217407217041225093047",
-    "source": "price() and getters read on-chain"
+    "price_raw": "999551329870742843657439536330200735",
+    "oracle_class": "price-tracking",
+    "class_basis": "base side: Pendle Chainlink-compatible Oracle: twapDuration() = 900, Pendle PendleChainlinkOracle: a TWAP of the Pendle AMM (900 s on PT-reUSD), so a pool move reaches the price",
+    "source": "price() and getters read on-chain; class from the base-side inputs (D82\u2013D84)",
+    "tracks_bound": true
    }
   },
   {
@@ -842,7 +4058,13 @@
    "details": {
     "address": "0xb131d953712db127308ef07fce30c2ace465bbce",
     "role_in_oracle": "BASE_FEED_1",
-    "source": "oracle getter, description() on-chain"
+    "oracle_class": "price-tracking",
+    "class_basis": "Pendle Chainlink-compatible Oracle: twapDuration() = 900, Pendle PendleChainlinkOracle: a TWAP of the Pendle AMM (900 s on PT-reUSD), so a pool move reaches the price",
+    "tracks_market": "0x177768caf9d0e036725a51d3f60d7e20f2d4d194",
+    "updated_at": 1791691631,
+    "freshness": "updated 3 min ago; no round history to learn its rhythm",
+    "stale": false,
+    "source": "oracle getter, description() on-chain; freshness from its rounds (D155)"
    }
   },
   {
@@ -852,7 +4074,12 @@
    "details": {
     "address": "0xa569d910839ae8865da8f8e70fffb0cba869f961",
     "role_in_oracle": "BASE_FEED_1",
-    "source": "oracle getter, description() on-chain"
+    "oracle_class": "price-tracking",
+    "class_basis": "USDe / USD: fell 12 times in 24 changes over 24 rounds, a market price",
+    "updated_at": 1791687563,
+    "freshness": "updated 1.2 h ago; usually every 23.0 h (25 rounds)",
+    "stale": false,
+    "source": "oracle getter, description() on-chain; freshness from its rounds (D155)"
    }
   },
   {
@@ -862,6 +4089,9 @@
    "details": {
     "address": "0x177768caf9d0e036725a51d3f60d7e20f2d4d194",
     "expiry": "2026-08-13",
+    "liquidity_usd": 2003564.0668384947,
+    "implied_apy": 0.22759246388872745,
+    "days_to_maturity": -59.17,
     "source": "Pendle API markets"
    }
   },
@@ -873,7 +4103,70 @@
     "market_id": "0xc3b37a18d5b15f8e5b78bcdc014ffb3f22933bde4e5f6a36dedf36db87e68585",
     "lltv": "86.0%",
     "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
-    "source": "Morpho Blue idToMarketParams on-chain"
+    "source": "Morpho Blue idToMarketParams on-chain",
+    "oracle_class": "price-tracking",
+    "oracle_tracks_bound": false,
+    "total_supply": 1.0030423513781368,
+    "total_borrow": 0.8030414366443925,
+    "loan_unit": "RLUSD",
+    "utilization": "80.1%",
+    "borrowers": 1,
+    "collateral_of_borrowers": 0.001286666666666667,
+    "collateral_unit": "WETH",
+    "unrealised_bad_debt": 0.0,
+    "lltv_value": 0.86,
+    "free_liquidity": 0.2000009147337443,
+    "_positions": [
+     [
+      3.2248504022556177,
+      0.8030414366443925
+     ]
+    ],
+    "liquidation_curve": [
+     {
+      "oracle_fall": 0.02,
+      "liquidatable_debt": 0.0,
+      "positions": 0,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 0.0
+     },
+     {
+      "oracle_fall": 0.05,
+      "liquidatable_debt": 0.0,
+      "positions": 0,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 0.0
+     },
+     {
+      "oracle_fall": 0.1,
+      "liquidatable_debt": 0.0,
+      "positions": 0,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 0.0
+     },
+     {
+      "oracle_fall": 0.2,
+      "liquidatable_debt": 0.0,
+      "positions": 0,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 0.0
+     },
+     {
+      "oracle_fall": 0.3,
+      "liquidatable_debt": 0.0,
+      "positions": 0,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 0.0
+     },
+     {
+      "oracle_fall": 0.5,
+      "liquidatable_debt": 0.0,
+      "positions": 0,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 0.0
+     }
+    ],
+    "state_source": "Morpho Blue market() and every borrower's position() on-chain, borrowers from the Morpho API"
    }
   },
   {
@@ -892,8 +4185,11 @@
    "details": {
     "address": "0x18803b5c20962244f0a99fc3b7d7e614762385eb",
     "shape": "Morpho ChainlinkOracleV2",
-    "price_raw": "2507235040829101759761285251724462061834",
-    "source": "price() and getters read on-chain"
+    "price_raw": "2506360416260842261470247654551599864802",
+    "oracle_class": "price-tracking",
+    "class_basis": "base side: ETH / USD: fell 12 times in 24 changes over 24 rounds, a market price",
+    "source": "price() and getters read on-chain; class from the base-side inputs (D82\u2013D84)",
+    "tracks_bound": false
    }
   },
   {
@@ -904,7 +4200,270 @@
     "market_id": "0x4fa31e3f8ba345227d44e1cf48559eea53a90dd5311dc006984c060f2f311d96",
     "lltv": "77.0%",
     "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
-    "source": "Morpho Blue idToMarketParams on-chain"
+    "source": "Morpho Blue idToMarketParams on-chain",
+    "oracle_class": "not classified",
+    "oracle_tracks_bound": false,
+    "total_supply": 8949959.62202528,
+    "total_borrow": 7985378.783898141,
+    "loan_unit": "RLUSD",
+    "utilization": "89.2%",
+    "borrowers": 51,
+    "collateral_of_borrowers": 11805718.087603,
+    "collateral_unit": "FXRP",
+    "unrealised_bad_debt": 0.0,
+    "lltv_value": 0.77,
+    "free_liquidity": 964580.8381271381,
+    "_positions": [
+     [
+      450.25710230064936,
+      206.68284497284588
+     ],
+     [
+      6898.5071320130955,
+      1324.3906487003399
+     ],
+     [
+      6.944339774524961,
+      1.006234954250805
+     ],
+     [
+      2774.6804003091934,
+      504.5714622418833
+     ],
+     [
+      13209.623099538849,
+      9551.666786562597
+     ],
+     [
+      0.009162361898508232,
+      0.004908377427660462
+     ],
+     [
+      369988.86771625915,
+      160061.04367388898
+     ],
+     [
+      6243.655889886524,
+      1009.4827226706169
+     ],
+     [
+      1253.2667807246564,
+      502.4719824891441
+     ],
+     [
+      69373.3988003224,
+      24646.25604293903
+     ],
+     [
+      138.8867954904992,
+      66.06227367787199
+     ],
+     [
+      13888.67954904992,
+      7503.891988125186
+     ],
+     [
+      160790.63200730583,
+      72729.82174187135
+     ],
+     [
+      36600.33506206895,
+      11767.435633593423
+     ],
+     [
+      122021.48025181735,
+      70143.43843763521
+     ],
+     [
+      2046.9967920738159,
+      683.1076817985196
+     ],
+     [
+      1.5277547503954e-05,
+      1.1072636052146e-05
+     ],
+     [
+      2107.204349861403,
+      784.7285122716034
+     ],
+     [
+      1238.2174478364475,
+      207.26251483268052
+     ],
+     [
+      235392.24367103394,
+      137591.71658905217
+     ],
+     [
+      13755.348225379043,
+      4536.711846645009
+     ],
+     [
+      1437.4783333266669,
+      87.08717060580908
+     ],
+     [
+      5.9721322060914e-05,
+      3.3172862403704e-05
+     ],
+     [
+      24329.148910811207,
+      12564.355525928755
+     ],
+     [
+      1666.6415458859906,
+      1100.1707013284226
+     ],
+     [
+      444.4238568900484,
+      98.21921307576098
+     ],
+     [
+      38987.12069233127,
+      18269.214235951975
+     ],
+     [
+      34514.465011475484,
+      9055.476723673073
+     ],
+     [
+      3.9721623510282775,
+      0.8084869297496391
+     ],
+     [
+      215.33008772846998,
+      136.02760500030038
+     ],
+     [
+      8333.207729429952,
+      4038.990061795759
+     ],
+     [
+      41.66603864714976,
+      17.115340750644542
+     ],
+     [
+      6.944339774524961,
+      2.0200384990581677
+     ],
+     [
+      17583.0683090972,
+      6729.506776223868
+     ],
+     [
+      6946.956544805401,
+      2502.1616221642544
+     ],
+     [
+      360857.3706330905,
+      124086.72210283464
+     ],
+     [
+      41666.03864714976,
+      15232.313002363862
+     ],
+     [
+      13810.277952995533,
+      5046.76187167264
+     ],
+     [
+      27777.35909809984,
+      15051.17046861476
+     ],
+     [
+      2967955.4169878685,
+      1523277.336558579
+     ],
+     [
+      4854.789333571563,
+      3007.4559444861584
+     ],
+     [
+      31166.19690806802,
+      12837.796846589039
+     ],
+     [
+      1.4054246497954146,
+      0.08341778664915196
+     ],
+     [
+      9.5831888888444e-05,
+      1.389186026546e-06
+     ],
+     [
+      2.777735909809e-06,
+      3.14477080532e-07
+     ],
+     [
+      0.001384701351040277,
+      0.000765818372156398
+     ],
+     [
+      12372.028546568796,
+      6808.792607563502
+     ],
+     [
+      5374446.367233728,
+      2815193.9768748526
+     ],
+     [
+      6326970.551284995,
+      2900179.759619634
+     ],
+     [
+      42013.25563587601,
+      6233.670576343935
+     ],
+     [
+      2.8191311192059274,
+      0.035165825257346996
+     ]
+    ],
+    "liquidation_curve": [
+     {
+      "oracle_fall": 0.02,
+      "liquidatable_debt": 0.0,
+      "positions": 0,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 0.0
+     },
+     {
+      "oracle_fall": 0.05,
+      "liquidatable_debt": 0.0,
+      "positions": 0,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 0.0
+     },
+     {
+      "oracle_fall": 0.1,
+      "liquidatable_debt": 9551.666797635233,
+      "positions": 2,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 9511.071998
+     },
+     {
+      "oracle_fall": 0.2,
+      "liquidatable_debt": 13795.321048450114,
+      "positions": 5,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 14361.613004
+     },
+     {
+      "oracle_fall": 0.3,
+      "liquidatable_debt": 250894.33193843218,
+      "positions": 12,
+      "bad_debt": 956.9758195839098,
+      "collateral_liquidatable": 310611.368863
+     },
+     {
+      "oracle_fall": 0.5,
+      "liquidatable_debt": 7770838.964427792,
+      "positions": 26,
+      "bad_debt": 506682.90282843576,
+      "collateral_liquidatable": 11330270.610981
+     }
+    ],
+    "state_source": "Morpho Blue market() and every borrower's position() on-chain, borrowers from the Morpho API"
    }
   },
   {
@@ -923,8 +4482,11 @@
    "details": {
     "address": "0x5ac03061500e0c97862a466a38a7e87fac4ac39d",
     "shape": "Morpho ChainlinkOracleV2",
-    "price_raw": "1405190025819431972496605074688356856149164718376",
-    "source": "price() and getters read on-chain"
+    "price_raw": "1388867954904992090174016171644223827075804332304",
+    "oracle_class": "not classified",
+    "class_basis": "base side: RedStone Price Feed for XRP: no round history, no known structure or name",
+    "source": "price() and getters read on-chain; class from the base-side inputs (D82\u2013D84)",
+    "tracks_bound": false
    }
   },
   {
@@ -934,7 +4496,12 @@
    "details": {
     "address": "0x64775db2ac856843e1f900f6249687d6d803b22d",
     "role_in_oracle": "BASE_FEED_1",
-    "source": "oracle getter, description() on-chain"
+    "oracle_class": "not classified",
+    "class_basis": "RedStone Price Feed for XRP: no round history, no known structure or name",
+    "updated_at": 1791691391,
+    "freshness": "updated 7 min ago; no round history to learn its rhythm",
+    "stale": false,
+    "source": "oracle getter, description() on-chain; freshness from its rounds (D155)"
    }
   },
   {
@@ -945,7 +4512,106 @@
     "market_id": "0xd9d2fc090bdbab1804ea960dd6669b62357787e5816f575f14ca4e6d999614bf",
     "lltv": "91.5%",
     "irm": "0x870ac11d48b15db9a138cf899d20f13f79ba00bc",
-    "source": "Morpho Blue idToMarketParams on-chain"
+    "source": "Morpho Blue idToMarketParams on-chain",
+    "oracle_class": "price-tracking",
+    "oracle_tracks_bound": true,
+    "total_supply": 50017116.383670315,
+    "total_borrow": 45701052.31560791,
+    "loan_unit": "RLUSD",
+    "utilization": "91.4%",
+    "borrowers": 10,
+    "collateral_of_borrowers": 51985396.56906576,
+    "collateral_unit": "USDe",
+    "unrealised_bad_debt": 0.0,
+    "lltv_value": 0.915,
+    "free_liquidity": 4316064.068062403,
+    "_positions": [
+     [
+      2574624.392985955,
+      2330767.217858107
+     ],
+     [
+      1403418.4022177893,
+      1103311.6411761588
+     ],
+     [
+      1181210.6635955013,
+      949472.6094306986
+     ],
+     [
+      7547381.041031119,
+      6566416.148791253
+     ],
+     [
+      942433.8605926983,
+      832678.1705199501
+     ],
+     [
+      38508.77222632608,
+      35143.680916426136
+     ],
+     [
+      49.97756649353714,
+      43.07096151995772
+     ],
+     [
+      14023042.278436419,
+      12186593.239041127
+     ],
+     [
+      16992372.60780263,
+      15198411.206169056
+     ],
+     [
+      7259030.278012701,
+      6498215.3307436155
+     ]
+    ],
+    "liquidation_curve": [
+     {
+      "oracle_fall": 0.02,
+      "liquidatable_debt": 2365910.898774533,
+      "positions": 2,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 2614306.1262798766
+     },
+     {
+      "oracle_fall": 0.05,
+      "liquidatable_debt": 31461631.75499841,
+      "positions": 6,
+      "bad_debt": 0.0,
+      "collateral_liquidatable": 35370220.514061324
+     },
+     {
+      "oracle_fall": 0.1,
+      "liquidatable_debt": 43648268.065001056,
+      "positions": 8,
+      "bad_debt": 507112.64522056666,
+      "collateral_liquidatable": 49399607.33686342
+     },
+     {
+      "oracle_fall": 0.2,
+      "liquidatable_debt": 45701052.31560791,
+      "positions": 10,
+      "bad_debt": 5191420.770432949,
+      "collateral_liquidatable": 51985396.56906576
+     },
+     {
+      "oracle_fall": 0.3,
+      "liquidatable_debt": 45701052.31560791,
+      "positions": 10,
+      "bad_debt": 10255124.713579824,
+      "collateral_liquidatable": 51985396.56906576
+     },
+     {
+      "oracle_fall": 0.5,
+      "liquidatable_debt": 45701052.31560791,
+      "positions": 10,
+      "bad_debt": 20382532.59987356,
+      "collateral_liquidatable": 51985396.56906576
+     }
+    ],
+    "state_source": "Morpho Blue market() and every borrower's position() on-chain, borrowers from the Morpho API"
    }
   },
   {
@@ -955,7 +4621,10 @@
    "details": {
     "address": "0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
     "issuer": "Ethena",
-    "source": "ERC-20 symbol() on-chain, issuer from registry.json"
+    "source": "ERC-20 symbol() on-chain, issuer from registry.json",
+    "pharos_id": "usde-ethena",
+    "pharos_grade": "C+ 60",
+    "pharos_as_of": "2026-10-11"
    }
   },
   {
@@ -965,8 +4634,11 @@
    "details": {
     "address": "0x0c13eec9b02cd9d85facc9edf17e71feafc3d8d7",
     "shape": "Morpho ChainlinkOracleV2",
-    "price_raw": "999574829353754217407217041225093047",
-    "source": "price() and getters read on-chain"
+    "price_raw": "999551329870742843657439536330200735",
+    "oracle_class": "price-tracking",
+    "class_basis": "base side: USDe / USD: fell 12 times in 24 changes over 24 rounds, a market price",
+    "source": "price() and getters read on-chain; class from the base-side inputs (D82\u2013D84)",
+    "tracks_bound": true
    }
   },
   {
@@ -1015,6 +4687,27 @@
    }
   },
   {
+   "id": "0xdc035d45d973e3ec169d2276ddab16f1e407384f",
+   "kind": "Asset",
+   "label": "USDS",
+   "details": {
+    "address": "0xdc035d45d973e3ec169d2276ddab16f1e407384f",
+    "source": "ERC-20 symbol() on-chain",
+    "pharos_id": "usds-sky",
+    "pharos_grade": "B 71",
+    "pharos_as_of": "2026-10-11"
+   }
+  },
+  {
+   "id": "0x65c9a641afceb9c0e6034e558a319488fa0fa3be",
+   "kind": "Asset",
+   "label": "fxSP",
+   "details": {
+    "address": "0x65c9a641afceb9c0e6034e558a319488fa0fa3be",
+    "source": "ERC-20 symbol() on-chain"
+   }
+  },
+  {
    "id": "user:0xb03d620e49b6a21ea9d02142831c3f61c2fcbabc",
    "kind": "Actor",
    "label": "Address 0xb03d\u2026babc",
@@ -1022,6 +4715,419 @@
     "address": "0xb03d620e49b6a21ea9d02142831c3f61c2fcbabc",
     "actor_type": "address with positions",
     "source": "Morpho API userByAddress (positions), Morpho Blue position() on-chain (amounts)"
+   }
+  },
+  {
+   "id": "pharos:fxusd-f-x-protocol",
+   "kind": "External",
+   "label": "fxUSD",
+   "details": {
+    "pharos_id": "fxusd-f-x-protocol",
+    "pharos_grade": "D 44",
+    "source": "Pharos"
+   }
+  },
+  {
+   "id": "pharos-group:mint-control:ethereum:0xe982615d461dd5cd06575bbea87624fda4e3de17",
+   "kind": "External",
+   "label": "mint control: ethereum:0xe982615d461dd",
+   "details": {
+    "source": "Pharos"
+   }
+  },
+  {
+   "id": "pharos-group:mint-control:ethereum:0xfcb19e6a322b27c06842a71e8c725399f049ae3a",
+   "kind": "External",
+   "label": "mint control: ethereum:0xfcb19e6a322b2",
+   "details": {
+    "source": "Pharos"
+   }
+  },
+  {
+   "id": "pharos-group:reserve-issuer:united states treasury",
+   "kind": "External",
+   "label": "reserve issuer: United States Treasury",
+   "details": {
+    "source": "Pharos"
+   }
+  },
+  {
+   "id": "pharos-group:mint-control:ethereum:0x36b072ed8afe665e3aa6daba79decbec63752b22",
+   "kind": "External",
+   "label": "mint control: ethereum:0x36b072ed8afe6",
+   "details": {
+    "source": "Pharos"
+   }
+  },
+  {
+   "id": "pharos-group:mint-control:ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+   "kind": "External",
+   "label": "mint control: ethereum:0xa3931d71877c0",
+   "details": {
+    "source": "Pharos"
+   }
+  },
+  {
+   "id": "protocol:morpho-blue",
+   "kind": "External",
+   "label": "Morpho Blue",
+   "details": {
+    "tvl_usd": 11276138516,
+    "category": "Lending",
+    "share_of_defi": 0.01897,
+    "share_of_category": 0.2123,
+    "rank_in_category": 2,
+    "concentrated": false,
+    "concentration": "Morpho Blue: 11,276M USD, 1.90% of DeFi, 21.2% of Lending (#2)",
+    "source": "DefiLlama /protocols (D158\u2013D160)"
+   }
+  },
+  {
+   "id": "protocol:huma",
+   "kind": "External",
+   "label": "Huma",
+   "details": {
+    "tvl_usd": 399893612,
+    "category": "RWA",
+    "share_of_defi": 0.00067,
+    "share_of_category": 0.0844,
+    "rank_in_category": 4,
+    "concentrated": false,
+    "concentration": "Huma: 400M USD, 0.07% of DeFi, 8.4% of RWA (#4)",
+    "source": "DefiLlama /protocols (D158\u2013D160)"
+   }
+  },
+  {
+   "id": "protocol:pendle-v2",
+   "kind": "External",
+   "label": "Pendle V2",
+   "details": {
+    "tvl_usd": 1207415400,
+    "category": "Yield",
+    "share_of_defi": 0.00203,
+    "share_of_category": 0.2524,
+    "rank_in_category": 2,
+    "concentrated": true,
+    "concentration": "Pendle V2: 1,207M USD, 0.20% of DeFi, 25.2% of Yield (#2): CONCENTRATED",
+    "source": "DefiLlama /protocols (D158\u2013D160)"
+   }
+  },
+  {
+   "id": "protocol:re",
+   "kind": "External",
+   "label": "Re",
+   "details": {
+    "tvl_usd": 408468990,
+    "category": "RWA",
+    "share_of_defi": 0.00069,
+    "share_of_category": 0.0862,
+    "rank_in_category": 3,
+    "concentrated": false,
+    "concentration": "Re: 408M USD, 0.07% of DeFi, 8.6% of RWA (#3)",
+    "source": "DefiLlama /protocols (D158\u2013D160)"
+   }
+  },
+  {
+   "id": "protocol:ethena-usde",
+   "kind": "External",
+   "label": "Ethena USDe",
+   "details": {
+    "tvl_usd": 4759814425,
+    "category": "Basis Trading",
+    "share_of_defi": 0.00801,
+    "share_of_category": 0.6101,
+    "rank_in_category": 1,
+    "concentrated": true,
+    "concentration": "Ethena USDe: 4,760M USD, 0.80% of DeFi, 61.0% of Basis Trading (#1): CONCENTRATED",
+    "source": "DefiLlama /protocols (D158\u2013D160)"
+   }
+  },
+  {
+   "id": "protocol:fx-protocol",
+   "kind": "External",
+   "label": "fx Protocol",
+   "details": {
+    "tvl_usd": 129544560,
+    "category": "Dual-Token Stablecoin",
+    "share_of_defi": 0.00022,
+    "share_of_category": 0.5765,
+    "rank_in_category": 1,
+    "concentrated": false,
+    "concentration": "fx Protocol: 130M USD, 0.02% of DeFi, 57.7% of Dual-Token Stablecoin (#1)",
+    "source": "DefiLlama /protocols (D158\u2013D160)"
+   }
+  },
+  {
+   "id": "protocol:lido",
+   "kind": "External",
+   "label": "Lido",
+   "details": {
+    "tvl_usd": 24391151737,
+    "category": "Liquid Staking",
+    "share_of_defi": 0.04103,
+    "share_of_category": 0.4273,
+    "rank_in_category": 1,
+    "concentrated": true,
+    "concentration": "Lido: 24,391M USD, 4.10% of DeFi, 42.7% of Liquid Staking (#1): CONCENTRATED",
+    "source": "DefiLlama /protocols (D158\u2013D160)"
+   }
+  },
+  {
+   "id": "zama:protocol",
+   "kind": "External",
+   "label": "Zama Protocol (KMS, coprocessors)",
+   "details": {
+    "role": "decrypts every batch aggregate and every unwrap: if it halts, no confidential exit completes",
+    "source": "docs/external/docs.zama.org-protocol-docs (D175)"
+   }
+  },
+  {
+   "id": "0xeb5015ff021db115ace010f23f55c2591059bba0",
+   "kind": "Admin",
+   "label": "Zama token wrapper registry",
+   "details": {
+    "address": "0xeb5015ff021db115ace010f23f55c2591059bba0",
+    "role": "its governance can pause a wrapper"
+   }
+  },
+  {
+   "id": "0xb1b18ad1f16d744c470cb6b09cb826affcc9eb30",
+   "kind": "Asset",
+   "label": "cShare (confidential vault shares)",
+   "details": {
+    "address": "0xb1b18ad1f16d744c470cb6b09cb826affcc9eb30",
+    "zama_vault": "rockawayx-usdc-rwa",
+    "pool": true,
+    "role": "holds the vault shares of every confidential depositor: one pool, not one holder"
+   }
+  },
+  {
+   "id": "0xe978f22157048e5db8e5d07971376e86671672b2",
+   "kind": "Asset",
+   "label": "cAsset (confidential underlying)",
+   "details": {
+    "address": "0xe978f22157048e5db8e5d07971376e86671672b2"
+   }
+  },
+  {
+   "id": "0x43e8f7b280b19637d2a7e3008657282aaf2c0e4b",
+   "kind": "Pool",
+   "label": "Zama redeem batcher (daily)",
+   "details": {
+    "address": "0x43e8f7b280b19637d2a7e3008657282aaf2c0e4b",
+    "role": "the confidential exit: one batch a day, settled after a decryption"
+   }
+  },
+  {
+   "id": "0x084fd3a517d6dae1f8e3e5481b65107fd7e5eec1",
+   "kind": "Pool",
+   "label": "Zama deposit batcher (daily)",
+   "details": {
+    "address": "0x084fd3a517d6dae1f8e3e5481b65107fd7e5eec1"
+   }
+  },
+  {
+   "id": "0xa28a369df348ac232e4daf7b0ef90280d8707d7f",
+   "kind": "Asset",
+   "label": "cShare (confidential vault shares)",
+   "details": {
+    "address": "0xa28a369df348ac232e4daf7b0ef90280d8707d7f",
+    "zama_vault": "flowdesk-usdt-high-yield",
+    "pool": true,
+    "role": "holds the vault shares of every confidential depositor: one pool, not one holder"
+   }
+  },
+  {
+   "id": "0xae0207c757aa2b4019ad96edd0092ddc63ef0c50",
+   "kind": "Asset",
+   "label": "cAsset (confidential underlying)",
+   "details": {
+    "address": "0xae0207c757aa2b4019ad96edd0092ddc63ef0c50"
+   }
+  },
+  {
+   "id": "0xd2f3f554f995c12e2bfe5e155397cb6272643744",
+   "kind": "Pool",
+   "label": "Zama redeem batcher (daily)",
+   "details": {
+    "address": "0xd2f3f554f995c12e2bfe5e155397cb6272643744",
+    "role": "the confidential exit: one batch a day, settled after a decryption"
+   }
+  },
+  {
+   "id": "0xbebee65445dad2f31628add14535fd0b3fc915b4",
+   "kind": "Pool",
+   "label": "Zama deposit batcher (daily)",
+   "details": {
+    "address": "0xbebee65445dad2f31628add14535fd0b3fc915b4"
+   }
+  },
+  {
+   "id": "0xbac6dedf2c10d6d381f9dbd9efd69d93ffcef50b",
+   "kind": "Asset",
+   "label": "cShare (confidential vault shares)",
+   "details": {
+    "address": "0xbac6dedf2c10d6d381f9dbd9efd69d93ffcef50b",
+    "zama_vault": "wintermute-usdt-select",
+    "pool": true,
+    "role": "holds the vault shares of every confidential depositor: one pool, not one holder"
+   }
+  },
+  {
+   "id": "0x79e621c35b93329bbb6f06d9635981b9a5f4a255",
+   "kind": "Pool",
+   "label": "Zama redeem batcher (daily)",
+   "details": {
+    "address": "0x79e621c35b93329bbb6f06d9635981b9a5f4a255",
+    "role": "the confidential exit: one batch a day, settled after a decryption"
+   }
+  },
+  {
+   "id": "0x7320830992a924e6d2f3d3e9a74fbd103e9a20ae",
+   "kind": "Pool",
+   "label": "Zama deposit batcher (daily)",
+   "details": {
+    "address": "0x7320830992a924e6d2f3d3e9a74fbd103e9a20ae"
+   }
+  },
+  {
+   "id": "0x1f6a937119c0c34db0a2c4f000386a3bfd4a9e73",
+   "kind": "Asset",
+   "label": "cShare (confidential vault shares)",
+   "details": {
+    "address": "0x1f6a937119c0c34db0a2c4f000386a3bfd4a9e73",
+    "zama_vault": "steakhouse-usdt-prime",
+    "pool": true,
+    "role": "holds the vault shares of every confidential depositor: one pool, not one holder"
+   }
+  },
+  {
+   "id": "0x7afb2cd6d41c379e3d8b46f206346b63a67f4d43",
+   "kind": "Pool",
+   "label": "Zama redeem batcher (daily)",
+   "details": {
+    "address": "0x7afb2cd6d41c379e3d8b46f206346b63a67f4d43",
+    "role": "the confidential exit: one batch a day, settled after a decryption"
+   }
+  },
+  {
+   "id": "0x737f4558c0cc7c29b56dd13c34b68e967c91e399",
+   "kind": "Pool",
+   "label": "Zama deposit batcher (daily)",
+   "details": {
+    "address": "0x737f4558c0cc7c29b56dd13c34b68e967c91e399"
+   }
+  },
+  {
+   "id": "0xb6e5299fc56053dd5440104fd6fd2a3cd064edbc",
+   "kind": "Asset",
+   "label": "cShare (confidential vault shares)",
+   "details": {
+    "address": "0xb6e5299fc56053dd5440104fd6fd2a3cd064edbc",
+    "zama_vault": "wintermute-usdc-pendle-looping",
+    "pool": true,
+    "role": "holds the vault shares of every confidential depositor: one pool, not one holder"
+   }
+  },
+  {
+   "id": "0xd671b562fdece574da12295d1680f6a7a0af2963",
+   "kind": "Pool",
+   "label": "Zama redeem batcher (daily)",
+   "details": {
+    "address": "0xd671b562fdece574da12295d1680f6a7a0af2963",
+    "role": "the confidential exit: one batch a day, settled after a decryption"
+   }
+  },
+  {
+   "id": "0x1b731ec615165094ec4d695b0a1c8ee31366cf84",
+   "kind": "Pool",
+   "label": "Zama deposit batcher (daily)",
+   "details": {
+    "address": "0x1b731ec615165094ec4d695b0a1c8ee31366cf84"
+   }
+  },
+  {
+   "id": "0x501b014f86a73a7199e00cb31c0e9565ac51e51b",
+   "kind": "Asset",
+   "label": "cShare (confidential vault shares)",
+   "details": {
+    "address": "0x501b014f86a73a7199e00cb31c0e9565ac51e51b",
+    "zama_vault": "steakhouse-usdc-high-yield",
+    "pool": true,
+    "role": "holds the vault shares of every confidential depositor: one pool, not one holder"
+   }
+  },
+  {
+   "id": "0x807c367da7b9228643b06390e199e33cca7cc533",
+   "kind": "Pool",
+   "label": "Zama redeem batcher (daily)",
+   "details": {
+    "address": "0x807c367da7b9228643b06390e199e33cca7cc533",
+    "role": "the confidential exit: one batch a day, settled after a decryption"
+   }
+  },
+  {
+   "id": "0x321c9aab1390100f6e7fe1735a928ec0f16252f0",
+   "kind": "Pool",
+   "label": "Zama deposit batcher (daily)",
+   "details": {
+    "address": "0x321c9aab1390100f6e7fe1735a928ec0f16252f0"
+   }
+  },
+  {
+   "id": "0x77f8207ee451441336538ba07a2f425780ded8db",
+   "kind": "Asset",
+   "label": "cShare (confidential vault shares)",
+   "details": {
+    "address": "0x77f8207ee451441336538ba07a2f425780ded8db",
+    "zama_vault": "wintermute-usdc-select",
+    "pool": true,
+    "role": "holds the vault shares of every confidential depositor: one pool, not one holder"
+   }
+  },
+  {
+   "id": "0x4f555b54842e609ba62843e0ab4ff184a436772e",
+   "kind": "Pool",
+   "label": "Zama redeem batcher (daily)",
+   "details": {
+    "address": "0x4f555b54842e609ba62843e0ab4ff184a436772e",
+    "role": "the confidential exit: one batch a day, settled after a decryption"
+   }
+  },
+  {
+   "id": "0x87356ade88315aed3ac61b42cacc3a263730b1bd",
+   "kind": "Pool",
+   "label": "Zama deposit batcher (daily)",
+   "details": {
+    "address": "0x87356ade88315aed3ac61b42cacc3a263730b1bd"
+   }
+  },
+  {
+   "id": "0x4fccf8046fb7fb7ab76321bd39c27453e396b88f",
+   "kind": "Asset",
+   "label": "cShare (confidential vault shares)",
+   "details": {
+    "address": "0x4fccf8046fb7fb7ab76321bd39c27453e396b88f",
+    "zama_vault": "rockawayx-usdc-high-yield",
+    "pool": true,
+    "role": "holds the vault shares of every confidential depositor: one pool, not one holder"
+   }
+  },
+  {
+   "id": "0xf18ad9f94a7ea994fdcbc5fd5c5da326a341d8a8",
+   "kind": "Pool",
+   "label": "Zama redeem batcher (daily)",
+   "details": {
+    "address": "0xf18ad9f94a7ea994fdcbc5fd5c5da326a341d8a8",
+    "role": "the confidential exit: one batch a day, settled after a decryption"
+   }
+  },
+  {
+   "id": "0x2deafb36f3b118d434cde4708e8350eae918724d",
+   "kind": "Pool",
+   "label": "Zama deposit batcher (daily)",
+   "details": {
+    "address": "0x2deafb36f3b118d434cde4708e8350eae918724d"
    }
   }
  ],
@@ -1038,9 +5144,11 @@
    "source": "0x002278ea242ec722813b4fe3c8eeaa07dbc331c731cc0b4248a1bf0771f933ea",
    "target": "0x22ae3d9a738471f405169af055d31c687087d4c7",
    "rel": "takes as collateral",
-   "amount": null,
-   "unit": null,
-   "details": {}
+   "amount": 37805692.541938,
+   "unit": "PST",
+   "details": {
+    "note": "collateral of the market's borrowers; liquidations sell it (curve on the market)"
+   }
   },
   {
    "source": "0xa5657b406fc4282039861c6fca64452aefec8ac0",
@@ -1048,7 +5156,9 @@
    "rel": "reads",
    "amount": null,
    "unit": null,
-   "details": {}
+   "details": {
+    "role": "BASE_FEED_1"
+   }
   },
   {
    "source": "0x002278ea242ec722813b4fe3c8eeaa07dbc331c731cc0b4248a1bf0771f933ea",
@@ -1062,11 +5172,11 @@
    "source": "user:0xdf81987465681d0515058fe0a47a3bd174012730",
    "target": "0x002278ea242ec722813b4fe3c8eeaa07dbc331c731cc0b4248a1bf0771f933ea",
    "rel": "borrows from",
-   "amount": 1100687.935949,
+   "amount": 1100775.756823,
    "unit": "USDC",
    "details": {
     "collateral": "1,230,761.81 PST",
-    "health_factor": 1.0945,
+    "health_factor": 1.0946,
     "liquidation_at": "-8.64% oracle fall"
    }
   },
@@ -1074,10 +5184,10 @@
    "source": "0xc207d3f66537d7f66456808379a0e560cf20da36",
    "target": "0x002278ea242ec722813b4fe3c8eeaa07dbc331c731cc0b4248a1bf0771f933ea",
    "rel": "supplies",
-   "amount": 21868173.093604,
+   "amount": 21934062.335596,
    "unit": "USDC",
    "details": {
-    "share_of_market": "57.6%",
+    "share_of_market": "57.7%",
     "through_adapter": "0xedee08b242d4cd94127cec8a4c334cd2d0ca3f65",
     "note": "its withdrawal raises utilisation and the borrow rate of the market"
    }
@@ -1086,7 +5196,7 @@
    "source": "0x8ac91877b93330f52b2979a31a4879506021475c",
    "target": "0x002278ea242ec722813b4fe3c8eeaa07dbc331c731cc0b4248a1bf0771f933ea",
    "rel": "supplies",
-   "amount": 12832941.04411,
+   "amount": 12843886.661329,
    "unit": "USDC",
    "details": {
     "share_of_market": "33.8%",
@@ -1098,7 +5208,7 @@
    "source": "0xd95fe7adf5075fad9d6bf853e0f9fe53369e8d96",
    "target": "0x002278ea242ec722813b4fe3c8eeaa07dbc331c731cc0b4248a1bf0771f933ea",
    "rel": "supplies",
-   "amount": 3183878.667675,
+   "amount": 3184108.73924,
    "unit": "USDC",
    "details": {
     "share_of_market": "8.4%",
@@ -1118,9 +5228,11 @@
    "source": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
    "target": "0xecfafdc7741323a945a163ed068b5a3c43483957",
    "rel": "takes as collateral",
-   "amount": null,
-   "unit": null,
-   "details": {}
+   "amount": 10386801.904236,
+   "unit": "PT-reUSD-10DEC2026",
+   "details": {
+    "note": "collateral of the market's borrowers; liquidations sell it (curve on the market)"
+   }
   },
   {
    "source": "0x217d6ddcdb95112c51657f6270e8c079cfdb51f0",
@@ -1128,7 +5240,9 @@
    "rel": "reads",
    "amount": null,
    "unit": null,
-   "details": {}
+   "details": {
+    "role": "BASE_FEED_1"
+   }
   },
   {
    "source": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
@@ -1158,11 +5272,11 @@
    "source": "user:0xdf81987465681d0515058fe0a47a3bd174012730",
    "target": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
    "rel": "borrows from",
-   "amount": 1204104.886569,
+   "amount": 1204207.90096,
    "unit": "USDT",
    "details": {
     "collateral": "1,413,899.81 PT-reUSD-10DEC2026",
-    "health_factor": 1.0548,
+    "health_factor": 1.0549,
     "liquidation_at": "-5.20% oracle fall"
    }
   },
@@ -1170,7 +5284,7 @@
    "source": "0xa0804346780b4c2e3be118ac957d1db82f9d7484",
    "target": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
    "rel": "supplies",
-   "amount": 4327508.439873,
+   "amount": 4327785.997116,
    "unit": "USDT",
    "details": {
     "share_of_market": "38.1%",
@@ -1181,7 +5295,7 @@
    "source": "0xb48c056c5608ba2ee4cd94af2bf4b1f25295bd7e",
    "target": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
    "rel": "supplies",
-   "amount": 3069226.257802,
+   "amount": 3069423.111486,
    "unit": "USDT",
    "details": {
     "share_of_market": "27.1%",
@@ -1193,7 +5307,7 @@
    "source": "0x500ae64100d7dbdb640531085c2f5d40cdc8930d",
    "target": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
    "rel": "supplies",
-   "amount": 1905687.402676,
+   "amount": 1905809.629438,
    "unit": "USDT",
    "details": {
     "share_of_market": "16.8%",
@@ -1205,7 +5319,7 @@
    "source": "0xbeef0c18715acddc14a3123a608f491319f1c28c",
    "target": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
    "rel": "supplies",
-   "amount": 1001015.93618,
+   "amount": 1001080.139227,
    "unit": "USDT",
    "details": {
     "share_of_market": "8.8%",
@@ -1224,9 +5338,11 @@
    "source": "0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b",
    "target": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
    "rel": "takes as collateral",
-   "amount": null,
-   "unit": null,
-   "details": {}
+   "amount": 10912241.146869732,
+   "unit": "sUSDS",
+   "details": {
+    "note": "collateral of the market's borrowers; liquidations sell it (curve on the market)"
+   }
   },
   {
    "source": "0x0c426d174fc88b7a25d59945ab2f7274bf7b4c79",
@@ -1234,7 +5350,9 @@
    "rel": "converts through",
    "amount": null,
    "unit": null,
-   "details": {}
+   "details": {
+    "role": "BASE_VAULT"
+   }
   },
   {
    "source": "0x0c426d174fc88b7a25d59945ab2f7274bf7b4c79",
@@ -1242,7 +5360,9 @@
    "rel": "reads",
    "amount": null,
    "unit": null,
-   "details": {}
+   "details": {
+    "role": "BASE_FEED_1"
+   }
   },
   {
    "source": "0x0c426d174fc88b7a25d59945ab2f7274bf7b4c79",
@@ -1250,7 +5370,9 @@
    "rel": "reads",
    "amount": null,
    "unit": null,
-   "details": {}
+   "details": {
+    "role": "QUOTE_FEED_1"
+   }
   },
   {
    "source": "0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b",
@@ -1268,7 +5390,7 @@
    "unit": "USDT",
    "details": {
     "collateral": "1,162,712.11 sUSDS",
-    "health_factor": 1.0766,
+    "health_factor": 1.0765,
     "liquidation_at": "-7.11% oracle fall"
    }
   },
@@ -1319,9 +5441,11 @@
    "source": "0x5613b170ded221c588b6e9637b910f49e5508680ceede207f44aa72e5c46cb05",
    "target": "0xb195b618ea52b77cb2a58846f452f59f8dfa9390",
    "rel": "takes as collateral",
-   "amount": null,
-   "unit": null,
-   "details": {}
+   "amount": 7982359.346812969,
+   "unit": "PT-sUSDE-26NOV2026",
+   "details": {
+    "note": "collateral of the market's borrowers; liquidations sell it (curve on the market)"
+   }
   },
   {
    "source": "0x5613b170ded221c588b6e9637b910f49e5508680ceede207f44aa72e5c46cb05",
@@ -1387,8 +5511,8 @@
    "unit": "USDC",
    "details": {
     "collateral": "3,961,491.35 PT-sUSDE-26NOV2026",
-    "health_factor": 1.0535,
-    "liquidation_at": "-5.08% oracle fall"
+    "health_factor": 1.0536,
+    "liquidation_at": "-5.09% oracle fall"
    }
   },
   {
@@ -1415,9 +5539,11 @@
    "source": "0xae992849c5f544a32dfdfcc74c0695b73b8732f449727827af6ce3768e968382",
    "target": "0x079c3469143804af5d0d645a878c371dbe8d038e",
    "rel": "takes as collateral",
-   "amount": null,
-   "unit": null,
-   "details": {}
+   "amount": 1239375.123257785,
+   "unit": "PT-fxSAVE-29OCT2026",
+   "details": {
+    "note": "collateral of the market's borrowers; liquidations sell it (curve on the market)"
+   }
   },
   {
    "source": "0x5911530e5f62fff0a73e91ccd797d717e6d49fa9",
@@ -1425,7 +5551,9 @@
    "rel": "reads",
    "amount": null,
    "unit": null,
-   "details": {}
+   "details": {
+    "role": "BASE_FEED_1"
+   }
   },
   {
    "source": "0xae992849c5f544a32dfdfcc74c0695b73b8732f449727827af6ce3768e968382",
@@ -1455,7 +5583,7 @@
    "source": "user:0xdf81987465681d0515058fe0a47a3bd174012730",
    "target": "0xae992849c5f544a32dfdfcc74c0695b73b8732f449727827af6ce3768e968382",
    "rel": "borrows from",
-   "amount": 601575.098766,
+   "amount": 601675.72692,
    "unit": "USDC",
    "details": {
     "collateral": "734,250.79 PT-fxSAVE-29OCT2026",
@@ -1467,10 +5595,10 @@
    "source": "0x2ca22cb25558fa2018ecb1ce4ed8af92ee7ea423",
    "target": "0xae992849c5f544a32dfdfcc74c0695b73b8732f449727827af6ce3768e968382",
    "rel": "supplies",
-   "amount": 1016883.513582,
+   "amount": 1225293.853375,
    "unit": "USDC",
    "details": {
-    "share_of_market": "89.2%",
+    "share_of_market": "90.9%",
     "through_adapter": "0x516ecd770f9b6420e77cedd80ea7052ae65bf835",
     "note": "its withdrawal raises utilisation and the borrow rate of the market"
    }
@@ -1487,9 +5615,11 @@
    "source": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
    "target": "0xecfafdc7741323a945a163ed068b5a3c43483957",
    "rel": "takes as collateral",
-   "amount": null,
-   "unit": null,
-   "details": {}
+   "amount": 135306607.113726,
+   "unit": "PT-reUSD-10DEC2026",
+   "details": {
+    "note": "collateral of the market's borrowers; liquidations sell it (curve on the market)"
+   }
   },
   {
    "source": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
@@ -1503,11 +5633,11 @@
    "source": "user:0xdf81987465681d0515058fe0a47a3bd174012730",
    "target": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
    "rel": "borrows from",
-   "amount": 3672199.609934,
+   "amount": 3672579.724738,
    "unit": "USDC",
    "details": {
     "collateral": "4,300,638.38 PT-reUSD-10DEC2026",
-    "health_factor": 1.052,
+    "health_factor": 1.0521,
     "liquidation_at": "-4.95% oracle fall"
    }
   },
@@ -1515,10 +5645,10 @@
    "source": "0x55c1b6e461a6334b567baf0feb5d728715446f05",
    "target": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
    "rel": "supplies",
-   "amount": 41184636.231286,
+   "amount": 40154682.640333,
    "unit": "USDC",
    "details": {
-    "share_of_market": "34.1%",
+    "share_of_market": "31.6%",
     "through_adapter": "0xa2f362079dbc570a6df5bd04ad91002d17c0db9a",
     "note": "its withdrawal raises utilisation and the borrow rate of the market"
    }
@@ -1527,10 +5657,10 @@
    "source": "0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757",
    "target": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
    "rel": "supplies",
-   "amount": 10000427.114958,
+   "amount": 9999207.032481,
    "unit": "USDC",
    "details": {
-    "share_of_market": "8.3%",
+    "share_of_market": "7.9%",
     "through_adapter": "0xbfe734baab130048e20a64e800c4c2ec25756284",
     "note": "its withdrawal raises utilisation and the borrow rate of the market"
    }
@@ -1539,10 +5669,10 @@
    "source": "0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd",
    "target": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
    "rel": "supplies",
-   "amount": 9325611.144454,
+   "amount": 9326447.052613,
    "unit": "USDC",
    "details": {
-    "share_of_market": "7.7%",
+    "share_of_market": "7.3%",
     "through_adapter": "0x3b9e060a2b05588126fda01b95e9485687fc91d7",
     "note": "its withdrawal raises utilisation and the borrow rate of the market"
    }
@@ -1551,10 +5681,10 @@
    "source": "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
    "target": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
    "rel": "supplies",
-   "amount": 9300860.352802,
+   "amount": 9301694.042405,
    "unit": "USDC",
    "details": {
-    "share_of_market": "7.7%",
+    "share_of_market": "7.3%",
     "through_adapter": "0xce0b17e6e94c9068b760557ba11a7bb1943f5674",
     "note": "its withdrawal raises utilisation and the borrow rate of the market"
    }
@@ -1563,10 +5693,10 @@
    "source": "0xd33847382f821094d9079256c25ca1794ab408c6",
    "target": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
    "rel": "supplies",
-   "amount": 9049075.084633,
+   "amount": 9049886.205275,
    "unit": "USDC",
    "details": {
-    "share_of_market": "7.5%",
+    "share_of_market": "7.1%",
     "note": "its withdrawal raises utilisation and the borrow rate of the market"
    }
   },
@@ -1590,9 +5720,11 @@
    "source": "0xffd010618ed3cb39bb2c5de0e3e58d3d2ec9f52187a180f29723c31756a939bc",
    "target": "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
    "rel": "takes as collateral",
-   "amount": null,
-   "unit": null,
-   "details": {}
+   "amount": 495.27723451,
+   "unit": "cbBTC",
+   "details": {
+    "note": "collateral of the market's borrowers; liquidations sell it (curve on the market)"
+   }
   },
   {
    "source": "0x8b36909dd84d310cbde90cb286d9dab285a245bd",
@@ -1600,7 +5732,9 @@
    "rel": "reads",
    "amount": null,
    "unit": null,
-   "details": {}
+   "details": {
+    "role": "BASE_FEED_1"
+   }
   },
   {
    "source": "0x8b36909dd84d310cbde90cb286d9dab285a245bd",
@@ -1608,7 +5742,9 @@
    "rel": "reads",
    "amount": null,
    "unit": null,
-   "details": {}
+   "details": {
+    "role": "QUOTE_FEED_1"
+   }
   },
   {
    "source": "0xffd010618ed3cb39bb2c5de0e3e58d3d2ec9f52187a180f29723c31756a939bc",
@@ -1622,13 +5758,13 @@
    "source": "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
    "target": "0xffd010618ed3cb39bb2c5de0e3e58d3d2ec9f52187a180f29723c31756a939bc",
    "rel": "supplies",
-   "amount": 13067441.29371734,
+   "amount": 13050476.711121425,
    "unit": "RLUSD",
    "details": {
-    "share_of_vault": "2.9%",
+    "share_of_vault": "2.8%",
     "share_of_market": "100.0%",
     "through_adapter": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
-    "utilization": "88.6%"
+    "utilization": "88.7%"
    }
   },
   {
@@ -1643,9 +5779,11 @@
    "source": "0xea4bfb18df0ee6bffb7b3f0270899a8adb92ab6b684709634c8276128813cfd4",
    "target": "0xcd5fe23c85820f7b72d0926fc9b05b43e359b7ee",
    "rel": "takes as collateral",
-   "amount": null,
-   "unit": null,
-   "details": {}
+   "amount": 50633.47948390441,
+   "unit": "weETH",
+   "details": {
+    "note": "collateral of the market's borrowers; liquidations sell it (curve on the market)"
+   }
   },
   {
    "source": "0x6ab351ffde101bb24a97332f4f7162c1711f110b",
@@ -1653,7 +5791,9 @@
    "rel": "reads",
    "amount": null,
    "unit": null,
-   "details": {}
+   "details": {
+    "role": "BASE_FEED_1"
+   }
   },
   {
    "source": "0x6ab351ffde101bb24a97332f4f7162c1711f110b",
@@ -1661,7 +5801,9 @@
    "rel": "reads",
    "amount": null,
    "unit": null,
-   "details": {}
+   "details": {
+    "role": "BASE_FEED_2"
+   }
   },
   {
    "source": "0x6ab351ffde101bb24a97332f4f7162c1711f110b",
@@ -1669,7 +5811,9 @@
    "rel": "reads",
    "amount": null,
    "unit": null,
-   "details": {}
+   "details": {
+    "role": "QUOTE_FEED_1"
+   }
   },
   {
    "source": "0xea4bfb18df0ee6bffb7b3f0270899a8adb92ab6b684709634c8276128813cfd4",
@@ -1683,13 +5827,13 @@
    "source": "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
    "target": "0xea4bfb18df0ee6bffb7b3f0270899a8adb92ab6b684709634c8276128813cfd4",
    "rel": "supplies",
-   "amount": 105547763.83366641,
+   "amount": 104951490.58485262,
    "unit": "RLUSD",
    "details": {
-    "share_of_vault": "23.0%",
+    "share_of_vault": "22.9%",
     "share_of_market": "100.0%",
     "through_adapter": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
-    "utilization": "84.3%"
+    "utilization": "84.8%"
    }
   },
   {
@@ -1704,9 +5848,11 @@
    "source": "0x88abdf8693e663144c3544b9442e9b04520016d6ebc57aa76424c00ab1683c9d",
    "target": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
    "rel": "takes as collateral",
-   "amount": null,
-   "unit": null,
-   "details": {}
+   "amount": 1019.880838934621,
+   "unit": "wstETH",
+   "details": {
+    "note": "collateral of the market's borrowers; liquidations sell it (curve on the market)"
+   }
   },
   {
    "source": "0x4e58cea93a5252547c99d04042de646b17531653",
@@ -1714,7 +5860,9 @@
    "rel": "reads",
    "amount": null,
    "unit": null,
-   "details": {}
+   "details": {
+    "role": "BASE_FEED_1"
+   }
   },
   {
    "source": "0x4e58cea93a5252547c99d04042de646b17531653",
@@ -1722,7 +5870,9 @@
    "rel": "reads",
    "amount": null,
    "unit": null,
-   "details": {}
+   "details": {
+    "role": "BASE_FEED_2"
+   }
   },
   {
    "source": "0x4e58cea93a5252547c99d04042de646b17531653",
@@ -1730,7 +5880,9 @@
    "rel": "reads",
    "amount": null,
    "unit": null,
-   "details": {}
+   "details": {
+    "role": "QUOTE_FEED_1"
+   }
   },
   {
    "source": "0x88abdf8693e663144c3544b9442e9b04520016d6ebc57aa76424c00ab1683c9d",
@@ -1765,9 +5917,11 @@
    "source": "0xc0ae375fd761ff19b3f04de5534c0f1ec110f80e1c2ede27c42c1c43c3040394",
    "target": "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
    "rel": "takes as collateral",
-   "amount": null,
-   "unit": null,
-   "details": {}
+   "amount": 4070626.913311,
+   "unit": "syrupUSDC",
+   "details": {
+    "note": "collateral of the market's borrowers; liquidations sell it (curve on the market)"
+   }
   },
   {
    "source": "0xf766f4f1bcb0cbbf4eef5e26ff7c7f66a713c1b5",
@@ -1775,7 +5929,9 @@
    "rel": "converts through",
    "amount": null,
    "unit": null,
-   "details": {}
+   "details": {
+    "role": "BASE_VAULT"
+   }
   },
   {
    "source": "0xf766f4f1bcb0cbbf4eef5e26ff7c7f66a713c1b5",
@@ -1783,7 +5939,9 @@
    "rel": "reads",
    "amount": null,
    "unit": null,
-   "details": {}
+   "details": {
+    "role": "BASE_FEED_1"
+   }
   },
   {
    "source": "0xf766f4f1bcb0cbbf4eef5e26ff7c7f66a713c1b5",
@@ -1791,7 +5949,9 @@
    "rel": "reads",
    "amount": null,
    "unit": null,
-   "details": {}
+   "details": {
+    "role": "QUOTE_FEED_1"
+   }
   },
   {
    "source": "0xc0ae375fd761ff19b3f04de5534c0f1ec110f80e1c2ede27c42c1c43c3040394",
@@ -1826,9 +5986,11 @@
    "source": "0x15bb2a6af0c909eed19fb1f2ceeead34ecbdcba626de752c6b09389ee14eec32",
    "target": "0x73e0c0d45e048d25fc26fa3159b0aa04bfa4db98",
    "rel": "takes as collateral",
-   "amount": null,
-   "unit": null,
-   "details": {}
+   "amount": 3845.25161412,
+   "unit": "kBTC",
+   "details": {
+    "note": "collateral of the market's borrowers; liquidations sell it (curve on the market)"
+   }
   },
   {
    "source": "0xbcc3d9834b84b32cf540dbe948ded4b47bec5ddb",
@@ -1836,7 +5998,9 @@
    "rel": "reads",
    "amount": null,
    "unit": null,
-   "details": {}
+   "details": {
+    "role": "BASE_FEED_1"
+   }
   },
   {
    "source": "0xbcc3d9834b84b32cf540dbe948ded4b47bec5ddb",
@@ -1844,7 +6008,9 @@
    "rel": "reads",
    "amount": null,
    "unit": null,
-   "details": {}
+   "details": {
+    "role": "QUOTE_FEED_1"
+   }
   },
   {
    "source": "0x15bb2a6af0c909eed19fb1f2ceeead34ecbdcba626de752c6b09389ee14eec32",
@@ -1879,9 +6045,11 @@
    "source": "0xa128dddc761075df9a9a60689f3a41a989b245aad506352c509c0c3a76a9ec6b",
    "target": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
    "rel": "takes as collateral",
-   "amount": null,
-   "unit": null,
-   "details": {}
+   "amount": 309.37259198,
+   "unit": "WBTC",
+   "details": {
+    "note": "collateral of the market's borrowers; liquidations sell it (curve on the market)"
+   }
   },
   {
    "source": "0xf58725eb213161e9054c97f970dc80b2d0327e8d",
@@ -1889,7 +6057,9 @@
    "rel": "reads",
    "amount": null,
    "unit": null,
-   "details": {}
+   "details": {
+    "role": "BASE_FEED_1"
+   }
   },
   {
    "source": "0xf58725eb213161e9054c97f970dc80b2d0327e8d",
@@ -1897,7 +6067,9 @@
    "rel": "reads",
    "amount": null,
    "unit": null,
-   "details": {}
+   "details": {
+    "role": "BASE_FEED_2"
+   }
   },
   {
    "source": "0xf58725eb213161e9054c97f970dc80b2d0327e8d",
@@ -1905,7 +6077,9 @@
    "rel": "reads",
    "amount": null,
    "unit": null,
-   "details": {}
+   "details": {
+    "role": "QUOTE_FEED_1"
+   }
   },
   {
    "source": "0xa128dddc761075df9a9a60689f3a41a989b245aad506352c509c0c3a76a9ec6b",
@@ -1940,9 +6114,11 @@
    "source": "0x1749e02006bc6bd6a86af52d231511f6911d5e42318e028e51a28dfabc68dd47",
    "target": "0x5a19fa369f2895dcd8d2cee62e4ceae58ef92bbb",
    "rel": "takes as collateral",
-   "amount": null,
-   "unit": null,
-   "details": {}
+   "amount": 5.2159956476740374,
+   "unit": "PT-sUSDE-13AUG2026",
+   "details": {
+    "note": "collateral of the market's borrowers; liquidations sell it (curve on the market)"
+   }
   },
   {
    "source": "0x968eb911db90bb8ea9e4792b05c94500bc1a62d7",
@@ -1950,7 +6126,9 @@
    "rel": "reads",
    "amount": null,
    "unit": null,
-   "details": {}
+   "details": {
+    "role": "BASE_FEED_1"
+   }
   },
   {
    "source": "0x968eb911db90bb8ea9e4792b05c94500bc1a62d7",
@@ -1958,7 +6136,9 @@
    "rel": "reads",
    "amount": null,
    "unit": null,
-   "details": {}
+   "details": {
+    "role": "BASE_FEED_2"
+   }
   },
   {
    "source": "0x968eb911db90bb8ea9e4792b05c94500bc1a62d7",
@@ -1966,7 +6146,9 @@
    "rel": "reads",
    "amount": null,
    "unit": null,
-   "details": {}
+   "details": {
+    "role": "QUOTE_FEED_1"
+   }
   },
   {
    "source": "0x1749e02006bc6bd6a86af52d231511f6911d5e42318e028e51a28dfabc68dd47",
@@ -2017,9 +6199,11 @@
    "source": "0xc3b37a18d5b15f8e5b78bcdc014ffb3f22933bde4e5f6a36dedf36db87e68585",
    "target": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
    "rel": "takes as collateral",
-   "amount": null,
-   "unit": null,
-   "details": {}
+   "amount": 0.001286666666666667,
+   "unit": "WETH",
+   "details": {
+    "note": "collateral of the market's borrowers; liquidations sell it (curve on the market)"
+   }
   },
   {
    "source": "0x18803b5c20962244f0a99fc3b7d7e614762385eb",
@@ -2027,7 +6211,9 @@
    "rel": "reads",
    "amount": null,
    "unit": null,
-   "details": {}
+   "details": {
+    "role": "BASE_FEED_1"
+   }
   },
   {
    "source": "0x18803b5c20962244f0a99fc3b7d7e614762385eb",
@@ -2035,7 +6221,9 @@
    "rel": "reads",
    "amount": null,
    "unit": null,
-   "details": {}
+   "details": {
+    "role": "QUOTE_FEED_1"
+   }
   },
   {
    "source": "0xc3b37a18d5b15f8e5b78bcdc014ffb3f22933bde4e5f6a36dedf36db87e68585",
@@ -2070,9 +6258,11 @@
    "source": "0x4fa31e3f8ba345227d44e1cf48559eea53a90dd5311dc006984c060f2f311d96",
    "target": "0xce6170ea245dc8d1f275a710a062b70f125f0110",
    "rel": "takes as collateral",
-   "amount": null,
-   "unit": null,
-   "details": {}
+   "amount": 11805718.087603,
+   "unit": "FXRP",
+   "details": {
+    "note": "collateral of the market's borrowers; liquidations sell it (curve on the market)"
+   }
   },
   {
    "source": "0x5ac03061500e0c97862a466a38a7e87fac4ac39d",
@@ -2080,7 +6270,9 @@
    "rel": "reads",
    "amount": null,
    "unit": null,
-   "details": {}
+   "details": {
+    "role": "BASE_FEED_1"
+   }
   },
   {
    "source": "0x5ac03061500e0c97862a466a38a7e87fac4ac39d",
@@ -2088,7 +6280,9 @@
    "rel": "reads",
    "amount": null,
    "unit": null,
-   "details": {}
+   "details": {
+    "role": "QUOTE_FEED_1"
+   }
   },
   {
    "source": "0x4fa31e3f8ba345227d44e1cf48559eea53a90dd5311dc006984c060f2f311d96",
@@ -2102,7 +6296,7 @@
    "source": "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
    "target": "0x4fa31e3f8ba345227d44e1cf48559eea53a90dd5311dc006984c060f2f311d96",
    "rel": "supplies",
-   "amount": 8949101.753285129,
+   "amount": 8949958.612559244,
    "unit": "RLUSD",
    "details": {
     "share_of_vault": "2.0%",
@@ -2123,9 +6317,11 @@
    "source": "0xd9d2fc090bdbab1804ea960dd6669b62357787e5816f575f14ca4e6d999614bf",
    "target": "0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
    "rel": "takes as collateral",
-   "amount": null,
-   "unit": null,
-   "details": {}
+   "amount": 51985396.56906576,
+   "unit": "USDe",
+   "details": {
+    "note": "collateral of the market's borrowers; liquidations sell it (curve on the market)"
+   }
   },
   {
    "source": "0x0c13eec9b02cd9d85facc9edf17e71feafc3d8d7",
@@ -2133,7 +6329,9 @@
    "rel": "reads",
    "amount": null,
    "unit": null,
-   "details": {}
+   "details": {
+    "role": "BASE_FEED_1"
+   }
   },
   {
    "source": "0x0c13eec9b02cd9d85facc9edf17e71feafc3d8d7",
@@ -2141,7 +6339,9 @@
    "rel": "reads",
    "amount": null,
    "unit": null,
-   "details": {}
+   "details": {
+    "role": "QUOTE_FEED_1"
+   }
   },
   {
    "source": "0xd9d2fc090bdbab1804ea960dd6669b62357787e5816f575f14ca4e6d999614bf",
@@ -2229,11 +6429,1142 @@
    "details": {}
   },
   {
+   "source": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+   "target": "0xdc035d45d973e3ec169d2276ddab16f1e407384f",
+   "rel": "wraps",
+   "amount": null,
+   "unit": null,
+   "details": {
+    "note": "an ERC-4626 share: redeems into this asset at the vault's exchange rate"
+   }
+  },
+  {
+   "source": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+   "target": "0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
+   "rel": "wraps",
+   "amount": null,
+   "unit": null,
+   "details": {
+    "note": "an ERC-4626 share: redeems into this asset at the vault's exchange rate"
+   }
+  },
+  {
+   "source": "0x7743e50f534a7f9f1791dde7dcd89f7783eefc39",
+   "target": "0x65c9a641afceb9c0e6034e558a319488fa0fa3be",
+   "rel": "wraps",
+   "amount": null,
+   "unit": null,
+   "details": {
+    "note": "an ERC-4626 share: redeems into this asset at the vault's exchange rate"
+   }
+  },
+  {
+   "source": "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
+   "target": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+   "rel": "wraps",
+   "amount": null,
+   "unit": null,
+   "details": {
+    "note": "an ERC-4626 share: redeems into this asset at the vault's exchange rate"
+   }
+  },
+  {
+   "source": "0x77ee147391eac11c92817e771860ff4aad265d89",
+   "target": "0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "rel": "tracks",
+   "amount": null,
+   "unit": null,
+   "details": {
+    "note": "a Pendle TWAP of this PT's pool (PT against its underlying)"
+   }
+  },
+  {
+   "source": "0x2665701293fcbeb223d11a08d826563edcce423a",
+   "target": "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
+   "rel": "tracks",
+   "amount": null,
+   "unit": null,
+   "details": {
+    "note": "the cbBTC / USD market"
+   }
+  },
+  {
+   "source": "0x8fffffd4afb6115b954bd326cbe7b4ba576818f6",
+   "target": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+   "rel": "tracks",
+   "amount": null,
+   "unit": null,
+   "details": {
+    "note": "the USDC / USD market"
+   }
+  },
+  {
+   "source": "0xb131d953712db127308ef07fce30c2ace465bbce",
+   "target": "0x5a19fa369f2895dcd8d2cee62e4ceae58ef92bbb",
+   "rel": "tracks",
+   "amount": null,
+   "unit": null,
+   "details": {
+    "note": "a Pendle TWAP of this PT's pool (PT against its underlying)"
+   }
+  },
+  {
+   "source": "0xa569d910839ae8865da8f8e70fffb0cba869f961",
+   "target": "0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
+   "rel": "tracks",
+   "amount": null,
+   "unit": null,
+   "details": {
+    "note": "the USDe / USD market"
+   }
+  },
+  {
    "source": "user:0xb03d620e49b6a21ea9d02142831c3f61c2fcbabc",
    "target": "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
    "rel": "deposits in",
-   "amount": 149441765.6964041,
+   "amount": 149447742.72500658,
    "unit": "RLUSD",
+   "details": {}
+  },
+  {
+   "source": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+   "target": "0xdc035d45d973e3ec169d2276ddab16f1e407384f",
+   "rel": "backed by (Pharos)",
+   "amount": null,
+   "unit": null,
+   "details": {
+    "share": 1.0,
+    "role": "serial-claim",
+    "source": "Pharos 2026-10-11"
+   }
+  },
+  {
+   "source": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+   "target": "0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
+   "rel": "backed by (Pharos)",
+   "amount": null,
+   "unit": null,
+   "details": {
+    "share": 1.0,
+    "role": "serial-claim",
+    "source": "Pharos 2026-10-11"
+   }
+  },
+  {
+   "source": "0x7743e50f534a7f9f1791dde7dcd89f7783eefc39",
+   "target": "pharos:fxusd-f-x-protocol",
+   "rel": "backed by (Pharos)",
+   "amount": null,
+   "unit": null,
+   "details": {
+    "share": 1.0,
+    "role": "serial-claim",
+    "source": "Pharos 2026-10-11"
+   }
+  },
+  {
+   "source": "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
+   "target": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+   "rel": "backed by (Pharos)",
+   "amount": null,
+   "unit": null,
+   "details": {
+    "share": 1.0,
+    "role": "serial-claim",
+    "source": "Pharos 2026-10-11"
+   }
+  },
+  {
+   "source": "0xdc035d45d973e3ec169d2276ddab16f1e407384f",
+   "target": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+   "rel": "backed by (Pharos)",
+   "amount": null,
+   "unit": null,
+   "details": {
+    "share": 0.3957,
+    "role": "basket-exposure",
+    "source": "Pharos 2026-10-11"
+   }
+  },
+  {
+   "source": "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
+   "target": "pharos-group:mint-control:ethereum:0xe982615d461dd5cd06575bbea87624fda4e3de17",
+   "rel": "shares (Pharos)",
+   "amount": null,
+   "unit": null,
+   "details": {
+    "kind": "mint-control",
+    "members": 6
+   }
+  },
+  {
+   "source": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+   "target": "pharos-group:mint-control:ethereum:0xe982615d461dd5cd06575bbea87624fda4e3de17",
+   "rel": "shares (Pharos)",
+   "amount": null,
+   "unit": null,
+   "details": {
+    "kind": "mint-control",
+    "members": 6
+   }
+  },
+  {
+   "source": "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
+   "target": "pharos-group:mint-control:ethereum:0xfcb19e6a322b27c06842a71e8c725399f049ae3a",
+   "rel": "shares (Pharos)",
+   "amount": null,
+   "unit": null,
+   "details": {
+    "kind": "mint-control",
+    "members": 2
+   }
+  },
+  {
+   "source": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+   "target": "pharos-group:mint-control:ethereum:0xfcb19e6a322b27c06842a71e8c725399f049ae3a",
+   "rel": "shares (Pharos)",
+   "amount": null,
+   "unit": null,
+   "details": {
+    "kind": "mint-control",
+    "members": 2
+   }
+  },
+  {
+   "source": "0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
+   "target": "pharos-group:reserve-issuer:united states treasury",
+   "rel": "shares (Pharos)",
+   "amount": null,
+   "unit": null,
+   "details": {
+    "kind": "reserve-issuer",
+    "members": 9
+   }
+  },
+  {
+   "source": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+   "target": "pharos-group:reserve-issuer:united states treasury",
+   "rel": "shares (Pharos)",
+   "amount": null,
+   "unit": null,
+   "details": {
+    "kind": "reserve-issuer",
+    "members": 9
+   }
+  },
+  {
+   "source": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+   "target": "pharos-group:reserve-issuer:united states treasury",
+   "rel": "shares (Pharos)",
+   "amount": null,
+   "unit": null,
+   "details": {
+    "kind": "reserve-issuer",
+    "members": 9
+   }
+  },
+  {
+   "source": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+   "target": "pharos-group:mint-control:ethereum:0x36b072ed8afe665e3aa6daba79decbec63752b22",
+   "rel": "shares (Pharos)",
+   "amount": null,
+   "unit": null,
+   "details": {
+    "kind": "mint-control",
+    "members": 3
+   }
+  },
+  {
+   "source": "0xdc035d45d973e3ec169d2276ddab16f1e407384f",
+   "target": "pharos-group:mint-control:ethereum:0x36b072ed8afe665e3aa6daba79decbec63752b22",
+   "rel": "shares (Pharos)",
+   "amount": null,
+   "unit": null,
+   "details": {
+    "kind": "mint-control",
+    "members": 3
+   }
+  },
+  {
+   "source": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+   "target": "pharos-group:mint-control:ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+   "rel": "shares (Pharos)",
+   "amount": null,
+   "unit": null,
+   "details": {
+    "kind": "mint-control",
+    "members": 3
+   }
+  },
+  {
+   "source": "0xdc035d45d973e3ec169d2276ddab16f1e407384f",
+   "target": "pharos-group:mint-control:ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+   "rel": "shares (Pharos)",
+   "amount": null,
+   "unit": null,
+   "details": {
+    "kind": "mint-control",
+    "members": 3
+   }
+  },
+  {
+   "source": "0x002278ea242ec722813b4fe3c8eeaa07dbc331c731cc0b4248a1bf0771f933ea",
+   "target": "protocol:morpho-blue",
+   "rel": "runs on",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x22ae3d9a738471f405169af055d31c687087d4c7",
+   "target": "protocol:huma",
+   "rel": "issued by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
+   "target": "protocol:morpho-blue",
+   "rel": "runs on",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xecfafdc7741323a945a163ed068b5a3c43483957",
+   "target": "protocol:pendle-v2",
+   "rel": "issued by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+   "target": "protocol:re",
+   "rel": "issued by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b",
+   "target": "protocol:morpho-blue",
+   "rel": "runs on",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x5613b170ded221c588b6e9637b910f49e5508680ceede207f44aa72e5c46cb05",
+   "target": "protocol:morpho-blue",
+   "rel": "runs on",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xb195b618ea52b77cb2a58846f452f59f8dfa9390",
+   "target": "protocol:pendle-v2",
+   "rel": "issued by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+   "target": "protocol:ethena-usde",
+   "rel": "issued by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xae992849c5f544a32dfdfcc74c0695b73b8732f449727827af6ce3768e968382",
+   "target": "protocol:morpho-blue",
+   "rel": "runs on",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x079c3469143804af5d0d645a878c371dbe8d038e",
+   "target": "protocol:pendle-v2",
+   "rel": "issued by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x7743e50f534a7f9f1791dde7dcd89f7783eefc39",
+   "target": "protocol:fx-protocol",
+   "rel": "issued by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+   "target": "protocol:morpho-blue",
+   "rel": "runs on",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xffd010618ed3cb39bb2c5de0e3e58d3d2ec9f52187a180f29723c31756a939bc",
+   "target": "protocol:morpho-blue",
+   "rel": "runs on",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xea4bfb18df0ee6bffb7b3f0270899a8adb92ab6b684709634c8276128813cfd4",
+   "target": "protocol:morpho-blue",
+   "rel": "runs on",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x88abdf8693e663144c3544b9442e9b04520016d6ebc57aa76424c00ab1683c9d",
+   "target": "protocol:morpho-blue",
+   "rel": "runs on",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+   "target": "protocol:lido",
+   "rel": "issued by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xc0ae375fd761ff19b3f04de5534c0f1ec110f80e1c2ede27c42c1c43c3040394",
+   "target": "protocol:morpho-blue",
+   "rel": "runs on",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x15bb2a6af0c909eed19fb1f2ceeead34ecbdcba626de752c6b09389ee14eec32",
+   "target": "protocol:morpho-blue",
+   "rel": "runs on",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xa128dddc761075df9a9a60689f3a41a989b245aad506352c509c0c3a76a9ec6b",
+   "target": "protocol:morpho-blue",
+   "rel": "runs on",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x1749e02006bc6bd6a86af52d231511f6911d5e42318e028e51a28dfabc68dd47",
+   "target": "protocol:morpho-blue",
+   "rel": "runs on",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x5a19fa369f2895dcd8d2cee62e4ceae58ef92bbb",
+   "target": "protocol:pendle-v2",
+   "rel": "issued by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xc3b37a18d5b15f8e5b78bcdc014ffb3f22933bde4e5f6a36dedf36db87e68585",
+   "target": "protocol:morpho-blue",
+   "rel": "runs on",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x4fa31e3f8ba345227d44e1cf48559eea53a90dd5311dc006984c060f2f311d96",
+   "target": "protocol:morpho-blue",
+   "rel": "runs on",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xd9d2fc090bdbab1804ea960dd6669b62357787e5816f575f14ca4e6d999614bf",
+   "target": "protocol:morpho-blue",
+   "rel": "runs on",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
+   "target": "protocol:ethena-usde",
+   "rel": "issued by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x65c9a641afceb9c0e6034e558a319488fa0fa3be",
+   "target": "protocol:fx-protocol",
+   "rel": "issued by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xb1b18ad1f16d744c470cb6b09cb826affcc9eb30",
+   "target": "0xc207d3f66537d7f66456808379a0e560cf20da36",
+   "rel": "wraps",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xe978f22157048e5db8e5d07971376e86671672b2",
+   "target": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+   "rel": "wraps",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x43e8f7b280b19637d2a7e3008657282aaf2c0e4b",
+   "target": "0xc207d3f66537d7f66456808379a0e560cf20da36",
+   "rel": "redeems from",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x084fd3a517d6dae1f8e3e5481b65107fd7e5eec1",
+   "target": "0xc207d3f66537d7f66456808379a0e560cf20da36",
+   "rel": "deposits into",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x43e8f7b280b19637d2a7e3008657282aaf2c0e4b",
+   "target": "0xb1b18ad1f16d744c470cb6b09cb826affcc9eb30",
+   "rel": "takes",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x084fd3a517d6dae1f8e3e5481b65107fd7e5eec1",
+   "target": "0xe978f22157048e5db8e5d07971376e86671672b2",
+   "rel": "takes",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xb1b18ad1f16d744c470cb6b09cb826affcc9eb30",
+   "target": "zama:protocol",
+   "rel": "decrypted by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xe978f22157048e5db8e5d07971376e86671672b2",
+   "target": "zama:protocol",
+   "rel": "decrypted by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x43e8f7b280b19637d2a7e3008657282aaf2c0e4b",
+   "target": "zama:protocol",
+   "rel": "decrypted by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x084fd3a517d6dae1f8e3e5481b65107fd7e5eec1",
+   "target": "zama:protocol",
+   "rel": "decrypted by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xb1b18ad1f16d744c470cb6b09cb826affcc9eb30",
+   "target": "0xeb5015ff021db115ace010f23f55c2591059bba0",
+   "rel": "can be paused by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xe978f22157048e5db8e5d07971376e86671672b2",
+   "target": "0xeb5015ff021db115ace010f23f55c2591059bba0",
+   "rel": "can be paused by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xc207d3f66537d7f66456808379a0e560cf20da36",
+   "target": "0x084fd3a517d6dae1f8e3e5481b65107fd7e5eec1",
+   "rel": "accepts deposits only from",
+   "amount": null,
+   "unit": null,
+   "details": {
+    "gate": "0x51f667a68c2ebec5018019d7d75fd5c0ed70d525"
+   }
+  },
+  {
+   "source": "0xa28a369df348ac232e4daf7b0ef90280d8707d7f",
+   "target": "0xb48c056c5608ba2ee4cd94af2bf4b1f25295bd7e",
+   "rel": "wraps",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xae0207c757aa2b4019ad96edd0092ddc63ef0c50",
+   "target": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+   "rel": "wraps",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xd2f3f554f995c12e2bfe5e155397cb6272643744",
+   "target": "0xb48c056c5608ba2ee4cd94af2bf4b1f25295bd7e",
+   "rel": "redeems from",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xbebee65445dad2f31628add14535fd0b3fc915b4",
+   "target": "0xb48c056c5608ba2ee4cd94af2bf4b1f25295bd7e",
+   "rel": "deposits into",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xd2f3f554f995c12e2bfe5e155397cb6272643744",
+   "target": "0xa28a369df348ac232e4daf7b0ef90280d8707d7f",
+   "rel": "takes",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xbebee65445dad2f31628add14535fd0b3fc915b4",
+   "target": "0xae0207c757aa2b4019ad96edd0092ddc63ef0c50",
+   "rel": "takes",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xa28a369df348ac232e4daf7b0ef90280d8707d7f",
+   "target": "zama:protocol",
+   "rel": "decrypted by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xae0207c757aa2b4019ad96edd0092ddc63ef0c50",
+   "target": "zama:protocol",
+   "rel": "decrypted by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xd2f3f554f995c12e2bfe5e155397cb6272643744",
+   "target": "zama:protocol",
+   "rel": "decrypted by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xbebee65445dad2f31628add14535fd0b3fc915b4",
+   "target": "zama:protocol",
+   "rel": "decrypted by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xa28a369df348ac232e4daf7b0ef90280d8707d7f",
+   "target": "0xeb5015ff021db115ace010f23f55c2591059bba0",
+   "rel": "can be paused by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xae0207c757aa2b4019ad96edd0092ddc63ef0c50",
+   "target": "0xeb5015ff021db115ace010f23f55c2591059bba0",
+   "rel": "can be paused by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xb48c056c5608ba2ee4cd94af2bf4b1f25295bd7e",
+   "target": "0xbebee65445dad2f31628add14535fd0b3fc915b4",
+   "rel": "accepts deposits only from",
+   "amount": null,
+   "unit": null,
+   "details": {
+    "gate": "0x2bbba2fd0ae8976c798499477c03b47b88fba9fa"
+   }
+  },
+  {
+   "source": "0xbac6dedf2c10d6d381f9dbd9efd69d93ffcef50b",
+   "target": "0x500ae64100d7dbdb640531085c2f5d40cdc8930d",
+   "rel": "wraps",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x79e621c35b93329bbb6f06d9635981b9a5f4a255",
+   "target": "0x500ae64100d7dbdb640531085c2f5d40cdc8930d",
+   "rel": "redeems from",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x7320830992a924e6d2f3d3e9a74fbd103e9a20ae",
+   "target": "0x500ae64100d7dbdb640531085c2f5d40cdc8930d",
+   "rel": "deposits into",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x79e621c35b93329bbb6f06d9635981b9a5f4a255",
+   "target": "0xbac6dedf2c10d6d381f9dbd9efd69d93ffcef50b",
+   "rel": "takes",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x7320830992a924e6d2f3d3e9a74fbd103e9a20ae",
+   "target": "0xae0207c757aa2b4019ad96edd0092ddc63ef0c50",
+   "rel": "takes",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xbac6dedf2c10d6d381f9dbd9efd69d93ffcef50b",
+   "target": "zama:protocol",
+   "rel": "decrypted by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x79e621c35b93329bbb6f06d9635981b9a5f4a255",
+   "target": "zama:protocol",
+   "rel": "decrypted by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x7320830992a924e6d2f3d3e9a74fbd103e9a20ae",
+   "target": "zama:protocol",
+   "rel": "decrypted by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xbac6dedf2c10d6d381f9dbd9efd69d93ffcef50b",
+   "target": "0xeb5015ff021db115ace010f23f55c2591059bba0",
+   "rel": "can be paused by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x1f6a937119c0c34db0a2c4f000386a3bfd4a9e73",
+   "target": "0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9",
+   "rel": "wraps",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x7afb2cd6d41c379e3d8b46f206346b63a67f4d43",
+   "target": "0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9",
+   "rel": "redeems from",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x737f4558c0cc7c29b56dd13c34b68e967c91e399",
+   "target": "0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9",
+   "rel": "deposits into",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x7afb2cd6d41c379e3d8b46f206346b63a67f4d43",
+   "target": "0x1f6a937119c0c34db0a2c4f000386a3bfd4a9e73",
+   "rel": "takes",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x737f4558c0cc7c29b56dd13c34b68e967c91e399",
+   "target": "0xae0207c757aa2b4019ad96edd0092ddc63ef0c50",
+   "rel": "takes",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x1f6a937119c0c34db0a2c4f000386a3bfd4a9e73",
+   "target": "zama:protocol",
+   "rel": "decrypted by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x7afb2cd6d41c379e3d8b46f206346b63a67f4d43",
+   "target": "zama:protocol",
+   "rel": "decrypted by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x737f4558c0cc7c29b56dd13c34b68e967c91e399",
+   "target": "zama:protocol",
+   "rel": "decrypted by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x1f6a937119c0c34db0a2c4f000386a3bfd4a9e73",
+   "target": "0xeb5015ff021db115ace010f23f55c2591059bba0",
+   "rel": "can be paused by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xb6e5299fc56053dd5440104fd6fd2a3cd064edbc",
+   "target": "0x55c1b6e461a6334b567baf0feb5d728715446f05",
+   "rel": "wraps",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xd671b562fdece574da12295d1680f6a7a0af2963",
+   "target": "0x55c1b6e461a6334b567baf0feb5d728715446f05",
+   "rel": "redeems from",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x1b731ec615165094ec4d695b0a1c8ee31366cf84",
+   "target": "0x55c1b6e461a6334b567baf0feb5d728715446f05",
+   "rel": "deposits into",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xd671b562fdece574da12295d1680f6a7a0af2963",
+   "target": "0xb6e5299fc56053dd5440104fd6fd2a3cd064edbc",
+   "rel": "takes",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x1b731ec615165094ec4d695b0a1c8ee31366cf84",
+   "target": "0xe978f22157048e5db8e5d07971376e86671672b2",
+   "rel": "takes",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xb6e5299fc56053dd5440104fd6fd2a3cd064edbc",
+   "target": "zama:protocol",
+   "rel": "decrypted by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xd671b562fdece574da12295d1680f6a7a0af2963",
+   "target": "zama:protocol",
+   "rel": "decrypted by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x1b731ec615165094ec4d695b0a1c8ee31366cf84",
+   "target": "zama:protocol",
+   "rel": "decrypted by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xb6e5299fc56053dd5440104fd6fd2a3cd064edbc",
+   "target": "0xeb5015ff021db115ace010f23f55c2591059bba0",
+   "rel": "can be paused by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x501b014f86a73a7199e00cb31c0e9565ac51e51b",
+   "target": "0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757",
+   "rel": "wraps",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x807c367da7b9228643b06390e199e33cca7cc533",
+   "target": "0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757",
+   "rel": "redeems from",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x321c9aab1390100f6e7fe1735a928ec0f16252f0",
+   "target": "0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757",
+   "rel": "deposits into",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x807c367da7b9228643b06390e199e33cca7cc533",
+   "target": "0x501b014f86a73a7199e00cb31c0e9565ac51e51b",
+   "rel": "takes",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x321c9aab1390100f6e7fe1735a928ec0f16252f0",
+   "target": "0xe978f22157048e5db8e5d07971376e86671672b2",
+   "rel": "takes",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x501b014f86a73a7199e00cb31c0e9565ac51e51b",
+   "target": "zama:protocol",
+   "rel": "decrypted by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x807c367da7b9228643b06390e199e33cca7cc533",
+   "target": "zama:protocol",
+   "rel": "decrypted by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x321c9aab1390100f6e7fe1735a928ec0f16252f0",
+   "target": "zama:protocol",
+   "rel": "decrypted by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x501b014f86a73a7199e00cb31c0e9565ac51e51b",
+   "target": "0xeb5015ff021db115ace010f23f55c2591059bba0",
+   "rel": "can be paused by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x77f8207ee451441336538ba07a2f425780ded8db",
+   "target": "0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd",
+   "rel": "wraps",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x4f555b54842e609ba62843e0ab4ff184a436772e",
+   "target": "0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd",
+   "rel": "redeems from",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x87356ade88315aed3ac61b42cacc3a263730b1bd",
+   "target": "0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd",
+   "rel": "deposits into",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x4f555b54842e609ba62843e0ab4ff184a436772e",
+   "target": "0x77f8207ee451441336538ba07a2f425780ded8db",
+   "rel": "takes",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x87356ade88315aed3ac61b42cacc3a263730b1bd",
+   "target": "0xe978f22157048e5db8e5d07971376e86671672b2",
+   "rel": "takes",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x77f8207ee451441336538ba07a2f425780ded8db",
+   "target": "zama:protocol",
+   "rel": "decrypted by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x4f555b54842e609ba62843e0ab4ff184a436772e",
+   "target": "zama:protocol",
+   "rel": "decrypted by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x87356ade88315aed3ac61b42cacc3a263730b1bd",
+   "target": "zama:protocol",
+   "rel": "decrypted by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x77f8207ee451441336538ba07a2f425780ded8db",
+   "target": "0xeb5015ff021db115ace010f23f55c2591059bba0",
+   "rel": "can be paused by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x4fccf8046fb7fb7ab76321bd39c27453e396b88f",
+   "target": "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
+   "rel": "wraps",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xf18ad9f94a7ea994fdcbc5fd5c5da326a341d8a8",
+   "target": "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
+   "rel": "redeems from",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x2deafb36f3b118d434cde4708e8350eae918724d",
+   "target": "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
+   "rel": "deposits into",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xf18ad9f94a7ea994fdcbc5fd5c5da326a341d8a8",
+   "target": "0x4fccf8046fb7fb7ab76321bd39c27453e396b88f",
+   "rel": "takes",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x2deafb36f3b118d434cde4708e8350eae918724d",
+   "target": "0xe978f22157048e5db8e5d07971376e86671672b2",
+   "rel": "takes",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x4fccf8046fb7fb7ab76321bd39c27453e396b88f",
+   "target": "zama:protocol",
+   "rel": "decrypted by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0xf18ad9f94a7ea994fdcbc5fd5c5da326a341d8a8",
+   "target": "zama:protocol",
+   "rel": "decrypted by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x2deafb36f3b118d434cde4708e8350eae918724d",
+   "target": "zama:protocol",
+   "rel": "decrypted by",
+   "amount": null,
+   "unit": null,
+   "details": {}
+  },
+  {
+   "source": "0x4fccf8046fb7fb7ab76321bd39c27453e396b88f",
+   "target": "0xeb5015ff021db115ace010f23f55c2591059bba0",
+   "rel": "can be paused by",
+   "amount": null,
+   "unit": null,
    "details": {}
   }
  ]

@@ -3,11 +3,12 @@ import { X } from 'lucide-react';
 import { useGraph, useSelectedTarget } from '../api/hooks';
 import { GRAPH_NODE_KINDS } from '../api/types';
 import type { GraphNodeKind } from '../api/types';
-import { GraphCanvas } from '../components/GraphCanvas';
+import { GraphCanvas, KindFilter } from '../components/GraphCanvas';
 import type { FlowNeighbour, GraphSelection } from '../components/GraphCanvas';
 import { DetailsTable } from '../components/DetailsTable';
 import { ErrorState, Loading } from '../components/States';
 import { KIND_COLOR, RISK_KEYS, edgeLabel, scopeToTarget } from '../lib/graph';
+import { useTwinGroups } from '../lib/useTwinGroups';
 import { detailValue } from '../lib/format';
 import { Button } from '@/components/ui/button';
 
@@ -37,10 +38,12 @@ export function GraphPage() {
   const own = useGraph(ownGraph ? { vault: target } : {});
   const { data: full, dataUpdatedAt, error } = own;
   const isPending = shared.isPending || own.isPending;
-  const data = useMemo(
+  const scoped = useMemo(
     () => full && (ownGraph ? full : scopeToTarget(full, target)),
     [full, ownGraph, target],
   );
+  const twins = useTwinGroups(scoped);
+  const data = twins.graph;
   const [hiddenKinds, setHiddenKinds] = useState<ReadonlySet<GraphNodeKind>>(new Set());
   const [selection, setSelection] = useState<GraphSelection>(null);
 
@@ -71,32 +74,24 @@ export function GraphPage() {
     <div className="relative h-full min-h-[70vh] overflow-hidden">
       {/* Remounting re-runs the layout when the target or data changes. */}
       <GraphCanvas
-        key={`${target ?? ''}-${dataUpdatedAt}`}
+        key={`${target ?? ''}-${dataUpdatedAt}-${twins.layoutKey}`}
         nodes={data.nodes}
         edges={data.edges}
         visibleKinds={visibleKinds}
         search=""
         selection={selection}
-        onSelect={setSelection}
+        onSelect={(next) => {
+          // A group of twins opens on click; it has nothing of its own to show.
+          setSelection(next?.type === 'node' && twins.open(next.node) ? null : next);
+        }}
       />
 
-      {/* Legend and kind filter in one: the colour chip keys the node colour. */}
-      <div className="absolute bottom-3.5 left-3.5 flex flex-wrap gap-1 rounded-md bg-background/80">
-        {presentKinds.map((kind) => (
-          <Button
-            key={kind}
-            type="button"
-            variant="ghost"
-            size="xs"
-            aria-pressed={!hiddenKinds.has(kind)}
-            onClick={() => toggleKind(kind)}
-            className="font-normal aria-[pressed=false]:opacity-40"
-          >
-            <span className="size-2.5" style={{ background: KIND_COLOR[kind] }} />
-            {kind}
-          </Button>
-        ))}
-      </div>
+      <KindFilter
+        kinds={presentKinds}
+        hidden={hiddenKinds}
+        onToggle={toggleKind}
+        className="absolute bottom-3.5 left-3.5"
+      />
 
       {selection ? (
         <aside className="absolute top-3.5 right-3.5 bottom-12 w-[340px] max-w-[calc(100%-28px)] overflow-auto rounded-lg border bg-background p-5.5 shadow-sm">

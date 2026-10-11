@@ -416,7 +416,7 @@ def main(argv: list[str] | None = None) -> int:
             )
         )
     incident = res.incident
-    hp, jp = report.write(pos, prs, sim, dec, res.quote, Path(args.out), mode, res.oracle_alt, incident)
+    hp, jp = report.write(pos, prs, sim, dec, res.quote, Path(args.out), mode, res.oracle_alt, incident, res.discovery)
     if incident:
         for line in incident.lines():
             print(line)
@@ -426,6 +426,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  - {r}")
     for c in res.checks:
         print(f"  {c.line}")
+    if res.discovery:
+        print(f"DISCOVERY DEPTH (the position's graph, block {res.discovery['graph_block']:,}):")
+        for line in res.discovery["lines"]:
+            print(f"  - {line}")
     print(f"report: {hp}\njson:   {jp}\nnetwork calls: {f.network_calls}")
     return 0
 

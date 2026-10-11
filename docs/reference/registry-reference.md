@@ -191,11 +191,12 @@ The sibling-market search and the oracle classification of the `graph` command (
 | `oracle_history_min` | rounds | 6 | below this many readable past rounds, history does not decide and the next rules apply |
 | `oracle_fall_share` | fraction | 0.2 | a feed whose answer fell in at least this share of its changes is `price-tracking`; below it, `constant-price` (an accrual or exchange rate) |
 | `oracle_children_getters` | signatures | `FEED_1()`, `FEED_2()`, `innerOracle()` | getters of a composite or wrapper input; its class comes from the inputs they return, `price-tracking` if one is |
-| `oracle_getters` | list | `twapDuration()` → price-tracking when nonzero; `baseDiscountPerYear()` → constant-price when it answers | structural getters that classify an input, each with `when` (`nonzero` or `answers`), `class` and `basis` |
-| `oracle_patterns` | list | contract names (`PendleChainlinkOracle`, `PendleSparkLinearDiscountOracle`, `LossAdjustedPTFeed`, `CustomAggregator` for Midas's issuer-published NAV feeds, …) and description fragments (`FUNDAMENTAL`, `exchange rate`, `net asset value`, `discount`) | the last rule: a case-insensitive `match` in the input's `description()` or verified contract name (Etherscan, optional) gives its `class`; each entry has a `basis` |
+| `oracle_getters` | list | `twapDuration()` → price-tracking when nonzero; `baseDiscountPerYear()` → constant-price when it answers | structural getters that classify an input, each with `when` (`nonzero` or `answers`), `class`, `basis` and, for a constant-price one, its `kind` (D205) |
+| `oracle_patterns` | list | contract names (`PendleChainlinkOracle`, `PendleSparkLinearDiscountOracle`, `LossAdjustedPTFeed`, `CustomAggregator` for Midas's issuer-published NAV feeds, …) and description fragments (`FUNDAMENTAL`, `exchange rate`, `net asset value`, `discount`) | the last rule: a case-insensitive `match` in the input's `description()` or verified contract name (Etherscan, optional) gives its `class`; each entry has a `basis`, and a constant-price one its `kind`: `exchange rate`, `published`, `linear discount` or `fixed` (D205) |
+| `constant_kinds_basis` | text | — | D205: how each kind of constant-price input moves on an issuer's loss, and how a kind is read when no rule gives one |
 | `oracle_basis` | text | — | the rules in order, and the 2026-10-10 probe behind the history thresholds |
 
-**Adding a pattern.** When a graph shows an input `not classified`, read its verified source, decide whether a market move reaches its answer, and add `{"match": "<contract name or description fragment>", "class": "price-tracking" | "constant-price", "basis": "<what it computes, source, date>"}`. Prefer a structural getter in `oracle_getters` when the contract exposes one: it needs no Etherscan key.
+**Adding a pattern.** When a graph shows an input `not classified`, read its verified source, decide whether a market move reaches its answer, and add `{"match": "<contract name or description fragment>", "class": "price-tracking" | "constant-price", "kind": "<for constant-price>", "basis": "<what it computes, source, date>"}`. Prefer a structural getter in `oracle_getters` when the contract exposes one: it needs no Etherscan key.
 
 ## `engine`
 
@@ -276,7 +277,7 @@ TVL concentration of the protocols in a graph (plan `2026-10-11-feed-quality`, D
 | `warn_category_min_usd` | USD | 1,000,000,000 | …when the category is at least this large |
 | `blue_markets` | slug | `morpho-blue` | the protocol of every Blue market |
 | `pt_assets` | slug | `pendle-v2` | the protocol of every Pendle PT |
-| `tokens` | address → slug | Re, Tori, infiniFi, Hastra, NUVA, Midas, Lido, Huma, AUTOfinance, f(x), Steakhouse | the protocol issuing a token; add a token by its address and the slug in `https://api.llama.fi/protocols` |
+| `tokens` | address → slug | Re, Tori, infiniFi, Hastra, NUVA, Midas, Lido, Huma, AUTOfinance, f(x), Steakhouse, Ethena (sUSDe, USDe) | the protocol issuing a token; add a token by its address and the slug in `https://api.llama.fi/protocols` |
 | `basis`, `warn_basis` | text | — | why |
 
 ## `backtest`
@@ -286,7 +287,8 @@ Past incidents replayed (plan `2026-10-11-backtest`, D161–D164). Read by `back
 | Key | Unit | Default | What it controls |
 |---|---|---|---|
 | `lead_blocks` | blocks | 60 | the state before is read this long before the first liquidation (12 minutes) |
-| `episodes.<name>` | object | `pt-reusd-2026-08-25` | `title`, `markets` (Blue market ids), `window` (first and last block to search for liquidations), `source` |
+| `episodes.<name>` | object | `pt-reusd-2026-08-25`, `crash-2025-10-10` | `title`, `markets` (Blue market ids), `window` (first and last block to search for liquidations), `source`; optional `followup_to`, the last block in which a later liquidation explains an over-prediction (D197) |
+| `dust_debt` | loan units | 1,000 | a position left liquidatable that owes less is counted as dust: rarely worth a liquidator's gas (D197) |
 | `basis` | text | — | the method |
 
 **Adding an episode.** Find the markets and a block window around the event, add it, run `backtest --episode <name> --record` once (archive RPC and Etherscan key in `keys.ini`), commit `fixtures/replay/backtest-<name>/`, and pin the result in `tests/test_backtest.py`.

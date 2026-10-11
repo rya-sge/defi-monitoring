@@ -10,7 +10,7 @@ import {
 } from '@xyflow/react';
 import type { Edge, EdgeProps, Node, NodeProps } from '@xyflow/react';
 import type { GraphEdge, GraphNode } from '../api/types';
-import { KIND_COLOR, NAME_SLOT, nodeDrawing, nodeRole, logoUrl } from '../lib/graph';
+import { GROUP_KEY, KIND_COLOR, NAME_SLOT, nodeDrawing, nodeRole, logoUrl } from '../lib/graph';
 
 /** `ring`: a colour to ring the node with when it is not selected (the impact page's status). */
 export type RiskNodeData = {
@@ -116,6 +116,21 @@ export function RiskNode({ data, selected }: NodeProps<RiskNodeType>) {
           preserveAspectRatio="none"
           aria-hidden="true"
         >
+          {GROUP_KEY in node.details
+            ? [8, 4].map((offset) => (
+                <polygon
+                  key={offset}
+                  points={HEXAGON}
+                  transform={`translate(${offset} ${-offset})`}
+                  style={{
+                    fill: `color-mix(in srgb, var(--fg) ${offset === 8 ? 5 : 8}%, var(--bg))`,
+                    stroke: 'var(--bg)',
+                  }}
+                  strokeWidth={1}
+                  vectorEffect="non-scaling-stroke"
+                />
+              ))
+            : null}
           {ring ? (
             <polygon
               points={HEXAGON}
@@ -134,15 +149,35 @@ export function RiskNode({ data, selected }: NodeProps<RiskNodeType>) {
           />
         </svg>
       ) : (
-        <div
-          className="absolute inset-0"
-          style={{
-            background: NODE_FILL,
-            border: ring ? `2px solid ${ring}` : undefined,
-            boxShadow: ring ? `0 0 0 ${HALO}px ${halo(ring)}` : undefined,
-            borderRadius: shape === 'circle' ? '50%' : shape === 'rounded' ? 20 : 6,
-          }}
-        />
+        <>
+          {GROUP_KEY in node.details
+            ? [8, 4].map((offset) => (
+                // Two cards behind a group of twins: it stands for several nodes.
+                <div
+                  key={offset}
+                  className="absolute inset-0 rounded-md"
+                  style={{
+                    transform: `translate(${offset}px, ${-offset}px)`,
+                    background: `color-mix(in srgb, var(--fg) ${offset === 8 ? 5 : 8}%, var(--bg))`,
+                    boxShadow: '-1px 1px 0 var(--bg)',
+                  }}
+                />
+              ))
+            : null}
+          <div
+            className="absolute inset-0"
+            style={{
+              // A vault is tinted with its kind colour: it is what the graph is about.
+              background:
+                nodeRole(node) === 'vault'
+                  ? `color-mix(in srgb, ${colour} 22%, var(--bg))`
+                  : NODE_FILL,
+              border: ring ? `2px solid ${ring}` : undefined,
+              boxShadow: ring ? `0 0 0 ${HALO}px ${halo(ring)}` : undefined,
+              borderRadius: shape === 'circle' ? '50%' : shape === 'rounded' ? 20 : 6,
+            }}
+          />
+        </>
       )}
 
       {/* Centred in the node and sized to it; the amount, drawn after, sits over it. */}

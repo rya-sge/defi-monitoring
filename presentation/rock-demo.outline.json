@@ -22,11 +22,11 @@
       "title": "The question we answer",
       "bullets": [
         "One deposit hides a chain of other contracts and people",
-        "If one link breaks: how much do I lose, and how fast?",
+        "When one link breaks: what does it do to my position, and how fast?",
         "Leaving costs something for sure; staying may cost more",
         "riskdep finds the chain, watches it, and says stay or exit"
       ],
-      "notes": "The challenge brief (Belem Capital): identify a position's dependencies, estimate the impact when one fails, and help decide stay or exit despite execution costs."
+      "notes": "The challenge brief (Belem Capital): 'the hard part is not noticing the incident. It is working out what it does to your book, and how fast.' The demo starts from known incidents and shows their impact and the decision."
     },
     {
       "layout": "image",
@@ -120,26 +120,8 @@
       "notes": "Levels: docs/reference/alert-runbook.md (critical: money is being lost now, or can be lost in the next block; warn: the risk changed, a decision may be needed)."
     },
     {
-      "layout": "two-column",
-      "title": "Act 1 · A forecast before the event",
-      "left_title": "What we ask",
-      "left": [
-        "What if strUSD lost 32 % of its value?",
-        "Computed from recorded vaults, offline",
-        "Before anything happens on the fork"
-      ],
-      "right_title": "What riskdep answers",
-      "right": [
-        "The book of 7 vaults loses 2.80M USD (2.8 %)",
-        "Tori: 1.83M (13.5 %) · USDC Yield: 0.97M (5.3 %)",
-        "Act first on Tori: leaving pays if the risk is above 4.9 % over 30 days"
-      ],
-      "font_size": 20,
-      "notes": "Command: analyze --book examples/rockawayx-ethereum.json --shock token=strUSD:0.32. Same −32 % as act 2 causes, so the forecast comes before the event."
-    },
-    {
       "layout": "image",
-      "title": "Act 2 · The price feed is rewritten",
+      "title": "Act 1 · The price feed is rewritten",
       "image": "/home/ryan/Pictures/charrette/defi-monitoring/presentation/img/rock-demo/act2-chain.png",
       "placement": {
         "x_cm": 2.5,
@@ -164,7 +146,7 @@
     },
     {
       "layout": "table",
-      "title": "Act 2 · What riskdep said",
+      "title": "Act 1 · What riskdep said",
       "table": [
         [
           "Alert",
@@ -208,11 +190,11 @@
         "width_cm": 25.2,
         "height_cm": 8.4
       },
-      "notes": "All six at block 26,165,574, the block after the upgrade. On Telegram: one summary (bad debt, exit queue, oracle move), the upgrade, and a second summary (divergence, impact)."
+      "notes": "All six at block 26,165,574, the block after the upgrade. On Telegram: one message, the cause first, the loss and the EXIT decision on top, the six alerts folded underneath."
     },
     {
       "layout": "two-column",
-      "title": "Act 2 · Stay or exit?",
+      "title": "Act 1 · Stay or exit?",
       "left_title": "Stay",
       "left": [
         "Loses 454,103 USDC: its share of the bad debt",
@@ -262,7 +244,7 @@
     },
     {
       "layout": "image",
-      "title": "Act 3 · Coins from nowhere",
+      "title": "Act 2 · Coins from nowhere",
       "image": "/home/ryan/Pictures/charrette/defi-monitoring/presentation/img/rock-demo/act3-mint.png",
       "placement": {
         "x_cm": 4.5,
@@ -289,13 +271,13 @@
       "layout": "bullets",
       "title": "Reading a Telegram alert",
       "bullets": [
-        "Red (critical) rings the phone; orange (warn) arrives silently",
-        "First line: the level and the vault",
-        "Then what happened, the amounts, the block and a runbook link",
-        "Alerts of one block can arrive as one short summary",
-        "On the fork, the Etherscan link finds nothing: the transaction is local"
+        "One message per incident; red (critical) rings the phone",
+        "First line: the vault and what happened, in plain words",
+        "Then the loss and the decision: EXIT or STAY",
+        "Details folded underneath: tap to open",
+        "A 'What to do' button opens the runbook"
       ],
-      "notes": "riskdep notify: only alerts at warn and above, no heartbeat; standing findings once per 1800 blocks; criticals with sound."
+      "notes": "riskdep notify: alerts at warn and above, one message per block, no heartbeat. On a fork the Etherscan button is left out: the transaction is local."
     },
     {
       "layout": "bullets",

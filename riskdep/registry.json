@@ -289,9 +289,11 @@
         "getter": "baseDiscountPerYear()",
         "when": "answers",
         "class": "constant-price",
+        "kind": "linear discount",
         "basis": "Pendle linear-discount oracle: a deterministic discount to maturity, no market input"
       }
     ],
+    "constant_kinds_basis": "D205: a constant-price input moves on an issuer's loss in one of four ways: an exchange rate (on-chain accounting, ERC-4626 or a computed rate) at once when the issuer records the loss; a published value (NAV or fundamental rounds pushed by a transaction) at its next round; a linear discount (a schedule to maturity) or a fixed value never. A pushed round history is published, even flat so far (the next round can carry a loss); exactly 1.0 with no round, or no base input, is fixed; a rule's kind decides otherwise.",
     "oracle_patterns": [
       {
         "match": "PendleChainlinkOracle",
@@ -301,46 +303,55 @@
       {
         "match": "PendleSparkLinearDiscountOracle",
         "class": "constant-price",
+        "kind": "linear discount",
         "basis": "Pendle linear discount to maturity (contract name)"
       },
       {
         "match": "NetAssetValueChainlinkAdapter",
         "class": "constant-price",
+        "kind": "published",
         "basis": "net asset value reported by the issuer (contract name)"
       },
       {
         "match": "CustomAggregator",
         "class": "constant-price",
+        "kind": "published",
         "basis": "Midas custom aggregator feed: the issuer's admin publishes the NAV by transaction (contract name, e.g. MGloEuroCustomAggregatorFeed behind an upgradeable proxy; mGLOeuro read 100,000 EUR on 2026-08-04 and 2026-09-23, its only two rounds)"
       },
       {
         "match": "TranchesChainlinkOracle",
         "class": "constant-price",
+        "kind": "exchange rate",
         "basis": "Idle tranche exchange rate (contract name)"
       },
       {
         "match": "LossAdjustedPTFeed",
         "class": "constant-price",
+        "kind": "linear discount",
         "basis": "PT discount lowered only by the SY's own accounting losses (exchangeRate against pyIndexStored), no market input (verified source, 2026-10-10)"
       },
       {
         "match": "FUNDAMENTAL",
         "class": "constant-price",
+        "kind": "published",
         "basis": "RedStone fundamental feed: the issuer's redemption value, not a market price"
       },
       {
         "match": "exchange rate",
         "class": "constant-price",
+        "kind": "exchange rate",
         "basis": "an exchange rate between a token and its underlying, not a market price"
       },
       {
         "match": "net asset value",
         "class": "constant-price",
+        "kind": "published",
         "basis": "net asset value reported by the issuer"
       },
       {
         "match": "discount",
         "class": "constant-price",
+        "kind": "linear discount",
         "basis": "a discount schedule or a discounted NAV, not a market price"
       }
     ],
@@ -913,12 +924,14 @@
       "0x997e2efbce91d170b00ea402e35a66c887ee1da9": "autofinance",
       "0x7743e50f534a7f9f1791dde7dcd89f7783eefc39": "fx-protocol",
       "0x65c9a641afceb9c0e6034e558a319488fa0fa3be": "fx-protocol",
-      "0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f": "steakhouse-financial"
+      "0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f": "steakhouse-financial",
+      "0x9d39a5de30e57443bff2a8307a4256c8797a3497": "ethena-usde",
+      "0x4c9edd5852cd905f086c759e8383e09bff1e68b3": "ethena-usde"
     },
     "warn_category_min_usd": 1000000000.0
   },
   "backtest": {
-    "basis": "D161-D164: a past incident replayed: the markets' borrowers (their Borrow events up to the block before), their positions, the market totals and the oracle price read at that block through an archive RPC (keys.ini), the oracle's lowest price over the liquidation blocks applied as the shock, the liquidation model of market_risk.value predicting what becomes liquidatable, against the Liquidate events. lead_blocks: how far before the first liquidation the 'before' state is read (60 blocks, 12 minutes: the episode's yield spike took nine).",
+    "basis": "D161-D164: a past incident replayed: the markets' borrowers (their Borrow events up to the block before), their positions, the market totals and the oracle price read at that block through an archive RPC (keys.ini), the oracle's lowest price over the liquidation blocks applied as the shock, the liquidation model of market_risk.value predicting what becomes liquidatable, against the Liquidate events. lead_blocks: how far before the first liquidation the 'before' state is read (60 blocks, 12 minutes: the episode's yield spike took nine). followup_to (optional): liquidations after the window up to this block, to tell an over-prediction from a liquidation that came later; positions predicted but not liquidated are re-read at the window's last liquidation block, to tell a borrower who defended (repaid, added collateral) from one no liquidator reached (D197).",
     "lead_blocks": 60,
     "episodes": {
       "pt-reusd-2026-08-25": {
@@ -947,9 +960,12 @@
           23549800,
           23550200
         ],
-        "source": "Liquidate events on Morpho Blue read through Etherscan on 2026-10-11: 258 liquidations in 29 markets between 2025-10-10 12:00 and 10-11 12:00 UTC, led by memecoin collateral (Mog, PEPE, SPX) and WBTC; the six markets with the most, in the crash's main wave. USDe itself barely reached Morpho that night (2 liquidations in sUSDe/USDT): its −35 % print was on a centralized exchange."
+        "source": "Liquidate events on Morpho Blue read through Etherscan on 2026-10-11: 258 liquidations in 29 markets between 2025-10-10 12:00 and 10-11 12:00 UTC, led by memecoin collateral (Mog, PEPE, SPX) and WBTC; the six markets with the most, in the crash's main wave. USDe itself barely reached Morpho that night (2 liquidations in sUSDe/USDT): its −35 % print was on a centralized exchange.",
+        "followup_to": 23554345
       }
-    }
+    },
+    "dust_debt": 1000,
+    "dust_basis": "a position owing less than this (loan units, about USD) is rarely worth a liquidator's gas and incentive on Ethereum: left liquidatable, it is not a miss of the model"
   },
   "conditional": {
     "paths": 10000,

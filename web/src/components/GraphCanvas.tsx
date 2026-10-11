@@ -1,12 +1,24 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { MarkerType, Panel, ReactFlow, useNodesState, useReactFlow } from '@xyflow/react';
 import type { XYPosition } from '@xyflow/react';
 import { Maximize, Minus, Plus } from 'lucide-react';
+import { cn } from 'cn';
 import { Button } from '@/components/ui/button';
 import '@xyflow/react/dist/base.css';
 import type { GraphEdge, GraphNode, GraphNodeKind } from '../api/types';
 import { detailValue } from '../lib/format';
-import { edgeLabel, edgeWidth, layoutGraph, nodeAmount, nodeRole, reach } from '../lib/graph';
+import {
+  KIND_COLOR,
+  edgeId,
+  edgeLabel,
+  edgeWidth,
+  flowLit,
+  layoutGraph,
+  nodeAmount,
+  nodeRole,
+  reach,
+} from '../lib/graph';
+import type { Lit } from '../lib/graph';
 import { RiskEdge, RiskNode } from './GraphElements';
 import type { RiskEdgeType, RiskNodeType } from './GraphElements';
 
@@ -36,7 +48,8 @@ export type GraphCanvasProps = {
   /** The selection drives the focus: its whole upstream and downstream flow stays lit. */
   selection: GraphSelection;
   onSelect: (selection: GraphSelection) => void;
-  /** Lit when nothing is selected or searched: the impact page's reached nodes and steps. */
+  /** Lit when nothing is selected or searched: the impact page's reached nodes and steps; the
+   *  rest is greyed out rather than faded. */
   focus?: Lit;
   /** Per node: a ring colour, and amount lines that replace the node's own. */
   overlay?: Record<string, { ring?: string; amount: string[] }>;
@@ -49,29 +62,17 @@ export type GraphCanvasProps = {
 const nodeTypes = { risk: RiskNode };
 const edgeTypes = { risk: RiskEdge };
 const FADED = 0.08;
-const edgeId = (index: number) => `e${index}`;
-
-/** Lit nodes and edges, or null when nothing is focused. */
-export type Lit = { nodes: Set<string>; edges: Set<string> } | null;
+/** Outside the impact page's focus: still readable, but plainly not reached. */
+const GREYED = { opacity: 0.35, filter: 'grayscale(1)' };
+export type { Lit };
 
 /** The whole flow through the selection: upstream of its start, downstream of its end. */
-function flowLit(selection: GraphSelection, edges: GraphEdge[]): Lit {
+function selectionLit(selection: GraphSelection, edges: GraphEdge[]): Lit {
   if (!selection) return null;
-  const [from, to] =
-    selection.type === 'node'
-      ? [selection.node.id, selection.node.id]
-      : [selection.edge.source, selection.edge.target];
-  const up = reach(from, edges, true);
-  const down = reach(to, edges);
-  const lit = new Set(
-    edges.flatMap((e, i) =>
-      (up.has(e.source) && up.has(e.target)) || (down.has(e.source) && down.has(e.target))
-        ? [edgeId(i)]
-        : [],
-    ),
-  );
-  if (selection.type === 'edge') lit.add(selection.id);
-  return { nodes: new Set([...up, ...down]), edges: lit };
+  if (selection.type === 'node') return flowLit(selection.node.id, selection.node.id, edges);
+  const lit = flowLit(selection.edge.source, selection.edge.target, edges);
+  lit.edges.add(selection.id);
+  return lit;
 }
 
 /** Search hits and their direct neighbours. */
@@ -226,8 +227,13 @@ export function GraphCanvas({
   );
 
   const lit = useMemo(
-    () => flowLit(selection, edges) ?? searchLit(search, nodes, edges) ?? focus,
+    () => selectionLit(selection, edges) ?? searchLit(search, nodes, edges) ?? focus,
     [selection, search, nodes, edges, focus],
+  );
+
+  const dim = useCallback(
+    (out: boolean | null) => (!out ? { opacity: 1 } : lit === focus ? GREYED : { opacity: FADED }),
+    [lit, focus],
   );
 
   const shownNodes = useMemo(
@@ -237,9 +243,9 @@ export function GraphCanvas({
         data: overlay?.[n.id] ? { ...n.data, ...overlay[n.id] } : n.data,
         hidden: !visibleKinds.has(n.data.node.kind),
         selected: selection?.type === 'node' && selection.node.id === n.id,
-        style: { opacity: lit && !lit.nodes.has(n.id) ? FADED : 1 },
+        style: dim(lit && !lit.nodes.has(n.id)),
       })),
-    [rfNodes, visibleKinds, lit, selection, overlay],
+    [rfNodes, visibleKinds, lit, selection, overlay, dim],
   );
 
   const shownEdges = useMemo(
@@ -247,9 +253,9 @@ export function GraphCanvas({
       rfEdges.map((e) => ({
         ...e,
         selected: selection?.type === 'edge' && selection.id === e.id,
-        style: { opacity: lit && !lit.edges.has(e.id) ? FADED : 1 },
+        style: dim(lit && !lit.edges.has(e.id)),
       })),
-    [rfEdges, lit, selection],
+    [rfEdges, lit, selection, dim],
   );
 
   const byId = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
@@ -301,5 +307,37 @@ export function GraphCanvas({
     >
       <ZoomControls />
     </ReactFlow>
+  );
+}
+
+/** Legend and kind filter in one: the colour chip keys the node colour. */
+export function KindFilter({
+  kinds,
+  hidden,
+  onToggle,
+  className,
+}: {
+  kinds: GraphNodeKind[];
+  hidden: ReadonlySet<GraphNodeKind>;
+  onToggle: (kind: GraphNodeKind) => void;
+  className?: string;
+}) {
+  return (
+    <div className={cn('flex flex-wrap gap-1 rounded-md bg-background/80', className)}>
+      {kinds.map((kind) => (
+        <Button
+          key={kind}
+          type="button"
+          variant="ghost"
+          size="xs"
+          aria-pressed={!hidden.has(kind)}
+          onClick={() => onToggle(kind)}
+          className="font-normal aria-[pressed=false]:opacity-40"
+        >
+          <span className="size-2.5" style={{ background: KIND_COLOR[kind] }} />
+          {kind}
+        </Button>
+      ))}
+    </div>
   );
 }

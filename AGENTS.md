@@ -101,10 +101,11 @@ riskdep/
   # graph
   graph.py            dependency graph as JSON + Cytoscape.js HTML
   siblings.py         sibling markets: other Blue markets sharing a held market's collateral, underlying or price input
-  oracle_class.py     oracle class, price-tracking or constant-price, from structure and round history (pure + probe)
+  oracle_class.py     oracle class, price-tracking or constant-price, and a constant-price one's kind, from structure and round history (pure + probe)
   feeds.py            feed quality: each feed's freshness against its own update rhythm (pure)
   tvl.py              TVL concentration of the graph's protocols, from DefiLlama (pure)
   backtest.py         a past incident replayed: the prediction against the Liquidate events (backtest subcommand)
+  depth.py            discovery depth for a borrow position: the graph's layers in the PT report (pure)
   detect.py           detection → impact for a vault: an oracle fall's loss and verdict in the watches (pure)
   zama.py             Zama confidential vaults: the cShare pool, the batchers, a confidential depositor's two exits
   conditional.py      the conditional Monte Carlo of vault and book incidents: the loss of staying given the incident (pure)
@@ -120,7 +121,7 @@ riskdep/
   report.py           HTML + JSON report
 tests/                pytest, all offline (snapshot + recorded replays)
   test_watch_rules.py, test_watch_replay.py, test_borrower.py, test_watch_user_replay.py,
-  test_graph.py, test_siblings.py, test_oracle_class.py, test_engine.py, test_market_risk.py, test_exit_queue.py, test_drain.py, test_scenario.py, test_vault_incident.py, test_vault_book.py, test_pharos.py, test_breakeven.py, test_feeds.py, test_backtest.py, test_conditional.py, test_zama.py, test_detect.py, test_readme.py, test_admin.py, test_decide.py, test_propagate.py, test_demo_snapshot.py, test_fixes.py, test_light_reads.py, test_api.py, test_dashboard.py, test_fork_replay.py, test_notify.py
+  test_graph.py, test_siblings.py, test_oracle_class.py, test_engine.py, test_market_risk.py, test_exit_queue.py, test_drain.py, test_scenario.py, test_vault_incident.py, test_vault_book.py, test_pharos.py, test_breakeven.py, test_feeds.py, test_backtest.py, test_conditional.py, test_zama.py, test_detect.py, test_readme.py, test_depth.py, test_admin.py, test_decide.py, test_propagate.py, test_demo_snapshot.py, test_fixes.py, test_light_reads.py, test_api.py, test_dashboard.py, test_fork_replay.py, test_notify.py
 scripts/fork/          the crisis demo on a local mainnet fork (anvil): demo.sh (all in one), start-fork.sh, crisis-belem.sh, alt-*.sh, lib.sh,
                       addresses.env, src/ (two demo contracts, not protocol code), tapes/ (vhs); see its README.md
 pyproject.toml        project metadata, dependencies, ruff and pytest configuration
@@ -139,7 +140,7 @@ pyproject.toml        project metadata, dependencies, ruff and pytest configurat
 - `keys.example.ini` — template of the API keys and secrets (no values); the real `keys.ini` is git-ignored. `[alchemy]` (or `[rpc] url`) is an archive RPC, used only as a route by `backtest --record`: its URL embeds the key, so it is never cached, logged or printed.
 - `erpc.yaml` — configuration of the optional local eRPC proxy (eRPC 0.3.0, six free upstreams, no key); `docs/setup/erpc.md` is the setup guide. Its upstream list is mirrored in `docs/analysis/PROVIDERS.md`.
 - `docs/analysis/ANALYSIS_MONITORING.md` — design note: dependency graph, impact, monitoring, execution, and gaps of the current implementation (done / partial / missing).
-- `plan/` — the thirty plans (`defi-risk-dependency`, `morpho-vault-v2-watcher`, `morpho-user-watcher`, `lenders-and-timelocks`, `market-borrowers`, `admin-surface`, `exit-queue`, `drain-threshold`, `sibling-markets`, `incident-mode`, `propagation-engine`, `vault-incident`, `vault-book`, `wrapped-collateral`, `borrower-concentration`, `pharos`, `one-number`, `breakeven`, `incident-api`, `judge-path`, `fork-demo`, `feed-quality`, `backtest`, `conditional`, `pt-channels`, `zama`, `mixed-book`, `detect`, `alerts-and-verdict`, and `web-graph-react-flow` for the SPA's graph).
+- `plan/` — the thirty-four plans (`defi-risk-dependency`, `morpho-vault-v2-watcher`, `morpho-user-watcher`, `lenders-and-timelocks`, `market-borrowers`, `admin-surface`, `exit-queue`, `drain-threshold`, `sibling-markets`, `incident-mode`, `propagation-engine`, `vault-incident`, `vault-book`, `wrapped-collateral`, `borrower-concentration`, `pharos`, `one-number`, `breakeven`, `incident-api`, `judge-path`, `fork-demo`, `feed-quality`, `backtest`, `conditional`, `pt-channels`, `zama`, `mixed-book`, `detect`, `alerts-and-verdict`, `backtest-crash`, `depth`, `pool-move`, `oracle-kinds`, and `web-graph-react-flow` for the SPA's graph).
 - `examples/` — `rockawayx-ethereum.json`, the demo book of vaults and the template for any other (`analyze --book`); `brief-ten-pockets.json`, the brief's own book of ten 1M pockets (`pocket` weighting, with `--exit-cost 0.11`); `brief-mixed-book.json`, the same with the brief's PT loop as a borrow pocket (`kind: borrow`).
 - `docs/` — the documentation, grouped; `docs/README.md` is the index:
   - `docs/model/` — how risk and impact are computed: `how-risk-is-computed.md`, `how-probabilities-are-computed.md` (where every probability comes from: hack base rates, oracle and market-event priors, the breakeven p\*, outside views), `monte-carlo.md` (how `analyze`'s simulation works), `scenarios-and-breakeven.md`, `vault-incident.md` (incident mode end to end: `analyze --vault` / `--book`, `POST /api/incident`), `vault-depositor-scenarios.md`, `shock-engine.md` (the shock engine and its rules), `shock-trace.md` (the propagation trace for a front end, example in `shock-trace-example.json`), `graph-propagation.md`.
@@ -197,7 +198,7 @@ web/src/
   lib/format.ts       usd / percent / num / shortHash / etherscanUrl…, all null-tolerant
   lib/utils.ts        re-exports `cn` from the `cn` package, where `components.json` tells `shadcn add` to import it
   lib/graph.ts        kind colours, shapes and icons, node amounts, dagre layout, flow reach, edge width, report-graph normalisation
-  routes/             VaultPage (follows the top-bar selector) · VaultRisksPage (the curator view: exit, bad debt, oracle class, cushion, borrower concentration, changes) · MarketPage · GraphPage · ImpactPage (a shock trace, one view per tab) · WatchPage
+  routes/             VaultPage (follows the top-bar selector) · VaultRisksPage (the curator view: exit, bad debt, oracle class, cushion, borrower concentration, changes, dependencies with points of failure, risk rings and a shock) · MarketPage · GraphPage · ImpactPage (a shock trace: summary and graph) · WatchPage
   mocks/              report.json, graph.json, graphs.json (each Vault V2's own graph), vaults.json, markets.json, shock-trace.json (a copy of docs/model/shock-trace-example.json), alerts.ts
 ```
 
@@ -215,7 +216,7 @@ web/src/
 - **Mocks are the default, including with no `.env`:** `USE_MOCKS` is `import.meta.env.VITE_USE_MOCKS !== 'false'`. Every endpoint added to `api/client.ts` needs its fixture branch in the same commit, or mock mode breaks on that page.
 - **Two fixture alerts are invented.** The `critical` entries in `mocks/alerts.ts` are modelled on `docs/reference/alert-runbook.md` because no recorded run has one; the header of that file says so. Never cite their `data` keys as the real event payload.
 - **SSE, not WebSocket:** named events `alert` and `tick`, one JSON object each. `min_level` is a server-side filter, so `WatchPage` restarts the stream by remounting on `key={minLevel}` rather than resetting state in an effect. The browser reconnects on its own; `onStatus` only reports the gap.
-- **Routes are lazy because Recharts and React Flow are heavy; only Impact needs both.** A new heavy dependency belongs behind `lazyRouteComponent`, not in the shell.
+- **Routes are lazy because Recharts and React Flow are heavy.** A new heavy dependency belongs behind `lazyRouteComponent`, not in the shell.
 - **`GraphCanvas` lays out once per mount.** dagre runs in the initial state, and the page remounts the canvas with `key` to re-lay out (on new data or Re-layout), which also drops the user's drags. Focus, kind filter and search are derived from props, never stored. Names and edge labels counter-scale with the zoom (`clamp(1/zoom, 1, 2.5)`, D65); the amount inside a node scales with it. React Flow's `base.css` only is imported, and its `<Controls>` are not used: zoom and fit are shadcn `Button`s over `useReactFlow()` in a `<Panel>`.
 
 **Tooling.** TypeScript is strict with `noUnusedLocals`/`noUnusedParameters`, split into `tsconfig.app.json` (src) and `tsconfig.node.json` (vite config); eslint runs `recommendedTypeChecked` over both projects and makes `no-explicit-any` and `consistent-type-imports` errors, with `react-refresh/only-export-components` turned off for `src/components/ui/**` alone, because the generated primitives export their variants next to the component. Prettier is 100 columns, single quotes, trailing commas — **not** ruff's 120, and the two should not be unified; the generated fixtures are in `.prettierignore`. There are no frontend tests, so `pnpm lint && pnpm build` (the build type-checks with `tsc -b`) is the whole gate — the `web` CI job runs exactly that, and the pre-commit `prettier` hook formats `web/` before it gets there. Run both before handing work over.
@@ -228,7 +229,7 @@ Python ≥ 3.10; CI runs the suite on 3.10, the floor `requires-python` in `pypr
 
 ```bash
 uv sync
-uv run pytest -q tests                                 # 319 tests, offline
+uv run pytest -q tests                                 # 327 tests, offline
 uv run python -m riskdep analyze --demo                # cached snapshot, no network → out/report.html/.json
 uv run python -m riskdep watch --replay                # re-run the recorded vault range offline
 uv run python -m riskdep watch --blocks 1000 --record  # live range, saved for --replay
@@ -267,5 +268,5 @@ pnpm lint && pnpm build                                # eslint + prettier, then
 - A behaviour change that departs from a plan decision is recorded in that plan's decision table.
 - Leave format and lint to ruff, at 120 columns, in pre-commit and in CI; never mix a style-only commit with a behaviour change.
 - `uv.lock` is committed: change a dependency with `uv add` / `uv lock`, never by editing the lock by hand — CI runs `uv sync --locked` and fails if the lock has drifted from `pyproject.toml`.
-- Never hand-edit `web/src/mocks/report.json`, `graph.json`, `graphs.json`, `vaults.json` or `markets.json`: regenerate them with `analyze --demo`, `graph --example`, `graph --vault <v>` for each Vault V2 of `vaults.json` (live, the JSON outputs gathered by lowercase address into `graphs.json`) and `python -m riskdep.dashboard` with every Vault V2 of the fixture graph (offline, from the snapshot) and copy the files out of `out/`.
+- Never hand-edit `web/src/mocks/report.json`, `graph.json`, `graphs.json`, `vaults.json` or `markets.json`: regenerate them with `analyze --demo`, `graph --example --no-siblings`, `graph --vault <v>` for each Vault V2 of `vaults.json` (live, the JSON outputs gathered by lowercase address into `graphs.json`) and `python -m riskdep.dashboard` with every Vault V2 of the fixture graph (offline, from the snapshot) and copy the files out of `out/`.
 - Package version lives in `pyproject.toml` and must stay in step with `riskdep/__init__.py` `__version__` (currently `0.1.0`); nothing in the code reads `__version__`, only the docs cite it. There is no `CHANGELOG.md` yet.

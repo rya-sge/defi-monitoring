@@ -47,17 +47,18 @@ export function nodeRole(node: GraphNode): NodeRole {
 
 /**
  * Circle: a token. Square: holds or routes assets, rounded for an address or a lender,
- * sharp for a vault or a pool. Hexagon: holds nothing, smaller for a feed than for the
+ * sharp for a vault or a pool; a vault is larger and tinted, a pool
+ * flatter. Hexagon: holds nothing, smaller for a feed than for the
  * oracle that reads it (D64).
  */
 const ROLE_DRAWING: Record<
   NodeRole,
   { shape: NodeShape; width: number; height: number; icon: LucideIcon }
 > = {
-  vault: { shape: 'rect', width: 80, height: 70, icon: Vault },
+  vault: { shape: 'rect', width: 96, height: 80, icon: Vault },
   user: { shape: 'rounded', width: 80, height: 70, icon: User },
-  market: { shape: 'rect', width: 80, height: 70, icon: Database },
-  pendle: { shape: 'rect', width: 80, height: 70, icon: Database },
+  market: { shape: 'rect', width: 80, height: 52, icon: Database },
+  pendle: { shape: 'rect', width: 80, height: 52, icon: Database },
   asset: { shape: 'circle', width: 56, height: 56, icon: Coins },
   oracle: { shape: 'hexagon', width: 60, height: 52, icon: Eye },
   feed: { shape: 'hexagon', width: 46, height: 40, icon: Activity },
@@ -234,6 +235,17 @@ export function reach(start: string, edges: GraphEdge[], backward = false): Set<
   return seen;
 }
 
+/** The nodes one edge away from `id`, either way. */
+export function adjacent(id: string, edges: GraphEdge[]): string[] {
+  return edges.flatMap((e) => (e.source === id ? [e.target] : e.target === id ? [e.source] : []));
+}
+
+/** The nodes on some path from `from` down to `to`, both included. */
+export function pathNodes(from: string, to: string, edges: GraphEdge[]): string[] {
+  const up = reach(to, edges, true);
+  return [...reach(from, edges)].filter((id) => up.has(id));
+}
+
 /** Detail keys that speak to risk, shown first in the selection panel. */
 export const RISK_KEYS = [
   'health_factor',
@@ -314,4 +326,97 @@ export function edgeLabel(amount: number | null, unit: string | null): string {
         ? `${(amount / 1e3).toFixed(1)}k`
         : amount.toFixed(2);
   return unit ? `${magnitude} ${unit}` : magnitude;
+}
+
+/** At least this many structural twins are drawn as one stacked node until it is clicked. */
+const GROUP_MIN = 6;
+export const GROUP_KEY = 'grouped';
+
+/** What a label names, without its address: "mint control: ethereum:0x…" → "mint control". */
+const labelStem = (label: string) => label.split(/:|\s0x/)[0].trim();
+
+/**
+ * Merges nodes of one kind and label stem with exactly the same edges (same relation to the same
+ * neighbours),
+ * GROUP_MIN or more of them, into one node; `expanded` holds the groups the user opened.
+ */
+export function groupTwins(
+  graph: Pick<GraphResponse, 'nodes' | 'edges'>,
+  expanded: ReadonlySet<string>,
+): Pick<GraphResponse, 'nodes' | 'edges'> {
+  const incident = new Map<string, string[]>();
+  for (const e of graph.edges) {
+    incident.set(e.source, [...(incident.get(e.source) ?? []), `>${e.rel}>${e.target}`]);
+    incident.set(e.target, [...(incident.get(e.target) ?? []), `<${e.rel}<${e.source}`]);
+  }
+  const twins = new Map<string, GraphNode[]>();
+  for (const n of graph.nodes) {
+    const key = `${n.kind}|${labelStem(n.label)}|${(incident.get(n.id) ?? []).sort().join('|')}`;
+    twins.set(key, [...(twins.get(key) ?? []), n]);
+  }
+  const groupOf = new Map<string, string>();
+  const groups: GraphNode[] = [];
+  for (const [key, members] of twins) {
+    const id = `group:${key}`;
+    if (members.length < GROUP_MIN || expanded.has(id)) continue;
+    groups.push({
+      id,
+      kind: members[0].kind,
+      label: `${members.length} × ${labelStem(members[0].label) || members[0].kind}`,
+      details: { [GROUP_KEY]: members.length, members: members.map((m) => m.label).join(', ') },
+    });
+    for (const m of members) groupOf.set(m.id, id);
+  }
+  if (!groups.length) return graph;
+  const seen = new Set<string>();
+  const edges = graph.edges.flatMap((e) => {
+    const source = groupOf.get(e.source) ?? e.source;
+    const target = groupOf.get(e.target) ?? e.target;
+    if (source === e.source && target === e.target) return [e];
+    const key = `${source}|${e.rel}|${target}`;
+    if (seen.has(key)) return [];
+    seen.add(key);
+    // One edge stands for the group's: no single amount fits it.
+    return [{ ...e, source, target, amount: null }];
+  });
+  return { nodes: [...graph.nodes.filter((n) => !groupOf.has(n.id)), ...groups], edges };
+}
+
+/** React Flow edge id of the edge at `index` in the graph's edge list. */
+export const edgeId = (index: number) => `e${index}`;
+
+/** Lit nodes and edges, or null when nothing is focused. */
+export type Lit = { nodes: Set<string>; edges: Set<string> } | null;
+
+/** The whole flow through a node or an edge: upstream of `from`, downstream of `to`. */
+export function flowLit(from: string, to: string, edges: GraphEdge[]): NonNullable<Lit> {
+  const up = reach(from, edges, true);
+  const down = reach(to, edges);
+  const lit = new Set(
+    edges.flatMap((e, i) =>
+      (up.has(e.source) && up.has(e.target)) || (down.has(e.source) && down.has(e.target))
+        ? [edgeId(i)]
+        : [],
+    ),
+  );
+  return { nodes: new Set([...up, ...down]), edges: lit };
+}
+
+/**
+ * What the vault's assets rely on: for every node downstream of a market the vault supplies,
+ * the sum of the vault's supply to those markets, largest first.
+ */
+export function pointsOfFailure(
+  vault: string,
+  edges: GraphEdge[],
+): { id: string; amount: number; unit: string | null }[] {
+  const exposed = new Map<string, number>();
+  const supplies = edges.filter((e) => e.source === vault && e.rel === 'supplies' && e.amount);
+  for (const s of supplies)
+    for (const id of reach(s.target, edges))
+      if (id !== vault) exposed.set(id, (exposed.get(id) ?? 0) + (s.amount ?? 0));
+  const unit = supplies[0]?.unit ?? null;
+  return [...exposed]
+    .map(([id, amount]) => ({ id, amount, unit }))
+    .sort((a, b) => b.amount - a.amount);
 }

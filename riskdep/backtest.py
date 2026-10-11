@@ -49,6 +49,11 @@ class MarketBacktest:
     realised_bad_debt: float
     missed: list[str] = field(default_factory=list)  # liquidated, not predicted
     extra: list[str] = field(default_factory=list)  # predicted, not liquidated
+    # D197: why each `extra` was not liquidated in the window
+    extra_later: list[str] = field(default_factory=list)  # liquidated after the window (the episode's follow-up)
+    extra_defended: list[str] = field(default_factory=list)  # repaid or added collateral: safe at the low by the end
+    left_debt: float = 0.0  # D197: debt of the rest, left liquidatable at the window's end, loan units
+    left_dust: int = 0  # of which positions below `backtest.dust_debt`: not worth a liquidator's gas
 
 
 @dataclass
@@ -77,8 +82,16 @@ class Backtest:
                 f"{m.realised_bonus:<10,.0f} {m.predicted_bad_debt:>7,.0f} / {m.realised_bad_debt:<7,.0f} {u}"
             )
             if m.missed or m.extra:
+                left = len(m.extra) - len(m.extra_later) - len(m.extra_defended)
                 out.append(
                     f"      {len(m.missed)} liquidated but not predicted, {len(m.extra)} predicted but not liquidated"
+                    + (
+                        f" ({len(m.extra_later)} liquidated later, {len(m.extra_defended)} defended by their borrower, "
+                        f"{left} left liquidatable: {m.left_debt:,.0f} {m.loan_symbol} of debt, {m.left_dust} of them "
+                        f"under {BT['dust_debt']:,} each)"
+                        if m.extra
+                        else ""
+                    )
                 )
         out.append("    (each pair: predicted / realised)")
         out += [f"  note: {n}" for n in self.notes]
@@ -95,6 +108,17 @@ def decode_liquidation(log: dict) -> tuple[int, str, int, int, int]:
     """(block, borrower, repaid assets, seized collateral, bad debt assets) of one `Liquidate` log."""
     repaid, _, seized, bad, _ = decode(["uint256"] * 5, bytes.fromhex(log["data"][2:]))
     return log["block"], "0x" + log["topics"][3][26:], repaid, seized, bad
+
+
+def defended(positions: dict[str, tuple[int, int]], totals: tuple[int, int], low: int, lltv: float) -> set[str]:
+    """D197, pure: the borrowers whose position, read at the end of the window, is safe at the episode's low price
+    (repaid, or more collateral): they defended it rather than being missed by the liquidators."""
+    tba, tbs = totals
+    return {
+        u
+        for u, (coll, bs) in positions.items()
+        if not bs or (coll * low // 10**36) * lltv > bs * (tba + 1) // (tbs + 10**6)
+    }
 
 
 def compare(
@@ -165,17 +189,30 @@ def run(f: S.Fetcher, name: str) -> Backtest:
         p0 = _uint(S.rpc_batch(f, [_call(m.oracle, "price()")], before)[0])
         ev_blocks = sorted({e[0] for e in events[mid]})
         prices = {b: _uint(S.rpc_batch(f, [_call(m.oracle, "price()")], b)[0]) for b in ev_blocks}
-        out.append(
-            compare(
-                info,
-                10**m.loan_decimals,
-                tr.positions.get(mid, {}),
-                tr.totals.get(mid, (0, 0)),
-                p0,
-                prices,
-                events[mid],
-            )
+        mb = compare(
+            info, 10**m.loan_decimals, tr.positions.get(mid, {}), tr.totals.get(mid, (0, 0)), p0, prices, events[mid]
         )
+        if mb.extra:
+            # D197: why the extra ones were not liquidated in the window: later, or defended by their borrower
+            end = MR.Tracker({mid: info})
+            end._read(f, [(mid, u) for u in mb.extra], blocks[-1])
+            ok = defended(end.positions.get(mid, {}), end.totals.get(mid, (0, 0)), min(prices.values()), info.lltv)
+            later = set()
+            if ep.get("followup_to"):
+                later = {
+                    decode_liquidation(x)[1]
+                    for x in S.etherscan_logs(f, MORPHO_BLUE, LIQUIDATE, mid, hi + 1, ep["followup_to"])
+                }
+            mb.extra_later = sorted(set(mb.extra) & later)
+            mb.extra_defended = sorted((set(mb.extra) & ok) - later)
+            tba, tbs = end.totals.get(mid, (0, 0))
+            left = [
+                bs * (tba + 1) // (tbs + 10**6) / 10**m.loan_decimals
+                for u, (_, bs) in end.positions.get(mid, {}).items()
+                if u not in ok and u not in later
+            ]
+            mb.left_debt, mb.left_dust = sum(left), sum(1 for d in left if d < BT["dust_debt"])
+        out.append(mb)
     notes = [
         ep["source"],
         "the prediction is the liquidation model alone, at the oracle's lowest price of the episode: the shock "

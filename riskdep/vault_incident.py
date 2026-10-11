@@ -360,7 +360,9 @@ def market_feeds(graph: dict, market_id: str) -> list[tuple[str, str, bool]]:
 def engine_shocks(graph: dict, shocks: list[tuple]) -> list[EN.Shock]:
     """D139, pure: a markdown of token T by f, in the engine's terms: T's market price falls by f, and every
     constant-price input (the issuer's rate or NAV feed) of the oracles of markets taking T as collateral reads f low.
-    A price-tracking input follows T's price through the graph's `tracks` edges by itself."""
+    A price-tracking input follows T's price through the graph's `tracks` edges by itself. D205: a linear-discount or
+    fixed input does not read the markdown: its market keeps its oracle, liquidates nobody, and its lenders hold the
+    shortfall (and the drain the gap opens)."""
     nodes = {n["id"]: n for n in graph["nodes"]}
     out: dict[tuple, EN.Shock] = {}
     for kind, tok, fall, _ in normalise(shocks):
@@ -377,6 +379,7 @@ def engine_shocks(graph: dict, shocks: list[tuple]) -> list[EN.Shock]:
                     e["rel"] == "reads"
                     and e["source"] in oracles
                     and feed.get("details", {}).get("oracle_class") == (OC.CONSTANT_PRICE)
+                    and feed["details"].get("constant_kind") not in (OC.LINEAR_DISCOUNT, OC.FIXED)
                 ):
                     out[(feed["id"], "misreport")] = EN.Shock(feed["id"], "reads-low", fall)
     return list(out.values())
@@ -425,9 +428,15 @@ def nav_timing(profile: scenario.OracleProfile | None) -> str:
     if profile is None or profile.kind == OC.NOT_CLASSIFIED:
         return "unknown: the oracle could not be classified"
     if profile.kind == OC.CONSTANT_PRICE:
+        k = profile.constant_kind
+        if k in (OC.LINEAR_DISCOUNT, OC.FIXED):
+            return (
+                f"never: the oracle is a {k} and does not see the markdown, so nobody is liquidated; the loss stays "
+                "with the lenders, hidden until the collateral is sold, and the gap invites a drain"
+            )
         return (
-            "at once when the issuer publishes the new value: the oracle is the issuer's rate or NAV, so no market "
-            "move announces it, and liquidations can start in the same block"
+            f"{OC.MOVES[k] if k else 'at once when the issuer publishes the new value'}: the oracle is the issuer's "
+            "rate or NAV, so no market move announces it, and liquidations can start in the same block"
         )
     if profile.kind == OC.PRICE_TRACKING:
         return f"as the market falls, through the feed ({'TWAP ' + str(profile.twap_s) + ' s' if profile.twap_s else 'its next update'})"

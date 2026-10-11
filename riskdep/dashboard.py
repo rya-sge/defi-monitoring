@@ -114,8 +114,9 @@ def graph_oracles(graph: dict | None) -> dict[str, tuple[str | None, list[dict]]
     }
 
 
-def exit_liquidity(address: str) -> dict | None:
-    """D62–D71: the vault's exit liquidity at its recorded state, in asset units; None without a recording."""
+def exit_liquidity(address: str, live: bool = False) -> dict | None:
+    """D62–D71: the vault's exit liquidity in asset units, read on-chain when `live`, else at its recorded state;
+    None without a recording, or when the chain does not answer."""
     from . import drain as DR
     from . import exit_queue as EQ
     from . import pipeline
@@ -123,7 +124,7 @@ def exit_liquidity(address: str) -> dict | None:
     from . import zama as ZM
 
     try:
-        f, block, _ = pipeline.vault_source(address.lower(), "offline")
+        f, block, _ = pipeline.vault_source(address.lower(), "live" if live else "offline")
         view = V.discover_vault(f, address.lower(), block)
         dep = V.largest_depositor(f, view.address, frozenset(ZM.POOLS))
         st = V.read_state(f, view, block, dep)
@@ -217,7 +218,7 @@ def vault(f: S.Fetcher, address: str) -> dict:
         "liquidity_usd": v["liquidityUsd"],
         "markets": markets,
         "liquidations": sorted(liq, key=lambda x: x["drop"]),
-        "exit": exit_liquidity(address),
+        "exit": exit_liquidity(address, live=f.mode == "direct"),
     }
 
 
