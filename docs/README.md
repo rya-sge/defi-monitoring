@@ -25,6 +25,7 @@ Usage of every mode is in the repository's `README.md`; how the code is built is
 | `shock-engine.md` | The shock engine: what happens to a vault when a node fails, and its rules |
 | `shock-trace.md`, `shock-trace-example.json` | The propagation as data, for a front end |
 | `graph-propagation.md` (+ pdf) | The dependency graph as a propagation engine |
+| `zama-confidential-vaults.md` | Zama confidential vaults: the hidden layer, who loses, the two exits, contagion, alerts, and what is not computed |
 
 ## `watch/`: detection and monitoring
 

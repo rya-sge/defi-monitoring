@@ -1,0 +1,1 @@
+{"method": "GET", "url": "https://coins.llama.fi/prices/current/ethereum:0x56072c95faa701256059aa122697b133aded9279", "body": null, "fetched": "2026-10-11T05:26:52Z", "response": {"coins": {"ethereum:0x56072c95faa701256059aa122697b133aded9279": {"decimals": 18, "symbol": "SKY", "price": 0.07667052485580933, "timestamp": 1791696161, "confidence": 0.99}}}}

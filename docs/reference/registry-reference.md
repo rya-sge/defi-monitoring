@@ -22,6 +22,7 @@ Rules for editing:
 - [`watch`](#watch)
 - [`graph`](#graph)
 - [`engine`](#engine)
+- [`sky`](#sky)
 - [`ethena`](#ethena)
 - [`exit_liquidity`](#exit_liquidity)
 - [`pharos`](#pharos)
@@ -217,6 +218,17 @@ The shock engine's propagation rules and settings (plan `2026-10-10-propagation-
 | `basis` | text | — | why |
 
 **Changing a rule.** Prefer a `--rules` file for a study: the registry's rules are the defaults everyone gets. A change here keeps its `basis` honest and is followed by `python3 -m pytest -q tests/test_engine.py`. The drain threshold uses `watch.drain_buy_cost`.
+
+## `sky`
+
+Sky's backing (plan `2026-10-11-sky`, D223–D226). Read by `sky.py` and `graph.py`.
+
+| Key | Unit | Default | What it controls |
+|---|---|---|---|
+| `usds`, `susds`, `dai` | address | on Ethereum | the tokens a Sky incident marks down and the graph nodes the sources hang from |
+| `sources` | name prefix → source | `LITE-PSM`/`PSM` peg module, `ALLOCATOR-` the allocator's name, `RWA`, `LSE` staked SKY | how collateral types are grouped; the rest are crypto vaults |
+| `debt_auction_share` | fraction | 0.25 | the share of SKY's market value debt auctions can raise before USDS holders bear a loss |
+| `basis` | text | — | the reads and the loss order |
 
 ## `ethena`
 

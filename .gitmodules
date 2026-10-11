@@ -37,3 +37,15 @@
 [submodule "docs/external/sky/dss-exec-lib"]
 	path = docs/external/sky/dss-exec-lib
 	url = https://github.com/sky-ecosystem/dss-exec-lib
+[submodule "docs/external/sky/sky-protocol-info"]
+	path = docs/external/sky/sky-protocol-info
+	url = https://github.com/sky-ecosystem/sky-protocol-info
+[submodule "docs/external/sky/executive-votes"]
+	path = docs/external/sky/executive-votes
+	url = https://github.com/sky-ecosystem/executive-votes
+[submodule "docs/external/sky/dss-lite-psm"]
+	path = docs/external/sky/dss-lite-psm
+	url = https://github.com/sky-ecosystem/dss-lite-psm
+[submodule "docs/external/sky/dss"]
+	path = docs/external/sky/dss
+	url = https://github.com/sky-ecosystem/dss

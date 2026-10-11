@@ -770,6 +770,52 @@ def annotate_supply(g: Graph, f: S.Fetcher, block: int) -> int:
     return n
 
 
+def annotate_sky(g: Graph, snap) -> int:
+    """D224: behind USDS and DAI, where Sky's debt sits: one External node per source (the peg module, each allocator,
+    crypto, RWA and staked-SKY vaults) with its share; the surplus, the system's bad debt and the debt auctions'
+    capacity on USDS; the savings rate on sUSDS. Returns the sources drawn (0 when the graph holds no Sky token)."""
+    from . import sky as SK
+
+    if snap is None:
+        return 0
+    held = {
+        k: nid
+        for k in ("usds", "dai", "susds")
+        for nid, n in g.nodes.items()
+        if nid == SK.K[k] or n["details"].get("address") == SK.K[k]
+    }
+    if not held:
+        return 0
+    if "usds" in held:
+        n = g.nodes[held["usds"]]
+        g.node(
+            held["usds"],
+            n["kind"],
+            n["label"],
+            sky_debt_usd=round(snap.total),
+            sky_net_surplus_usd=round(snap.net_surplus),
+            sky_auction_capacity_usd=round(snap.auction_capacity),
+        )
+    if "susds" in held:
+        n = g.nodes[held["susds"]]
+        g.node(held["susds"], n["kind"], n["label"], savings_rate=round(snap.ssr, 4))
+    drawn = 0
+    for source, usd in sorted(snap.debt.items(), key=lambda x: -x[1]):
+        sid = g.node(
+            f"sky:{source.lower().replace(' ', '-')}",
+            "External",
+            f"Sky {source}" + (f" ({snap.psm_usdc / 1e9:,.2f}B USDC)" if source == "peg module" else ""),
+            usd=round(usd),
+            share_of_backing=round(usd / snap.total, 4),
+            source="Sky's Vat and IlkRegistry, read on-chain through its ChainLog (D223)",
+        )
+        for k in ("usds", "dai"):
+            if k in held:
+                g.edge(held[k], sid, "backed by (Sky)", round(usd), "USD")
+        drawn += 1
+    return drawn
+
+
 def annotate_ethena(g: Graph, snap) -> int:
     """D221: behind USDe, where Ethena's backing sits: one External node per exchange holding margin, one for what is
     not on an exchange, and the off-exchange settlement providers; the reserve fund on USDe. Returns the venues drawn

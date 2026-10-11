@@ -363,15 +363,55 @@ def ethena_snapshot(mode: str = "offline"):
     return ethena.load(_outside_fetcher("ethena", mode))
 
 
+def sky_snapshot(mode: str = "offline"):
+    """D223: Sky's core at the recorded block (fixtures/replay/sky/meta.json) offline; at the head, saved, in `record`
+    and `refresh`; at the head, not saved, `live`."""
+    from . import sky
+
+    rdir = REPLAY_DIR / "sky"
+    if mode in ("record", "refresh"):
+        f = S.Fetcher("refresh", rdir)
+        block = int(S.rpc(S.Fetcher("direct"), "eth_blockNumber", []), 16) - 2
+        rdir.mkdir(parents=True, exist_ok=True)
+        (rdir / "meta.json").write_text(json.dumps({"block": block}, indent=1))
+    elif mode == "live":
+        f = S.Fetcher("direct")
+        block = int(S.rpc(f, "eth_blockNumber", []), 16) - 2
+    else:
+        if not (rdir / "meta.json").exists():
+            return None
+        f, block = S.Fetcher("offline", rdir), json.loads((rdir / "meta.json").read_text())["block"]
+    return sky.load(f, block)
+
+
 def venue_shocks(items: list[str] | None, mode: str, target: str) -> tuple[list[str], dict | None]:
     """D220: `venue=<exchange>:<loss>` replaced by the USDe markdown it leaves once the reserve fund absorbed what it
     can: `issuer_depeg=<markdown>` for `analyze` (`target` "position"), `token=` markdowns of USDe and sUSDe for a
     vault or a book. Returns (the shocks, the venue loss or None). Raises ValueError (unknown venue, no Ethena data)."""
     from . import ethena as ET
+    from . import sky as SK
 
+    rest, skies = SK.parse_sky(items)
+    if skies:
+        # D226: a loss on one of Sky's sources, after its surplus and its debt auctions, marks USDS, DAI and sUSDS down
+        if target == "position":
+            raise ValueError("sky=<source>:<loss> applies with --vault or --book: the analyze position is not on USDS")
+        snap = sky_snapshot(mode)
+        if snap is None:
+            raise ValueError("a Sky incident needs Sky's core: no recording under fixtures/replay/sky/")
+        losses = [SK.sky_loss(snap, s, v) for s, v in skies]
+        m = min(0.99, sum(x["markdown"] for x in losses))
+        info = {"losses": losses, "markdown": m, "text": "; ".join(x["text"] for x in losses)}
+        if m <= 0:
+            raise ValueError(info["text"])
+        rest += [f"token=USDS:{m}", f"token=sUSDS:{m}", f"token=DAI:{m}"]
+        items = rest
+        sky_info = info
+    else:
+        sky_info = None
     rest, venues = ET.parse_venue(items)
     if not venues:
-        return list(items or []), None
+        return list(items or []), sky_info
     snap = ethena_snapshot(mode)
     if snap is None:
         raise ValueError("a venue incident needs Ethena's backing: no recording under fixtures/replay/ethena/")
@@ -384,6 +424,8 @@ def venue_shocks(items: list[str] | None, mode: str, target: str) -> tuple[list[
         rest += [f"token=USDe:{m}", f"token=sUSDe:{m}"]
     else:
         raise ValueError(info["text"])
+    if sky_info:
+        info["text"] = sky_info["text"] + "; " + info["text"]
     return rest, info
 
 
@@ -484,6 +526,8 @@ def incident(
     result = vault_book.aggregate(book, parsed, incidents, borrows, names)
     if venue:
         result.notes.insert(0, venue["text"])
+        for inc in incidents:
+            inc.notes.insert(0, venue["text"])
     if conditional:
         conditional_distribution(book, parsed, incidents, result, run_all, borrows, run_borrows)
     return VaultIncidentResult(book, incidents, result)

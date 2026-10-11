@@ -68,7 +68,8 @@ def main(argv: list[str] | None = None) -> int:
         + ", ".join(scenario.EVENTS)
         + "; with --vault or --book: token=<collateral>:<fall> (a markdown) or "
         "borrower=<collateral, market id or all>:<recovery>[:<n>] (the n largest borrowers default); everywhere: "
-        "venue=<exchange>:<loss>, a share of USDe's backing at that venue lost (Ethena, e.g. venue=Binance:0.5)",
+        "venue=<exchange>:<loss>, a share of USDe's backing at that venue lost (Ethena, e.g. venue=Binance:0.5); "
+        "with --vault or --book: sky=<source>:<loss>, a share of a Sky source lost (e.g. sky=spark:0.2)",
     )
     a.add_argument("--out", default=str(Path(__file__).resolve().parent.parent / "out"))
 
@@ -318,6 +319,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"shared feeds and oracles: {shared} read by more than one market")
         if venues:
             print(f"Ethena: {venues} venue(s) holding USDe's backing drawn behind USDe")
+        skies = GR.annotate_sky(
+            g, pipeline.sky_snapshot("record" if args.record else "offline" if args.replay else "live")
+        )
+        if skies:
+            print(f"Sky: {skies} source(s) of USDS and DAI's backing drawn")
         print(
             f"collateral supply: {measured} token(s) with their share posted in Morpho"
             if measured
