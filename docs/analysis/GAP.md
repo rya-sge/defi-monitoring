@@ -531,7 +531,7 @@ The challenge also found choices that the evidence supports.
 
 ## 11. Recommended order
 
-The order of the remaining work now lives in `NEXT_STEP.md`, which merges the earlier plans and follows the reading of the brief in `ANALYSIS_CURRENT.md` (detect → impact → how fast → decide). How the gaps map onto it:
+The order of the remaining work now lives in `NEXT_STEP.md`, which merges the earlier plans and follows the reading of the brief in `docs/archive/ANALYSIS_CURRENT.md` (detect → impact → how fast → decide). How the gaps map onto it:
 
 | `NEXT_STEP.md` phase | Steps | Gaps |
 |---|---|---|

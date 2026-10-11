@@ -1,6 +1,6 @@
 # Next steps
 
-Where the project goes next, in recommended order, and what each step needs. It follows the reading of the brief in `ANALYSIS_CURRENT.md`: **an incident is known; the tool must detect it, compute its impact on the book, say how fast it lands, and decide stay or exit**. Built steps are listed once, in §2, with their plan; the rest of the file holds only what remains.
+Where the project goes next, in recommended order, and what each step needs. It follows the reading of the brief in the 2026-10-10 assessment (`docs/archive/ANALYSIS_CURRENT.md`, now archived; where each criterion stands is in `GOAL.md`): **an incident is known; the tool must detect it, compute its impact on the book, say how fast it lands, and decide stay or exit**. Built steps are listed once, in §2, with their plan; the rest of the file holds only what remains.
 
 Sources: the brief (`docs/hackaton_instruction/GOAL.md` and its PDF), the gap review `GAP.md` (K ids), `IMPROVEMENT.md` (a judge's reading, 2026-10-11), the gap list of `ANALYSIS_MONITORING.md` (C, D, M, R, T, X ids), and the RockawayX and Belem findings (`ROCK-VAULT.md`, `ROCK-VAULT-DEP.md`).
 

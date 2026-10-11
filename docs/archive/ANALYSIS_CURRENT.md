@@ -1,5 +1,7 @@
 # Current analysis: the brief's question against what the tool does
 
+> **Archived 2026-10-11, superseded.** Its plan (§7) is built: incident mode, time to impact, detection → impact, the conditional Monte Carlo, the book, the sampling error. Its findings (§8) describe the tool on 2026-10-10 and no longer hold. The current state is `docs/hackaton_instruction/GOAL.md` (where each criterion is answered) and `docs/analysis/NEXT_STEP.md` (what remains); kept for the reasoning behind the pivot to known-incident answers.
+
 This note records an assessment made on 2026-10-10, after the merge of the sibling-markets work. It re-reads the challenge brief (`docs/hackaton_instruction/GOAL.md` and the PDF next to it) as a chain of four steps, checks each step against the code, and draws the consequences for the Monte Carlo simulation and for the next tasks. It complements `GAP.md` (the model's gaps K1–K25), `NEXT_STEP.md` (the plan) and the former `NEXT_TASK.md` (the two next tasks, since built; removed 2026-10-11), and it changes the order they propose.
 
 ## Contents

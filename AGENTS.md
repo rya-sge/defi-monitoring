@@ -136,7 +136,7 @@ pyproject.toml        project metadata, dependencies, ruff and pytest configurat
 - `docs/hackaton_instruction/GOAL.md` — the challenge brief: what to build, what is expected, the judging criteria and their weights, and where the repository answers each.
 - `docs/analysis/ARCHITECTURE.md` — how the system is built: modes, components and their imports, data sources and trust, data flow, state, testing, decision index.
 - `README.md` — usage of every mode, alert trigger tables, limits.
-- `docs/analysis/ANALYSIS_CURRENT.md` — the latest assessment (2026-10-10): the brief read as detect → impact → how fast → decide, where the tool stands on each step, why the Monte Carlo should become conditional on the observed incident, and the resulting order of work. Read it before `docs/analysis/NEXT_STEP.md`.
+- `docs/archive/ANALYSIS_CURRENT.md` — archived (superseded 2026-10-11): the 2026-10-10 assessment that read the brief as detect → impact → how fast → decide and turned the project to known-incident answers; its plan is built. The current state is `GOAL.md`'s criteria map and `docs/analysis/NEXT_STEP.md`.
 - `docs/analysis/NEXT_STEP.md` — the next steps, in recommended order (phases A to D), with how each would be built and what it needs; it records what has been built and merges the earlier versions 1 and 2. Keep it current when a step is done.
 - `docs/risk-assessment/outside-providers.md` — the outside risk providers and how each is used: Pharos and Nexus Mutual (both in use, keyless); the rules any outside provider follows. `docs/analysis/EXTERNAL_SOURCE.md` is the survey that chose them.
 - `docs/analysis/PROVIDERS.md` — every external provider (RPC, APIs, CDNs): endpoints, queries, limits, trust model. Keep it current.
