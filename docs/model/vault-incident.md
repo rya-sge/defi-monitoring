@@ -268,6 +268,8 @@ Optional providers add context without changing the verdict, except Pharos's off
 | shock engine | second-order liquidations, sibling markets | `docs/model/shock-engine.md` |
 | Zama registry | a confidential depositor's two exits (D174) | `docs/analysis/ZAMA-VAULT.md` |
 
+Every vault and book result also carries a **value at risk** block (D227, plan `2026-10-11-value-at-risk`), gathered from the figures above: the money in the hit markets, the expected loss if the incident happens and the worst pocket, the 95 % and 99 % worst cases given the incident (with `--conditional`), the certain cost of leaving the hit pockets against what it saves, and the losses beyond the book (the lenders of the sibling markets the incident reaches, each counted once, by loan unit). In the `vault` weighting the loss counts each vault whole, while the draw, the cost and the saving are the followed depositors': the block says so. It is `book.value_at_risk` in `POST /api/incident`.
+
 Each `VaultIncident` also carries notes that qualify the numbers: the share price stays at par until the write-off; a stale feed; a default accrues with no due date; issuer-priced collateral needs a buyer; the exit liquidity is the DEX aggregator's only (KyberSwap, quoted live at the size the liquidations seize, plan `2026-10-11-exit-liquidity`), or not available; the hit market is the vault's liquidity market; the depositor's share of the vault.
 
 ## 13. Output: CLI, JSON, API

@@ -34,6 +34,7 @@ What to read in the output:
 | `if the incident is not certain: … it pays if the incident's probability over 30 days is above 7.92%` | the breakeven: exiting is certain and costly, staying is uncertain |
 | `outside view: Nexus f(x) Protocol cover …` | an outside price to compare that probability with |
 | `Leaving Belem RWA EURCV costs 110,000 USD for sure, against 53,445 saved if the incident comes: stay.` | the brief's ten-pocket example, made explicit |
+| `VALUE AT RISK` … `at risk:`, `expected loss if it happens:`, `worst cases given the incident:`, `leaving the hit pockets now:`, `beyond the book:` | the total at risk in one block: the money in the hit markets, the loss, its worst cases, the cost of leaving, and the losses outside the book (also `book.value_at_risk` in `POST /api/incident`) |
 | `given the incident, drawn: staying loses 52,067 USD on average (median 11,164, 95 % 246,211, 99 % 352,195); leaving now costs 110,000 …; staying is worse in 18% of 10,000 paths` | "exiting is expensive and certain, staying is cheap and uncertain": the uncertain side as a distribution (`--conditional`) |
 
 **Is the number defensible: a backtest.** `uv run python -m riskdep backtest` replays the PT-reUSD liquidations of 2026-08-25 (a Pendle yield spike moved a min(TWAP, linear) oracle; `GAP.md` K8). It reads the state 60 blocks before them, applies the oracle's observed fall, and compares the prediction with the 33 `Liquidate` events:

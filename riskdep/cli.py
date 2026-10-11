@@ -513,6 +513,8 @@ def _vault_incident(ap, args) -> int:
     if len(res.incidents) == 1 and not args.book:
         for line in res.incidents[0].lines():
             print(line)
+        for line in res.result.value_at_risk["lines"]:
+            print(line)
         print(f"json:   {vault_incident.write(res.incidents[0], Path(args.out))}")
         return 0
     for line in res.result.text():

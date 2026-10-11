@@ -345,6 +345,29 @@ class Conditional(BaseModel):
     text: str
 
 
+class ValueAtRisk(BaseModel):
+    """What the incident puts at risk, in one block (D227): the figures are the book's, gathered."""
+
+    exposure_usd: float = Field(description="Money in the markets the incident hits.")
+    loss_usd: float = Field(description="Expected loss if the incident happens.")
+    loss_share: float = Field(description="That loss over the book's value.")
+    pockets_hit: int
+    pockets: int
+    worst_pocket: str | None = None
+    worst_pocket_loss_usd: float = 0.0
+    p95_usd: float | None = Field(default=None, description="95 % worst case given the incident (with `conditional`).")
+    p99_usd: float | None = Field(default=None, description="99 % worst case given the incident (with `conditional`).")
+    leave_cost_usd: float = Field(description="Certain cost of leaving the hit pockets now.")
+    saved_usd: float = Field(description="What leaving them saves if the incident happens.")
+    beyond_markets: int = Field(description="Other markets the incident reaches, outside the book.")
+    beyond_by_unit: dict[str, float] = Field(description="Their lenders' loss, by loan unit (USDC, EURCV…).")
+    loss_is_whole_vaults: bool = Field(
+        description="`vault` weighting: the loss counts each vault whole; the draw, the cost of leaving and the saving "
+        "are the followed depositors'."
+    )
+    lines: list[str] = Field(description="The block in words, as the CLI prints it.")
+
+
 class MarketHit(BaseModel):
     market_id: str
     label: str
@@ -454,6 +477,7 @@ class BookIncident(BaseModel):
     p_star_year: float | None = None
     horizon_days: float = 30.0
     conditional: Conditional | None = None
+    value_at_risk: ValueAtRisk | None = None
 
 
 class IncidentResponse(BaseModel):

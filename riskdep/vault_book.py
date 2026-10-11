@@ -79,12 +79,15 @@ class BookIncident:
     p_star_year: float | None = None
     horizon_days: float = 30.0
     conditional: dict | None = None  # D165: the book's loss of staying given the incident, drawn, against leaving
+    value_at_risk: dict | None = None  # D227: what the incident puts at risk, in one block
 
     def text(self) -> list[str]:
         shock = "; ".join(self.shocks)
         out = [f"BOOK  {self.name}  ·  incident: {shock}  ·  weighting: {self.weighting}", f"  {self.headline}"]
         if self.conditional:
             out.append(f"  given the incident, drawn: {self.conditional['text']}")
+        if self.value_at_risk:
+            out += self.value_at_risk["lines"]
         out.append(
             f"    {'vault':<44} {'in the book':>14} {'in hit mkts':>14} {'loss':>12} {'loss %':>7} {'p*/yr':>7}  verdict"
         )
@@ -299,6 +302,68 @@ def borrow_line(
         stay,
         reason(hit, stay, stay, cost, p, days, None),
     )
+
+
+def value_at_risk(book: BookIncident, incidents: list[VaultIncident]) -> dict:
+    """D227, pure: what the incident puts at risk, gathered from figures already computed: the money in the hit
+    markets, the expected loss if it happens and its worst pocket, the worst cases given the incident (when the
+    conditional draw ran), the cost of leaving the hit pockets against what it saves, and the losses beyond the book:
+    the lenders of the other markets the incident reaches (sibling markets, each counted once, in its loan unit)."""
+    hit = [ln for ln in book.lines if ln.hit_markets]
+    worst = max(hit, key=lambda ln: ln.loss_usd, default=None)
+    own = {h.market_id for inc in incidents for h in inc.hits}
+    beyond: dict[str, tuple[str, float, str]] = {}
+    for inc in incidents:
+        for mid, label, loss, unit in inc.sibling_losses:
+            if mid not in own and loss > beyond.get(mid, ("", 0.0, ""))[1]:
+                beyond[mid] = (label, loss, unit)
+    per_unit: dict[str, float] = {}
+    for _, loss, unit in beyond.values():
+        per_unit[unit or "?"] = per_unit.get(unit or "?", 0.0) + loss
+    c = book.conditional
+    leave = sum(ln.exit_cost_usd for ln in hit)
+    saved = sum(ln.saved_usd for ln in hit)
+    share = book.loss_usd / book.value_usd if book.value_usd else 0.0
+    # the "vault" weighting counts each vault whole (all its depositors); the draw, the cost of leaving and what it
+    # saves are the followed depositor's: say whose figures each line gives
+    whole = book.weighting == "vault"
+    them = " for the depositors followed" if whole else ""
+    lines = [
+        "  VALUE AT RISK",
+        f"    at risk: {book.exposure_usd:,.0f} USD in the hit markets, {len(hit)} of {len(book.lines)} pocket(s) hit",
+        f"    expected loss if it happens: {book.loss_usd:,.0f} USD ({share:.2%} of the book"
+        + ("; the vaults whole, all their depositors)" if whole else ")")
+        + (f"; worst pocket: {worst.name} ({worst.loss_usd:,.0f})" if worst and worst.loss_usd > 0 else ""),
+        (
+            f"    worst cases given the incident{them}: 95 % {c['stay_p95']:,.0f}, 99 % {c['stay_p99']:,.0f} USD "
+            f"(its size and the liquidators drawn over {c['paths']:,} paths)"
+            if c
+            else "    worst cases given the incident: run with --conditional to draw them"
+        ),
+        f"    leaving the hit pockets now{them}: costs {leave:,.0f} USD for sure, saves {saved:,.0f} if it happens",
+    ]
+    if per_unit:
+        lines.append(
+            f"    beyond the book: the lenders of {len(beyond)} other market(s) the incident reaches lose "
+            + ", ".join(f"{v:,.0f} {u}" for u, v in sorted(per_unit.items(), key=lambda x: -x[1]))
+        )
+    return {
+        "exposure_usd": book.exposure_usd,
+        "loss_usd": book.loss_usd,
+        "loss_share": share,
+        "pockets_hit": len(hit),
+        "pockets": len(book.lines),
+        "worst_pocket": worst.name if worst and worst.loss_usd > 0 else None,
+        "worst_pocket_loss_usd": worst.loss_usd if worst else 0.0,
+        "p95_usd": c["stay_p95"] if c else None,
+        "p99_usd": c["stay_p99"] if c else None,
+        "leave_cost_usd": leave,
+        "saved_usd": saved,
+        "beyond_markets": len(beyond),
+        "beyond_by_unit": per_unit,
+        "loss_is_whole_vaults": whole,
+        "lines": lines,
+    }
 
 
 def aggregate(

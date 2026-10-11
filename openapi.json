@@ -1125,6 +1125,16 @@
                 "type": "null"
               }
             ]
+          },
+          "value_at_risk": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ValueAtRisk"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -3325,6 +3335,125 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "ValueAtRisk": {
+        "properties": {
+          "exposure_usd": {
+            "type": "number",
+            "title": "Exposure Usd",
+            "description": "Money in the markets the incident hits."
+          },
+          "loss_usd": {
+            "type": "number",
+            "title": "Loss Usd",
+            "description": "Expected loss if the incident happens."
+          },
+          "loss_share": {
+            "type": "number",
+            "title": "Loss Share",
+            "description": "That loss over the book's value."
+          },
+          "pockets_hit": {
+            "type": "integer",
+            "title": "Pockets Hit"
+          },
+          "pockets": {
+            "type": "integer",
+            "title": "Pockets"
+          },
+          "worst_pocket": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Worst Pocket"
+          },
+          "worst_pocket_loss_usd": {
+            "type": "number",
+            "title": "Worst Pocket Loss Usd",
+            "default": 0.0
+          },
+          "p95_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "P95 Usd",
+            "description": "95 % worst case given the incident (with `conditional`)."
+          },
+          "p99_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "P99 Usd",
+            "description": "99 % worst case given the incident (with `conditional`)."
+          },
+          "leave_cost_usd": {
+            "type": "number",
+            "title": "Leave Cost Usd",
+            "description": "Certain cost of leaving the hit pockets now."
+          },
+          "saved_usd": {
+            "type": "number",
+            "title": "Saved Usd",
+            "description": "What leaving them saves if the incident happens."
+          },
+          "beyond_markets": {
+            "type": "integer",
+            "title": "Beyond Markets",
+            "description": "Other markets the incident reaches, outside the book."
+          },
+          "beyond_by_unit": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Beyond By Unit",
+            "description": "Their lenders' loss, by loan unit (USDC, EURCV\u2026)."
+          },
+          "loss_is_whole_vaults": {
+            "type": "boolean",
+            "title": "Loss Is Whole Vaults",
+            "description": "`vault` weighting: the loss counts each vault whole; the draw, the cost of leaving and the saving are the followed depositors'."
+          },
+          "lines": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Lines",
+            "description": "The block in words, as the CLI prints it."
+          }
+        },
+        "type": "object",
+        "required": [
+          "exposure_usd",
+          "loss_usd",
+          "loss_share",
+          "pockets_hit",
+          "pockets",
+          "leave_cost_usd",
+          "saved_usd",
+          "beyond_markets",
+          "beyond_by_unit",
+          "loss_is_whole_vaults",
+          "lines"
+        ],
+        "title": "ValueAtRisk",
+        "description": "What the incident puts at risk, in one block (D227): the figures are the book's, gathered."
       },
       "Vault": {
         "properties": {

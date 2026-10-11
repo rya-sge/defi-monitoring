@@ -530,6 +530,7 @@ def incident(
             inc.notes.insert(0, venue["text"])
     if conditional:
         conditional_distribution(book, parsed, incidents, result, run_all, borrows, run_borrows)
+    result.value_at_risk = vault_book.value_at_risk(result, incidents)  # D227, after the draw it reports
     return VaultIncidentResult(book, incidents, result)
 
 
