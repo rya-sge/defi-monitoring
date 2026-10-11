@@ -1,0 +1,1 @@
+{"method": "GET", "url": "https://app.ethena.fi/api/solvency/reserve-fund", "body": null, "fetched": "2026-10-11T04:50:44Z", "response": {"last": {"timestamp": "2026-10-11T04:00:16.933Z", "value": 62082727.30508551}}}

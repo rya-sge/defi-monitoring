@@ -723,6 +723,118 @@ def annotate_zama(g: Graph) -> int:
     return n
 
 
+def annotate_shared(g: Graph) -> int:
+    """D215, pure: each oracle and feed the graph's Blue markets read, with the markets that read it; one read by
+    several is `shared`: a fault in it (stale, misreporting, upgraded) reaches all of them at once. Returns the number
+    of shared feeds and oracles."""
+    priced = {}
+    for e in g.edges:
+        if e["rel"] == "priced by":
+            priced.setdefault(e["target"], set()).add(e["source"])
+    reads = {}
+    for e in g.edges:
+        if e["rel"] in ("reads", "converts through") and e["source"] in priced:
+            reads.setdefault(e["target"], set()).update(priced[e["source"]])
+    shared = 0
+    for nid, markets in [*priced.items(), *reads.items()]:
+        n = g.nodes.get(nid)
+        if n is None or n["kind"] != "Oracle":
+            continue
+        held = sum(1 for m in markets if not g.nodes[m]["details"].get("sibling"))
+        many = len(markets) > 1
+        shared += many
+        g.node(
+            nid,
+            n["kind"],
+            n["label"],
+            markets_reading=len(markets),
+            shared=many,
+            shared_text=(
+                f"read by {len(markets)} markets ({held} held, {len(markets) - held} sibling): a fault in it reaches "
+                "all of them at once"
+                if many
+                else None
+            ),
+        )
+    return shared
+
+
+def annotate_supply(g: Graph, f: S.Fetcher, block: int) -> int:
+    """D216: each collateral of the graph's Blue markets, with what its borrowers post in them and that amount's share
+    of the token's supply (`totalSupply()` at the graph's block, one batch; skipped when it cannot be read). The share
+    counts the markets the graph found (held and sibling), so it is a floor. Returns the number of tokens measured."""
+    posted, markets = {}, {}
+    for e in g.edges:
+        if e["rel"] == "takes as collateral":
+            d = g.nodes[e["source"]]["details"]
+            posted[e["target"]] = posted.get(e["target"], 0.0) + float(d.get("collateral_of_borrowers") or 0)
+            markets[e["target"]] = markets.get(e["target"], 0) + 1
+    tokens = [t for t in posted if g.nodes.get(t, {}).get("details", {}).get("address")]
+    try:
+        raw = S.rpc_batch(f, [_call(g.nodes[t]["details"]["address"], "totalSupply()") for t in tokens], block)
+        dec = S.rpc_batch(f, [_call(g.nodes[t]["details"]["address"], "decimals()") for t in tokens], block)
+    except (S.CacheMiss, S.SourceError):
+        return 0
+    n = 0
+    for t, s, d in zip(tokens, raw, dec):
+        supply, decimals = _uint(s), _uint(d)
+        if not supply or decimals is None:
+            continue
+        share = posted[t] / (supply / 10**decimals)
+        node = g.nodes[t]
+        g.node(
+            t,
+            node["kind"],
+            node["label"],
+            posted_in_morpho=round(posted[t], 2),
+            supply=round(supply / 10**decimals, 2),
+            share_in_morpho=round(share, 4),
+            supply_text=f"{share:.1%} of its supply is posted as collateral in {markets[t]} Morpho market(s) of this "
+            f"graph",
+        )
+        n += 1
+    return n
+
+
+def annotate_ethena(g: Graph, snap) -> int:
+    """D221: behind USDe, where Ethena's backing sits: one External node per exchange holding margin, one for what is
+    not on an exchange, and the off-exchange settlement providers; the reserve fund on USDe. Returns the venues drawn
+    (0 when the graph has no USDe)."""
+    from . import ethena as ET
+
+    usde = next(
+        (nid for nid, n in g.nodes.items() if nid == ET.E["usde"] or n["details"].get("address") == ET.E["usde"]),
+        None,
+    ) or next((nid for nid, n in g.nodes.items() if n["kind"] == "Asset" and n["label"] == "USDe"), None)
+    if usde is None or snap is None:
+        return 0
+    n = g.nodes[usde]
+    g.node(usde, n["kind"], n["label"], ethena_backing_usd=round(snap.total_usd), reserve_fund_usd=snap.reserve_usd)
+    cust = g.node(
+        "venue:off-exchange-settlement",
+        "External",
+        "Off-exchange settlement: " + ", ".join(ET.E["custodians"]),
+        source="docs.ethena.fi, backing-asset-custody: custody of the backing, delegated to exchanges as margin",
+    )
+    g.edge(usde, cust, "custodied by (Ethena)")
+    drawn = 0
+    for venue, usd in sorted(snap.venues.items(), key=lambda x: -x[1]):
+        if usd <= 0:
+            continue
+        label = "Liquid stablecoins (not on an exchange)" if venue == "Unallocated" else f"{venue} (Ethena margin)"
+        vid = g.node(
+            f"venue:{venue.lower()}",
+            "External",
+            label,
+            usd=round(usd),
+            share_of_backing=round(snap.share(venue), 4),
+            source="Ethena transparency API /positions/current/collateral (D218)",
+        )
+        g.edge(usde, vid, "backing held at (Ethena)", round(usd), "USD")
+        drawn += 1
+    return drawn
+
+
 def annotate_tvl(g: Graph, protocols: list[dict]) -> int:
     """D160: each Blue market, PT and issuer token of the graph points to the DefiLlama protocol it belongs to, an
     External node carrying that protocol's TVL, its share of DeFi and of its category, and whether that is a

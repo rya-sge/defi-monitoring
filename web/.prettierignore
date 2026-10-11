@@ -9,3 +9,5 @@ src/mocks/markets.json
 src/mocks/books.json
 src/mocks/incidents.json
 pnpm-lock.yaml
+src/mocks/shock.json
+src/mocks/backtests.json

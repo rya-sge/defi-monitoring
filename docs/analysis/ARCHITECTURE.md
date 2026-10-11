@@ -293,7 +293,7 @@ The `Fetcher` has four modes: `offline` (cache only; a miss is an error), `live`
 | Engine tests | `test_engine.py` | every transmission and node model on a hand-worked graph, every rule criterion, a rules file overriding the defaults, the squeeze down to the PT floor, and three scenarios on the recorded RockawayX graph |
 | Model tests | `test_propagate.py`, `test_decide.py`, `test_scenario.py`, `test_vault_incident.py` | loss propagation, the verdict, and incident mode for a position and for a vault depositor |
 | End to end on recorded real data | `test_demo_snapshot.py`, `test_watch_replay.py`, `test_watch_user_replay.py`, `test_graph.py` | the `analyze` demo, three recorded watch ranges (a vault, a borrower with 6 borrows, a depositor) and the recorded RockawayX USDC Yield graph (10 siblings, 6 oracle classes) |
-| HTTP API | `test_api.py` | every route, the block cursor of `/api/alerts`, the 404s that name the command to run, and the OpenAPI surface |
+| HTTP API | `test_api.py` | every route, the block cursor of `/api/alerts`, the shock trace against the committed example, the 404s that name the command to run, and the OpenAPI surface |
 | Fixes and tools | `test_fixes.py`, `test_graph.py`, `test_light_reads.py` | the snapshot clock, oracle ambiguity, cross-checks, the graph output, light reads on quiet batches (D61), RPC routing and retries, throttled batches (a 429, or rate-limit errors inside a reply) resent and never recorded |
 
 **Re-recording.** When a reader starts making new requests, the replays miss them. Re-record with `watch --blocks 1000 --record` (vault), `watch --user <address> --blocks 300 --record` or `graph --vault <vault> --record`, then prune the responses the tests no longer read. The free RPC's short state window means a recording must be made in one go, close to the chain head.
@@ -328,6 +328,9 @@ The design decisions are numbered across twelve plans, in the order the incremen
 | `plan/2026-10-11-zama.plan.md` | Zama confidential vaults: the cShare pool, the two exits, the hidden layer | D171–D176 |
 | `plan/2026-10-11-pt-channels.plan.md` | the PT loop's implied-yield and borrow-rate incidents | D169–D170 |
 | `plan/2026-10-11-conditional.plan.md` | the loss of staying given the incident, drawn, against the certain cost of leaving | D165–D168 |
+| `plan/2026-10-11-venues.plan.md` | the venues behind USDe: backing by exchange, reserve fund, venue incidents, funding stress | D218–D221 |
+| `plan/2026-10-11-shared-and-supply.plan.md` | shared feeds and oracles; supply concentration; the position's share of its market and pool | D215–D217 |
+| `plan/2026-10-11-exit-liquidity.plan.md` | exit liquidity live from KyberSwap in vault incidents | D212–D214 |
 | `plan/2026-10-11-pendle-pool.plan.md` | a Pendle pool rebuilt at a past block; the sale behind the backtest's fall and the squeeze; the backtest from the sale alone; `pool_move` on the pool's math | D207–D211 |
 | `plan/2026-10-11-stressed-exit.plan.md` | the exit cost after the incident's own liquidations | D206 |
 | `plan/2026-10-11-oracle-kinds.plan.md` | constant-price oracles split by kind; a markdown reaches only the kinds that move | D205 |

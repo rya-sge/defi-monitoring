@@ -134,7 +134,11 @@ class Fetcher:
                     time.sleep(float(after) if after.isdigit() else min(60.0, 2.0**throttled))
                     continue
                 pace[0] = 0.95 * pace[0] if 0.95 * pace[0] >= PACE_MIN else 0.0
-                if r.status_code >= 400 and payload is not None and "error" in json.dumps(payload)[:2000]:
+                if (
+                    r.status_code >= 400
+                    and payload is not None
+                    and ("error" in json.dumps(payload)[:2000] or (isinstance(payload, dict) and "message" in payload))
+                ):
                     # the free node answers some refusals (archive reads) with 403 + a JSON-RPC error body;
                     # kept apart from `body`, which a retry must send again unchanged
                     data, done = payload, True

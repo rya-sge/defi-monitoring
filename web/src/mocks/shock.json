@@ -1,0 +1,644 @@
+{
+ "graphs": [
+  {
+   "target": "0x2ca22cb25558fa2018ecb1ce4ed8af92ee7ea423",
+   "vaults": [
+    "0x2ca22cb25558fa2018ecb1ce4ed8af92ee7ea423"
+   ],
+   "users": [],
+   "block": 26165485,
+   "siblings": true
+  },
+  {
+   "target": "0x3bd9adae6643ddcddd02746b8b60075e56df9478",
+   "vaults": [
+    "0x3bd9adae6643ddcddd02746b8b60075e56df9478"
+   ],
+   "users": [],
+   "block": 26165498,
+   "siblings": true
+  },
+  {
+   "target": "0x8ac91877b93330f52b2979a31a4879506021475c",
+   "vaults": [
+    "0x8ac91877b93330f52b2979a31a4879506021475c"
+   ],
+   "users": [],
+   "block": 26165488,
+   "siblings": true
+  },
+  {
+   "target": "0x93e0f9d502eefce8d34924ab3478c7ea0cbc5a2e",
+   "vaults": [
+    "0x93e0f9d502eefce8d34924ab3478c7ea0cbc5a2e"
+   ],
+   "users": [],
+   "block": 26165502,
+   "siblings": true
+  },
+  {
+   "target": "0xc207d3f66537d7f66456808379a0e560cf20da36",
+   "vaults": [
+    "0xc207d3f66537d7f66456808379a0e560cf20da36"
+   ],
+   "users": [],
+   "block": 26165477,
+   "siblings": true
+  },
+  {
+   "target": "0xd6d4b804014ef27836dbe9f8f6bf6c71251548ec",
+   "vaults": [
+    "0xd6d4b804014ef27836dbe9f8f6bf6c71251548ec"
+   ],
+   "users": [],
+   "block": 26164854,
+   "siblings": true
+  },
+  {
+   "target": "0xdf81987465681d0515058fe0a47a3bd174012730",
+   "vaults": [],
+   "users": [
+    "0xdf81987465681d0515058fe0a47a3bd174012730"
+   ],
+   "block": 26166434,
+   "siblings": true
+  },
+  {
+   "target": "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
+   "vaults": [
+    "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965"
+   ],
+   "users": [],
+   "block": 26164907,
+   "siblings": true
+  }
+ ],
+ "targets": {
+  "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965": [
+   {
+    "node": "0x8fffffd4afb6115b954bd326cbe7b4ba576818f6",
+    "label": "USDC / USD",
+    "kind": "Oracle",
+    "oracle_class": null,
+    "held": 4,
+    "siblings": 2,
+    "markets": [
+     "0x755f954513d31d5f24aaf3d0cdc5e913a28383f8ea8ff85be9ffffa7371fb64d",
+     "0x975c6e8b71073a82216ae464bc44f67d71988450d2542d635d88bc78fca344b1",
+     "0x9e553e8a22eb2b2040042965d0dc424f7c5e64744b093d2df9162dce1833eeda",
+     "0xd21bbc238918855461d943753ac4c90d103888e5661fd78f3378294c45f7d8df",
+     "0xf062a110320da27e0e7e7d9e1bdf458dd51e2d2089e55f63ff9fd54f415ce35d",
+     "0xff836cc9796e2889ebf73b26c2de2de74b35f985bb83e9d79380deb4229e365b"
+    ]
+   },
+   {
+    "node": "0x19ebb35279a16207ec4ba82799cc64715065f7f6",
+    "label": "PRIME",
+    "kind": "Asset",
+    "oracle_class": null,
+    "held": 1,
+    "siblings": 3,
+    "markets": [
+     "0x41c41d0c9aadbf4751f5ee215ed5a16954a4b34e1b70fca5393d4b08858fa3fa",
+     "0x5131d0b823d726a4080951ee49f0cbd57d0fd53776c7d8aeceb76dd9a22a1695",
+     "0x755f954513d31d5f24aaf3d0cdc5e913a28383f8ea8ff85be9ffffa7371fb64d",
+     "0x9e553e8a22eb2b2040042965d0dc424f7c5e64744b093d2df9162dce1833eeda"
+    ]
+   },
+   {
+    "node": "0xf17c0edcaa28371e9c8012d7699bf40ecf0f58d1",
+    "label": "PRIME / WYLDS Exchange Rate",
+    "kind": "Oracle",
+    "oracle_class": "constant-price",
+    "held": 1,
+    "siblings": 3,
+    "markets": [
+     "0x41c41d0c9aadbf4751f5ee215ed5a16954a4b34e1b70fca5393d4b08858fa3fa",
+     "0x5131d0b823d726a4080951ee49f0cbd57d0fd53776c7d8aeceb76dd9a22a1695",
+     "0x755f954513d31d5f24aaf3d0cdc5e913a28383f8ea8ff85be9ffffa7371fb64d",
+     "0x9e553e8a22eb2b2040042965d0dc424f7c5e64744b093d2df9162dce1833eeda"
+    ]
+   },
+   {
+    "node": "0x6ad038ca6c04e885630851278ca0a856ad9a66cc",
+    "label": "wYLDS",
+    "kind": "Asset",
+    "oracle_class": null,
+    "held": 1,
+    "siblings": 2,
+    "markets": [
+     "0x41c41d0c9aadbf4751f5ee215ed5a16954a4b34e1b70fca5393d4b08858fa3fa",
+     "0x5131d0b823d726a4080951ee49f0cbd57d0fd53776c7d8aeceb76dd9a22a1695",
+     "0x755f954513d31d5f24aaf3d0cdc5e913a28383f8ea8ff85be9ffffa7371fb64d"
+    ]
+   },
+   {
+    "node": "0xf81aa28a4f68124683afada81e8ebbf6e2867067",
+    "label": "Chainlink-formatted InfiniFi RT Oracle",
+    "kind": "Oracle",
+    "oracle_class": "constant-price",
+    "held": 1,
+    "siblings": 1,
+    "markets": [
+     "0x64d2f82e674b764d618b630297813cd34bdc42a0fa66f92efa2ac8b1efe4bbd5",
+     "0xbbf7ce1b40d32d3e3048f5cf27eeaa6de8cb27b80194690aab191a63381d8c99"
+    ]
+   },
+   {
+    "node": "0xc3866d726c204c0836e0677a31973c649888973d",
+    "label": "Dummy feed with 12 decimals",
+    "kind": "Oracle",
+    "oracle_class": null,
+    "held": 1,
+    "siblings": 1,
+    "markets": [
+     "0x64d2f82e674b764d618b630297813cd34bdc42a0fa66f92efa2ac8b1efe4bbd5",
+     "0xbbf7ce1b40d32d3e3048f5cf27eeaa6de8cb27b80194690aab191a63381d8c99"
+    ]
+   },
+   {
+    "node": "0x77ee147391eac11c92817e771860ff4aad265d89",
+    "label": "Ojo PT Feed Pendle Chainlink-compatible Oracle",
+    "kind": "Oracle",
+    "oracle_class": "price-tracking",
+    "held": 1,
+    "siblings": 1,
+    "markets": [
+     "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+     "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca"
+    ]
+   },
+   {
+    "node": "0x217d6ddcdb95112c51657f6270e8c079cfdb51f0",
+    "label": "Oracle 0x217d\u202651f0",
+    "kind": "Oracle",
+    "oracle_class": "price-tracking",
+    "held": 1,
+    "siblings": 1,
+    "markets": [
+     "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+     "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca"
+    ]
+   },
+   {
+    "node": "0xecfafdc7741323a945a163ed068b5a3c43483957",
+    "label": "PT-reUSD-10DEC2026",
+    "kind": "Asset",
+    "oracle_class": null,
+    "held": 1,
+    "siblings": 1,
+    "markets": [
+     "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+     "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca"
+    ]
+   },
+   {
+    "node": "0x33c6f75916db4267e52209a8e6b270b22d983b53",
+    "label": "RedStone Price Feed for trUSD_FUNDAMENTAL",
+    "kind": "Oracle",
+    "oracle_class": "constant-price",
+    "held": 1,
+    "siblings": 1,
+    "markets": [
+     "0xd21bbc238918855461d943753ac4c90d103888e5661fd78f3378294c45f7d8df",
+     "0xf062a110320da27e0e7e7d9e1bdf458dd51e2d2089e55f63ff9fd54f415ce35d"
+    ]
+   },
+   {
+    "node": "0x48f9e38f3070ad8945dfeae3fa70987722e3d89c",
+    "label": "iUSD",
+    "kind": "Asset",
+    "oracle_class": null,
+    "held": 1,
+    "siblings": 1,
+    "markets": [
+     "0x64d2f82e674b764d618b630297813cd34bdc42a0fa66f92efa2ac8b1efe4bbd5",
+     "0xbbf7ce1b40d32d3e3048f5cf27eeaa6de8cb27b80194690aab191a63381d8c99"
+    ]
+   },
+   {
+    "node": "0xdbdc1ef57537e34680b898e1febd3d68c7389bcb",
+    "label": "siUSD",
+    "kind": "Asset",
+    "oracle_class": null,
+    "held": 1,
+    "siblings": 1,
+    "markets": [
+     "0x64d2f82e674b764d618b630297813cd34bdc42a0fa66f92efa2ac8b1efe4bbd5",
+     "0xbbf7ce1b40d32d3e3048f5cf27eeaa6de8cb27b80194690aab191a63381d8c99"
+    ]
+   },
+   {
+    "node": "0xcb8c6585bd593a4b7d91bfcc85ff1dcfa04a640b",
+    "label": "BASE_FEED_1",
+    "kind": "Oracle",
+    "oracle_class": "constant-price",
+    "held": 1,
+    "siblings": 0,
+    "markets": [
+     "0xf062a110320da27e0e7e7d9e1bdf458dd51e2d2089e55f63ff9fd54f415ce35d"
+    ]
+   },
+   {
+    "node": "0x1506c98ce61ac63c8438b710c054a51c5dd9a6a4",
+    "label": "Oracle 0x1506\u2026a6a4",
+    "kind": "Oracle",
+    "oracle_class": "constant-price",
+    "held": 1,
+    "siblings": 0,
+    "markets": [
+     "0x975c6e8b71073a82216ae464bc44f67d71988450d2542d635d88bc78fca344b1"
+    ]
+   },
+   {
+    "node": "0x999eff9ca63d23a60a0cd19b9f65a0918674119a",
+    "label": "Oracle 0x999e\u2026119a",
+    "kind": "Oracle",
+    "oracle_class": "constant-price",
+    "held": 1,
+    "siblings": 0,
+    "markets": [
+     "0x755f954513d31d5f24aaf3d0cdc5e913a28383f8ea8ff85be9ffffa7371fb64d"
+    ]
+   },
+   {
+    "node": "0xd2cc46b9b2d761502ef933320ecf0268ec0dfa6d",
+    "label": "Oracle 0xd2cc\u2026fa6d",
+    "kind": "Oracle",
+    "oracle_class": "constant-price",
+    "held": 1,
+    "siblings": 0,
+    "markets": [
+     "0xbbf7ce1b40d32d3e3048f5cf27eeaa6de8cb27b80194690aab191a63381d8c99"
+    ]
+   },
+   {
+    "node": "0xdb6e2e77ac10f05b9a52efe02d4c61c2770a776d",
+    "label": "Oracle 0xdb6e\u2026776d",
+    "kind": "Oracle",
+    "oracle_class": "constant-price",
+    "held": 1,
+    "siblings": 0,
+    "markets": [
+     "0xf062a110320da27e0e7e7d9e1bdf458dd51e2d2089e55f63ff9fd54f415ce35d"
+    ]
+   },
+   {
+    "node": "0xf73166adf598f4c03776d058564f6543f8184dcf",
+    "label": "Oracle 0xf731\u20264dcf",
+    "kind": "Oracle",
+    "oracle_class": "constant-price",
+    "held": 1,
+    "siblings": 0,
+    "markets": [
+     "0xff836cc9796e2889ebf73b26c2de2de74b35f985bb83e9d79380deb4229e365b"
+    ]
+   },
+   {
+    "node": "0x74299580811e1c3c1a2831db079ba0a8f513998f",
+    "label": "PT-strUSD-26NOV2026",
+    "kind": "Asset",
+    "oracle_class": null,
+    "held": 1,
+    "siblings": 0,
+    "markets": [
+     "0xf062a110320da27e0e7e7d9e1bdf458dd51e2d2089e55f63ff9fd54f415ce35d"
+    ]
+   },
+   {
+    "node": "0x835cfff06a60a16fd1880c3b0befac9968abd659",
+    "label": "RedStone Price Feed for etrUSD_FUNDAMENTAL/USD",
+    "kind": "Oracle",
+    "oracle_class": "constant-price",
+    "held": 1,
+    "siblings": 0,
+    "markets": [
+     "0xff836cc9796e2889ebf73b26c2de2de74b35f985bb83e9d79380deb4229e365b"
+    ]
+   },
+   {
+    "node": "0x7fda577c085330e69df3179a2a5867751a9d0caa",
+    "label": "RedStone Price Feed for strUSD_FUNDAMENTAL",
+    "kind": "Oracle",
+    "oracle_class": "constant-price",
+    "held": 1,
+    "siblings": 0,
+    "markets": [
+     "0x975c6e8b71073a82216ae464bc44f67d71988450d2542d635d88bc78fca344b1"
+    ]
+   },
+   {
+    "node": "0x6f20ae2c98c2d34e6a57f3411f2c5af92e32592d",
+    "label": "etrUSD",
+    "kind": "Asset",
+    "oracle_class": null,
+    "held": 1,
+    "siblings": 0,
+    "markets": [
+     "0xff836cc9796e2889ebf73b26c2de2de74b35f985bb83e9d79380deb4229e365b"
+    ]
+   },
+   {
+    "node": "0x280839980a7ed0d7717f64125fe241012e5f5815",
+    "label": "strUSD",
+    "kind": "Asset",
+    "oracle_class": null,
+    "held": 1,
+    "siblings": 0,
+    "markets": [
+     "0x975c6e8b71073a82216ae464bc44f67d71988450d2542d635d88bc78fca344b1"
+    ]
+   },
+   {
+    "node": "0xd0580192e98ea6ceb9c7b6191ed2e27560911697",
+    "label": "trUSD",
+    "kind": "Asset",
+    "oracle_class": null,
+    "held": 1,
+    "siblings": 0,
+    "markets": [
+     "0x975c6e8b71073a82216ae464bc44f67d71988450d2542d635d88bc78fca344b1"
+    ]
+   },
+   {
+    "node": "0xa66a4f03fd8031973f8c7718904ce32385f54e70",
+    "label": "Oracle 0xa66a\u20264e70",
+    "kind": "Oracle",
+    "oracle_class": "constant-price",
+    "held": 0,
+    "siblings": 2,
+    "markets": [
+     "0x4565ac05d38b19374ccbb04c17cca60ca9353cd41824f0803d0fc7704f60eaed",
+     "0x9105a5447f3eecdf768f04da12d580a878106e2e6b234312db2ee0f304539e35"
+    ]
+   },
+   {
+    "node": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+    "label": "reUSD",
+    "kind": "Asset",
+    "oracle_class": null,
+    "held": 0,
+    "siblings": 2,
+    "markets": [
+     "0x4565ac05d38b19374ccbb04c17cca60ca9353cd41824f0803d0fc7704f60eaed",
+     "0x9105a5447f3eecdf768f04da12d580a878106e2e6b234312db2ee0f304539e35"
+    ]
+   },
+   {
+    "node": "0x72b5760cfbe437dd01409f44055fdfb8f8121b46",
+    "label": "reUSD/USD exchange rate",
+    "kind": "Oracle",
+    "oracle_class": "constant-price",
+    "held": 0,
+    "siblings": 2,
+    "markets": [
+     "0x4565ac05d38b19374ccbb04c17cca60ca9353cd41824f0803d0fc7704f60eaed",
+     "0x9105a5447f3eecdf768f04da12d580a878106e2e6b234312db2ee0f304539e35"
+    ]
+   },
+   {
+    "node": "0x7180e88ac8883aac79934ad27cfab41d5aa74d19",
+    "label": "BASE_FEED_1",
+    "kind": "Oracle",
+    "oracle_class": "constant-price",
+    "held": 0,
+    "siblings": 1,
+    "markets": [
+     "0xd21bbc238918855461d943753ac4c90d103888e5661fd78f3378294c45f7d8df"
+    ]
+   },
+   {
+    "node": "0x335e5718bc20028d5e357473a3736c187ca6b07e",
+    "label": "Oracle 0x335e\u2026b07e",
+    "kind": "Oracle",
+    "oracle_class": "constant-price",
+    "held": 0,
+    "siblings": 1,
+    "markets": [
+     "0x41c41d0c9aadbf4751f5ee215ed5a16954a4b34e1b70fca5393d4b08858fa3fa"
+    ]
+   },
+   {
+    "node": "0x345866dcd877994afb36277d1ad287eb94a1e7af",
+    "label": "Oracle 0x3458\u2026e7af",
+    "kind": "Oracle",
+    "oracle_class": "constant-price",
+    "held": 0,
+    "siblings": 1,
+    "markets": [
+     "0xd21bbc238918855461d943753ac4c90d103888e5661fd78f3378294c45f7d8df"
+    ]
+   },
+   {
+    "node": "0x9cc1a40a90760c7cc238ce06abdef4adc972e28d",
+    "label": "Oracle 0x9cc1\u2026e28d",
+    "kind": "Oracle",
+    "oracle_class": "constant-price",
+    "held": 0,
+    "siblings": 1,
+    "markets": [
+     "0x9e553e8a22eb2b2040042965d0dc424f7c5e64744b093d2df9162dce1833eeda"
+    ]
+   },
+   {
+    "node": "0xb79429cf3ae7bfb1bee0fd5b2f338d8ea49d7d11",
+    "label": "Oracle 0xb794\u20267d11",
+    "kind": "Oracle",
+    "oracle_class": "constant-price",
+    "held": 0,
+    "siblings": 1,
+    "markets": [
+     "0x5131d0b823d726a4080951ee49f0cbd57d0fd53776c7d8aeceb76dd9a22a1695"
+    ]
+   },
+   {
+    "node": "0xc7bb5f34d645f3849a3091ce4b6724631ee811af",
+    "label": "Oracle 0xc7bb\u202611af",
+    "kind": "Oracle",
+    "oracle_class": "constant-price",
+    "held": 0,
+    "siblings": 1,
+    "markets": [
+     "0x64d2f82e674b764d618b630297813cd34bdc42a0fa66f92efa2ac8b1efe4bbd5"
+    ]
+   },
+   {
+    "node": "0x7191878f1fe834b28f4d0cead0e4375b814c4abb",
+    "label": "PT-trUSD-26NOV2026",
+    "kind": "Asset",
+    "oracle_class": null,
+    "held": 0,
+    "siblings": 1,
+    "markets": [
+     "0xd21bbc238918855461d943753ac4c90d103888e5661fd78f3378294c45f7d8df"
+    ]
+   },
+   {
+    "node": "0x8f1df6d7f2db73eece86a18b4381f4707b918fb1",
+    "label": "PYUSD / USD",
+    "kind": "Oracle",
+    "oracle_class": null,
+    "held": 0,
+    "siblings": 1,
+    "markets": [
+     "0x41c41d0c9aadbf4751f5ee215ed5a16954a4b34e1b70fca5393d4b08858fa3fa"
+    ]
+   },
+   {
+    "node": "0xc360e625f19a7ea47e47810b13e386221d5187d1",
+    "label": "nvPRIME",
+    "kind": "Asset",
+    "oracle_class": null,
+    "held": 0,
+    "siblings": 1,
+    "markets": [
+     "0x9e553e8a22eb2b2040042965d0dc424f7c5e64744b093d2df9162dce1833eeda"
+    ]
+   }
+  ]
+ },
+ "sweep": {
+  "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965": {
+   "block": 26164907,
+   "mode": "reads-low",
+   "size": 0.1,
+   "ranking": [
+    {
+     "node": "0x217d6ddcdb95112c51657f6270e8c079cfdb51f0",
+     "label": "Oracle 0x217d\u202651f0",
+     "kind": "Oracle",
+     "vault_loss": 6851.01801624658,
+     "markets_hit": 2,
+     "worst_market": "Blue PT-reUSD-10DEC2026/USDC",
+     "worst_market_loss": 88912.7220560778
+    },
+    {
+     "node": "0x77ee147391eac11c92817e771860ff4aad265d89",
+     "label": "Ojo PT Feed Pendle Chainlink-compatible Oracle",
+     "kind": "Oracle",
+     "vault_loss": 6851.01801624658,
+     "markets_hit": 2,
+     "worst_market": "Blue PT-reUSD-10DEC2026/USDC",
+     "worst_market_loss": 88912.7220560778
+    },
+    {
+     "node": "0xc3866d726c204c0836e0677a31973c649888973d",
+     "label": "Dummy feed with 12 decimals",
+     "kind": "Oracle",
+     "vault_loss": 3890.5924211716333,
+     "markets_hit": 2,
+     "worst_market": "Blue siUSD/USDC",
+     "worst_market_loss": 13202.827031229612
+    },
+    {
+     "node": "0xf81aa28a4f68124683afada81e8ebbf6e2867067",
+     "label": "Chainlink-formatted InfiniFi RT Oracle",
+     "kind": "Oracle",
+     "vault_loss": 190.2428692851404,
+     "markets_hit": 2,
+     "worst_market": "Blue siUSD/msUSD",
+     "worst_market_loss": 41089.44332973488
+    },
+    {
+     "node": "0xd2cc46b9b2d761502ef933320ecf0268ec0dfa6d",
+     "label": "Oracle 0xd2cc\u2026fa6d",
+     "kind": "Oracle",
+     "vault_loss": 190.2428692851404,
+     "markets_hit": 1,
+     "worst_market": "Blue siUSD/USDC",
+     "worst_market_loss": 645.5941474178201
+    },
+    {
+     "node": "0xa66a4f03fd8031973f8c7718904ce32385f54e70",
+     "label": "Oracle 0xa66a\u20264e70",
+     "kind": "Oracle",
+     "vault_loss": 0.0,
+     "markets_hit": 2,
+     "worst_market": "Blue reUSD/USDC",
+     "worst_market_loss": 230711.92641656764
+    },
+    {
+     "node": "0x72b5760cfbe437dd01409f44055fdfb8f8121b46",
+     "label": "reUSD/USD exchange rate",
+     "kind": "Oracle",
+     "vault_loss": 0.0,
+     "markets_hit": 2,
+     "worst_market": "Blue reUSD/USDC",
+     "worst_market_loss": 230711.92641656764
+    },
+    {
+     "node": "0xc7bb5f34d645f3849a3091ce4b6724631ee811af",
+     "label": "Oracle 0xc7bb\u202611af",
+     "kind": "Oracle",
+     "vault_loss": 0.0,
+     "markets_hit": 1,
+     "worst_market": "Blue siUSD/msUSD",
+     "worst_market_loss": 41089.44332973488
+    },
+    {
+     "node": "0x33c6f75916db4267e52209a8e6b270b22d983b53",
+     "label": "RedStone Price Feed for trUSD_FUNDAMENTAL",
+     "kind": "Oracle",
+     "vault_loss": 0.0,
+     "markets_hit": 2,
+     "worst_market": "Blue PT-trUSD-26NOV2026/USDC",
+     "worst_market_loss": 26752.55407319058
+    },
+    {
+     "node": "0x345866dcd877994afb36277d1ad287eb94a1e7af",
+     "label": "Oracle 0x3458\u2026e7af",
+     "kind": "Oracle",
+     "vault_loss": 0.0,
+     "markets_hit": 1,
+     "worst_market": "Blue PT-trUSD-26NOV2026/USDC",
+     "worst_market_loss": 26752.55407319058
+    },
+    {
+     "node": "0x7180e88ac8883aac79934ad27cfab41d5aa74d19",
+     "label": "BASE_FEED_1",
+     "kind": "Oracle",
+     "vault_loss": 0.0,
+     "markets_hit": 1,
+     "worst_market": "Blue PT-trUSD-26NOV2026/USDC",
+     "worst_market_loss": 26752.55407319058
+    },
+    {
+     "node": "0x8fffffd4afb6115b954bd326cbe7b4ba576818f6",
+     "label": "USDC / USD",
+     "kind": "Oracle",
+     "vault_loss": 0.0,
+     "markets_hit": 1,
+     "worst_market": "Blue PT-trUSD-26NOV2026/USDC",
+     "worst_market_loss": 9111.814541285725
+    },
+    {
+     "node": "0xdb6e2e77ac10f05b9a52efe02d4c61c2770a776d",
+     "label": "Oracle 0xdb6e\u2026776d",
+     "kind": "Oracle",
+     "vault_loss": 0.0,
+     "markets_hit": 1,
+     "worst_market": "Blue PT-strUSD-26NOV2026/USDC",
+     "worst_market_loss": 0.0
+    },
+    {
+     "node": "0xcb8c6585bd593a4b7d91bfcc85ff1dcfa04a640b",
+     "label": "BASE_FEED_1",
+     "kind": "Oracle",
+     "vault_loss": 0.0,
+     "markets_hit": 1,
+     "worst_market": "Blue PT-strUSD-26NOV2026/USDC",
+     "worst_market_loss": 0.0
+    },
+    {
+     "node": "0x1506c98ce61ac63c8438b710c054a51c5dd9a6a4",
+     "label": "Oracle 0x1506\u2026a6a4",
+     "kind": "Oracle",
+     "vault_loss": 0.0,
+     "markets_hit": 1,
+     "worst_market": "Blue strUSD/USDC",
+     "worst_market_loss": 0.0
+    }
+   ]
+  }
+ }
+}

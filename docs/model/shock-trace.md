@@ -7,6 +7,8 @@ python3 -m riskdep shock --vault 0xE0181090c22579B6A217f1522cbf8c9f1F0C1965 --re
 # → out/shock-0xe0181090c22579b6a217f1522cbf8c9f1f0c1965.trace.json
 ```
 
+The API serves the same object without writing a file: `POST /api/shock` with `{"vault": ["0xe018…1965"], "shocks": ["Ojo PT:reads-low:10%"]}`, offline from the recorded graph (`GET /api/shock/graphs` lists them, `GET /api/shock/targets` the nodes a shock can name).
+
 `docs/model/shock-trace-example.json` is that run, committed (RockawayX USDC Yield, the Ojo PT feed reading 10 % low: 65 nodes, 93 edges, 39 steps over 14 waves). Work from it without running anything. How the engine decides each step is in `docs/model/shock-engine.md`; this page covers only the file.
 
 ## Using it

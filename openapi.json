@@ -241,6 +241,265 @@
         }
       }
     },
+    "/api/shock/graphs": {
+      "get": {
+        "tags": [
+          "shock"
+        ],
+        "summary": "Get Graphs",
+        "description": "The recorded graphs a shock can run on offline: one per `fixtures/replay/graph-<target>/`.",
+        "operationId": "get_graphs_api_shock_graphs_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ShockGraph"
+                  },
+                  "type": "array",
+                  "title": "Response Get Graphs Api Shock Graphs Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/shock/targets": {
+      "get": {
+        "tags": [
+          "shock"
+        ],
+        "summary": "Get Targets",
+        "description": "The nodes that can be shocked \u2014 oracles, feeds and assets \u2014 with the markets whose price they enter\n(`shock --list`); held markets first.",
+        "operationId": "get_targets_api_shock_targets_get",
+        "parameters": [
+          {
+            "name": "vault",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Vault V2 whose markets seed the graph; repeatable.",
+              "default": [],
+              "title": "Vault"
+            },
+            "description": "Vault V2 whose markets seed the graph; repeatable."
+          },
+          {
+            "name": "user",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Address whose borrows seed the graph; repeatable.",
+              "default": [],
+              "title": "User"
+            },
+            "description": "Address whose borrows seed the graph; repeatable."
+          },
+          {
+            "name": "live",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Read the chain instead of the recording.",
+              "default": false,
+              "title": "Live"
+            },
+            "description": "Read the chain instead of the recording."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ShockTarget"
+                  },
+                  "title": "Response Get Targets Api Shock Targets Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/shock": {
+      "post": {
+        "tags": [
+          "shock"
+        ],
+        "summary": "Post Shock",
+        "description": "Apply the shocks together and return the propagation trace (`shock --shock`, `docs/model/shock-trace.md`).",
+        "operationId": "post_shock_api_shock_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShockRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShockTrace"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/shock/sweep": {
+      "post": {
+        "tags": [
+          "shock"
+        ],
+        "summary": "Post Sweep",
+        "description": "The same failure on every oracle and feed in turn (every asset, for `price`), ranked by the vaults' loss\n(`shock --sweep`).",
+        "operationId": "post_sweep_api_shock_sweep_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShockSweepRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShockSweep"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/backtests": {
+      "get": {
+        "tags": [
+          "backtest"
+        ],
+        "summary": "Get Backtests",
+        "description": "The episodes of `registry.json` `backtest.episodes`, and whether each is recorded (servable).",
+        "operationId": "get_backtests_api_backtests_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BacktestSummary"
+                  },
+                  "type": "array",
+                  "title": "Response Get Backtests Api Backtests Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/backtest/{episode}": {
+      "get": {
+        "tags": [
+          "backtest"
+        ],
+        "summary": "Get Backtest",
+        "description": "One episode replayed from its recording: per market, predicted against realised positions, debt, incentive and\nbad debt.",
+        "operationId": "get_backtest_api_backtest__episode__get",
+        "parameters": [
+          {
+            "name": "episode",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Episode"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Backtest"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/targets": {
       "get": {
         "tags": [
@@ -632,6 +891,112 @@
         },
         "type": "object",
         "title": "AnalyzeRequest"
+      },
+      "Backtest": {
+        "properties": {
+          "episode": {
+            "type": "string",
+            "title": "Episode"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "before_block": {
+            "type": "integer",
+            "title": "Before Block"
+          },
+          "blocks": {
+            "prefixItems": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "type": "array",
+            "maxItems": 2,
+            "minItems": 2,
+            "title": "Blocks",
+            "description": "First and last liquidation block."
+          },
+          "markets": {
+            "items": {
+              "$ref": "#/components/schemas/MarketBacktest"
+            },
+            "type": "array",
+            "title": "Markets"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Notes"
+          },
+          "pool": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pool",
+            "description": "The Pendle pool behind the oracle (D208)."
+          },
+          "lines": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Lines",
+            "description": "The CLI's table, line by line."
+          }
+        },
+        "type": "object",
+        "required": [
+          "episode",
+          "title",
+          "before_block",
+          "blocks",
+          "markets",
+          "notes",
+          "lines"
+        ],
+        "title": "Backtest"
+      },
+      "BacktestSummary": {
+        "properties": {
+          "episode": {
+            "type": "string",
+            "title": "Episode"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "markets": {
+            "type": "integer",
+            "title": "Markets"
+          },
+          "recorded": {
+            "type": "boolean",
+            "title": "Recorded",
+            "description": "False: GET /api/backtest/{episode} answers 404 until it is recorded."
+          }
+        },
+        "type": "object",
+        "required": [
+          "episode",
+          "title",
+          "markets",
+          "recorded"
+        ],
+        "title": "BacktestSummary"
       },
       "BookIn": {
         "properties": {
@@ -1234,7 +1599,7 @@
             "type": "array",
             "minItems": 1,
             "title": "Shocks",
-            "description": "As `analyze --shock`: `token=<collateral>:<fall>` (an issuer markdown), `borrower=<collateral, market id or all>:<recovery>[:<n>]` (the n largest borrowers default).",
+            "description": "As `analyze --shock`: `token=<collateral>:<fall>` (an issuer markdown), `borrower=<collateral, market id or all>:<recovery>[:<n>]` (the n largest borrowers default), `venue=<exchange>:<loss>` (a share of USDe's backing at that venue lost; Ethena).",
             "examples": [
               [
                 "token=PST:0.30"
@@ -1441,6 +1806,136 @@
         ],
         "title": "Market"
       },
+      "MarketBacktest": {
+        "properties": {
+          "market_id": {
+            "type": "string",
+            "title": "Market Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "loan_symbol": {
+            "type": "string",
+            "title": "Loan Symbol"
+          },
+          "oracle_fall": {
+            "type": "number",
+            "title": "Oracle Fall"
+          },
+          "borrowers": {
+            "type": "integer",
+            "title": "Borrowers"
+          },
+          "predicted_positions": {
+            "type": "integer",
+            "title": "Predicted Positions"
+          },
+          "predicted_debt": {
+            "type": "number",
+            "title": "Predicted Debt"
+          },
+          "predicted_bonus": {
+            "type": "number",
+            "title": "Predicted Bonus"
+          },
+          "predicted_bad_debt": {
+            "type": "number",
+            "title": "Predicted Bad Debt"
+          },
+          "realised_positions": {
+            "type": "integer",
+            "title": "Realised Positions"
+          },
+          "realised_events": {
+            "type": "integer",
+            "title": "Realised Events"
+          },
+          "realised_repaid": {
+            "type": "number",
+            "title": "Realised Repaid"
+          },
+          "realised_bonus": {
+            "type": "number",
+            "title": "Realised Bonus"
+          },
+          "realised_bad_debt": {
+            "type": "number",
+            "title": "Realised Bad Debt"
+          },
+          "missed": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Missed",
+            "description": "Liquidated, not predicted."
+          },
+          "extra": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Extra",
+            "description": "Predicted, not liquidated."
+          },
+          "extra_later": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Extra Later"
+          },
+          "extra_defended": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Extra Defended"
+          },
+          "left_debt": {
+            "type": "number",
+            "title": "Left Debt",
+            "default": 0.0
+          },
+          "left_dust": {
+            "type": "integer",
+            "title": "Left Dust",
+            "default": 0
+          },
+          "from_sale": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Sale"
+          }
+        },
+        "type": "object",
+        "required": [
+          "market_id",
+          "label",
+          "loan_symbol",
+          "oracle_fall",
+          "borrowers",
+          "predicted_positions",
+          "predicted_debt",
+          "predicted_bonus",
+          "predicted_bad_debt",
+          "realised_positions",
+          "realised_events",
+          "realised_repaid",
+          "realised_bonus",
+          "realised_bad_debt"
+        ],
+        "title": "MarketBacktest"
+      },
       "MarketHit": {
         "properties": {
           "market_id": {
@@ -1541,6 +2036,36 @@
               }
             ],
             "title": "Exit Route"
+          },
+          "exit_impact": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exit Impact",
+            "description": "Slippage against the oracle selling what the liquidations seize (KyberSwap)."
+          },
+          "exit_capacity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exit Capacity",
+            "description": "Largest size the aggregator routes, loan token."
+          },
+          "exit_source": {
+            "type": "string",
+            "title": "Exit Source",
+            "description": "KyberSwap (quoted), registry (measured by hand) or empty.",
+            "default": ""
           },
           "no_liquidator_shortfall": {
             "type": "number",
@@ -2344,6 +2869,420 @@
           "interaction_usd"
         ],
         "title": "ReportSimulation"
+      },
+      "ShockGraph": {
+        "properties": {
+          "target": {
+            "type": "string",
+            "title": "Target",
+            "description": "Pass it as `vault` (or `user`) to the shock routes to run offline."
+          },
+          "vaults": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Vaults"
+          },
+          "users": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Users"
+          },
+          "block": {
+            "type": "integer",
+            "title": "Block"
+          },
+          "siblings": {
+            "type": "boolean",
+            "title": "Siblings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "target",
+          "vaults",
+          "users",
+          "block",
+          "siblings"
+        ],
+        "title": "ShockGraph"
+      },
+      "ShockRequest": {
+        "properties": {
+          "vault": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Vault",
+            "description": "Vault V2 addresses: GET /api/shock/graphs offline."
+          },
+          "user": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "User",
+            "description": "Addresses whose borrows seed the graph."
+          },
+          "shocks": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Shocks",
+            "description": "As `shock --shock`: `<node>:<mode>[:<size>]`, node an address, a market id or a unique label fragment; mode reads-low, reads-high, frozen or price. Applied together.",
+            "examples": [
+              [
+                "Ojo PT:reads-low:10%"
+              ]
+            ]
+          },
+          "siblings": {
+            "type": "boolean",
+            "title": "Siblings",
+            "description": "Include the sibling markets (live only: a recording fixes it).",
+            "default": true
+          },
+          "live": {
+            "type": "boolean",
+            "title": "Live",
+            "description": "Read the chain instead of the recording (nothing is saved).",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "shocks"
+        ],
+        "title": "ShockRequest"
+      },
+      "ShockSweep": {
+        "properties": {
+          "block": {
+            "type": "integer",
+            "title": "Block"
+          },
+          "mode": {
+            "type": "string",
+            "title": "Mode"
+          },
+          "size": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Size"
+          },
+          "ranking": {
+            "items": {
+              "$ref": "#/components/schemas/ShockSweepRow"
+            },
+            "type": "array",
+            "title": "Ranking",
+            "description": "Ranked by the vaults' total loss."
+          }
+        },
+        "type": "object",
+        "required": [
+          "block",
+          "mode",
+          "ranking"
+        ],
+        "title": "ShockSweep"
+      },
+      "ShockSweepRequest": {
+        "properties": {
+          "vault": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Vault"
+          },
+          "user": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "User"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "reads-low",
+              "reads-high",
+              "frozen",
+              "price"
+            ],
+            "title": "Mode"
+          },
+          "size": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Size",
+            "description": "e.g. `10%`; none for frozen.",
+            "examples": [
+              "10%"
+            ]
+          },
+          "top": {
+            "type": "integer",
+            "maximum": 200.0,
+            "minimum": 1.0,
+            "title": "Top",
+            "default": 15
+          },
+          "siblings": {
+            "type": "boolean",
+            "title": "Siblings",
+            "default": true
+          },
+          "live": {
+            "type": "boolean",
+            "title": "Live",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "mode"
+        ],
+        "title": "ShockSweepRequest"
+      },
+      "ShockSweepRow": {
+        "properties": {
+          "node": {
+            "type": "string",
+            "title": "Node"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "vault_loss": {
+            "type": "number",
+            "title": "Vault Loss"
+          },
+          "markets_hit": {
+            "type": "integer",
+            "title": "Markets Hit"
+          },
+          "worst_market": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Worst Market"
+          },
+          "worst_market_loss": {
+            "type": "number",
+            "title": "Worst Market Loss"
+          }
+        },
+        "type": "object",
+        "required": [
+          "node",
+          "label",
+          "kind",
+          "vault_loss",
+          "markets_hit",
+          "worst_market_loss"
+        ],
+        "title": "ShockSweepRow"
+      },
+      "ShockTarget": {
+        "properties": {
+          "node": {
+            "type": "string",
+            "title": "Node",
+            "description": "Address or id; use it before the colon of a shock."
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "oracle_class": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oracle Class"
+          },
+          "held": {
+            "type": "integer",
+            "title": "Held",
+            "description": "Markets of the vault (or the user) whose price this node enters."
+          },
+          "siblings": {
+            "type": "integer",
+            "title": "Siblings",
+            "description": "Sibling markets whose price it enters."
+          },
+          "markets": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Markets"
+          }
+        },
+        "type": "object",
+        "required": [
+          "node",
+          "label",
+          "kind",
+          "held",
+          "siblings",
+          "markets"
+        ],
+        "title": "ShockTarget"
+      },
+      "ShockTrace": {
+        "properties": {
+          "format": {
+            "type": "string",
+            "title": "Format"
+          },
+          "block": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Block"
+          },
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          },
+          "shocks": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Shocks"
+          },
+          "converged": {
+            "type": "boolean",
+            "title": "Converged"
+          },
+          "evaluations": {
+            "type": "integer",
+            "title": "Evaluations"
+          },
+          "graph": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Graph"
+          },
+          "rules": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Rules"
+          },
+          "steps": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Steps"
+          },
+          "evaluations_log": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Evaluations Log"
+          },
+          "waves": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Waves"
+          },
+          "nodes": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Nodes"
+          },
+          "paths": {
+            "additionalProperties": {
+              "items": {
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Paths"
+          }
+        },
+        "type": "object",
+        "required": [
+          "format",
+          "note",
+          "shocks",
+          "converged",
+          "evaluations",
+          "graph",
+          "rules",
+          "steps",
+          "evaluations_log",
+          "waves",
+          "nodes",
+          "paths"
+        ],
+        "title": "ShockTrace",
+        "description": "The propagation as data: the shape is `docs/model/shock-trace.md`; the inner objects are kept open."
       },
       "SimulationLayer": {
         "properties": {
