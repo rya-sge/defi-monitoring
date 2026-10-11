@@ -209,3 +209,12 @@ def test_incident_on_one_vault_matches_the_cli(client, tmp_path):
 )
 def test_incident_errors(client, body, status):
     assert client.post("/api/incident", json=body).status_code == status
+
+
+def test_incident_takes_the_briefs_exit_cost(client):
+    body = {"example": "brief-ten-pockets", "shocks": ["token=mGLOeuro:0.30"], "exit_cost": 0.11}
+    r = client.post("/api/incident", json=body)
+    assert r.status_code == 200, r.text
+    hit = next(ln for ln in r.json()["book"]["lines"] if ln["hit_markets"])
+    assert hit["exit_cost_usd"] == pytest.approx(110_000) and hit["reason"].startswith("leaving costs")
+    assert client.post("/api/incident", json={**body, "exit_cost": 1.5}).status_code == 422

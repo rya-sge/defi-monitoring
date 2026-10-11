@@ -43,6 +43,12 @@ def main(argv: list[str] | None = None) -> int:
         help="a book of vaults in a JSON file (see examples/), each vault with an optional depositor and label",
     )
     a.add_argument(
+        "--exit-cost",
+        type=float,
+        help="with --vault or --book: the cost of leaving as a share of what leaves (0.11 for the brief's 11 %% "
+        "unwind), instead of the vault's yield given up over --horizon",
+    )
+    a.add_argument(
         "--record",
         action="store_true",
         help="with --vault or --book: read each vault live at the head and save every response under "
@@ -82,6 +88,13 @@ def main(argv: list[str] | None = None) -> int:
         "--record", action="store_true", help="with --blocks: save every response under fixtures/replay/<vault>"
     )
     w.add_argument("--replay", action="store_true", help="re-run a recorded range offline")
+    w.add_argument(
+        "--step",
+        type=int,
+        metavar="N",
+        help="blocks per batch (default watch.max_range); --step 1 reads state at every block, so a short crisis "
+        "on a local fork is seen act by act",
+    )
     w.add_argument(
         "--record-as",
         metavar="NAME",
@@ -140,7 +153,7 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     if S.FORK:
-        # fork-demo D1–D2: a local fork only; its clock is the fork's, which `anvil_increaseTime` moves ahead of ours
+        # D180–D181: a local fork only; its clock is the fork's, which `anvil_increaseTime` moves ahead of ours
         if S.RPC not in S.ROUTES:
             ap.error("RISKDEP_FORK needs RISKDEP_RPC_URL pointing at the local fork (scripts/fork/start-fork.sh)")
         if not getattr(args, "replay", False):
@@ -297,6 +310,7 @@ def main(argv: list[str] | None = None) -> int:
             blocks=args.blocks,
             min_level=args.level,
             max_polls=args.max_polls,
+            step=args.step,
         )
         try:
             return run(opts)
@@ -376,7 +390,7 @@ def _vault_incident(ap, args) -> int:
     mode = "record" if args.record else "refresh" if args.refresh else "live" if args.live else "offline"
     try:
         book = vault_book.load(Path(args.book)) if args.book else vault_book.from_addresses(args.vault, args.user)
-        res = pipeline.incident(book, args.shock, args.user, args.horizon, mode)
+        res = pipeline.incident(book, args.shock, args.user, args.horizon, mode, args.exit_cost)
     except (ValueError, FileNotFoundError) as e:
         ap.error(str(e))
     except S.CacheMiss as e:

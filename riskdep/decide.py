@@ -78,8 +78,12 @@ def verdict(
     mult = (carry + exit_cost) / el if el > 0 else float("inf")
     equity = max(pos.equity_usd, 1.0)
 
+    band = 1.96 * sim.expected_loss_se  # 95 % sampling interval of the expected loss
+    close = abs(el - carry) <= band  # carry and expected loss are not told apart by the simulation
     reasons = [
-        f"Over {sim.horizon_days:.0f} days: expected loss ${el:,.0f} vs carry ${carry:,.0f} "
+        f"Over {sim.horizon_days:.0f} days: expected loss ${el:,.0f}"
+        + (f" ± ${band:,.0f} (95 %, {sim.n:,} paths)" if band else "")
+        + f" vs carry ${carry:,.0f} "
         f"(net ${net_stay:+,.0f}); leaving now costs ${exit_cost:,.0f} "
         f"({quote['price_impact']:.2%} price impact + fees, {quote['source']})."
     ]
@@ -117,10 +121,15 @@ def verdict(
     if el > carry + exit_cost:
         v = "EXIT"
         head = "EXIT: the expected loss exceeds the carry plus the cost of leaving."
-    elif net_stay < 0 or tail_bad or (ld is not None and ld < (stress or 0)):
+    elif (net_stay < 0 and not close) or tail_bad or (ld is not None and ld < (stress or 0)):
         v = "REDUCE"
         why = []
-        if net_stay < 0:
+        if net_stay < 0 and close:
+            why.append(
+                f"the carry (${carry:,.0f}) and the expected loss (${el:,.0f} ± ${band:,.0f}) are about equal: "
+                "the simulation cannot tell which is larger"
+            )
+        elif net_stay < 0:
             why.append(f"the carry (${carry:,.0f}) does not cover the expected loss (${el:,.0f})")
         if tail_bad:
             why.append(

@@ -273,13 +273,14 @@ class BookVaultIn(BaseModel):
     address: str
     label: str | None = None
     depositor: str | None = Field(default=None, description="Whose position to weigh; default the largest depositor.")
+    amount: float | None = Field(default=None, gt=0, description="`pocket` weighting: the book's position, in USD.")
 
 
 class BookIn(BaseModel):
     """A book of Morpho Vault V2 vaults, as in `examples/*.json`."""
 
     name: str | None = None
-    weighting: Literal["vault", "depositor"] = "vault"
+    weighting: Literal["vault", "depositor", "pocket"] = "vault"
     vaults: list[BookVaultIn] = Field(min_length=1)
 
 
@@ -297,13 +298,20 @@ class IncidentRequest(BaseModel):
     )
     user: str | None = Field(default=None, description="Depositor address, for every vault without its own.")
     horizon: float = Field(default=30.0, gt=0, le=365, description="Days over which the breakeven p* is stated.")
+    exit_cost: float | None = Field(
+        default=None,
+        ge=0,
+        lt=1,
+        description="The cost of leaving as a share of what leaves (0.11 for the brief's 11 % unwind), instead of "
+        "the vault's yield given up.",
+    )
     live: bool = Field(default=False, description="Read the chain instead of the recordings (nothing is saved).")
 
 
 class BookSummary(BaseModel):
     name: str
     title: str
-    weighting: Literal["vault", "depositor"]
+    weighting: Literal["vault", "depositor", "pocket"]
     vaults: list[BookVaultIn]
 
 
@@ -371,6 +379,10 @@ class VaultIncident(BaseModel):
     )
     p_star_year: float | None = None
     outside: list[str] = Field(default_factory=list)
+    liquidity: tuple[float, float, float] = Field(
+        default=(0.0, 0.0, 0.0), description="What can leave: plain, through forceDeallocate, and its penalty."
+    )
+    exit_cost_rate: float | None = None
 
 
 class VaultLine(BaseModel):
@@ -386,11 +398,12 @@ class VaultLine(BaseModel):
     p_star_year: float | None = None
     exit_cost_usd: float = 0.0
     saved_usd: float = 0.0
+    reason: str = Field(default="", description="Why the verdict, in one clause.")
 
 
 class BookIncident(BaseModel):
     name: str
-    weighting: Literal["vault", "depositor"]
+    weighting: Literal["vault", "depositor", "pocket"]
     shocks: list[str]
     lines: list[VaultLine]
     value_usd: float

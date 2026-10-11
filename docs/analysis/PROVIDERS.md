@@ -7,6 +7,7 @@ Every external service the project calls, what it is used for, and what is known
 - [Summary](#summary)
 - [Ethereum RPC](#ethereum-rpc)
 - [eRPC, optional local proxy](#erpc-optional-local-proxy)
+- [Local mainnet fork, demo only](#local-mainnet-fork-demo-only)
 - [Morpho API](#morpho-api)
 - [Pendle API](#pendle-api)
 - [DefiLlama](#defillama)
@@ -26,6 +27,7 @@ Every external service the project calls, what it is used for, and what is known
 | dRPC | `https://eth.drpc.org` | Ethereum JSON-RPC (HTTP) | no | cross-check only (block hash) | `riskdep/crosscheck.py` (`SECOND_RPCS`) |
 | 1RPC | `https://1rpc.io/eth` | Ethereum JSON-RPC (HTTP) | no | cross-check fallback; answers 410 "discontinued" since at least 2026-10-10 | `riskdep/crosscheck.py` (`SECOND_RPCS`) |
 | eRPC (optional) | `http://127.0.0.1:4000/main/evm/1`, run locally | RPC proxy over 6 free endpoints | no | the main RPC's requests, when `RISKDEP_RPC_URL` points at it | `erpc.yaml`, `docs/erpc.md` |
+| anvil fork (demo) | `http://127.0.0.1:8545`, run locally by `scripts/fork/start-fork.sh` | Ethereum JSON-RPC (anvil) | no | the main RPC's requests during the fork demo (`RISKDEP_RPC_URL` + `RISKDEP_FORK=1`) | `scripts/fork/addresses.env` (`FORK_RPC`, `FORK_UPSTREAMS`) |
 | Morpho | `https://blue-api.morpho.org/graphql` | GraphQL API | no | discovery: positions, borrowers, lenders, vault roles | `riskdep/sources.py` (`MORPHO`) |
 | Pendle | `https://api-v2.pendle.finance/core` | REST API | no | PT markets, implied yield, swap quotes | `riskdep/sources.py` (`PENDLE`) |
 | DefiLlama | `https://api.llama.fi` | REST API | no | protocol list, hack record | `riskdep/sources.py` (`LLAMA`) |
@@ -84,6 +86,21 @@ Every request to the data providers goes through the cached fetcher of `riskdep/
 **Left out on purpose:** dRPC (the cross-check's independent node; its free plan also refuses batches above 3 calls), 1RPC (discontinued). **Tried and rejected:** LlamaRPC, BlockPI, OmniaTech, MeowRPC (no JSON answer), payload.de and SubQuery (unreachable), Lava (discontinued), OnFinality and merkle.io (throttled at once), ZAN (`eth_getLogs` needs an account), Ankr (key required), Cloudflare (batches of 10, `eth_getLogs` and `eth_getStorageAt` answer "Internal error"), Flashbots (refuses 30-call batches and recent log ranges).
 
 **Measured 2026-10-10:** `graph --vault 0xE018…1965` (RockawayX USDC Yield) took 43 s direct and 20 s through eRPC, with the same graph (74 nodes, 106 edges, same oracle classes). `graph --example` took 8 to 12 min direct (65 siblings) and 178 s through eRPC with the $1M TVL floor (52 siblings). eRPC's log then shows upstream throttling it routes around, for example Tenderly's 20-call limit.
+
+## Local mainnet fork, demo only
+
+**`http://127.0.0.1:8545`**, an [anvil](https://book.getfoundry.sh/anvil/) fork of mainnet started by `scripts/fork/start-fork.sh` for the crisis demo (`scripts/fork/README.md`, plan `2026-10-11-fork-demo`). `RISKDEP_RPC_URL` sends the main RPC's requests to it and `RISKDEP_FORK=1` marks it as a fork (D180): the block-hash and Morpho-API cross-checks read "not checked", since the fork's blocks exist nowhere else and the API still describes mainnet. `RISKDEP_FORK` without `RISKDEP_RPC_URL` is refused, so it can never silence the checks on mainnet. Cache keys keep the publicnode URL, as for eRPC.
+
+Anvil fetches the state it needs from an upstream at the fork block, which must serve old state (archive):
+
+| Upstream | Endpoint | Probe 2026-10-11 (`eth_call` 5,000 blocks back) |
+|---|---|---|
+| `keys.ini [rpc] url`, when set | the user's paid endpoint, never printed | — |
+| Tenderly gateway | `https://mainnet.gateway.tenderly.co` | answered |
+| Blast | `https://eth-mainnet.public.blastapi.io` | answered |
+| MEV Blocker | `https://rpc.mevblocker.io` | answered |
+
+**Left out on purpose:** dRPC, which also answered, because it is the cross-check's independent node; publicnode (refuses old state: "Archive"); 1RPC (502), LlamaRPC (525), merkle.io (429), Cloudflare (internal error), Flashbots (method refused). Anvil keeps what it fetched in `~/.foundry/cache/rpc/`, and `--stop` saves the fork to `out/fork-<block>.json` so `--load` restarts it with no upstream.
 
 ## Morpho API
 

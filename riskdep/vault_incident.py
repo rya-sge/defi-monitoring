@@ -97,6 +97,8 @@ class VaultIncident:
     p_star: float | None = None  # D143: the incident probability over the horizon above which leaving now pays
     p_star_year: float | None = None
     outside: list[str] = field(default_factory=list)  # D145: Nexus cover prices on the hit collateral's protocols
+    liquidity: tuple[float, float, float] = (0.0, 0.0, 0.0)  # D150: plain, forced (asset units), forced penalty
+    exit_cost_rate: float | None = None  # D151: a flat cost of leaving, as a share of what leaves (else the yield)
 
     def lines(self) -> list[str]:
         s = self.symbol
@@ -158,13 +160,17 @@ class VaultIncident:
 
     def breakeven_text(self) -> str:
         h = f"{self.horizon_days:g} days"
-        if self.apy is None:
+        if self.apy is None and self.exit_cost_rate is None:
             return "the vault's yield could not be read: the breakeven probability is not computed"
         if self.p_star is None:
             return (
                 "leaving first does not lower the loss: exiting does not pay against this incident, whatever its odds"
             )
-        cost = f"leaving now forgoes {self.exit_cost:,.0f} {self.symbol} of yield over {h} ({self.apy:.2%}/yr)"
+        cost = (
+            f"leaving now costs {self.exit_cost:,.0f} {self.symbol} ({self.exit_cost_rate:.0%} of what leaves)"
+            if self.exit_cost_rate is not None
+            else f"leaving now forgoes {self.exit_cost:,.0f} {self.symbol} of yield over {h} ({self.apy:.2%}/yr)"
+        )
         if self.p_star >= 1:
             return f"{cost}, more than leaving first saves: stay even if the incident is certain"
         return (
@@ -179,13 +185,14 @@ class VaultIncident:
 # --- pure
 
 
-def breakeven(stay: float, leave: float, par: float, apy: float | None, days: float):
-    """D142–D143, pure: (yield forgone by leaving now, p* over the horizon, p* per year). Leaving now costs the vault's
-    net yield on what can leave; it saves stay − leave if the incident comes. p* = cost / saving; None when leaving
-    saves nothing; ≥ 1 when the cost exceeds the saving even for a certain incident."""
-    if apy is None:
+def breakeven(stay: float, leave: float, par: float, apy: float | None, days: float, rate: float | None = None):
+    """D142–D143, pure: (cost of leaving now, p* over the horizon, p* per year). Leaving now costs the vault's net
+    yield on what can leave, or `rate` × what leaves when a flat exit cost is given (D151: the brief's 11 % unwind); it
+    saves stay − leave if the incident comes. p* = cost / saving; None when leaving saves nothing; ≥ 1 when the cost
+    exceeds the saving even for a certain incident."""
+    if apy is None and rate is None:
         return 0.0, None, None
-    cost = par * apy * days / 365
+    cost = par * rate if rate is not None else par * apy * days / 365
     saved = stay - leave
     if saved <= 0:
         return cost, None, None
@@ -482,7 +489,21 @@ def decide(
             "the collateral still covers the debt after the fall: no bad debt reaches the vault",
         )
     gain = stay - leave
-    if gain > 1 and gain >= REGISTRY["incident"]["exit_min_gain"] * stay:
+    share = liq.position / liq.total if liq.total else 0.0
+    why = (
+        f"the depositor holds {share:.0%} of the vault, so the loss falls on it either way"
+        if share >= 0.5
+        else f"only {par:,.0f} can leave, and the {stuck:,.0f} left behind carries the loss"
+    )
+    if gain <= 1:
+        pen = (
+            f"; the forceDeallocate penalty on the way out ({first.penalty / unit:,.0f}) makes leaving cost "
+            f"{-gain:,.0f} more"
+            if first.penalty and -gain > 1
+            else ""
+        )
+        return stay, par, stuck, leave, "STAY", f"leaving first does not lower the loss: {why}{pen}"
+    if gain >= REGISTRY["incident"]["exit_min_gain"] * stay:
         return (
             stay,
             par,
@@ -498,9 +519,8 @@ def decide(
         stuck,
         leave,
         "STAY",
-        f"leaving first saves only {gain:,.0f} ({gain / stay:.1%} of the {stay:,.0f} loss): too little can leave, or the "
-        "depositor is most of the vault, so the loss falls on it either way; withdrawing what can leave still cuts "
-        f"its exposure to a further cut by {par:,.0f}",
+        f"leaving first saves only {gain:,.0f} ({gain / stay:.1%} of the {stay:,.0f} loss): {why}; withdrawing what "
+        f"can leave still cuts its exposure to a further cut by {par:,.0f}",
     )
 
 
@@ -518,6 +538,7 @@ def run(
     graph: dict | None = None,
     horizon_days: float = 30.0,
     nexus: tuple[list[dict], list[dict]] | None = None,
+    exit_cost_rate: float | None = None,
 ) -> VaultIncident:
     """Read the vault and every borrower of its markets at `block`, then apply the incident (D98). `token_shocks` is
     `parse_shocks`' list (token markdowns and borrower defaults, D130) or `parse_token_shocks`' pairs. `profile_all`
@@ -639,7 +660,15 @@ def run(
     liq = EQ.liquidity(st)
     stay, par, stuck, leave, verdict, reason = decide(liq, loss_raw, exposure_raw, unit)
     apy = vault_apy(f, view.address)
-    exit_cost, p_star, p_year = breakeven(stay, leave, par, apy, horizon_days)
+    exit_cost, p_star, p_year = breakeven(stay, leave, par, apy, horizon_days, exit_cost_rate)
+    if exit_cost_rate is not None and verdict == "EXIT" and stay - leave <= exit_cost:
+        verdict, reason = (
+            "STAY",
+            (
+                f"leaving first would save {stay - leave:,.0f}, but leaving costs {exit_cost:,.0f} "
+                f"({exit_cost_rate:.0%} of the {par:,.0f} that leaves): staying is cheaper even if the incident is certain"
+            ),
+        )
     outside = []
     if nexus is not None and hits:
         tokens = [
@@ -750,6 +779,8 @@ def run(
         p_star,
         p_year,
         outside,
+        (liq.plain / unit, liq.forced / unit, liq.penalty),
+        exit_cost_rate,
     )
 
 

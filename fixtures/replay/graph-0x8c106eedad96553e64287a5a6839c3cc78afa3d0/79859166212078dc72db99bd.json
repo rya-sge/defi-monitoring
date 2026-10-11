@@ -1,0 +1,1 @@
+{"method": "GET", "url": "https://api.etherscan.io/v2/api?chainid=1&module=contract&action=getsourcecode&address=0x70e0b687b85a79aa8d936affc8ba6f9a1fb7befe", "body": null, "fetched": "2026-10-11T00:34:44Z", "response": {"verified": false, "name": null, "proxy": false, "implementation": null}}

@@ -8,6 +8,34 @@ Risk tooling for DeFi positions on Ethereum, built with the charrette loop: desi
 - **`graph`**: draws the dependency graph of a vault or an address, with the sibling markets around it. Plan: `plan/2026-10-10-sibling-markets.plan.md`.
 - **`shock`**: applies a failure to a node of that graph (an oracle reading low or high, a frozen feed, a collateral falling) and propagates it to every market, vault and depositor, by rules you can change. Plan: `plan/2026-10-10-propagation-engine.plan.md`.
 
+## The answer in five minutes
+
+The brief asks: a dependency of a position is hit; how much is lost, how fast, and should you stay or exit despite what exiting costs (`docs/hackaton_instruction/GOAL.md`). Three commands answer it, offline, on mainnet recordings of the sponsor's vault and its curator's book (`uv sync` first):
+
+```bash
+# 1. Dependency discovery (30 %): what RockawayX USDC Yield depends on, siblings, oracle classes, issuer grades
+uv run python -m riskdep graph --vault 0xE0181090c22579B6A217f1522cbf8c9f1F0C1965 --replay        # → out/graph.html
+
+# 2. Impact and decision (30 % + 25 %): fxSAVE marked down 30 %, for the f(x) vault and its largest depositor
+uv run python -m riskdep analyze --vault 0x2cA22cb25558fa2018ecb1CE4eD8AF92Ee7ea423 --shock token=fxSAVE:0.30
+
+# 3. The brief's own trade-off: ten 1M pockets, one hit, an 11 % cost to unwind it
+uv run python -m riskdep analyze --book examples/brief-ten-pockets.json --shock token=mGLOeuro:0.30 --exit-cost 0.11
+```
+
+What to read in the output:
+
+| Output line | Answers |
+|---|---|
+| `fxSAVE/USDC …: 1,494,648 of 25,324,668 USDC of debt liquidatable; bad debt 2,284,812 …` | the impact, market by market, from the shock engine over the recorded graph |
+| `oracle constant-price; how fast: at once when the issuer publishes …` | how fast it lands |
+| `verdict given the incident: EXIT: withdraw the 2,500,571 that can leave now …` | stay or exit, if the incident happens |
+| `if the incident is not certain: … it pays if the incident's probability over 30 days is above 7.92%` | the breakeven: exiting is certain and costly, staying is uncertain |
+| `outside view: Nexus f(x) Protocol cover …` | an outside price to compare that probability with |
+| `Leaving Belem RWA EURCV costs 110,000 USD for sure, against 53,445 saved if the incident comes: stay.` | the brief's ten-pocket example, made explicit |
+
+The same runs are served over HTTP (`POST /api/incident`, below). A borrower's view of the brief's PT example: `analyze --demo --shock issuer_depeg=0.08`.
+
 How the system is built (components, data sources, data flow, state, testing): `docs/analysis/ARCHITECTURE.md`.
 
 A browser UI over the same three outputs lives in `web/`.
@@ -20,7 +48,7 @@ All data comes from keyless public sources: the publicnode Ethereum RPC, the Mor
 
 ```bash
 uv sync                             # Python >= 3.10
-uv run pytest -q tests              # 257 tests, offline
+uv run pytest -q tests              # offline, from the committed recordings
 ```
 
 Outside an activated virtualenv, prefix the `python3 -m riskdep …` commands below with `uv run`.
@@ -44,6 +72,8 @@ python3 -m riskdep watch --vault <V2 address> --user <addr> --level warn
 python3 -m riskdep watch --blocks 1000                     # check the last 1000 blocks, then stop
 python3 -m riskdep watch --blocks 1000 --record            # same, saving every response under fixtures/replay/<vault>
 python3 -m riskdep watch --replay                          # re-run the recorded range offline
+python3 -m riskdep watch --vault <V2> --step 1             # one block per batch: a short crisis is seen act by act
+python3 -m riskdep watch --vault <V2> --replay --record-as fork-belem   # a recording kept under its own name
 ```
 
 At start it reads the vault's structure on-chain (vault → adapters → Blue markets: collateral, LLTV, the vault's share, utilisation, caps, the liquidity market). It reports what a plain withdrawal can pay (idle assets plus the liquidity adapter's market, per the Morpho docs) separately from what only `forceDeallocate` can reach, at the adapter's penalty, and prints standing findings such as concentration or an exit that can't be done in full. It also lists every borrower of the vault's markets (Morpho API, positions read on-chain) and prints each market's liquidation curve and unrealised bad debt; positions are re-read when an event touches them and fully refreshed every 300 blocks. It then prints each market's **drain threshold**: how far the collateral trades below its oracle, the depeg d\* past which the market's free liquidity can be borrowed in one block, and how much that is (`docs/drain-threshold.md`). It then prints the depositor's **exit queue**: what it recovers at par and what stays stuck if it exits first, behind the vault's contract holders, behind half of the other depositors, or last, and its loss in each case for the unrealised bad debt now and for every collateral falling 2 to 20 % at once (`docs/exit-queue.md`). A live batch with no event re-reads only what moves without one (oracle prices, `totalAssets`, `realAssets`, idle cash, the depositor's gates); the full state read runs on any event and at least every 25 blocks (D61). Finally it prints the **admin surface** of those markets: each oracle and the feeds it reads, the collateral and loan tokens, Pendle SY and yield tokens, whether each is upgradeable and who controls it, and each oracle's gap to DefiLlama's price. It then polls every 12 s, 2 blocks behind the head, and prints one line per relevant transaction. Each alert is also appended to `out/watch-<vault>.jsonl`, and the cursor in `out/watch-<vault>.cursor` lets a restart resume where it stopped.
@@ -51,8 +81,8 @@ At start it reads the vault's structure on-chain (vault → adapters → Blue ma
 | Level | What triggers it |
 |---|---|
 | critical | an upgrade of a contract a held market depends on (oracle, feed, collateral or loan token, Pendle SY); a pause of a collateral token; one transaction minting ≥ 5 % of a collateral or yield token's supply; unrealised bad debt in a held market from 0.1 % of the vault (borrowers underwater, not yet liquidated; warn from 0.01 %); a pending change with no notice (`Submit` for a risk-increasing function whose timelock is 0); bad debt in a held market (`Liquidate.badDebtAssets`, your share computed), a loss recorded by an adapter but not yet accrued (`totalAssets()` below the stored `_totalAssets`), vault total assets falling (`AccrueInterest`), the adapter writing off shares (`BurnShares`); at least half of your position stuck behind the vault's contract holders in a run while the vault carries unrealised bad debt; a market's collateral at or past its drain threshold (`DrainWindow`) |
-| warn | an oracle ≥ 3 % away from DefiLlama's price; a change of proxy admin, owner or Chainlink aggregator of a dependency; a steep liquidation curve: a 5 % oracle fall would make ≥ 25 % of a held market's debt liquidatable (markets holding ≥ 10 % of the vault); risk-increasing functions that can change with no notice (timelock 0, not abdicated), listed at start; a timelocked change submitted (`Submit`, decoded, with its execution date and timelock) or made live (`Accept`), new adapter, cap raised, fee or gate change, shorter timelock, `ForceDeallocate`, new liquidity adapter, a market crossing 25 % of the vault, ≥ 99 % utilisation on a market holding ≥ 10 %, an oracle moving ≥ 5 %, you no longer able to exit in full with a plain withdrawal, a gate blocking your exit, a block range that could not be read; at least half of your position stuck if the vault's contract holders withdrew before you (`ExitQueue`); a market's collateral within 2 points of its drain threshold (`DrainWindow`); one borrower holding ≥ 50 % of a market's debt, or fewer than 5 borrowers, in a market holding ≥ 10 % of the vault (`BorrowerConcentration`) |
-| info | allocation moves, caps lowered, cancelled changes, liquidations without bad debt, your own and large (≥ 1 %) deposits and withdrawals |
+| warn | an oracle ≥ 3 % away from DefiLlama's price; a change of proxy admin, owner or Chainlink aggregator of a dependency; a steep liquidation curve: a 5 % oracle fall would make ≥ 25 % of a held market's debt liquidatable (markets holding ≥ 10 % of the vault); risk-increasing functions that can change with no notice (timelock 0, not abdicated), listed at start; a timelocked change submitted (`Submit`, decoded, with its execution date and timelock) or made live (`Accept`), new adapter, cap raised, fee or gate change, shorter timelock, `ForceDeallocate`, new liquidity adapter, a market crossing 25 % of the vault, ≥ 99 % utilisation on a market holding ≥ 10 %, an oracle moving ≥ 5 %, you no longer able to exit in full with a plain withdrawal, a gate blocking your exit, a block range that could not be read; at least half of your position stuck if the vault's contract holders withdrew before you (`ExitQueue`); a market's collateral within 2 points of its drain threshold (`DrainWindow`); one borrower holding ≥ 50 % of a market's debt, or fewer than 5 borrowers, in a market holding ≥ 10 % of the vault (`BorrowerConcentration`); an upgrade, admin or owner change of a dependency scheduled on a timelock above it, with its delay (`Admin.CallScheduled`, D182); a custom feed that cannot report below a floor within 50 % of its answer without an upgrade (`FeedBand`, D183); an exit gate settable with no notice (`ExitGate`, D184) |
+| info | allocation moves, caps lowered, cancelled changes, liquidations without bad debt, your own and large (≥ 1 %) deposits and withdrawals; both exit gates abdicated (`ExitGate`); a `Submit` for an abdicated function; the timelocks found above the markets, and other calls queued on them |
 
 Thresholds live in `riskdep/registry.json` (`watch`), documented in `docs/registry-reference.md`. What to do about each alert: `docs/alert-runbook.md`. Terms: `docs/glossary.md`.
 
@@ -63,6 +93,8 @@ Thresholds live in `riskdep/registry.json` (`watch`), documented in `docs/regist
 A check that can't run prints "not checked" and never stops the run. Why polling rather than a WebSocket: `docs/websocket-vs-polling.md`.
 
 **Limits.** The free RPC serves state only ~64–90 blocks back, so for older ranges the state-based rules start at the oldest servable block; rules that use the event's own data stay exact. Reorgs deeper than 2 blocks are not handled. Underwater borrowers in the held markets (bad debt Blue has not yet written off, the window in which early exits shift a loss onto others) are not followed. A V1 vault held through `MorphoVaultV1Adapter` is watched as one opaque layer. The mempool is not watched.
+
+**Crisis demo on a mainnet fork** (`scripts/fork/README.md`). `scripts/fork/start-fork.sh` starts an anvil fork; with `RISKDEP_RPC_URL=http://127.0.0.1:8545 RISKDEP_FORK=1`, `watch` follows it and skips the cross-checks that a fork cannot pass. `scripts/fork/crisis-belem.sh` then plays the Belem RWA EURCV crisis through the roles that could cause it: the issuer's −10 % markdown, a liquidation, a run, the curator's (abdicated) gate, a feed upgrade queued 48 h on the Midas timelock, and the bad debt. The start-up shows how far the custom feed can fall without new code (`FeedBand`), the timelocks above the markets and whether the exit gates are abdicated (`ExitGate`); an upgrade is alerted when it is scheduled (`Admin.CallScheduled`), not when it lands. Without a fork: `watch --vault 0xD6d4b804014EF27836dBe9f8f6Bf6c71251548Ec --replay --record-as fork-belem`.
 
 ## watch --user: every Morpho position of an address
 
@@ -202,7 +234,7 @@ python3 -m riskdep analyze --vault <A> --vault <B> --user <depositor> --shock to
 python3 -m riskdep analyze --book my-book.json --record --shock token=<collateral>:0.30                # record new vaults
 ```
 
-A book file lists vault addresses, each with an optional `label` and `depositor`, and a `weighting`: `vault` (each vault at its total assets, a curator's view) or `depositor` (each vault at the depositor's position). `examples/rockawayx-ethereum.json` is the template. A token also reaches the markets whose collateral wraps it (a PT, an ERC-4626 share, chains of them), and the output shows the path; when such a market's oracle does not track a market, nothing is liquidated and the loss is shown as a hidden shortfall. `--record` reads each vault live and saves it under `fixtures/replay/incident-<vault>/`, with all its oracles and wrapping chains, so any later incident runs offline. Output: the headline, one line per vault, and `out/book-incident.json`. Plan: `plan/2026-10-11-vault-book.plan.md`.
+A book file lists vault addresses, each with an optional `label` and `depositor`, and a `weighting`: `vault` (each vault at its total assets, a curator's view), `depositor` (each vault at the depositor's position) or `pocket` (each vault at the `amount` in USD the file gives it, a position first in the exit queue: the brief's book of pockets, `examples/brief-ten-pockets.json`). `--exit-cost 0.11` makes the cost of leaving a share of what leaves (the brief's 11 % unwind) instead of the vault's yield given up. Each line says why it reads STAY or EXIT. `examples/rockawayx-ethereum.json` is the template. A token also reaches the markets whose collateral wraps it (a PT, an ERC-4626 share, chains of them), and the output shows the path; when such a market's oracle does not track a market, nothing is liquidated and the loss is shown as a hidden shortfall. `--record` reads each vault live and saves it under `fixtures/replay/incident-<vault>/`, with all its oracles and wrapping chains, so any later incident runs offline. Output: the headline, one line per vault, and `out/book-incident.json`. Plan: `plan/2026-10-11-vault-book.plan.md`.
 
 - **Data date.** An offline run uses the snapshot's date, `fixtures/snapshot/as_of.json`, as "now", so the demo gives the same result on any later day. `--refresh` refetches everything and rewrites that date; `--live` fetches only what is missing and uses today's date.
 - **Oracle.** Whether the lending market's oracle follows the PT market is read from the oracle's structure when it decides (its inputs' class; a meta-oracle through its live source and its switch within the horizon, D96). Otherwise it is inferred by comparing prices; when the PT trades within 1 % of par (near maturity), that test can't tell, so the report says *ambiguous*. The report always shows the verdict under the other oracle behaviour too.

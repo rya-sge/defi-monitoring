@@ -147,6 +147,7 @@ The thresholds of `watch --vault` and `watch --user`. Changing them changes when
 | `mint_share_critical` | fraction of the supply | 0.05 | `Admin.Mint` critical: one transaction minting this share of a collateral or yield token |
 | `oracle_divergence_warn` | fraction | 0.03 | `OracleDivergence` warning: oracle price vs DefiLlama's collateral ÷ loan price |
 | `divergence_check_every_blocks` | blocks | 25 | `OracleDivergence` between full refreshes: the batch's oracle prices against DefiLlama prices at most this old (D97) |
+| `feed_band_report_floor` | fraction | 0.5 | `FeedBand` at start-up: a custom feed whose `minAnswer` lies within this fraction below its latest answer is reported, with the timelock any upgrade must pass (D183). `feed_band_basis` holds the reason |
 | `drain_buy_cost` | fraction | 0.005 | the cost c of buying the collateral at the drain's size, in d\* = 1 − LLTV / (1 + c); low on purpose, so the threshold is early |
 | `drain_margin` | fraction (points of discount) | 0.02 | `DrainWindow` warn: the collateral's discount to its oracle within this distance of d\*; critical at d\* |
 | `drain_check_every_blocks` | blocks | 25 | how often DefiLlama's prices are re-read for the drain threshold; oracle prices come with every state read |

@@ -198,3 +198,9 @@ def test_default_stays_with_the_incident_module(tmp_path):
     assert cli.main(args) == 0
     (h,) = json.loads((tmp_path / f"vault-incident-{BELEM}.json").read_text())["hits"]
     assert h["source"] == "incident" and h["event"] == "default"
+
+
+def test_no_saving_says_why(tmp_path):
+    assert cli.main(["analyze", "--vault", BELEM, "--shock", "token=mGLOeuro:0.30", "--out", str(tmp_path)]) == 0
+    r = json.loads((tmp_path / f"vault-incident-{BELEM}.json").read_text())
+    assert r["verdict"] == "STAY" and "the depositor holds 99% of the vault" in r["reason"]

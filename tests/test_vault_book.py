@@ -95,3 +95,43 @@ def test_book_contagion_skips_markets_the_book_holds(tmp_path):
     assert cli.main(["analyze", "--book", str(BOOK), "--shock", "token=PRIME:0.30", "--out", str(tmp_path)]) == 0
     note = next(n for n in json.loads((tmp_path / "book-incident.json").read_text())["notes"] if "contagion" in n)
     assert "PRIME/PYUSD" in note and "PRIME/USDC" not in note
+
+
+def test_every_line_says_why(tmp_path):
+    """IMPROVEMENT 2.1: Confidential RWA loses 12 % and reads STAY: its depositor is 99 % of the vault."""
+    assert cli.main(["analyze", "--book", str(BOOK), "--shock", "token=PST:0.30", "--out", str(tmp_path)]) == 0
+    lines = {ln["name"]: ln for ln in json.loads((tmp_path / "book-incident.json").read_text())["lines"]}
+    assert lines["RockawayX Confidential RWA USDC"]["reason"].startswith("nothing to save by leaving first: the dep")
+    assert lines["Huma USDC Main"]["reason"].startswith("leaving pays above")
+    assert lines["Belem RWA EURCV"]["reason"] == ""  # not reached
+
+
+def test_pocket_line_first_in_the_queue():
+    inc = _inc(A, 1000, 100, 0, 0, 500)  # the vault loses 10 %
+    inc.liquidity, inc.apy, inc.horizon_days = (200.0, 0.0, 0.0), 0.05, 30
+    a, stay, leave, par, cost, p, _, verdict = VB.pocket(inc, 100.0)
+    assert (a, stay, par) == (100, pytest.approx(10.0), 100) and leave == 0  # it all leaves at par, first
+    assert cost == pytest.approx(100 * 0.05 * 30 / 365) and verdict == "EXIT"
+    inc.exit_cost_rate = 0.11  # the brief's 11 % unwind: 11 to save 10
+    assert VB.pocket(inc, 100.0)[-1] == "STAY"
+    with pytest.raises(ValueError):
+        VB.parse({"weighting": "pocket", "vaults": [A]})  # a pocket needs its amount
+
+
+TEN = ROOT / "examples" / "brief-ten-pockets.json"
+
+
+def test_the_briefs_ten_pockets(tmp_path):
+    """The brief's book: ten 1M pockets, one hit (mGLOeuro is Belem's only). At an 11 % unwind, leaving costs
+    110,000 for sure against 53k saved: stay; at the yield given up, leaving pays above a 4 % chance."""
+    args = ["analyze", "--book", str(TEN), "--shock", "token=mGLOeuro:0.30", "--out", str(tmp_path)]
+    assert cli.main([*args, "--exit-cost", "0.11"]) == 0
+    r = json.loads((tmp_path / "book-incident.json").read_text())
+    assert r["value_usd"] == pytest.approx(10e6) and [ln["name"] for ln in r["lines"] if ln["hit_markets"]] == [
+        "Belem RWA EURCV"
+    ]
+    (hit,) = [ln for ln in r["lines"] if ln["hit_markets"]]
+    assert hit["exit_cost_usd"] == pytest.approx(110_000) and hit["verdict"] == "STAY" and "110,000" in r["headline"]
+    assert cli.main(args) == 0
+    hit = next(ln for ln in json.loads((tmp_path / "book-incident.json").read_text())["lines"] if ln["hit_markets"])
+    assert hit["verdict"] == "EXIT" and 0.03 < hit["p_star"] < 0.05

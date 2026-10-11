@@ -1,5 +1,14 @@
 # Fork demo: a crisis played on a mainnet fork, for a video
 
+> **Status, 2026-10-11: implemented.** How to run it is in `scripts/fork/README.md`, the decisions (D180–D186) in `plan/2026-10-11-fork-demo.plan.md`. Implementing it corrected this plan in five places:
+> - **The exit gates are abdicated** on all 8 RockawayX vaults: the curator can never gate withdrawals. Act 5 now shows the attempt reverting with `Abdicated`, and `RedemptionWhitelistGate.sol` is dropped. `ROCK-VAULT-DEP.md` §2 had this wrong.
+> - **No paid RPC needed:** keyless endpoints (Tenderly gateway, Blast, MEV Blocker) serve old state, so the fork is pinned at a block for free.
+> - **EURCV and mGLOeuro have no transfer whitelist:** act 3 (liquidation) stays. EURCV balances sit at storage slot 140.
+> - **`watch --step 1`** is needed to see the acts one by one in a recording; **`--record-as`** keeps a fork run apart from the real recording.
+> - **Observed against predicted:** 217,286 EURCV realised against 251,761 predicted in act 1. The gap is act 3's early liquidation at 90,000.
+>
+> The alternative crises `alt-redstone.sh`, `alt-pst-mint.sh` and `alt-fxsave-expiry.sh` are scripted; the Pendle pool dump is not. The vhs tapes are written but not run here.
+
 **Yes, this works.** Anvil (Foundry 1.5.0, already installed in `~/.foundry/bin`) can fork Ethereum mainnet at a fixed block. It can run a crisis there with real contracts and real positions, by impersonating the accounts that can cause it. `riskdep watch` then follows the fork in real time through `RISKDEP_RPC_URL`.
 
 The video shows the four judging criteria at once (`docs/hackaton_instruction/GOAL.md`):
@@ -34,13 +43,13 @@ Why this vault:
 | Position | 52.58 mGLOeuro (5.258M EUR at 100,000) against 3.679M EURCV debt, **LTV 70.0 %** | graph replay |
 | Liquidatable below | 100,000 × 0.700 / 0.77 = **90,857 EUR (−9.1 %)** | computed |
 | Bad debt below | debt × LIF / collateral, with LIF = 1 / (0.3 × 0.77 + 0.7) = 1.074 → **75,142 EUR (−24.9 %)** | computed |
-| Vault exit settings | `setReceiveAssetsGate` and `setSendSharesGate` with a **0 s** timelock; curator `0xbBac…f918` (Safe 4/8) | Morpho API |
+| Vault exit settings | `setReceiveAssetsGate` and `setSendSharesGate` **abdicated** (they can never be called); curator `0xbBac…f918` (Safe 4/8) | `abdicated(bytes4)` on-chain; the first reading of the Morpho API missed it |
 
 ### What these facts mean
 
 1. **One EOA can make the sponsor's only borrower liquidatable with one transaction, and no delay.** A NAV of 90,000 (−10 %) is inside the band and below the 90,857 threshold.
 2. **The oracle cannot show a loss beyond 10 % for at least 48 hours.** If the fund really loses 30 %, the price sits at 90,000 while the true collateral covers less than the debt. Lenders carry bad debt the market cannot see until the upgrade lands.
-3. **The exit is narrow, and the curator can close it at once.** At 91 % utilisation the vault can pay out only 361,743 EURCV of 4.71M (7.7 %) in plain withdrawals (graph replay). The redemption gate has a 0 s timelock, so the curator can lock in the remaining 92 % with no notice. For curated RWA vaults with a handful of KYC'd depositors, the realistic case is not an attack: it is a **redemption gate set during the crisis**, as a fund would, with nothing making it wait.
+3. **The exit is narrow, but the curator cannot close it.** At 91 % utilisation the vault can pay out only 361,743 EURCV of 4.71M (7.7 %) in plain withdrawals (graph replay): the run of act 4 stops there. Both exit gates are abdicated, so no curator decision can lock in the rest; what traps the depositor is liquidity, not governance.
 
 ## 2. The crisis, act by act
 
@@ -53,11 +62,11 @@ Each act is a shell step with `cast`, on screen on the left. On the right, `risk
 | 2. Issuer markdown −10 % | impersonate `0xa301…600c`; `setRoundData(9000000000000)` | next poll | oracle-move alert (`oracle_move_warn`); market risk: the single borrower is liquidatable, the liquidation curve updates |
 | 3. Liquidation (optional) | impersonate a EURCV holder; `Morpho.liquidate(...)` on `0xa122…` | Liquidate event | liquidation alert; utilisation and vault share price |
 | 4. Depositors run | impersonate the vault's largest holders (4 in total); `redeem` | Withdraw events | the first ~361,743 EURCV (7.7 %) leaves, then utilisation hits 100 % and redemptions stop; exit-queue position and recovery for the watched depositor |
-| 5. Curator gates redemptions | deploy `RedemptionWhitelistGate` with an empty whitelist; impersonate the curator Safe; `submit(setReceiveAssetsGate(gate))`, then execute it in the same block | SetReceiveAssetsGate event | **critical**: "withdrawals now gated; timelock was 0". With repaid liquidity, a test `redeem` by a depositor still fails |
+| 5. Can the curator close the exit? | impersonate the curator Safe; `submit(setReceiveAssetsGate(0x…dEaD))`; executing it reverts `Abdicated` | Submit, Revoke events | info: "Submitted, but abdicated"; the startup's `ExitGate` already said both gates are abdicated |
 | 6. Deeper loss needs the timelock | impersonate a timelock proposer; `schedule(upgrade feed impl)`; `anvil_increaseTime 48h`; `execute`; `setRoundData(70000…)` | CallScheduled † then Upgraded, then the oracle move | warn at schedule time: "feed upgrade in 48 h" †; then bad debt realised on liquidation; the loss per depositor |
 | 7. Recap | none | the report | predicted (act 1) against observed (acts 2–6), side by side |
 
-Act 6 is the strongest point for the jury. The depositor gets 48 hours of warning **only if** the timelock queue is watched. Today `admin.py` sees `Upgraded`, which arrives when it is already too late.
+Act 6 is the strongest point for the jury. The depositor gets 48 hours of warning **only if** the timelock queue is watched. `admin.py` now watches it (D182): `Admin.CallScheduled` fires when the upgrade is queued, 48 h before `Upgraded`.
 
 ### Alternative crises (same tooling, one act each)
 
@@ -110,7 +119,9 @@ scripts/fork/
   addresses.env            every address and constant the scripts use, sourced by all of them (no secrets)
   start-fork.sh            starts anvil at FORK_BLOCK and checks it; prints the env to export
   crisis-belem.sh          acts 0–7 of §2 as cast commands, with captions, pauses and checks
-  RedemptionWhitelistGate.sol   the redemption gate the curator sets in act 5
+  (RedemptionWhitelistGate.sol: dropped, the exit gates are abdicated)
+  lib.sh                   helpers shared by the scripts (implementation)
+  src/FixedAnswerFeed.sol  alt-redstone.sh's implementation (implementation)
   MGloEuroFeedV2.sol       the feed implementation installed in act 6, with a wider band
   alt-redstone.sh, alt-pst-mint.sh, alt-fxsave-expiry.sh, alt-pendle-dump.sh   the alternative crises of §2
   tapes/act-*.tape         vhs scripts, one per act, for the video
@@ -158,19 +169,13 @@ The demo itself, run in the left pane.
 | 2 | `send_as $MIDAS_FEED_ADMIN $FEED "setRoundData(int256)" 9000000000000` | `latestRoundData` answers 90,000; the borrower's LTV is above 77 % |
 | 3 | give EURCV to a liquidator: impersonate a holder, or set its balance slot with `cast index` and `anvil_setStorageAt`. Then `approve` Morpho, and `liquidate((EURCV,mGLOeuro,oracle,irm,lltv), $BORROWER, seized, 0, 0x)` | the borrower's collateral fell. Skipped with a message if a token whitelist reverts |
 | 4 | for each large depositor: `send_as $HOLDER $VAULT "redeem(uint256,address,address)" <shares> $HOLDER $HOLDER`, as far as liquidity allows | the market's utilisation is 100 % |
-| 5 | `forge create RedemptionWhitelistGate --constructor-args $CURATOR_SAFE`, leaving the whitelist empty (or allowing only chosen addresses). As the curator: `submit(bytes)` with `cast calldata "setReceiveAssetsGate(address)" $GATE`. Then anyone calls `setReceiveAssetsGate($GATE)` in the same block: the 0 s timelock has already passed | `receiveAssetsGate()` = `$GATE`; a test `redeem` reverts |
+| 5 | As the curator: `submit(bytes)` with `cast calldata "setReceiveAssetsGate(address)" 0x…dEaD`; then `cast call setReceiveAssetsGate(0x…dEaD)` must revert with `Abdicated` (`0x281df4aa`); the submitted call is revoked | the revert is `Abdicated`; the script fails otherwise |
 | 6 | `forge create MGloEuroFeedV2`. As the timelock proposer: `schedule(ProxyAdmin, 0, upgradeAndCall(feed, impl, 0x), 0, salt, 172800)`. Then `evm_increaseTime 172800` and `evm_mine`. As the executor: `execute(…)`. As the feed admin: `setRoundData(7000000000000)` | the feed's implementation slot = the new impl; `latestRoundData` answers 70,000 |
 | 7 | `riskdep analyze --vault $VAULT --shock token=mGLOeuro:0.30` again, plus the watch's report | none |
 
-### `scripts/fork/RedemptionWhitelistGate.sol`
+### `scripts/fork/RedemptionWhitelistGate.sol` (dropped)
 
-The redemption gate the curator sets in act 5, about 40 lines. It mirrors the design of the gate RockawayX already runs for deposits on the Confidential vault, `WhitelistSendAssetsGate` (`0x51f6…D525`):
-- a `roleSetter` (the curator Safe), whitelisters, and `isWhitelisted[account]`;
-- it implements `IReceiveAssetsGate.canReceiveAssets(address)` and `ISendSharesGate.canSendShares(address)` from `vault-v2` (`src/interfaces/IGate.sol`), both returning `isWhitelisted[account]`.
-
-Why not reuse the deployed gate? It implements only `canSendAssets`, the deposit side; `canReceiveAssets` on it reverts (checked on 2026-10-11). Set as the withdrawal gate, it would block every withdrawal through a revert, not through a decision. Why not a deny-all contract or an address with no code? Either works mechanically, but neither is what a curator of KYC'd RWA vaults would deploy. A whitelist that is empty, or holds only chosen addresses, is.
-
-The point of the act stays the same: the risk is in the vault's settings (a 0 s timelock on the gate), not in a bug. It compiles against the `docs/external/morpho/lib/vault-v2` interfaces through a `foundry.toml` remapping. If realism does not matter for a take, the zero-file fallback is `setReceiveAssetsGate(0x…dEaD)`: an address with no code makes every withdrawal revert.
+Planned for act 5, dropped when the dry run showed `setReceiveAssetsGate` abdicated on the vault: no gate can be set, whatever the contract. Act 5 calls the setter with `0x…dEaD` and shows the `Abdicated` revert instead.
 
 ### `scripts/fork/MGloEuroFeedV2.sol`
 
@@ -229,7 +234,7 @@ It follows the format of the other plans in `plan/` (decisions, tracker, intervi
 | 0:50–1:15 | act 1, `analyze --vault --shock` | "Before anything happens: at −10 % the borrower is liquidatable; at −30 % depositors lose €0.25M." |
 | 1:15–1:45 | act 2, `setRoundData` | "One transaction from the issuer's key. The watch sees it on the next block." |
 | 1:45–2:15 | act 4, the run | "The first 7.7 % gets out. Then the money is lent out, and our depositor is stuck at this place in the queue." |
-| 2:15–2:40 | act 5, the gate | "Like a fund in a run, the curator gates redemptions. Here it takes effect in the same block: no timelock, no notice." |
+| 2:15–2:40 | act 5, the gate | "Could the curator lock the rest in? No: it gave that power up for good, and riskdep read it on-chain. What traps the money is liquidity." |
 | 2:40–3:20 | act 6, schedule → warp 48 h → upgrade | "A real loss needs an upgrade, behind 48 hours. riskdep sees it queued: that is the window to leave." |
 | 3:20–3:45 | act 7, the report | "Predicted against observed: the same numbers." |
 

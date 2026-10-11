@@ -227,12 +227,20 @@ def vault_graph(vault: str) -> dict | None:
 
 
 def incident(
-    book: vault_book.Book, shocks: list[str], user: str | None = None, horizon: float = 30.0, mode: str = "offline"
+    book: vault_book.Book,
+    shocks: list[str],
+    user: str | None = None,
+    horizon: float = 30.0,
+    mode: str = "offline",
+    exit_cost: float | None = None,
 ) -> VaultIncidentResult:
     """A known incident on every vault of a book, added up (shared by `analyze --vault|--book` and the API).
 
-    `shocks` in the CLI's syntax (`token=<collateral>:<fall>`, `borrower=<target>:<recovery>[:<n>]`). Raises
+    `shocks` in the CLI's syntax (`token=<collateral>:<fall>`, `borrower=<target>:<recovery>[:<n>]`). `exit_cost`, a share of what leaves, replaces the yield given up as the
+    cost of leaving (the brief's 11 % unwind). Raises
     ValueError (bad shocks), FileNotFoundError (a vault not recorded, offline), `sources.CacheMiss`, `SourceError`."""
+    if exit_cost is not None and not 0 <= exit_cost < 1:
+        raise ValueError("exit_cost is a share of what leaves, between 0 and 1 (0.11 for 11 %)")
     if mode not in MODES:
         raise ValueError(f"mode must be one of {', '.join(MODES)}")
     parsed = vault_incident.parse_shocks(shocks)
@@ -257,6 +265,7 @@ def incident(
                 graph=vault_graph(v.address),
                 horizon_days=horizon,
                 nexus=nx,
+                exit_cost_rate=exit_cost,
             )
         )
     return VaultIncidentResult(book, incidents, vault_book.aggregate(book, parsed, incidents))

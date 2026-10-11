@@ -1,0 +1,16 @@
+{
+  "name": "The brief's book: ten pockets of 1M USD, one Vault V2 each",
+  "weighting": "pocket",
+  "vaults": [
+    {"address": "0xD6d4b804014EF27836dBe9f8f6Bf6c71251548Ec", "label": "Belem RWA EURCV", "amount": 1000000},
+    {"address": "0xc207d3f66537D7F66456808379A0E560cF20Da36", "label": "RockawayX Confidential RWA USDC", "amount": 1000000},
+    {"address": "0x2cA22cb25558fa2018ecb1CE4eD8AF92Ee7ea423", "label": "RockawayX f(x) Protocol Ecosystem USDC", "amount": 1000000},
+    {"address": "0xE0181090c22579B6A217f1522cbf8c9f1F0C1965", "label": "RockawayX USDC Yield", "amount": 1000000},
+    {"address": "0x3BD9AdAE6643dDcddD02746b8B60075E56DF9478", "label": "RockawayX Tori Ecosystem", "amount": 1000000},
+    {"address": "0x8aC91877b93330f52b2979a31a4879506021475c", "label": "Huma USDC Main", "amount": 1000000},
+    {"address": "0x93e0F9d502eEfce8D34924ab3478C7EA0CBC5a2E", "label": "RockawayX NUVA Ecosystem", "amount": 1000000},
+    {"address": "0x8c106EEDAd96553e64287A5A6839c3Cc78afA3D0", "label": "Gauntlet USDC Prime", "amount": 1000000},
+    {"address": "0xbeef088055857739C12CD3765F20b7679Def0f51", "label": "Steakhouse Prime USDC", "amount": 1000000},
+    {"address": "0xb0c424116172B55CbB6dD3136F5989F7959e5B91", "label": "Spark Blue Chip USDT Vault", "amount": 1000000}
+  ]
+}

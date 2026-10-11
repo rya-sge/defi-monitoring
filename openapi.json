@@ -650,7 +650,8 @@
             "type": "string",
             "enum": [
               "vault",
-              "depositor"
+              "depositor",
+              "pocket"
             ],
             "title": "Weighting",
             "default": "vault"
@@ -681,7 +682,8 @@
             "type": "string",
             "enum": [
               "vault",
-              "depositor"
+              "depositor",
+              "pocket"
             ],
             "title": "Weighting"
           },
@@ -777,7 +779,8 @@
             "type": "string",
             "enum": [
               "vault",
-              "depositor"
+              "depositor",
+              "pocket"
             ],
             "title": "Weighting"
           },
@@ -826,6 +829,19 @@
             ],
             "title": "Depositor",
             "description": "Whose position to weigh; default the largest depositor."
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount",
+            "description": "`pocket` weighting: the book's position, in USD."
           }
         },
         "type": "object",
@@ -1101,6 +1117,20 @@
             "title": "Horizon",
             "description": "Days over which the breakeven p* is stated.",
             "default": 30.0
+          },
+          "exit_cost": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMaximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exit Cost",
+            "description": "The cost of leaving as a share of what leaves (0.11 for the brief's 11 % unwind), instead of the vault's yield given up."
           },
           "live": {
             "type": "boolean",
@@ -2536,6 +2566,40 @@
             },
             "type": "array",
             "title": "Outside"
+          },
+          "liquidity": {
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "type": "array",
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "Liquidity",
+            "description": "What can leave: plain, through forceDeallocate, and its penalty.",
+            "default": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          "exit_cost_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exit Cost Rate"
           }
         },
         "type": "object",
@@ -2632,6 +2696,12 @@
             "type": "number",
             "title": "Saved Usd",
             "default": 0.0
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason",
+            "description": "Why the verdict, in one clause.",
+            "default": ""
           }
         },
         "type": "object",

@@ -313,6 +313,7 @@ The design decisions are numbered across twelve plans, in the order the incremen
 | `plan/2026-10-11-pharos.plan.md` | Pharos, keyless: grades, off-chain backing, common-mode groups | D133–D138 |
 | `plan/2026-10-11-one-number.plan.md` | the shock engine as the impact core of vault and book incidents | D139–D141 |
 | `plan/2026-10-11-breakeven.plan.md` | the breakeven probability p\* of vault and book incidents; Nexus as an outside view | D142–D146 |
+| `plan/2026-10-11-judge-path.plan.md` | the brief's ten pockets and `--exit-cost`; a reason on every verdict; the sampling error in the PT verdict | D150–D154 |
 | `plan/2026-10-11-incident-api.plan.md` | `POST /api/incident`, `GET /api/books`; the incident run moved to `pipeline` | D147–D149 |
 
 A change that departs from a decision is recorded in that plan's table.

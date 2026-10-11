@@ -1,0 +1,1 @@
+{"method": "GET", "url": "https://api.etherscan.io/v2/api?chainid=1&module=contract&action=getsourcecode&address=0xa3a7a3cefee206f9d7fe00ec3c83324ed4228411", "body": null, "fetched": "2026-10-11T00:38:15Z", "response": {"verified": true, "name": "MorphoChainlinkOracleV2", "proxy": false, "implementation": null}}
