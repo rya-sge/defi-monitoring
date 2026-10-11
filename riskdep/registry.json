@@ -913,7 +913,9 @@
       "0x997e2efbce91d170b00ea402e35a66c887ee1da9": "autofinance",
       "0x7743e50f534a7f9f1791dde7dcd89f7783eefc39": "fx-protocol",
       "0x65c9a641afceb9c0e6034e558a319488fa0fa3be": "fx-protocol",
-      "0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f": "steakhouse-financial"
+      "0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f": "steakhouse-financial",
+      "0x9d39a5de30e57443bff2a8307a4256c8797a3497": "ethena-usde",
+      "0x4c9edd5852cd905f086c759e8383e09bff1e68b3": "ethena-usde"
     },
     "warn_category_min_usd": 1000000000.0
   },

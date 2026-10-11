@@ -54,6 +54,7 @@ Sizes: **S** about a day, **M** a few days, **L** more.
 | The brief's book with its PT loop (most of A6) | a borrow pocket in a book (`kind: borrow`), the same verdict rule as a vault pocket; `examples/brief-mixed-book.json` | `2026-10-11-mixed-book` |
 | Zama confidential vaults (Z1–Z3 of `ZAMA-VAULT.md`) | 16 vaults verified; the cShare as a pool; a confidential depositor's two exits in incidents; the hidden layer in `graph` | `2026-10-11-zama` |
 | FeedStale, Zama batcher alerts (Z4), the PT verdict's horizon and tail (K12, K13: B7, part of B3) | `FeedStale`; the day's confidential outflow, instant exits, pauses; EXIT when de-levering leaves the tail unsurvivable; the hold-to-maturity path | `2026-10-11-alerts-and-verdict` |
+| Discovery depth for the PT position (C1) | `analyze` reports the meta-oracle's structure, who can change the tokens, sibling markets, issuer grade and backing, protocol concentration; the incident names the sibling contagion | `2026-10-11-depth` |
 | Push alerts (part of D2) | Telegram (`riskdep notify`, `TELEGRAM_BOT.md`) | — |
 | CI | lint, tests, the OpenAPI contract, the web build | — |
 
@@ -69,14 +70,13 @@ Sizes: **S** about a day, **M** a few days, **L** more.
 | B3 | Stressed exit cost (the hold-to-maturity path is done, plan `2026-10-11-alerts-and-verdict`) | K12 | S | Pendle quotes at several sizes |
 | B1+, B2+ | The rate and yield channels as Monte Carlo layers, with Pendle's and Morpho's history | K10, K11 | S | `simulate.py` |
 | B8 | Loans at the market price; the drain as a loss channel | K16 | S–M | `market_risk.py`, `drain.py` |
-| C1 | Discovery depth in `analyze`: the graph's layers in the PT report | K19 | M | `discover.py`, `graph.py` |
 | C2+ | ~~`FeedStale` in the watches~~ **done**; left: one feed under several markets | K23 | S | `feeds.py` |
 | C3+ | A collateral's share of its supply held in Morpho | K25 | S | `graph.py` |
 | C6 | Bridges as graph nodes, issuer and oracle registry entries, PT expiry in incidents | K19, K23 | M | `graph.py`, registry |
 | C4, C5 | External venues; Vault V1, other chains | K24, C5 | M–L | registry, `metamorpho-v1.1` |
 | D | Validate on your positions; Slack/Discord/email alerts; infrastructure; execution | — | — | — |
 
-If time is short before the judging: **A6's rest, then B4** (the pool move behind the backtest's oracle fall). `IMPROVEMENT.md` advises against more documentation and against phase D.
+If time is short before the judging: **A6's rest, then B4** (the pool move behind the backtest's oracle fall). C1 is done. `IMPROVEMENT.md` advises against more documentation and against phase D.
 
 ## 4. Phase A: the brief's chain, the rest
 

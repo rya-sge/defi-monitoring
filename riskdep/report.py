@@ -118,6 +118,7 @@ def write(
     mode: str,
     oracle_alt: dict | None = None,
     incident=None,
+    discovery: dict | None = None,
 ) -> tuple[Path, Path]:
     out_dir.mkdir(parents=True, exist_ok=True)
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
@@ -218,7 +219,7 @@ def write(
 <h2>Dependency stack</h2>
 <p class="muted">Discovered from live sources; each layer shows its share of the expected loss. Dashed: off-chain dependencies of the issuer (registry).</p>
 <pre class="mermaid">{e(mermaid(pos, sim))}</pre>
-<h2>How each failure reaches the position</h2>
+{_depth_html(discovery, e)}<h2>How each failure reaches the position</h2>
 <div class="scroll"><table><thead><tr><th>Layer / event</th><th>P(horizon)</th><th>Mean severity</th><th>Loss if it happens</th><th>Liquidates</th><th>Expected loss</th><th>Typical propagation</th></tr></thead>
 <tbody>{"".join(rows)}</tbody></table></div>
 <h2>Loss distribution</h2>
@@ -243,9 +244,21 @@ theme:(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'default')}});}
     hp.write_text(doc)
 
     jp = out_dir / "report.json"
-    payload = to_dict(pos, priors, sim, dec, quote, mode, oracle_alt, incident)
+    payload = to_dict(pos, priors, sim, dec, quote, mode, oracle_alt, incident, discovery)
     jp.write_text(json.dumps(payload, indent=2, default=str))
     return hp, jp
+
+
+def _depth_html(discovery: dict | None, e) -> str:
+    """D199: the layers the position's recorded graph adds to the five above."""
+    if not discovery:
+        return ""
+    items = "".join(f"<li>{e(x)}</li>" for x in discovery.get("lines", []))
+    return (
+        f"<h2>Discovery depth</h2><p class='muted'>From the borrower's recorded dependency graph (block "
+        f"{discovery.get('graph_block', 0):,}): the oracle's inputs and who can change them, the sibling markets, "
+        f"the collateral's backing and grade, the protocols' share of DeFi.</p><ul>{items}</ul>"
+    )
 
 
 def _clean(o):
@@ -268,6 +281,7 @@ def to_dict(
     mode: str,
     oracle_alt: dict | None = None,
     incident=None,
+    discovery: dict | None = None,
 ) -> dict:
     """The report as plain JSON-ready data. `write` persists this; the API serves it."""
     pos_d = {k: v for k, v in pos.__dict__.items() if k != "graph"}
@@ -289,5 +303,6 @@ def to_dict(
             "exit_quote": quote,
             "oracle_sensitivity": oracle_alt,
             "incident": incident.to_json() if incident else None,
+            "discovery": discovery or None,
         }
     )

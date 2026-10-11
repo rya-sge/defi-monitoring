@@ -51,4 +51,5 @@ def post_analyze(req: AnalyzeRequest = Body(default_factory=AnalyzeRequest)) -> 
         res.quote,
         "live" if req.live else "offline",
         res.oracle_alt,
+        discovery=res.discovery,
     )

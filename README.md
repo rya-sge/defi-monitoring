@@ -48,6 +48,8 @@ The impact given the incident is right to within 1 % where positions were liquid
 
 The brief's book with its own worked example, the PT-sUSDe loop on Morpho, as one pocket next to nine vaults: `analyze --book examples/brief-mixed-book.json --shock token=sUSDe:0.08 --exit-cost 0.11` ("leaving it costs 110,000 USD … for sure and saves 776,708 if the incident comes": EXIT).
 
+**The brief's PT example, discovered in depth.** `analyze --demo` now also reports what its dependency graph knows beyond the five layers: the meta-oracle's two sources and its 16 h switch, who can change the tokens and through which timelock (sUSDe: a 24 h timelock; Pendle's SY and USDC: none seen), the three sibling markets on sUSDe (at a 10 % fall, 97M PYUSD liquidatable in sUSDe/PYUSD alone), sUSDe's grade and its backing by USDe, and Ethena's and Pendle's concentration. Its incident names the sibling contagion.
+
 **No hack probability in these answers.** The brief starts from a known incident, so every answer above takes the incident as given; p\* replaces a probability by the threshold above which leaving pays. The hack-history priors (DefiLlama's hack record, `priors.py`) feed only `analyze --demo`'s ex-ante Monte Carlo, a secondary view.
 
 The same runs are served over HTTP (`POST /api/incident`, below). A borrower's view of the brief's PT example: `analyze --demo --shock issuer_depeg=0.08`.
@@ -268,7 +270,7 @@ python3 -m riskdep notify --level critical --from-start  # only criticals, inclu
 python3 -m riskdep notify --post out/book-incident.json  # the headline of an incident run, as a scenario
 ```
 
-A separate process next to `watch`: it reads the alert files and posts to a private Telegram channel (`keys.ini` `[alerts] telegram_bot_token`, `telegram_chat_id`). It sends **only when there is an alert** at or above the level, never a heartbeat. Standing findings, printed again at every watch start, are posted once per 1800 blocks and those of one start come as one message; only criticals ring the phone. Offsets are saved in `out/notify.state.json` after each send, so a restart neither skips nor resends. Setup and design: `TELEGRAM_BOT.md`; thresholds: `registry.json` `notify`.
+A separate process next to `watch`: it reads the alert files and posts to a private Telegram channel (`keys.ini` `[alerts] telegram_bot_token`, `telegram_chat_id`). It sends **only when there is an alert** at or above the level, never a heartbeat. Standing findings, printed again at every watch start, are posted once per 1800 blocks. The alerts of one block come as one message: the cause in plain words, the loss and the decision (EXIT or STAY) on top, the details folded underneath, and a "What to do" button to the runbook; only criticals ring the phone. Offsets are saved in `out/notify.state.json` after each send, so a restart neither skips nor resends. Setup and design: `TELEGRAM_BOT.md`; thresholds: `registry.json` `notify`.
 
 ## web: the browser UI
 

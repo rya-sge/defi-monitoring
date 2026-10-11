@@ -39,6 +39,7 @@ class AnalyzeResult:
     checks: list[crosscheck.Check] = field(default_factory=list)
     oracle_alt: dict | None = None
     incident: IncidentResult | None = None
+    discovery: dict = field(default_factory=dict)  # D199: the layers the position's recorded graph adds
 
 
 def analyze(
@@ -156,6 +157,16 @@ def analyze(
     if bad:
         dec.reasons.insert(0, "DATA CHECK FAILED — " + "; ".join(c.detail for c in bad))
 
+    depth = position_depth(pos, profile)
+    if incident and depth.get("siblings"):
+        # D202: the same incident reaches the markets that sell the same collateral or read the same price
+        s = depth["siblings"][:3]
+        incident.notes.append(
+            f"{len(depth['siblings'])} sibling market(s) take the same collateral or read the same price: their "
+            f"liquidations at a {depth['sibling_fall']:.0%} fall ("
+            + ", ".join(f"{x['label']} {x['liquidatable_at_fall']:,.0f} {x['unit']}" for x in s)
+            + ") sell into the same market and can deepen the fall"
+        )
     return AnalyzeResult(
         position=pos,
         priors=prs,
@@ -165,7 +176,49 @@ def analyze(
         checks=checks,
         oracle_alt=alt,
         incident=incident,
+        discovery=depth,
     )
+
+
+def position_depth(pos, profile=None) -> dict:
+    """D199–D202: the borrow position's extra layers, from its borrower's recorded graph (`graph --user <borrower>
+    --record`) and its market's admin surface read at that block; {} when the graph is not recorded. Offline only:
+    the graph is a recording, so the layers carry its block and date."""
+    from . import admin as AD
+    from . import depth as DP
+    from . import graph as GR
+
+    if not pos.morpho_market or not pos.borrower:
+        return {}
+    rdir = REPLAY_DIR / f"graph-{pos.borrower.lower()}"
+    if not (rdir / "meta.json").exists():
+        return {}
+    as_of = clock.as_of()
+    try:
+        g, block, *_ = GR.load([], [], True, "replay", rdir)
+    except S.CacheMiss:
+        return {}
+    finally:
+        clock.set_as_of(as_of)
+    ph, protocols = pharos_snapshot("offline"), llama_protocols("offline")
+    if ph:
+        GR.annotate_pharos(g, ph)
+    if protocols:
+        GR.annotate_tvl(g, protocols)
+    try:
+        aw = AD.AdminWatch(S.Fetcher("offline", rdir), [pos.morpho_market], block)
+        admin = DP.admin_rows(aw.contracts, aw.timelock_over)
+    except S.CacheMiss:
+        admin = []
+    tokens = [x.lower() for x in (pos.collateral_address, pos.underlying_address) if x]
+    gd = {"nodes": list(g.nodes.values()), "edges": g.edges}
+    d = DP.position_depth(gd, pos.morpho_market, tokens, admin)
+    if d and profile is not None:
+        d["oracle_profile"] = DP.profile_text(profile)  # D200: what the graph cannot see inside a meta-oracle
+    if d:
+        d["graph_block"] = block
+        d["lines"] = DP.lines(d)
+    return d
 
 
 # --- a known incident on a vault or a book of vaults (plans 2026-10-11-vault-incident … 2026-10-11-breakeven)

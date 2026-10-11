@@ -276,7 +276,7 @@ TVL concentration of the protocols in a graph (plan `2026-10-11-feed-quality`, D
 | `warn_category_min_usd` | USD | 1,000,000,000 | …when the category is at least this large |
 | `blue_markets` | slug | `morpho-blue` | the protocol of every Blue market |
 | `pt_assets` | slug | `pendle-v2` | the protocol of every Pendle PT |
-| `tokens` | address → slug | Re, Tori, infiniFi, Hastra, NUVA, Midas, Lido, Huma, AUTOfinance, f(x), Steakhouse | the protocol issuing a token; add a token by its address and the slug in `https://api.llama.fi/protocols` |
+| `tokens` | address → slug | Re, Tori, infiniFi, Hastra, NUVA, Midas, Lido, Huma, AUTOfinance, f(x), Steakhouse, Ethena (sUSDe, USDe) | the protocol issuing a token; add a token by its address and the slug in `https://api.llama.fi/protocols` |
 | `basis`, `warn_basis` | text | — | why |
 
 ## `backtest`
