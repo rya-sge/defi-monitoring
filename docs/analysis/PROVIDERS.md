@@ -35,6 +35,7 @@ Every external service the project calls, what it is used for, and what is known
 | Nexus Mutual | `https://api.nexusmutual.io/v2` | REST API | no | cover prices and capacity per product: an outside probability next to the breakeven p\* (optional) | `riskdep/nexus.py` (`API`) |
 | Pharos | `https://api.pharos.watch` | REST API | no | issuer grades, off-chain backing, common-mode groups of stablecoins (optional) | `riskdep/pharos.py` (`URL`) |
 | Etherscan | `https://api.etherscan.io/v2/api` | REST API | yes, `keys.ini` `[etherscan]` | whether an oracle's source is verified; an unclassified oracle input's contract name | `riskdep/sources.py` (`ETHERSCAN`) |
+| Telegram Bot API | `https://api.telegram.org/bot<token>/sendMessage` | REST API (outbound push) | yes, `keys.ini` `[alerts]` | posts watch alerts to a private channel (`notify`, optional) | `riskdep/notify.py` (`API`) |
 | jsDelivr | `https://cdn.jsdelivr.net` | CDN (browser) | no | Mermaid in the `analyze` report | `riskdep/report.py` |
 | cdnjs | `https://cdnjs.cloudflare.com` | CDN (browser) | no | Cytoscape.js in the graph page | `riskdep/graph.py` |
 | DefiLlama token icons | `https://token-icons.llamao.fi` | image CDN (browser) | no | token logos in the web graph's Asset nodes | `web/src/lib/graph.ts` (`nodeIcon`) |
@@ -183,6 +184,10 @@ Anvil fetches the state it needs from an upstream at the fork block, which must 
 | `/capacity` | each product's yearly price range (`minAnnualPrice`, `maxAnnualPrice`) and its capacity in USDC | `nexus.load`, `vault_incident.py` |
 
 **Recording.** `fixtures/replay/nexus/`, read 2026-10-11. **Limits.** None published; a price of 0 means the product is not sold.
+
+## Telegram Bot API
+
+**`https://api.telegram.org/bot<token>/sendMessage`**, REST, keyed: `keys.ini` `[alerts] telegram_bot_token` and `telegram_chat_id`. Used only by `notify`, which posts the watch alerts at or above a level (`registry.json` `notify`) to a private channel; design and setup in `TELEGRAM_BOT.md`. **It is a push, not a data source:** nothing it answers is used, nothing is cached, and the token, which sits in the URL path, is never printed or logged. What it posts leaves the machine and is stored by Telegram. **Limits.** About 20 messages a minute to one channel (`429` with `retry_after`, waited out); 4096 characters a message.
 
 ## Archive RPC (Alchemy)
 

@@ -928,5 +928,36 @@
         "source": "GAP.md K8: trading in YT-reUSD pushed PT-reUSD's implied yield from about 11 % to over 20 % in nine minutes; the min(TWAP, linear) oracle fell; 33 positions liquidated, no bad debt. 33 Liquidate events confirmed on-chain on 2026-10-11 (blocks 25,829,868 to 25,829,936)."
       }
     }
+  },
+  "conditional": {
+    "paths": 10000,
+    "seed": 7,
+    "grid": [
+      0.25,
+      0.5,
+      0.75,
+      1.0,
+      1.25,
+      1.5,
+      2.0
+    ],
+    "recover_prob": 0.3,
+    "deepen_sigma": 0.35,
+    "no_liquidator_prob": {
+      "none": 0.5,
+      "thin": 0.25,
+      "unknown": 0.2,
+      "deep": 0.05
+    },
+    "basis": "D165-D168, a judgement stated so it can be argued with: given the incident, its size is drawn around the fall given, as a multiple m of it: with recover_prob the markdown is partly reversed (m uniform on 0-1), otherwise it holds or deepens (m lognormal, median 1, sigma deepen_sigma), the fall capped below 100 %. The losses at m come from real incident runs at the grid's multiples (engine included), interpolated. With no_liquidator_prob, by the hit collateral's worst exit route (exit_liquidity), nobody liquidates and the loss is the shortfall with the liquidity locked. Calibrate on past markdowns (the DeFi hack corpus, Pharos depeg events) before relying on the tails."
+  },
+  "notify": {
+    "level": "warn",
+    "dedup_blocks": 1800,
+    "min_gap_seconds": 3,
+    "burst_max": 10,
+    "poll_seconds": 2,
+    "max_retries": 5,
+    "basis": "Telegram delivery of the watch alerts (TELEGRAM_BOT.md). Nothing is sent unless there is an alert at or above level: warn by default, since info alerts (allocation moves, small flows) are context, not risk. A standing finding (no transaction) is posted again only after dedup_blocks (1800 blocks, about 6 h), because every watch restart prints it again. min_gap_seconds spaces messages only when several alerts arrive together, under Telegram's limit of about 20 messages a minute to one channel; past burst_max queued messages the rest goes as one digest. poll_seconds is how often the alert files are read; max_retries bounds the waits on Telegram's 429 answer."
   }
 }

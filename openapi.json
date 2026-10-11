@@ -750,6 +750,16 @@
             "type": "number",
             "title": "Horizon Days",
             "default": 30.0
+          },
+          "conditional": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Conditional"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -849,6 +859,62 @@
           "address"
         ],
         "title": "BookVaultIn"
+      },
+      "Conditional": {
+        "properties": {
+          "paths": {
+            "type": "integer",
+            "title": "Paths"
+          },
+          "stay_mean": {
+            "type": "number",
+            "title": "Stay Mean"
+          },
+          "stay_p50": {
+            "type": "number",
+            "title": "Stay P50"
+          },
+          "stay_p95": {
+            "type": "number",
+            "title": "Stay P95"
+          },
+          "stay_p99": {
+            "type": "number",
+            "title": "Stay P99"
+          },
+          "leave_mean": {
+            "type": "number",
+            "title": "Leave Mean",
+            "description": "Loss left after leaving first, plus the certain cost of leaving."
+          },
+          "p_stay_worse": {
+            "type": "number",
+            "title": "P Stay Worse",
+            "description": "Share of paths where staying costs more than leaving."
+          },
+          "no_liquidator_share": {
+            "type": "number",
+            "title": "No Liquidator Share"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "paths",
+          "stay_mean",
+          "stay_p50",
+          "stay_p95",
+          "stay_p99",
+          "leave_mean",
+          "p_stay_worse",
+          "no_liquidator_share",
+          "text"
+        ],
+        "title": "Conditional",
+        "description": "Given the incident, its size and the liquidators drawn: the loss of staying against leaving, in USD."
       },
       "ExitQuote": {
         "properties": {
@@ -1131,6 +1197,12 @@
             ],
             "title": "Exit Cost",
             "description": "The cost of leaving as a share of what leaves (0.11 for the brief's 11 % unwind), instead of the vault's yield given up."
+          },
+          "conditional": {
+            "type": "boolean",
+            "title": "Conditional",
+            "description": "Add the distribution of the loss of staying given the incident (needs a token=\u2026 shock).",
+            "default": false
           },
           "live": {
             "type": "boolean",
@@ -2600,6 +2672,16 @@
               }
             ],
             "title": "Exit Cost Rate"
+          },
+          "conditional": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Conditional"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",

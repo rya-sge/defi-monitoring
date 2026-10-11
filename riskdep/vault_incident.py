@@ -101,6 +101,7 @@ class VaultIncident:
     outside: list[str] = field(default_factory=list)  # D145: Nexus cover prices on the hit collateral's protocols
     liquidity: tuple[float, float, float] = (0.0, 0.0, 0.0)  # D150: plain, forced (asset units), forced penalty
     exit_cost_rate: float | None = None  # D151: a flat cost of leaving, as a share of what leaves (else the yield)
+    conditional: dict | None = None  # D165: the loss of staying given the incident, drawn (USD, depositor's terms)
 
     def lines(self) -> list[str]:
         s = self.symbol
@@ -157,6 +158,8 @@ class VaultIncident:
         out.append(f"  verdict given the incident: {self.verdict}: {self.reason}")
         if self.hits and self.depositor:
             out.append(f"  if the incident is not certain: {self.breakeven_text()}")
+        if self.conditional:
+            out.append(f"  given the incident, drawn: {self.conditional['text']}")
         out += [f"  outside view: {o}" for o in self.outside]
         out += [f"  note: {n}" for n in self.notes]
         return out

@@ -241,12 +241,15 @@ def incident(
     horizon: float = 30.0,
     mode: str = "offline",
     exit_cost: float | None = None,
+    conditional: bool = False,
 ) -> VaultIncidentResult:
     """A known incident on every vault of a book, added up (shared by `analyze --vault|--book` and the API).
 
-    `shocks` in the CLI's syntax (`token=<collateral>:<fall>`, `borrower=<target>:<recovery>[:<n>]`). `exit_cost`, a share of what leaves, replaces the yield given up as the
-    cost of leaving (the brief's 11 % unwind). Raises
-    ValueError (bad shocks), FileNotFoundError (a vault not recorded, offline), `sources.CacheMiss`, `SourceError`."""
+    `shocks` in the CLI's syntax (`token=<collateral>:<fall>`, `borrower=<target>:<recovery>[:<n>]`). `exit_cost`, a
+    share of what leaves, replaces the yield given up as the cost of leaving (the brief's 11 % unwind). `conditional`
+    adds the distribution of the loss of staying given the incident, from runs at multiples of the fall (D165–D168).
+    Raises ValueError (bad shocks), FileNotFoundError (a vault not recorded, offline), `sources.CacheMiss`,
+    `SourceError`."""
     if exit_cost is not None and not 0 <= exit_cost < 1:
         raise ValueError("exit_cost is a share of what leaves, between 0 and 1 (0.11 for 11 %)")
     if mode not in MODES:
@@ -257,23 +260,79 @@ def incident(
             "a vault incident needs a shock: token=<collateral address or symbol>:<fall>, e.g. token=mGLOeuro:0.30, "
             "or borrower=<collateral, market id or all>:<recovery>[:<n>], e.g. borrower=mGLOeuro:0.5"
         )
+    if conditional and not any(k == "token" for k, *_ in parsed):
+        raise ValueError("the conditional distribution draws the size of a markdown: it needs a token=… shock")
     ph, nx = pharos_snapshot(mode), nexus_prices(mode)
-    incidents = []
-    for v in book.vaults:
-        f, block, all_oracles = vault_source(v.address, mode)
-        incidents.append(
+    sources = [(v, *vault_source(v.address, mode), vault_graph(v.address)) for v in book.vaults]
+
+    def run_all(scaled):
+        return [
             vault_incident.run(
                 f,
                 v.address,
                 block,
                 v.depositor or user,
-                parsed,
+                scaled,
                 profile_all=all_oracles,
                 pharos=ph,
-                graph=vault_graph(v.address),
+                graph=g,
                 horizon_days=horizon,
                 nexus=nx,
                 exit_cost_rate=exit_cost,
             )
-        )
-    return VaultIncidentResult(book, incidents, vault_book.aggregate(book, parsed, incidents))
+            for v, f, block, all_oracles, g in sources
+        ]
+
+    incidents = run_all(parsed)
+    result = vault_book.aggregate(book, parsed, incidents)
+    if conditional:
+        conditional_distribution(book, parsed, incidents, result, run_all)
+    return VaultIncidentResult(book, incidents, result)
+
+
+def conditional_distribution(book, parsed, incidents, result, run_all) -> None:
+    """D165–D168: run the incident at each multiple of `conditional.grid`, build each vault's loss curve in its
+    depositor's terms (the book's pocket when it has one), and draw the distribution for each vault and the book."""
+    from dataclasses import asdict
+
+    from . import conditional as CD
+
+    grid = [m for m in CD.C["grid"] if m != 1.0]
+    runs = {1.0: incidents}
+    for m in grid:
+        scaled = [(k, t, min(0.99, v * m), n) if k == "token" else (k, t, v, n) for k, t, v, n in parsed]
+        runs[m] = run_all(scaled)
+    mults = [0.0] + sorted(runs)
+    amounts = {v.address: v.amount for v in book.vaults}
+    curves = []
+    for i, inc in enumerate(incidents):
+        stay, leave, ratio = [0.0], [0.0], [1.0]
+        for m in mults[1:]:
+            x = runs[m][i]
+            usd = x.asset_usd or 1.0
+            if book.weighting == "pocket":
+                ln = vault_book.line(x, None, "pocket", amounts.get(x.vault))
+                s, lv = ln.loss_usd, ln.loss_usd - ln.saved_usd
+            else:
+                s, lv = x.loss_if_stay * usd, x.loss_if_exit_first * usd
+            noliq = sum(
+                h.no_liquidator_shortfall if h.event == "markdown" and h.liquidatable_debt > 0 else h.vault_loss
+                for h in x.hits
+            )
+            stay.append(s)
+            leave.append(lv)
+            ratio.append(noliq / x.vault_loss if x.vault_loss > 0 else 1.0)
+        line = next(ln for ln in result.lines if ln.vault == inc.vault)
+        cost = line.exit_cost_usd if book.weighting == "pocket" else inc.exit_cost * (inc.asset_usd or 1.0)
+        liquidatable = [h.exit_route for h in inc.hits if h.liquidatable_debt > 0]
+        p_noliq = CD.C["no_liquidator_prob"][CD.worst_route(liquidatable)] if liquidatable else 0.0
+        curves.append(CD.Curve(line.name, mults, stay, leave, ratio, cost, p_noliq))
+    fall = max(v for k, _, v, _ in parsed if k == "token")
+    for inc, c in zip(incidents, curves):
+        if inc.hits:
+            d = CD.simulate([c], fall)
+            inc.conditional = {**asdict(d), "text": d.text()}
+    hit = [c for inc, c in zip(incidents, curves) if inc.hits]
+    if hit:
+        d = CD.simulate(hit, fall)
+        result.conditional = {**asdict(d), "text": d.text()}

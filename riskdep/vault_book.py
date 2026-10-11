@@ -77,10 +77,13 @@ class BookIncident:
     p_star: float | None = None  # D144: the book's breakeven: Σ yield forgone ÷ Σ loss saved, over the horizon
     p_star_year: float | None = None
     horizon_days: float = 30.0
+    conditional: dict | None = None  # D165: the book's loss of staying given the incident, drawn, against leaving
 
     def text(self) -> list[str]:
         shock = "; ".join(self.shocks)
         out = [f"BOOK  {self.name}  ·  incident: {shock}  ·  weighting: {self.weighting}", f"  {self.headline}"]
+        if self.conditional:
+            out.append(f"  given the incident, drawn: {self.conditional['text']}")
         out.append(
             f"    {'vault':<44} {'in the book':>14} {'in hit mkts':>14} {'loss':>12} {'loss %':>7} {'p*/yr':>7}  verdict"
         )

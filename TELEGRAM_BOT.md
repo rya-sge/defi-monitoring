@@ -1,10 +1,10 @@
 # Telegram bot: push the watch alerts to a private channel
 
-How `riskdep` could post its alerts to a private Telegram channel, during the demo and beyond. This is the push-alert step D2 of `docs/analysis/NEXT_STEP.md`; `keys.example.ini` already reserves `[alerts] telegram_bot_token` and `telegram_chat_id` for it. Nothing here is built yet.
+How `riskdep` could post its alerts to a private Telegram channel, during the demo and beyond. This is the push-alert step D2 of `docs/analysis/NEXT_STEP.md`; `keys.example.ini` already reserves `[alerts] telegram_bot_token` and `telegram_chat_id` for it. **Status (2026-10-11): built** as `python3 -m riskdep notify` (`riskdep/notify.py`, tests in `tests/test_notify.py`); the bot is `@AgenceTousRiskBot`, its credentials are in `keys.ini`, and a test message reached the channel. Usage: `README.md`, section notify.
 
 ## Recommendation
 
-A **separate local process, `riskdep notify`, that tails `out/watch-*.jsonl` and posts each new alert to the channel** (option B below). It needs no change to the watch loop, no public server and no inbound port; it works the same on a live `watch` and on a `watch --replay`, so the demo can show a real recorded alert landing on a phone. Size: S, about a day with tests.
+A **separate local process, `riskdep notify`, that tails `out/watch-*.jsonl` and posts each new alert to the channel** (option B below). It needs no change to the watch loop, no public server and no inbound port; it works the same on a live `watch` and on a `watch --replay`, so the demo can show a real recorded alert landing on a phone. It sends **only when there is a risk**: an alert at or above the level (warn by default). No heartbeat, no periodic message.
 
 ## What already exists
 
@@ -33,7 +33,7 @@ B keeps the project's rule that the watcher is its own process writing `out/watc
 
 **Filtering.**
 - Minimum level, default `warn`; `info` is too frequent for a phone.
-- **Standing findings once.** At start, `watch` prints standing findings (`Exposure`, `Caps`, `NoNoticeChange`…) with `tx: null`; after a restart they come again. Deduplicate on `(target, event, title)` over a window (e.g. 6 h) kept in the state file, so only new facts are pushed.
+- **Standing findings once.** At start, `watch` prints standing findings (`Exposure`, `Caps`, `NoNoticeChange`…) with `tx: null`; after a restart they come again. Deduplicate on `(target, event, title)` over a window of 1800 blocks, about 6 h (`registry.json` `notify.dedup_blocks`; blocks rather than wall time, so replays behave like live runs), kept in the state file, so only new facts are pushed.
 - **Startup digest.** Alerts with `tx: null` from the same block are grouped into one message ("RockawayX USDC Yield, start: 2 critical, 5 warn"), followed by one message per critical.
 
 **Message.** `parse_mode=HTML`, one alert per message, under Telegram's 4096-character limit:
@@ -50,7 +50,7 @@ block 26161886 · tx 0xab12… (Etherscan link) · runbook: DrainWindow
 - Vault name from the watch's target (address shortened otherwise); tx and addresses as Etherscan links; the runbook link to `docs/alert-runbook.md` on GitHub.
 - Text from `title`, `detail` and `depositor_impact` only, escaped for HTML; `data` is not posted (it can be long and is for machines).
 
-**Rate limits.** Telegram allows about 20 messages a minute to one group or channel and answers `429` with `retry_after`. Send through a queue at one message every 3 s, honour `retry_after`, and above a burst threshold (say 10 queued) fall back to one digest message.
+**Rate limits.** Telegram allows about 20 messages a minute to one group or channel and answers `429` with `retry_after`. When several alerts arrive together, space them at least 3 s apart (no effect when there is nothing to send), honour `retry_after`, and above a burst threshold (say 10 queued) fall back to one digest message.
 
 **Failures never stop anything.** A network error leaves the offset unchanged and retries with backoff; the watcher is unaffected because it never waits on the notifier. `notify` prints "telegram: not configured" and exits if the keys are missing.
 

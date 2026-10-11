@@ -72,7 +72,7 @@ Steps of the two earlier versions that are now done, with their plans:
 | ~~**A1**~~ | ~~Look-through of wrapped collateral in vault incidents~~ **done** (plan `2026-10-11-wrapped-collateral`) | D124, K26 | S–M | `siblings.underlyings` |
 | **A2** | ~~Breakeven probability p\* for a vault and a book, Nexus outside view~~ **done** (plan `2026-10-11-breakeven`); left: p\* for a borrow position (`analyze --shock`), mixed books with borrow and PT pockets; one verdict: the shock engine's planned step 2 should feed this one, not add another; mixed books with borrow and PT pockets; Nexus Mutual (keyless) as an outside probability next to p\* and a "stay and insure" option (`docs/risk-assessment/outside-providers.md` §2) | K21, M6 | M | `vault_book.py`, `scenario.py`, `decide.py` |
 | **A3** | Detection → impact for vaults: an issuer NAV update triggers the vault incident; other alert types carry an impact | K20, K22 | S–M | `vault_incident.py`, the watches |
-| **A4** | Conditional Monte Carlo around a known incident | K6, K14 | M | `simulate.py`, `scenario.py`, `vault_incident.py` |
+| ~~**A4**~~ | ~~Conditional Monte Carlo around a known incident~~ **done** for vaults and books (plan `2026-10-11-conditional`); left: a borrow position's, common-mode second failures, calibration | K6, K14 | S | `conditional.py` |
 | **A5** | HTML for vault and book incidents | demo | S | `report.py` |
 | B1 | Borrow-rate channel (AdaptiveCurveIRM) | K10 | S | utilisation already read |
 | B2 | PT implied-yield channel | K11 | S | Pendle historical data |
@@ -254,7 +254,7 @@ The demo's CVaR 99 % is 98 % of equity, and its carry sits inside the expected l
 ## 8. Phase D: operations
 
 - **D1. Validate on your own positions.** The Belem and RockawayX vaults are now the demo; a run on the positions you hold, and your reaction to the output, would set the thresholds.
-- **D2. Push alerts (D4, D5).** A notifier behind the alert printer (Telegram, Slack, Discord, ntfy or email), credentials in `keys.ini` `[alerts]`; a deduplication store so a standing alert is not resent after a restart; a test message. **S.**
+- **D2. Push alerts (D4, D5).** **Telegram done on 2026-10-11** (`riskdep notify`, `TELEGRAM_BOT.md`): alerts at or above a level, standing findings once per 1800 blocks, offsets saved after each send; Slack, Discord, ntfy and email left. Original step: A notifier behind the alert printer (Telegram, Slack, Discord, ntfy or email), credentials in `keys.ini` `[alerts]`; a deduplication store so a standing alert is not resent after a restart; a test message. **S.**
 - **D3. Tests on a forked chain (T1).** Cause the events the recordings never had: an oracle pushed down, a liquidation with bad debt, a NAV cut published, a timelocked change. Needs an archive RPC; Foundry is installed. **M.**
 - **D4. Reliable infrastructure (D1, D3).** Backfill after a stop, a WebSocket trigger (`docs/websocket-vs-polling.md`), deeper reorgs. The optional eRPC proxy (`docs/erpc.md`) already absorbs rate limits and fails over; archive reads still need a paid RPC. **S–M.**
 - **D5. Execution (X1).** De-lever, migrate or exit through Morpho Bundles, simulated before signing, with a security design first; the tool never holds a key with full control. **L.**

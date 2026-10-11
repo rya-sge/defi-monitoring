@@ -28,6 +28,8 @@ Rules for editing:
 - [`feeds`](#feeds)
 - [`tvl`](#tvl)
 - [`backtest`](#backtest)
+- [`conditional`](#conditional)
+- [`notify`](#notify)
 - [How to add a yield issuer](#how-to-add-a-yield-issuer)
 
 ## `chain`
@@ -274,6 +276,33 @@ Past incidents replayed (plan `2026-10-11-backtest`, D161–D164). Read by `back
 | `basis` | text | — | the method |
 
 **Adding an episode.** Find the markets and a block window around the event, add it, run `backtest --episode <name> --record` once (archive RPC and Etherscan key in `keys.ini`), commit `fixtures/replay/backtest-<name>/`, and pin the result in `tests/test_backtest.py`.
+
+## `conditional`
+
+The conditional Monte Carlo of vault and book incidents (plan `2026-10-11-conditional`, D165–D168), `--conditional`. A stated judgement, to calibrate on past markdowns before relying on the tails.
+
+| Key | Unit | Default | What it controls |
+|---|---|---|---|
+| `paths`, `seed` | count, integer | 10,000, 7 | the number of paths and the generator's seed (runs are reproducible) |
+| `grid` | multiples of the fall | 0.25 … 2 | where the real incident is run to measure the loss curve |
+| `recover_prob` | probability | 0.3 | the markdown is partly reversed: m uniform on 0–1 |
+| `deepen_sigma` | σ of ln m | 0.35 | otherwise m is lognormal with median 1 |
+| `no_liquidator_prob` | probability by exit route | none 0.5, thin 0.25, unknown 0.2, deep 0.05 | nobody liquidates: the loss is the shortfall, the liquidity locked |
+| `basis` | text | — | why |
+
+## `notify`
+
+Telegram delivery of the watch alerts (`riskdep/notify.py`, `TELEGRAM_BOT.md`). Nothing is sent unless there is an alert at or above `level`.
+
+| Key | Unit | Default | What it controls |
+|---|---|---|---|
+| `level` | info / warn / critical | warn | the lowest level posted; `--level` overrides it |
+| `dedup_blocks` | blocks | 1800 (about 6 h) | a standing finding (no transaction) is posted again only after this many blocks, since every watch restart prints it again |
+| `min_gap_seconds` | seconds | 3 | the spacing between two messages when several alerts arrive together; no effect when nothing is sent |
+| `burst_max` | messages | 10 | past this many messages in one pass, the rest goes as one digest |
+| `poll_seconds` | seconds | 2 | how often the alert files are read |
+| `max_retries` | count | 5 | waits on Telegram's 429 before giving up until the next pass |
+| `basis` | text | — | why |
 
 ## How to add a yield issuer
 

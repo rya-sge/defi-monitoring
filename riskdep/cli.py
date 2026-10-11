@@ -43,6 +43,12 @@ def main(argv: list[str] | None = None) -> int:
         help="a book of vaults in a JSON file (see examples/), each vault with an optional depositor and label",
     )
     a.add_argument(
+        "--conditional",
+        action="store_true",
+        help="with --vault or --book and a token=… shock: the distribution of the loss of staying given the incident "
+        "(its size recovering or deepening, liquidators failing to act), against the certain cost of leaving",
+    )
+    a.add_argument(
         "--exit-cost",
         type=float,
         help="with --vault or --book: the cost of leaving as a share of what leaves (0.11 for the brief's 11 %% "
@@ -166,10 +172,22 @@ def main(argv: list[str] | None = None) -> int:
         "under fixtures/replay/backtest-<episode>/ (offline otherwise)",
     )
     bt.add_argument("--out", default=str(Path(__file__).resolve().parent.parent / "out"))
+    nt = sub.add_parser("notify", help="post the watch alerts to a Telegram channel (keys.ini [alerts])")
+    nt.add_argument("--level", choices=["info", "warn", "critical"], help="lowest level posted (registry: warn)")
+    nt.add_argument("--from-start", action="store_true", help="post what the alert files already hold, not only new")
+    nt.add_argument("--once", action="store_true", help="one pass over the alert files, then stop")
+    nt.add_argument("--test", action="store_true", help="send one test message and stop")
+    nt.add_argument("--post", metavar="JSON", help="post the headline of an incident run (out/book-incident.json)")
+    nt.add_argument("--out", default=str(Path(__file__).resolve().parent.parent / "out"))
     args = ap.parse_args(argv)
 
     if args.cmd == "backtest":
         return _backtest(ap, args)
+    if args.cmd == "notify":
+        from . import notify
+
+        args.level = args.level or notify.N["level"]
+        return notify.run(args)
 
     if S.FORK:
         # D180–D181: a local fork only; its clock is the fork's, which `anvil_increaseTime` moves ahead of ours
@@ -444,7 +462,7 @@ def _vault_incident(ap, args) -> int:
     mode = "record" if args.record else "refresh" if args.refresh else "live" if args.live else "offline"
     try:
         book = vault_book.load(Path(args.book)) if args.book else vault_book.from_addresses(args.vault, args.user)
-        res = pipeline.incident(book, args.shock, args.user, args.horizon, mode, args.exit_cost)
+        res = pipeline.incident(book, args.shock, args.user, args.horizon, mode, args.exit_cost, args.conditional)
     except (ValueError, FileNotFoundError) as e:
         ap.error(str(e))
     except S.CacheMiss as e:

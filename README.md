@@ -20,7 +20,7 @@ uv run python -m riskdep graph --vault 0xE0181090c22579B6A217f1522cbf8c9f1F0C196
 uv run python -m riskdep analyze --vault 0x2cA22cb25558fa2018ecb1CE4eD8AF92Ee7ea423 --shock token=fxSAVE:0.30
 
 # 3. The brief's own trade-off: ten 1M pockets, one hit, an 11 % cost to unwind it
-uv run python -m riskdep analyze --book examples/brief-ten-pockets.json --shock token=mGLOeuro:0.30 --exit-cost 0.11
+uv run python -m riskdep analyze --book examples/brief-ten-pockets.json --shock token=mGLOeuro:0.30 --exit-cost 0.11 --conditional
 ```
 
 What to read in the output:
@@ -33,6 +33,7 @@ What to read in the output:
 | `if the incident is not certain: … it pays if the incident's probability over 30 days is above 7.92%` | the breakeven: exiting is certain and costly, staying is uncertain |
 | `outside view: Nexus f(x) Protocol cover …` | an outside price to compare that probability with |
 | `Leaving Belem RWA EURCV costs 110,000 USD for sure, against 53,445 saved if the incident comes: stay.` | the brief's ten-pocket example, made explicit |
+| `given the incident, drawn: staying loses 52,067 USD on average (median 11,164, 95 % 246,211, 99 % 352,195); leaving now costs 110,000 …; staying is worse in 18% of 10,000 paths` | "exiting is expensive and certain, staying is cheap and uncertain": the uncertain side as a distribution (`--conditional`) |
 
 **Is the number defensible: a backtest.** `uv run python -m riskdep backtest` replays the PT-reUSD liquidations of 2026-08-25 (a Pendle yield spike moved a min(TWAP, linear) oracle; `GAP.md` K8). It reads the state 60 blocks before them, applies the oracle's observed fall, and compares the prediction with the 33 `Liquidate` events:
 
@@ -249,6 +250,17 @@ A book file lists vault addresses, each with an optional `label` and `depositor`
 
 - **Data date.** An offline run uses the snapshot's date, `fixtures/snapshot/as_of.json`, as "now", so the demo gives the same result on any later day. `--refresh` refetches everything and rewrites that date; `--live` fetches only what is missing and uses today's date.
 - **Oracle.** Whether the lending market's oracle follows the PT market is read from the oracle's structure when it decides (its inputs' class; a meta-oracle through its live source and its switch within the horizon, D96). Otherwise it is inferred by comparing prices; when the PT trades within 1 % of par (near maturity), that test can't tell, so the report says *ambiguous*. The report always shows the verdict under the other oracle behaviour too.
+
+## notify: alerts to Telegram
+
+```bash
+python3 -m riskdep notify --test                         # one test message to the channel
+python3 -m riskdep notify                                # follow out/watch-*.jsonl, post warn and critical
+python3 -m riskdep notify --level critical --from-start  # only criticals, including what the files already hold
+python3 -m riskdep notify --post out/book-incident.json  # the headline of an incident run, as a scenario
+```
+
+A separate process next to `watch`: it reads the alert files and posts to a private Telegram channel (`keys.ini` `[alerts] telegram_bot_token`, `telegram_chat_id`). It sends **only when there is an alert** at or above the level, never a heartbeat. Standing findings, printed again at every watch start, are posted once per 1800 blocks and those of one start come as one message; only criticals ring the phone. Offsets are saved in `out/notify.state.json` after each send, so a restart neither skips nor resends. Setup and design: `TELEGRAM_BOT.md`; thresholds: `registry.json` `notify`.
 
 ## web: the browser UI
 

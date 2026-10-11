@@ -305,6 +305,10 @@ class IncidentRequest(BaseModel):
         description="The cost of leaving as a share of what leaves (0.11 for the brief's 11 % unwind), instead of "
         "the vault's yield given up.",
     )
+    conditional: bool = Field(
+        default=False,
+        description="Add the distribution of the loss of staying given the incident (needs a token=… shock).",
+    )
     live: bool = Field(default=False, description="Read the chain instead of the recordings (nothing is saved).")
 
 
@@ -313,6 +317,20 @@ class BookSummary(BaseModel):
     title: str
     weighting: Literal["vault", "depositor", "pocket"]
     vaults: list[BookVaultIn]
+
+
+class Conditional(BaseModel):
+    """Given the incident, its size and the liquidators drawn: the loss of staying against leaving, in USD."""
+
+    paths: int
+    stay_mean: float
+    stay_p50: float
+    stay_p95: float
+    stay_p99: float
+    leave_mean: float = Field(description="Loss left after leaving first, plus the certain cost of leaving.")
+    p_stay_worse: float = Field(description="Share of paths where staying costs more than leaving.")
+    no_liquidator_share: float
+    text: str
 
 
 class MarketHit(BaseModel):
@@ -383,6 +401,7 @@ class VaultIncident(BaseModel):
         default=(0.0, 0.0, 0.0), description="What can leave: plain, through forceDeallocate, and its penalty."
     )
     exit_cost_rate: float | None = None
+    conditional: Conditional | None = None
 
 
 class VaultLine(BaseModel):
@@ -414,6 +433,7 @@ class BookIncident(BaseModel):
     p_star: float | None = None
     p_star_year: float | None = None
     horizon_days: float = 30.0
+    conditional: Conditional | None = None
 
 
 class IncidentResponse(BaseModel):
