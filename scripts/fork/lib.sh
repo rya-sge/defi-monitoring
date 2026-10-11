@@ -6,7 +6,11 @@ source "$HERE/addresses.env"
 R="$FORK_RPC"
 export RISKDEP_RPC_URL="$R" RISKDEP_FORK=1
 
-caption() { printf '\n\033[1;37;44m %s \033[0m\n' "$*"; }
+caption() {  # in the short cut (SHORT=1) the act numbers would skip, so they are left out
+  local t="$*"
+  [[ -n "${SHORT:-}" ]] && t="$(sed -E 's/^Act [0-9]+ — //' <<<"$t")"
+  printf '\n\033[1;37;44m %s \033[0m\n' "$t"
+}
 say() { printf '\033[36m  %s\033[0m\n' "$*"; }
 pause() { if [[ -n "${PAUSE:-}" ]]; then sleep "$PAUSE"; else read -r -p "  [Enter] " _; fi; }
 fail() { printf '\033[1;31m  check failed: %s\033[0m\n' "$*" >&2; exit 1; }

@@ -48,6 +48,17 @@ act0() {
 
 act1() {
   caption "Act 1 — before anything happens: what would a markdown cost?"
+  if [[ -n "${SHORT:-}" ]]; then
+    # the vault's incident recording (fixtures/replay/incident-<vault>/), offline: the same figures in a second
+    local f
+    for f in 10 30; do
+      say "if mGLOeuro were marked down $f %:"
+      (cd "$ROOT" && env -u RISKDEP_RPC_URL -u RISKDEP_FORK uv run python -m riskdep analyze --vault "$VAULT" \
+        --shock "token=mGLOeuro:0.$f" 2>/dev/null) | grep -E '^  (vault loss|verdict given)' | cut -c1-150 | sed 's/^/  /'
+    done
+    cp "$ROOT/out/vault-incident-${VAULT,,}.json" "$ROOT/out/fork-prediction-30.json"
+    return
+  fi
   riskdep analyze --vault "$VAULT" --shock token=mGLOeuro:0.10 --live || true
   pause
   riskdep analyze --vault "$VAULT" --shock token=mGLOeuro:0.30 --live || true
@@ -62,12 +73,15 @@ act2() {
   python3 -c "import sys; sys.exit(0 if float('$(ltv)') > 0.77 else 1)" || fail "the borrower is not liquidatable"
 }
 
+fund_liquidator() {  # 10M EURCV written into the token's balance slot, and Morpho approved
+  cast rpc anvil_setStorageAt "$EURCV" "$(cast index address "$LIQUIDATOR" "$EURCV_BALANCE_SLOT")" \
+    "$(cast to-uint256 10000000000000000000000000)" --rpc-url "$R" >/dev/null
+  send_as "$LIQUIDATOR" "$EURCV" "approve(address,uint256)" "$MORPHO" "$(cast max-uint)"
+}
+
 act3() {
   caption "Act 3 — a liquidator steps in"
-  local bal
-  bal="$(cast to-uint256 10000000000000000000000000)"  # 10M EURCV, written into the token's balance slot
-  cast rpc anvil_setStorageAt "$EURCV" "$(cast index address "$LIQUIDATOR" "$EURCV_BALANCE_SLOT")" "$bal" --rpc-url "$R" >/dev/null
-  send_as "$LIQUIDATOR" "$EURCV" "approve(address,uint256)" "$MORPHO" "$(cast max-uint)"
+  fund_liquidator
   local before after
   before="$(position | sed -n 3p | num)"
   send_as "$LIQUIDATOR" "$MORPHO" "liquidate((address,address,address,address,uint256),address,uint256,uint256,bytes)" \
@@ -138,6 +152,7 @@ act7() {
   caption "Act 7 — liquidating the rest realises the bad debt"
   local before c after
   before="$(assets)"
+  fund_liquidator
   c="$(position | sed -n 3p | num)"
   send_as "$LIQUIDATOR" "$MORPHO" "liquidate((address,address,address,address,uint256),address,uint256,uint256,bytes)" \
     "$MP" "$BORROWER" "$c" 0 0x
@@ -151,8 +166,9 @@ lost = (before - after) / 1e18
 print(f"\033[36m  vault assets {before / 1e18:,.0f} → {after / 1e18:,.0f} EURCV: {lost:,.0f} lost by the depositors\033[0m")
 try:
     pred = json.load(open(sys.argv[3]))["vault_loss"]
-    print(f"\033[36m  predicted in act 1 for a 30 % markdown: {pred:,.0f}; observed: {lost:,.0f}. The gap is act 3: "
-          "part of the debt was liquidated at 90,000, before the full loss reached the oracle\033[0m")
+    why = ("the same, within rounding" if abs(lost / pred - 1) < 0.01 else
+           "the gap is act 3: part of the debt was liquidated at 90,000, before the full loss reached the oracle")
+    print(f"\033[36m  predicted in act 1 for a 30 % markdown: {pred:,.0f}; observed: {lost:,.0f}: {why}\033[0m")
 except (OSError, KeyError, ValueError):
     print("\033[36m  (no act-1 prediction saved: run act 1 first)\033[0m")
 sys.exit(0 if after < before else 1)

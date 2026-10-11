@@ -966,5 +966,162 @@
     "adjustment_speed_per_year": 50,
     "max_rate_at_target": 2.0,
     "basis": "D169-D170: Morpho's AdaptiveCurveIRM (docs/external/morpho/docs.morpho.org-developers-docs, IRM): the borrow rate is the rate at target times a curve of utilisation (×4 at 100 %, ×1/4 at 0, 1 at the 90 % target); away from the target the rate at target moves exponentially at 50 per year times the normalised error, so at 100 % utilisation it doubles in about 5 days, capped at 200 %/yr."
+  },
+  "zama": {
+    "basis": "D171-D176: Zama's Confidential Vault protocol (docs/external/docs.zama.org-protocol-docs/confidential-vault/reference/addresses.md, Ethereum mainnet), every vault's deposit and redeem batchers, cShare and cAsset; each checked on-chain on 2026-10-11 (batcher vault(), fromToken(), toToken() match: 16 of 16). A cShare holds the vault shares of every confidential depositor: a pool, not one holder.",
+    "router": "0x11c6acfd368ddfab97d15649eb8043c0197fac4c",
+    "wrapper_registry": "0xeb5015ff021db115ace010f23f55c2591059bba0",
+    "instant_exit_minutes": 15,
+    "instant_basis": "unwrap the cShare to public vault shares (one Zama decryption, minutes) and redeem them: docs concepts; a stated estimate, to measure",
+    "vaults": {
+      "0xb344e331a3cda61d329fb3cca2be5942da87c418": {
+        "name": "bitwise-ausd-premium-rwa",
+        "deposit_batcher": "0xe396fd82a7aa2f89c16505c1ad46e91f3bc7d3b0",
+        "redeem_batcher": "0x52ffc3aa2372d42d1cb413c0e36659fff1e58ec1",
+        "cshare": "0x9abb8f3dc2863b1f108ded7ea41902fef6732a8c",
+        "casset": "0xea9a15a29dd180c40442142caeefc491d37bfdb2",
+        "underlying": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "deploy_block": 25976034
+      },
+      "0x3d5eccb62974178236a768a7ef14d3ce468fbe91": {
+        "name": "confidential-wintermute-wbtc",
+        "deposit_batcher": "0xac82e75fba31122c1feb575ebc371aa2ef78604d",
+        "redeem_batcher": "0x83540af3adfc4d3133139d57d4bab17828902f05",
+        "cshare": "0xf921a5b0634f4236b21a4e948317abf9a2e86b6f",
+        "casset": "0xd86ae89c089b380f064fe01899b4071f1eb6bb3d",
+        "underlying": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+        "deploy_block": 25976163,
+        "deposit_gate": "0x1460784324f78c293f6f4668a9ba047a5925e264"
+      },
+      "0x32401b9fb79065bc15949de0bd43927492f02f0c": {
+        "name": "flowdesk-ausd-rwa",
+        "deposit_batcher": "0xae09d50c6b6e91d9fbe50d168ea6567759e930f8",
+        "redeem_batcher": "0xe7761e3864b077728cafe4e18e9c8c23b6f896d0",
+        "cshare": "0x76a3f985315aac9789cb5bf8a5bb83bff55fd5a6",
+        "casset": "0xea9a15a29dd180c40442142caeefc491d37bfdb2",
+        "underlying": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "deploy_block": 25976042
+      },
+      "0xb48c056c5608ba2ee4cd94af2bf4b1f25295bd7e": {
+        "name": "flowdesk-usdt-high-yield",
+        "deposit_batcher": "0xbebee65445dad2f31628add14535fd0b3fc915b4",
+        "redeem_batcher": "0xd2f3f554f995c12e2bfe5e155397cb6272643744",
+        "cshare": "0xa28a369df348ac232e4daf7b0ef90280d8707d7f",
+        "casset": "0xae0207c757aa2b4019ad96edd0092ddc63ef0c50",
+        "underlying": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+        "deploy_block": 25976050,
+        "deposit_gate": "0x2bbba2fd0ae8976c798499477c03b47b88fba9fa"
+      },
+      "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965": {
+        "name": "rockawayx-usdc-high-yield",
+        "deposit_batcher": "0x2deafb36f3b118d434cde4708e8350eae918724d",
+        "redeem_batcher": "0xf18ad9f94a7ea994fdcbc5fd5c5da326a341d8a8",
+        "cshare": "0x4fccf8046fb7fb7ab76321bd39c27453e396b88f",
+        "casset": "0xe978f22157048e5db8e5d07971376e86671672b2",
+        "underlying": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "deploy_block": 25976058
+      },
+      "0xc207d3f66537d7f66456808379a0e560cf20da36": {
+        "name": "rockawayx-usdc-rwa",
+        "deposit_batcher": "0x084fd3a517d6dae1f8e3e5481b65107fd7e5eec1",
+        "redeem_batcher": "0x43e8f7b280b19637d2a7e3008657282aaf2c0e4b",
+        "cshare": "0xb1b18ad1f16d744c470cb6b09cb826affcc9eb30",
+        "casset": "0xe978f22157048e5db8e5d07971376e86671672b2",
+        "underlying": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "deploy_block": 25976066,
+        "deposit_gate": "0x51f667a68c2ebec5018019d7d75fd5c0ed70d525"
+      },
+      "0xbeeffabcd0db09589dd21854aa760c52ab4bf04f": {
+        "name": "steakhouse-tgbp",
+        "deposit_batcher": "0xfd899e481c7349d107005fefb1d19f33923b481a",
+        "redeem_batcher": "0x2fb51a8fe20d9cc830b9ca5251f8d845eb5baaa7",
+        "cshare": "0xba4cff6ed6f7cb2a58776deca4e984b498446762",
+        "casset": "0xa873750ccbafd5ec7dd13bfd5237d7129832edd9",
+        "underlying": "0x27f6c8289550fce67f6b50bed1f519966afe5287",
+        "deploy_block": 25976075
+      },
+      "0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757": {
+        "name": "steakhouse-usdc-high-yield",
+        "deposit_batcher": "0x321c9aab1390100f6e7fe1735a928ec0f16252f0",
+        "redeem_batcher": "0x807c367da7b9228643b06390e199e33cca7cc533",
+        "cshare": "0x501b014f86a73a7199e00cb31c0e9565ac51e51b",
+        "casset": "0xe978f22157048e5db8e5d07971376e86671672b2",
+        "underlying": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "deploy_block": 25976085
+      },
+      "0xbeef00a59b577423653a1526c7009bde103f542b": {
+        "name": "steakhouse-usdc-v3",
+        "deposit_batcher": "0xa07c00a3b955b805b3ea76b086f95a3e793715d5",
+        "redeem_batcher": "0x3a906d6509eb4171ee9fc71d083fb1638baf083d",
+        "cshare": "0x66bf74e96900d1a19c7070d939d124f2f565c458",
+        "casset": "0xe978f22157048e5db8e5d07971376e86671672b2",
+        "underlying": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "deploy_block": 25977975,
+        "deposit_gate": "0x47c591a3bc346913d0b6bdd96fb50e34efa268aa"
+      },
+      "0xbeeff07d991c04cd640de9f15c08ba59c4fedeb7": {
+        "name": "steakhouse-usdt-high-yield",
+        "deposit_batcher": "0xe1bc291cf6fd71173db73d58f1b25fc371b9aa6d",
+        "redeem_batcher": "0xfc659fa98ac62970cae2c594be32fe4f8b844ea3",
+        "cshare": "0x80ae7dbce3c1696d3eed04ec8348c3c432322273",
+        "casset": "0xae0207c757aa2b4019ad96edd0092ddc63ef0c50",
+        "underlying": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+        "deploy_block": 25976097
+      },
+      "0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9": {
+        "name": "steakhouse-usdt-prime",
+        "deposit_batcher": "0x737f4558c0cc7c29b56dd13c34b68e967c91e399",
+        "redeem_batcher": "0x7afb2cd6d41c379e3d8b46f206346b63a67f4d43",
+        "cshare": "0x1f6a937119c0c34db0a2c4f000386a3bfd4a9e73",
+        "casset": "0xae0207c757aa2b4019ad96edd0092ddc63ef0c50",
+        "underlying": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+        "deploy_block": 25976104
+      },
+      "0x55c1b6e461a6334b567baf0feb5d728715446f05": {
+        "name": "wintermute-usdc-pendle-looping",
+        "deposit_batcher": "0x1b731ec615165094ec4d695b0a1c8ee31366cf84",
+        "redeem_batcher": "0xd671b562fdece574da12295d1680f6a7a0af2963",
+        "cshare": "0xb6e5299fc56053dd5440104fd6fd2a3cd064edbc",
+        "casset": "0xe978f22157048e5db8e5d07971376e86671672b2",
+        "underlying": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "deploy_block": 25976114
+      },
+      "0x5dc53a23adc9f2bed98de6f59f7f309a7c71ff2b": {
+        "name": "wintermute-usdc-prime",
+        "deposit_batcher": "0xd26f1546e7afd5881f132967637957416802865a",
+        "redeem_batcher": "0x2b5eb25da24dcd00a825487c60401f9736091006",
+        "cshare": "0x2ebbd099f66b0ca94dd82b4c06fe3eef6aff853c",
+        "casset": "0xe978f22157048e5db8e5d07971376e86671672b2",
+        "underlying": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "deploy_block": 25976124
+      },
+      "0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd": {
+        "name": "wintermute-usdc-select",
+        "deposit_batcher": "0x87356ade88315aed3ac61b42cacc3a263730b1bd",
+        "redeem_batcher": "0x4f555b54842e609ba62843e0ab4ff184a436772e",
+        "cshare": "0x77f8207ee451441336538ba07a2f425780ded8db",
+        "casset": "0xe978f22157048e5db8e5d07971376e86671672b2",
+        "underlying": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "deploy_block": 25976134
+      },
+      "0xbf29043164660c60a2a72cd15ffe2304e87b6838": {
+        "name": "wintermute-usdt-prime",
+        "deposit_batcher": "0xfb21951f291e742f24ab4f5c0c11e7bc8864142a",
+        "redeem_batcher": "0x99384d982399a9d890873e402ec04dee7dad8737",
+        "cshare": "0x63a60acc304b84ef829b263f28e7b636bf77d45a",
+        "casset": "0xae0207c757aa2b4019ad96edd0092ddc63ef0c50",
+        "underlying": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+        "deploy_block": 25976144
+      },
+      "0x500ae64100d7dbdb640531085c2f5d40cdc8930d": {
+        "name": "wintermute-usdt-select",
+        "deposit_batcher": "0x7320830992a924e6d2f3d3e9a74fbd103e9a20ae",
+        "redeem_batcher": "0x79e621c35b93329bbb6f06d9635981b9a5f4a255",
+        "cshare": "0xbac6dedf2c10d6d381f9dbd9efd69d93ffcef50b",
+        "casset": "0xae0207c757aa2b4019ad96edd0092ddc63ef0c50",
+        "underlying": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+        "deploy_block": 25976153
+      }
+    }
   }
 }

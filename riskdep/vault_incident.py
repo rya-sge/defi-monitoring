@@ -29,6 +29,7 @@ from . import oracle_class as OC
 from . import pharos as PH
 from . import scenario
 from . import sources as S
+from . import zama as ZM
 from .discover import REGISTRY
 from .vault import discover_vault, largest_depositor, read_state
 
@@ -102,6 +103,7 @@ class VaultIncident:
     liquidity: tuple[float, float, float] = (0.0, 0.0, 0.0)  # D150: plain, forced (asset units), forced penalty
     exit_cost_rate: float | None = None  # D151: a flat cost of leaving, as a share of what leaves (else the yield)
     conditional: dict | None = None  # D165: the loss of staying given the incident, drawn (USD, depositor's terms)
+    zama: list[str] = field(default_factory=list)  # D174: a confidential depositor's two exits, for a Zama vault
 
     def lines(self) -> list[str]:
         s = self.symbol
@@ -160,6 +162,7 @@ class VaultIncident:
             out.append(f"  if the incident is not certain: {self.breakeven_text()}")
         if self.conditional:
             out.append(f"  given the incident, drawn: {self.conditional['text']}")
+        out += [f"  confidential (Zama): {z}" for z in self.zama]
         out += [f"  outside view: {o}" for o in self.outside]
         out += [f"  note: {n}" for n in self.notes]
         return out
@@ -567,7 +570,7 @@ def run(
     `horizon_days` and the vault's yield give the breakeven probability; `nexus` adds cover prices (D142–D146)."""
     shocks = normalise(token_shocks)
     view = discover_vault(f, vault, block)
-    dep = depositor.lower() if depositor else largest_depositor(f, vault)
+    dep = depositor.lower() if depositor else largest_depositor(f, vault, frozenset(ZM.POOLS))
     st = read_state(f, view, block, dep)
     risk = MR.VaultRisk(f, view, st, block)
     shares = MR.vault_supply_shares(st, risk.markets)
@@ -773,7 +776,14 @@ def run(
             )
     if dep and st.total_supply:
         notes.append(f"the depositor holds {st.depositor_shares / st.total_supply:.2%} of the vault")
-    return VaultIncident(
+    zama_lines = []
+    if ZM.entry(view.address):
+        try:
+            zs = ZM.read(f, view.address, block)
+            zama_lines = ZM.exits(zs, any(h.oracle_class == OC.CONSTANT_PRICE and h.vault_loss > 0 for h in hits))
+        except (S.CacheMiss, S.SourceError, TypeError):
+            zama_lines = ["a Zama confidential vault: its batchers could not be read (record the vault again)"]
+    inc = VaultIncident(
         view.address,
         view.name,
         view.asset_symbol,
@@ -808,6 +818,8 @@ def run(
         (liq.plain / unit, liq.forced / unit, liq.penalty),
         exit_cost_rate,
     )
+    inc.zama = zama_lines
+    return inc
 
 
 def collateral_chains(

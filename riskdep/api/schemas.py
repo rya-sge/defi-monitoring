@@ -402,6 +402,9 @@ class VaultIncident(BaseModel):
     )
     exit_cost_rate: float | None = None
     conditional: Conditional | None = None
+    zama: list[str] = Field(
+        default_factory=list, description="For a Zama confidential vault: the confidential share and the two exits."
+    )
 
 
 class VaultLine(BaseModel):

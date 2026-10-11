@@ -394,8 +394,9 @@ def read_light(f: S.Fetcher, view: VaultView, block: int, before: VaultState) ->
     return light_state(before, block, ta, idle, real, prices, can_send, can_recv)
 
 
-def largest_depositor(f: S.Fetcher, vault: str) -> str | None:
-    """Default depositor via the Morpho API (D24): the largest share holder."""
+def largest_depositor(f: S.Fetcher, vault: str, exclude: frozenset[str] | set[str] = frozenset()) -> str | None:
+    """Default depositor via the Morpho API (D24): the largest share holder, skipping `exclude` (D172: a Zama cShare,
+    which pools every confidential depositor)."""
     try:
         d = S.morpho(
             f,
@@ -403,7 +404,7 @@ def largest_depositor(f: S.Fetcher, vault: str) -> str | None:
               positions(first:100){ items{ user{ address } shares } } } }""",
             {"a": vault},
         )
-        items = d["vaultV2ByAddress"]["positions"]["items"]
+        items = [i for i in d["vaultV2ByAddress"]["positions"]["items"] if i["user"]["address"].lower() not in exclude]
         top = max(items, key=lambda i: int(i["shares"] or 0), default=None)
         return top["user"]["address"].lower() if top else None
     except (S.SourceError, S.CacheMiss, KeyError, TypeError):

@@ -189,6 +189,10 @@ Anvil fetches the state it needs from an upstream at the fork block, which must 
 
 **`https://api.telegram.org/bot<token>/sendMessage`**, REST, keyed: `keys.ini` `[alerts] telegram_bot_token` and `telegram_chat_id`. Used only by `notify`, which posts the watch alerts at or above a level (`registry.json` `notify`) to a private channel; design and setup in `TELEGRAM_BOT.md`. **It is a push, not a data source:** nothing it answers is used, nothing is cached, and the token, which sits in the URL path, is never printed or logged. What it posts leaves the machine and is stored by Telegram. **Limits.** About 20 messages a minute to one channel (`429` with `retry_after`, waited out); 4096 characters a message.
 
+## Zama contracts (through the Ethereum RPC)
+
+No new endpoint: the Zama batchers and the vault's `balanceOf(cShare)` are read by `eth_call` on the main RPC (`zama.read`: `currentBatchId`, `batchCreatedAt`, `batchMinBatchAge`, `paused`, `balanceOf`, `totalSupply`). Recorded at the incident's block through the archive route below.
+
 ## Archive RPC (Alchemy)
 
 **`https://eth-mainnet.g.alchemy.com/v2/<key>`**, JSON-RPC, keyed: `keys.ini` `[alchemy] alchemy_ethereum_endpoint` (or any archive endpoint in `[rpc] url`). Used only by `backtest --record`, to read state at a past block, which the free publicnode no longer serves. It is a **route**: requests go to it, responses are cached under the public RPC's URL (`sources.routed_rpc`), so no file and no output carries the key, and the replay needs none. **Limits** (free plan, 2026-10-11): `eth_getLogs` over at most 10 blocks, hence events through Etherscan; batches of `eth_call` at a past block work.

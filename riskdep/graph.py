@@ -634,6 +634,67 @@ def load(
     return g, block, users, vaults, siblings
 
 
+def annotate_zama(g: Graph) -> int:
+    """D175: for each vault of the graph entered through Zama's Confidential Vault protocol, the hidden layer a
+    confidential depositor depends on: the cShare pool that holds its shares, the deposit and redeem batchers (daily),
+    the confidential asset, Zama's decryption (KMS and coprocessors) that every exit needs, and the wrapper registry
+    that can pause the wrappers. From the registry's verified addresses; no read. Returns the number of vaults."""
+    from . import zama as ZM
+
+    n = 0
+    for vid in [i for i, x in g.nodes.items() if x["kind"] == "Actor"]:
+        e = ZM.entry(vid)
+        if e is None:
+            continue
+        n += 1
+        kms = g.node(
+            "zama:protocol",
+            "External",
+            "Zama Protocol (KMS, coprocessors)",
+            role="decrypts every batch aggregate and every unwrap: if it halts, no confidential exit completes",
+            source="docs/external/docs.zama.org-protocol-docs (D175)",
+        )
+        reg = g.node(
+            ZM.Z["wrapper_registry"],
+            "Admin",
+            "Zama token wrapper registry",
+            address=ZM.Z["wrapper_registry"],
+            role="its governance can pause a wrapper",
+        )
+        cs = g.node(
+            e["cshare"],
+            "Asset",
+            "cShare (confidential vault shares)",
+            address=e["cshare"],
+            zama_vault=e["name"],
+            pool=True,
+            role="holds the vault shares of every confidential depositor: one pool, not one holder",
+        )
+        ca = g.node(e["casset"], "Asset", "cAsset (confidential underlying)", address=e["casset"])
+        g.edge(cs, vid, "wraps")
+        if e["underlying"] in g.nodes:
+            g.edge(ca, e["underlying"], "wraps")
+        rb = g.node(
+            e["redeem_batcher"],
+            "Pool",
+            "Zama redeem batcher (daily)",
+            address=e["redeem_batcher"],
+            role="the confidential exit: one batch a day, settled after a decryption",
+        )
+        db = g.node(e["deposit_batcher"], "Pool", "Zama deposit batcher (daily)", address=e["deposit_batcher"])
+        g.edge(rb, vid, "redeems from")
+        g.edge(db, vid, "deposits into")
+        g.edge(rb, cs, "takes")
+        g.edge(db, ca, "takes")
+        for x in (cs, ca, rb, db):
+            g.edge(x, kms, "decrypted by")
+        for x in (cs, ca):
+            g.edge(x, reg, "can be paused by")
+        if e.get("deposit_gate"):
+            g.edge(vid, db, "accepts deposits only from", gate=e["deposit_gate"])
+    return n
+
+
 def annotate_tvl(g: Graph, protocols: list[dict]) -> int:
     """D160: each Blue market, PT and issuer token of the graph points to the DefiLlama protocol it belongs to, an
     External node carrying that protocol's TVL, its share of DeFi and of its category, and whether that is a

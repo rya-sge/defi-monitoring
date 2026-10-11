@@ -286,6 +286,7 @@ def main(argv: list[str] | None = None) -> int:
         graded = GR.annotate_pharos(g, ph) if ph else 0
         protocols = pipeline.llama_protocols("offline" if args.replay else "live")
         drawn = GR.annotate_tvl(g, protocols) if protocols else 0
+        confidential = GR.annotate_zama(g)
         title = "Morpho dependency graph: " + ", ".join([u[:10] + "…" for u in users] + [v[:10] + "…" for v in vaults])
         hp, jp = GR.write(g, Path(args.out), title, GR.subtitle_for(block))
         kinds = {}
@@ -296,6 +297,8 @@ def main(argv: list[str] | None = None) -> int:
         print(
             f"TVL concentration: {drawn} protocol(s) from DefiLlama" if protocols else "TVL concentration: not checked"
         )
+        if confidential:
+            print(f"Zama: {confidential} vault(s) entered confidentially, their batchers and decryption drawn")
         print(f"html: {hp}\njson: {jp}")
         return 0
 

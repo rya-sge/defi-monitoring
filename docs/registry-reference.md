@@ -30,6 +30,7 @@ Rules for editing:
 - [`backtest`](#backtest)
 - [`conditional`](#conditional)
 - [`irm`](#irm)
+- [`zama`](#zama)
 - [`notify`](#notify)
 - [How to add a yield issuer](#how-to-add-a-yield-issuer)
 
@@ -316,6 +317,19 @@ Morpho's AdaptiveCurveIRM, for the timing of a `borrow_rate` incident (plan `202
 | `adjustment_speed_per_year` | per year | 50 | how fast the rate at target moves at full error: it doubles in ln 2 / 50 years, about 5 days |
 | `max_rate_at_target` | APY | 2.0 | its cap |
 | `basis` | text | — | the source |
+
+## `zama`
+
+Zama's Confidential Vault protocol (plan `2026-10-11-zama`, D171–D176). Read by `zama.py`, `vault.py`, `exit_queue.py`, `vault_incident.py` and `graph.py`.
+
+| Key | Unit | Default | What it controls |
+|---|---|---|---|
+| `vaults.<vault address>` | object | the 16 mainnet vaults | `name`, `deposit_batcher`, `redeem_batcher`, `cshare` (the pool), `casset`, `underlying`, `deploy_block`, optional `deposit_gate` |
+| `router`, `wrapper_registry` | address | chain-level contracts | drawn in `graph` |
+| `instant_exit_minutes` | minutes | 15 | the instant exit's duration (one decryption), a stated estimate |
+| `basis`, `instant_basis` | text | — | the source and the on-chain check |
+
+**Adding a vault.** From the Zama address list, add the vault's entry, and check its batchers' `vault()`, `fromToken()` and `toToken()` on-chain.
 
 ## How to add a yield issuer
 

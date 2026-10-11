@@ -18,7 +18,11 @@ PID="$OUT/anvil.pid"
 PORT="${FORK_RPC##*:}"
 
 stop() {
-  if [[ -f "$PID" ]] && kill -0 "$(cat "$PID")" 2>/dev/null; then kill "$(cat "$PID")"; echo "anvil stopped"; fi
+  if [[ -f "$PID" ]] && kill -0 "$(cat "$PID")" 2>/dev/null; then
+    kill "$(cat "$PID")"; kill -CONT "$(cat "$PID")" 2>/dev/null || true  # resumes it if suspended (Ctrl-Z)
+    for _ in $(seq 1 20); do kill -0 "$(cat "$PID")" 2>/dev/null || break; sleep 0.25; done
+    echo "anvil stopped"
+  fi
   rm -f "$PID"
 }
 
@@ -73,10 +77,16 @@ case "${1:-}" in
 esac
 
 stop
+if cast chain-id --rpc-url "$FORK_RPC" >/dev/null 2>&1; then
+  echo "something already answers on $FORK_RPC and was not started by this script (a demo? scripts/fork/demo.sh --stop)" >&2
+  exit 1
+fi
 UP="$(upstream)"
 BLOCK="${1:-$(( $(cast block-number --rpc-url "$UP") - 5 ))}"
 echo "forking mainnet at block $BLOCK"
+# throttled upstreams (HTTP 429) are retried with a back-off instead of failing the request riskdep is waiting on
 anvil --fork-url "$UP" --fork-block-number "$BLOCK" --chain-id 1 --port "$PORT" --auto-impersonate \
+  --retries 12 --fork-retry-backoff 2000 --timeout 60000 \
   --dump-state "$OUT/fork-$BLOCK.json" >"$OUT/anvil.log" 2>&1 &
 echo $! >"$PID"
 wait_up

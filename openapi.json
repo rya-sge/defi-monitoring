@@ -2682,6 +2682,14 @@
                 "type": "null"
               }
             ]
+          },
+          "zama": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Zama",
+            "description": "For a Zama confidential vault: the confidential share and the two exits."
           }
         },
         "type": "object",

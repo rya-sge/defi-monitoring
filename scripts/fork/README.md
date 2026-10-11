@@ -9,7 +9,10 @@ Needs Foundry (`anvil`, `cast`, `forge`) and the project's `uv` environment. No 
 ```bash
 scripts/fork/demo.sh            # everything, in one terminal: build, fork, watch in the background, acts 0–7, stop
 scripts/fork/demo.sh --record   # the same, recorded to out/video/demo.cast (needs: sudo apt install asciinema)
+scripts/fork/demo.sh --stop     # from another terminal: stops the demo, its watch and the fork
 ```
+
+Ctrl-C in the demo's terminal stops it the same way. Only one demo runs at a time: a second one refuses to start, and `start-fork.sh` refuses a port that something else already holds.
 
 It builds the contracts, forks mainnet at block 26,165,572, starts `riskdep watch --step 1 --poll 2` on the Belem vault in the background and plays each act; under each act it prints, marked `riskdep ▸`, the alerts the watch raised for it. At the end it stops the watch and the fork. `--manual` waits for Enter between steps (presenting live), `--fast` skips act 1 (the two predictions, ≈ 1.5 min), `--block N` forks elsewhere. The watch's full output is in `out/demo/watch.log`.
 

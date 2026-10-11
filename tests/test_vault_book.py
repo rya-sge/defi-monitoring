@@ -98,10 +98,11 @@ def test_book_contagion_skips_markets_the_book_holds(tmp_path):
 
 
 def test_every_line_says_why(tmp_path):
-    """IMPROVEMENT 2.1: Confidential RWA loses 12 % and reads STAY: its depositor is 99 % of the vault."""
+    """IMPROVEMENT 2.1: every reached vault says why. Confidential RWA's 99 % holder is the Zama cShare pool, so its
+    default depositor is now the largest public holder, for whom leaving first pays (plan 2026-10-11-zama)."""
     assert cli.main(["analyze", "--book", str(BOOK), "--shock", "token=PST:0.30", "--out", str(tmp_path)]) == 0
     lines = {ln["name"]: ln for ln in json.loads((tmp_path / "book-incident.json").read_text())["lines"]}
-    assert lines["RockawayX Confidential RWA USDC"]["reason"].startswith("nothing to save by leaving first: the dep")
+    assert lines["RockawayX Confidential RWA USDC"]["reason"].startswith("leaving pays above")
     assert lines["Huma USDC Main"]["reason"].startswith("leaving pays above")
     assert lines["Belem RWA EURCV"]["reason"] == ""  # not reached
 
