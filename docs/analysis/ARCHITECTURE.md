@@ -313,6 +313,7 @@ The design decisions are numbered across twelve plans, in the order the incremen
 | `plan/2026-10-11-pharos.plan.md` | Pharos, keyless: grades, off-chain backing, common-mode groups | D133–D138 |
 | `plan/2026-10-11-one-number.plan.md` | the shock engine as the impact core of vault and book incidents | D139–D141 |
 | `plan/2026-10-11-breakeven.plan.md` | the breakeven probability p\* of vault and book incidents; Nexus as an outside view | D142–D146 |
+| `plan/2026-10-11-pt-channels.plan.md` | the PT loop's implied-yield and borrow-rate incidents | D169–D170 |
 | `plan/2026-10-11-conditional.plan.md` | the loss of staying given the incident, drawn, against the certain cost of leaving | D165–D168 |
 | `plan/2026-10-11-backtest.plan.md` | `backtest`: the 2026-08-25 PT-reUSD liquidations replayed against the prediction | D161–D164 |
 | `plan/2026-10-11-feed-quality.plan.md` | feed freshness in `graph` and vault incidents; TVL concentration of the graph's protocols | D155–D160 |

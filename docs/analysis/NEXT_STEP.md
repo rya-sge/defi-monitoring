@@ -74,8 +74,8 @@ Steps of the two earlier versions that are now done, with their plans:
 | **A3** | Detection → impact for vaults: an issuer NAV update triggers the vault incident; other alert types carry an impact | K20, K22 | S–M | `vault_incident.py`, the watches |
 | ~~**A4**~~ | ~~Conditional Monte Carlo around a known incident~~ **done** for vaults and books (plan `2026-10-11-conditional`); left: a borrow position's, common-mode second failures, calibration | K6, K14 | S | `conditional.py` |
 | **A5** | HTML for vault and book incidents | demo | S | `report.py` |
-| B1 | Borrow-rate channel (AdaptiveCurveIRM) | K10 | S | utilisation already read |
-| B2 | PT implied-yield channel | K11 | S | Pendle historical data |
+| B1 | ~~Borrow-rate channel~~ **done** as an incident (`borrow_rate=`, plan `2026-10-11-pt-channels`); left: a Monte Carlo layer | K10 | S | utilisation already read |
+| B2 | ~~PT implied-yield channel~~ **done** as an incident (`pt_yield=`, plan `2026-10-11-pt-channels`); left: a Monte Carlo layer with Pendle's history | K11 | S | Pendle historical data |
 | B3 | Horizon to maturity, stressed exit cost | K12 | S | Pendle quotes at several sizes |
 | B4 | Oracle structure, rest: drain priority, split constant-price, pool-move event | K7, K8 | M | `oracle_class.py` |
 | B5 | Priors: decayed window, survivorship, double count, two-part depeg, off-chain prior, protocol multiplier, the RockawayX issuers | K1–K5, K17, K18 | M | `priors.py`, `registry.json` |

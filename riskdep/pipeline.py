@@ -131,7 +131,13 @@ def analyze(
     if shocks:
         recovery = next((p.recovery for p in prs if p.event == "issuer_depeg"), 0.0)
         incident = scenario.assess(
-            pos, shocks, recovery, quote, profile, quote_for=lambda q, fr: discover.partial_exit_quote(f, q, fr)
+            pos,
+            shocks,
+            recovery,
+            quote,
+            profile,
+            quote_for=lambda q, fr: discover.partial_exit_quote(f, q, fr),
+            horizon_days=horizon,
         )
 
     # a failed cross-check leads the reasons: the numbers below it are suspect

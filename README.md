@@ -200,7 +200,7 @@ python3 -m riskdep analyze --demo --shock issuer_depeg=0.08 --shock amm=0.03
 
 Writes `out/report.html` and `out/report.json`.
 
-**Incident mode** (`--shock EVENT=SEVERITY`, events `chain`, `issuer_hack`, `issuer_depeg`, `amm`, `oracle`, `lending`). The brief's question starts from a known incident, so `--shock` gives the incident's impact with no probability: the loss, whether the position is liquidated, how long before the oracle passes the shock on (from the oracle's type; a meta-oracle through its live source, and after its switch), and a verdict with the incident certain (REDUCE if a partial sale is cheapest, EXIT if staying loses more than leaving, STAY otherwise). The ex-ante Monte Carlo verdict follows it. Plan: `plan/2026-10-10-incident-mode.plan.md`.
+**Incident mode** (`--shock EVENT=SEVERITY`, events `chain`, `issuer_hack`, `issuer_depeg`, `amm`, `oracle`, `lending`, `pt_yield` (a rise of the PT's implied yield, in points: `pt_yield=0.09`), `borrow_rate` (the borrow APY over the horizon: `borrow_rate=0.40`)). The brief's question starts from a known incident, so `--shock` gives the incident's impact with no probability: the loss, whether the position is liquidated, how long before the oracle passes the shock on (from the oracle's type; a meta-oracle through its live source, and after its switch), and a verdict with the incident certain (REDUCE if a partial sale is cheapest, EXIT if staying loses more than leaving, STAY otherwise). The ex-ante Monte Carlo verdict follows it. Plan: `plan/2026-10-10-incident-mode.plan.md`.
 
 **Incident mode for a vault depositor** (`--vault`):
 

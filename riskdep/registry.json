@@ -959,5 +959,12 @@
     "poll_seconds": 2,
     "max_retries": 5,
     "basis": "Telegram delivery of the watch alerts (TELEGRAM_BOT.md). Nothing is sent unless there is an alert at or above level: warn by default, since info alerts (allocation moves, small flows) are context, not risk. A standing finding (no transaction) is posted again only after dedup_blocks (1800 blocks, about 6 h), because every watch restart prints it again. min_gap_seconds spaces messages only when several alerts arrive together, under Telegram's limit of about 20 messages a minute to one channel; past burst_max queued messages the rest goes as one digest. poll_seconds is how often the alert files are read; max_retries bounds the waits on Telegram's 429 answer."
+  },
+  "irm": {
+    "target_utilization": 0.9,
+    "curve_steepness": 4,
+    "adjustment_speed_per_year": 50,
+    "max_rate_at_target": 2.0,
+    "basis": "D169-D170: Morpho's AdaptiveCurveIRM (docs/external/morpho/docs.morpho.org-developers-docs, IRM): the borrow rate is the rate at target times a curve of utilisation (×4 at 100 %, ×1/4 at 0, 1 at the 90 % target); away from the target the rate at target moves exponentially at 50 per year times the normalised error, so at 100 % utilisation it doubles in about 5 days, capped at 200 %/yr."
   }
 }

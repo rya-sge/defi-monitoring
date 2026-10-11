@@ -29,6 +29,7 @@ Rules for editing:
 - [`tvl`](#tvl)
 - [`backtest`](#backtest)
 - [`conditional`](#conditional)
+- [`irm`](#irm)
 - [`notify`](#notify)
 - [How to add a yield issuer](#how-to-add-a-yield-issuer)
 
@@ -303,6 +304,18 @@ Telegram delivery of the watch alerts (`riskdep/notify.py`, `TELEGRAM_BOT.md`). 
 | `poll_seconds` | seconds | 2 | how often the alert files are read |
 | `max_retries` | count | 5 | waits on Telegram's 429 before giving up until the next pass |
 | `basis` | text | — | why |
+
+## `irm`
+
+Morpho's AdaptiveCurveIRM, for the timing of a `borrow_rate` incident (plan `2026-10-11-pt-channels`, D170).
+
+| Key | Unit | Default | What it controls |
+|---|---|---|---|
+| `target_utilization` | fraction | 0.9 | the utilisation the rate model steers to |
+| `curve_steepness` | × | 4 | the rate at 100 % utilisation is this times the rate at target |
+| `adjustment_speed_per_year` | per year | 50 | how fast the rate at target moves at full error: it doubles in ln 2 / 50 years, about 5 days |
+| `max_rate_at_target` | APY | 2.0 | its cap |
+| `basis` | text | — | the source |
 
 ## How to add a yield issuer
 

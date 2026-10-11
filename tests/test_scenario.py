@@ -153,3 +153,16 @@ def test_demo_oracle_mode_is_no_longer_ambiguous(tmp_path):
     pos = json.loads((tmp_path / "report.json").read_text())["position"]
     assert pos["oracle_mode"] == "market-tracking" and not pos["oracle_ambiguous"]
     assert any("within the 30-day horizon" in n for n in pos["notes"])
+
+
+def test_demo_borrow_rate_spike_and_pt_yield(tmp_path, capsys):
+    """D169–D170 on the demo: a 40 % borrow rate over 30 days costs more than leaving; a +30 pt implied-yield rise
+    moves the PT 3 % 47 days from maturity, inside the position's margin even after the meta-oracle switch."""
+    assert (
+        cli.main(["analyze", "--demo", "--shock", "borrow_rate=0.40", "--paths", "2000", "--out", str(tmp_path)]) == 0
+    )
+    r = json.loads((tmp_path / "report.json").read_text())["incident"]
+    assert r["verdict"] == "EXIT" and 90_000 < r["loss_usd"] < 110_000 and "gradual" in r["timing"]["text"]
+    assert cli.main(["analyze", "--demo", "--shock", "pt_yield=0.30", "--paths", "2000", "--out", str(tmp_path)]) == 0
+    r = json.loads((tmp_path / "report.json").read_text())["incident"]
+    assert r["verdict"] == "STAY" and r["after_switch"] is not None and "PT price −3.15%" in " ".join(r["path"])
