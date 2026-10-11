@@ -32,7 +32,7 @@ from . import scenario
 from . import sources as S
 from . import zama as ZM
 from .discover import REGISTRY
-from .vault import discover_vault, largest_depositor, read_state
+from .vault import cap_ids, discover_vault, largest_depositor, read_state
 
 TERMINAL = frozenset(REGISTRY["stables"])
 
@@ -71,6 +71,7 @@ class MarketHit:
     feeds: list[str] = field(default_factory=list)  # D157: each base feed of the market's oracle and its freshness
     returned: float = 0.0  # D239: what the vault can withdraw more from this market once liquidators repaid
     band: dict | None = None  # D241: the feed's floor holds the oracle back; the stage now, the rest after an upgrade
+    cap_limit: float = 0.0  # D243: the most the vault can hold in this market within its caps, asset units
     stale_feed: bool = False
 
 
@@ -112,6 +113,7 @@ class VaultIncident:
     conditional: dict | None = None  # D165: the loss of staying given the incident, drawn (USD, depositor's terms)
     zama: list[str] = field(default_factory=list)  # D174: a confidential depositor's two exits, for a Zama vault
     returned_liquidity: float = 0.0  # D239: Σ hits' `returned`: freed once the liquidations have repaid their debt
+    at_caps_loss: float = 0.0  # D243: the vault's loss if the hit markets held their caps (the vault's share scaled)
 
     def lines(self) -> list[str]:
         s = self.symbol
@@ -166,6 +168,11 @@ class VaultIncident:
                 )
         out.append(
             f"  vault loss {self.vault_loss:,.0f} {s} ({self.vault_loss / self.vault_total:.2%} of {self.vault_total:,.0f})"
+            + (
+                f"; at the caps, which an allocator can reach at once with no timelock, about {self.at_caps_loss:,.0f}"
+                if self.at_caps_loss > self.vault_loss * 1.01
+                else ""
+            )
             + (
                 f"; if liquidators act, the debt they repay frees {self.returned_liquidity:,.0f} more for the vault to "
                 f"withdraw once they have (now {sum(self.liquidity[:2]):,.0f}; the market's other lenders can draw on it "
@@ -771,7 +778,7 @@ def run(
                 hidden_shortfall(positions, totals, price, d) / lu + (dbad / lu if who else 0.0)
             ) * h.vault_share
         b = (bands or {}).get(mid)
-        if b and d > b["floor_fall"] and h.event == "markdown" and not h.via:
+        if b and d > b["floor_fall"] + 1e-9 and h.event == "markdown" and not h.via:
             # D241: the oracle can fall only to the feed's floor now; the rest waits for an upgrade of the feed
             now = market_hit(mid, risk.markets[mid], positions, totals, price, b["floor_fall"], h.vault_share, profile)
             lock = f" through a {b['timelock_h']:g} h timelock" if b["timelock_h"] else ""
@@ -955,6 +962,17 @@ def run(
     )
     inc.zama = zama_lines
     inc.returned_liquidity = sum(h.returned for h in hits)
+    from . import exposure as XP
+
+    for h in hits:
+        a = next((ad for ad in view.adapters if h.market_id in ad.markets), None)
+        if a is not None:
+            h.cap_limit = XP.market_limit(cap_ids(a.address, params[h.market_id]), st.caps, st.total_assets) / unit
+    # D243: an allocator can move the vault up to the caps at once; the vault's share of each market's loss scales with
+    # what it holds there (approximately: the other lenders' supply unchanged)
+    inc.at_caps_loss = sum(
+        h.vault_loss * max(h.cap_limit, h.vault_exposure) / h.vault_exposure if h.vault_exposure else 0.0 for h in hits
+    )
     return inc
 
 

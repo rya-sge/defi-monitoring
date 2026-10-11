@@ -328,6 +328,7 @@ The design decisions are numbered across twelve plans, in the order the incremen
 | `plan/2026-10-11-zama.plan.md` | Zama confidential vaults: the cShare pool, the two exits, the hidden layer | D171–D176 |
 | `plan/2026-10-11-pt-channels.plan.md` | the PT loop's implied-yield and borrow-rate incidents | D169–D170 |
 | `plan/2026-10-11-conditional.plan.md` | the loss of staying given the incident, drawn, against the certain cost of leaving | D165–D168 |
+| `plan/2026-10-11-gapv2-fixes.plan.md` | GAPV2 G19, G11, G12, G1: ERC-4626 rates, the Midas band, values computed on read, exposure up to the caps | D240–D243 |
 | `plan/2026-10-11-cascade-and-liquidity.plan.md` | the cascade through the pool, backtested; the liquidity liquidations return in vault incidents | D238–D239 |
 | `plan/2026-10-11-priors-k5-k15-k17.plan.md` | hacks weighted by age; the age factor a judgement; the PT stress from a measured spike; a synthetic dollar's collapse | D234–D237 |
 | `plan/2026-10-11-priors-k3-k4.plan.md` | oracle exploits counted once; Morpho Blue's core prior without the Lending multiplier | D232–D233 |

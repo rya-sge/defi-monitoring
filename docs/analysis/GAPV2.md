@@ -36,7 +36,7 @@ The brief judges dependency discovery (30 %) and impact estimation (30 %) first,
 
 | # | Gap | Criterion | Size | Order |
 |---|---|---|---|---|
-| G1 | Worst-case exposure up to the caps, per oracle and feed | discovery, impact | S | 4 |
+| G1 | Worst-case exposure up to the caps, per oracle and feed | discovery, impact | S | 4 · **done: `CapExposure` and the incident's loss at the caps (D243); graph nodes open** |
 | G2 | Who holds each role: EOA, Safe (threshold), timelock | discovery, decision | S | 6 |
 | G3 | The protocol's hard limits next to the current settings | decision | S | later |
 | G4 | The Zama layer in the engine's graph, and a decryption halt | discovery, impact | S–M | 10 |
@@ -46,15 +46,15 @@ The brief judges dependency discovery (30 %) and impact estimation (30 %) first,
 | G8 | Other chains | discovery | L | later |
 | G9 | Audits, bug bounty, licence as provenance | — | S | optional |
 | G10 | Each admin change classified: hits existing deposits, only future ones, or enables another change; with the funds it can move | impact, decision | S | 6 |
-| G11 | Midas: the feed's band in the incident, the shock engine and `OracleImpact` | impact | S–M | 1 |
-| G12 | f(x): the NAV oracle's timing (published or computed on-chain); the freshness of feeds computed on read | impact | S | 3 |
+| G11 | Midas: the feed's band in the incident, the shock engine and `OracleImpact` | impact | S–M | 1 · **done in the incident (D241); the shock engine and `OracleImpact` open** |
+| G12 | f(x): the NAV oracle's timing (published or computed on-chain); the freshness of feeds computed on read | impact | S | 3 · **done (D242)** |
 | G13 | f(x): fxSAVE's NAV components, `fxusd=` / `aave=` shocks, the lower layers in the graph | discovery, impact | M | 5 |
 | G14 | Issuer exits: Midas redemption, f(x) cooldown and instant fee, infiniFi's Gateway and queue | decision | S | 8 |
 | G15 | Issuer priors for mGLOeuro, fxSAVE, siUSD and the other RockawayX collateral | impact | S | 9 |
 | G16 | f(x): oracle-source updates that bypass the timelock, and the price oracle behind the NAV | discovery | S | 10 |
 | G17 | Data and scope: Midas TVL, mROX | discovery | S | later |
 | G18 | infiniFi: the loss waterfall (liUSD, safety buffer), a farm-loss shock, the pending-loss early warning | discovery, impact | M | 5 |
-| G19 | `token=` on an ERC-4626 collateral whose oracle reads its rate: market fall or booked loss; the engine's `converts through` transmission | impact | S | 2 |
+| G19 | `token=` on an ERC-4626 collateral whose oracle reads its rate: market fall or booked loss; the engine's `converts through` transmission | impact | S | 2 · **done (plan `2026-10-11-gapv2-fixes`, D240)** |
 | G20 | infiniFi: price, oracle and loss events, and the pauses, not decoded | discovery | S | 10 |
 
 ## G1. Worst-case exposure up to the caps

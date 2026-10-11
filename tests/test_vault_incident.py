@@ -57,7 +57,14 @@ def test_belem_nav_cut(tmp_path, capsys, cut, bad_low, bad_high):
     out = capsys.readouterr().out
     inc = json.loads((tmp_path / f"vault-incident-{BELEM}.json").read_text())
     (hit,) = inc["hits"]
-    assert hit["oracle_class"] == OC.CONSTANT_PRICE and "next published round" in hit["timing"]
+    assert hit["oracle_class"] == OC.CONSTANT_PRICE
+    if cut > 0.1:
+        # D241 (GAPV2 G11): the feed's floor holds the oracle at −10 % now; the rest after a 48 h upgrade
+        assert (
+            "the feed's floor" in hit["timing"] and hit["band"]["timelock_h"] == 48 and hit["band"]["now_bad_debt"] == 0
+        )
+    else:
+        assert "next published round" in hit["timing"] and hit["band"] is None
     assert bad_low <= hit["bad_debt"] <= bad_high and hit["vault_share"] == pytest.approx(1.0, abs=0.01)
     assert inc["verdict"] == "STAY" and "INCIDENT" in out  # a 99.46 % depositor loses about the same either way
 

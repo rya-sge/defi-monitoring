@@ -2366,6 +2366,25 @@
             "type": "string",
             "title": "Engine",
             "default": ""
+          },
+          "band": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Band",
+            "description": "A feed whose floor holds the oracle back: the floor's fall, the timelock above the feed, and the stage now (liquidatable, bad debt, the vault's loss); the main figures apply once the feed is upgraded."
+          },
+          "cap_limit": {
+            "type": "number",
+            "title": "Cap Limit",
+            "description": "The most the vault can hold in this market within its caps.",
+            "default": 0.0
           }
         },
         "type": "object",
@@ -4126,6 +4145,12 @@
             "type": "array",
             "title": "Zama",
             "description": "For a Zama confidential vault: the confidential share and the two exits."
+          },
+          "at_caps_loss": {
+            "type": "number",
+            "title": "At Caps Loss",
+            "description": "The vault's loss if the hit markets held their caps, which an allocator reaches at once.",
+            "default": 0.0
           },
           "returned_liquidity": {
             "type": "number",

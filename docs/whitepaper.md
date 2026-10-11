@@ -56,6 +56,21 @@ Four features of this book shape the analysis.
 - **The markets are nearly full.** Utilisation is 86 % to 91 % in every market, so a depositor who wants to leave depends on borrowers repaying.
 - **Some depositors are hidden.** Two vaults can be entered through Zama's Confidential Vault protocol, which encrypts each depositor's amount. On the Confidential RWA vault, 99.1 % of the shares sit in one confidential pool.
 
+The Morpho book by issuer family, 99.7 million USD:
+
+```mermaid
+%%{init: {"themeVariables": {"pie1": "#56B4E9", "pie2": "#E69F00", "pie3": "#009E73", "pie4": "#F0E442", "pie5": "#D55E00", "pie6": "#CC79A7", "pie7": "#0072B2", "pie8": "#BBBBBB", "cScale1": "#56B4E9", "cScale2": "#E69F00", "cScale3": "#009E73", "cScale4": "#F0E442", "cScale5": "#D55E00", "cScale6": "#CC79A7", "cScale7": "#0072B2", "cScale8": "#BBBBBB", "pieSectionTextColor": "#000000"}}}%%
+pie showData
+    "Huma (PST)" : 34.7
+    "f(x) Protocol (fxSAVE)" : 21.0
+    "Tori (strUSD, etrUSD)" : 18.9
+    "Re (PT-reUSD)" : 13.3
+    "Midas (mGLOeuro)" : 4.5
+    "Hastra (PRIME, AUTO)" : 3.4
+    "infiniFi (siUSD)" : 2.4
+    "Blue chips" : 1.6
+```
+
 ```mermaid
 flowchart TD
     D["Depositor (USDC)"] --> V["Morpho Vault V2"]
@@ -115,6 +130,27 @@ flowchart LR
 
 Discovery starts from an address, a vault or a borrower, and reads outward.
 
+```mermaid
+flowchart TD
+    A["An address: a vault or a borrower"] --> V["Vault: adapters, allocation, caps, roles"]
+    V --> M["Markets: borrowers, debt, collateral, totals"]
+    M --> O["Oracles: their feeds and exchange-rate vaults, each classified"]
+    M --> C["Collateral tokens and their issuers"]
+    M --> S["Sibling markets on the same collateral or price"]
+    O --> W["Who can change each contract, and through which timelock"]
+    C --> X["Outside views: backing and grades, cover prices, TVL share"]
+    C --> I["Issuer layers where published: backing venues, confidential pools"]
+    style A fill:#F0F2F5,stroke:#78909C
+    style V fill:#E8F5E9,stroke:#2E7D32
+    style M fill:#E8EEF9,stroke:#3A5FA0
+    style O fill:#E8EEF9,stroke:#3A5FA0
+    style C fill:#E8EEF9,stroke:#3A5FA0
+    style S fill:#E8EEF9,stroke:#3A5FA0
+    style W fill:#FDEEEE,stroke:#B54A4A
+    style X fill:#F0F2F5,stroke:#78909C
+    style I fill:#F0F2F5,stroke:#78909C
+```
+
 **The vault and its markets.** For a Vault V2, the system reads the adapters, the markets each adapter supplies, the vault's allocation and caps in each, and the vault's admin roles: owner, curator, allocators and sentinels. For each market it reads every borrower, their debt and collateral, and the market's totals.
 
 **Oracles, and what kind each one is.** Each market's oracle is decomposed into its inputs: the feeds it multiplies and divides, and the ERC-4626 vaults whose exchange rate it applies. Each input is classified:
@@ -123,6 +159,25 @@ Discovery starts from an address, a vault or a borrower, and reads outward.
 - **constant-price**, when it does not, with a kind that says when a loss shows in it: an *exchange rate* computed on-chain (the loss arrives at once), a *published* NAV (at the issuer's next transaction), a *linear discount* to maturity for a principal token (never), or a *fixed* value.
 
 The class decides whether a depeg causes liquidations and how fast an issuer's markdown lands. Meta-oracles that read one source and switch to another after a sustained divergence are detected, with their switch delay.
+
+```mermaid
+flowchart TD
+    F["An oracle input"] --> Q{"Does it follow a market price?"}
+    Q -->|"Yes"| PT["Price-tracking: a depeg liquidates within minutes"]
+    Q -->|"No"| CP["Constant-price: what kind?"]
+    CP --> K1["Exchange rate: a booked loss shows at once"]
+    CP --> K2["Published NAV: at the issuer's next transaction"]
+    CP --> K3["Linear discount: never"]
+    CP --> K4["Fixed value: never"]
+    style F fill:#F0F2F5,stroke:#78909C
+    style Q fill:#F0F2F5,stroke:#78909C
+    style PT fill:#E8EEF9,stroke:#3A5FA0
+    style CP fill:#E8EEF9,stroke:#3A5FA0
+    style K1 fill:#FDEEEE,stroke:#B54A4A
+    style K2 fill:#FDEEEE,stroke:#B54A4A
+    style K3 fill:#F0F2F5,stroke:#78909C
+    style K4 fill:#F0F2F5,stroke:#78909C
+```
 
 **Feed quality.** Each feed's freshness is measured against its own update rhythm, learned from its past rounds. Feeds read by several markets are marked as shared, because a fault there hits all of them at once. A custom feed whose answer is bounded by a fixed band is reported with how far it can fall before it needs new code.
 
@@ -136,6 +191,33 @@ The class decides whether a depeg causes liquidations and how fast an issuer's m
 
 On the RockawayX USDC Yield vault, the graph holds the issuers' tokens, their oracles and feeds, the admin of each feed, the sibling markets on the same collateral, the Pharos backing of each stablecoin, and the protocols' TVL: 84 nodes, from one address.
 
+One branch of that graph, the vault's siUSD market, shows how many layers sit behind a single market:
+
+```mermaid
+flowchart TD
+    V["RockawayX USDC Yield"] -->|"supplies"| M["siUSD / USDC market"]
+    M -->|"priced by"| O["Market oracle"]
+    O -->|"reads"| RT["infiniFi RT oracle: iUSD price"]
+    O -->|"converts through"| S["siUSD share rate"]
+    S -->|"wraps"| U["iUSD"]
+    U -->|"backed by (Pharos)"| B1["fxSAVE (f(x))"]
+    U -->|"backed by (Pharos)"| B2["mGLOBAL (Midas)"]
+    U -->|"backed by (Pharos)"| B3["USDC"]
+    RT -->|"also read by"| SB["Sibling market siUSD / msUSD"]
+    style V fill:#E8F5E9,stroke:#2E7D32
+    style M fill:#E8EEF9,stroke:#3A5FA0
+    style O fill:#E8EEF9,stroke:#3A5FA0
+    style RT fill:#E8EEF9,stroke:#3A5FA0
+    style S fill:#E8EEF9,stroke:#3A5FA0
+    style U fill:#E8EEF9,stroke:#3A5FA0
+    style B1 fill:#FDEEEE,stroke:#B54A4A
+    style B2 fill:#FDEEEE,stroke:#B54A4A
+    style B3 fill:#F0F2F5,stroke:#78909C
+    style SB fill:#F0F2F5,stroke:#78909C
+```
+
+The market's collateral depends, two layers down, on two other issuers of the RockawayX book: a loss at f(x) or at Midas passes to siUSD through iUSD's backing.
+
 ## 5. Estimating the impact of a failure
 
 **Named incidents, not distributions.** The impact model starts from a named incident: an issuer marks its token down by a given fraction; a borrower defaults; an oracle reads low, reads high or freezes; an exchange holding part of a synthetic dollar's backing loses it. The incident is stated, and its consequences are computed. Whether it is likely is a separate question (section 6).
@@ -148,11 +230,58 @@ On the RockawayX USDC Yield vault, the graph holds the issuers' tokens, their or
 - what the collateral cannot cover becomes bad debt, borne by the market's lenders in proportion to their supply;
 - where the oracle keeps reading a price the market no longer pays, the market can be drained before anyone is liquidated.
 
+```mermaid
+flowchart TD
+    S["Incident: the collateral loses value"] --> Q{"Does the oracle follow it?"}
+    Q -->|"Yes, now or later"| O["Oracle reads lower"]
+    Q -->|"No"| H["Hidden loss: collateral worth less than debt, nobody liquidated"]
+    O --> L["Borrowers below their LLTV become liquidatable"]
+    L --> X["Liquidators repay debt, seize collateral with an incentive"]
+    X --> SQ["Seized collateral sold into the market: the price can fall further"]
+    SQ --> BD["What the collateral cannot cover: bad debt"]
+    H --> BD
+    BD --> LE["Lenders bear it in proportion to their supply: vaults, then their depositors"]
+    style S fill:#FDEEEE,stroke:#B54A4A
+    style Q fill:#F0F2F5,stroke:#78909C
+    style O fill:#E8EEF9,stroke:#3A5FA0
+    style H fill:#FDEEEE,stroke:#B54A4A
+    style L fill:#E8EEF9,stroke:#3A5FA0
+    style X fill:#E8EEF9,stroke:#3A5FA0
+    style SQ fill:#E8EEF9,stroke:#3A5FA0
+    style BD fill:#FDEEEE,stroke:#B54A4A
+    style LE fill:#E8F5E9,stroke:#2E7D32
+```
+
 The result is, for every market, vault and depositor hit: the debt liquidated, the bad debt, the share each lender bears, and the path the loss took. The full propagation is also available as data, step by step, for a front end to draw.
 
 **Hidden losses.** When the oracle does not follow the incident, nobody is liquidated, but the collateral is worth less than the debt it secures. The system counts that shortfall as a hidden loss: it is real for the lenders, but it does not show in the vault's share price until the positions are liquidated or written off. Those who leave before then leave the loss to those who stay.
 
 **Time to impact.** The oracle's kind gives the timing. An exchange rate passes a loss at once; a published NAV at the issuer's next transaction; a meta-oracle after its switch delay; a linear discount never. A feed bounded by a band passes a larger loss only after an upgrade, through whatever timelock controls it.
+
+```mermaid
+flowchart LR
+    I["The issuer's token loses 30 %"] --> K1["Exchange rate computed on-chain"]
+    I --> K2["NAV published by the issuer"]
+    I --> K3["Meta-oracle"]
+    I --> K4["Feed bounded by a band"]
+    I --> K5["Linear discount (principal token)"]
+    K1 --> T1["At once"]
+    K2 --> T2["At the issuer's next transaction"]
+    K3 --> T3["After its switch delay, e.g. 16 h"]
+    K4 --> T4["Up to the floor now; the rest after an upgrade, e.g. 48 h"]
+    K5 --> T5["Never: the loss stays hidden"]
+    style I fill:#FDEEEE,stroke:#B54A4A
+    style K1 fill:#E8EEF9,stroke:#3A5FA0
+    style K2 fill:#E8EEF9,stroke:#3A5FA0
+    style K3 fill:#E8EEF9,stroke:#3A5FA0
+    style K4 fill:#E8EEF9,stroke:#3A5FA0
+    style K5 fill:#E8EEF9,stroke:#3A5FA0
+    style T1 fill:#FDEEEE,stroke:#B54A4A
+    style T2 fill:#FDEEEE,stroke:#B54A4A
+    style T3 fill:#F0F2F5,stroke:#78909C
+    style T4 fill:#F0F2F5,stroke:#78909C
+    style T5 fill:#F0F2F5,stroke:#78909C
+```
 
 **Exit liquidity.** Whether liquidators act depends on whether they can sell what they seize. For each collateral, the system measures the route available through a DEX aggregator at the incident's size, or records that only the issuer's redemption remains. A collateral with no route means liquidations may not happen, and the bad debt stays unrealised while the market's liquidity stays locked.
 
@@ -185,6 +314,32 @@ The portfolio manager compares p\* with their own view of the issuer. A p\* of 2
 
 The verdict is EXIT when leaving first saves more than it costs, STAY when it does not, and REDUCE for a leveraged position when de-levering moves the liquidation point beyond the stress at a cost below what it saves. Each verdict carries its reason in one sentence.
 
+```mermaid
+flowchart TD
+    D["Depositor's position"] --> N["What can leave now"]
+    D --> R["What cannot leave"]
+    N --> N1["1. Idle funds"]
+    N1 --> N2["2. Free liquidity of the markets"]
+    N2 --> N3["3. Forced deallocation, at a penalty"]
+    R --> R1["Bears its share of the bad debt"]
+    N3 --> C{"Does leaving first save more than it costs?"}
+    R1 --> C
+    C -->|"Yes"| E["EXIT"]
+    C -->|"No"| ST["STAY"]
+    C -->|"Leveraged: de-levering is enough"| RE["REDUCE"]
+    style D fill:#F0F2F5,stroke:#78909C
+    style N fill:#E8F5E9,stroke:#2E7D32
+    style R fill:#FDEEEE,stroke:#B54A4A
+    style N1 fill:#E8F5E9,stroke:#2E7D32
+    style N2 fill:#E8F5E9,stroke:#2E7D32
+    style N3 fill:#E8F5E9,stroke:#2E7D32
+    style R1 fill:#FDEEEE,stroke:#B54A4A
+    style C fill:#F0F2F5,stroke:#78909C
+    style E fill:#FDEEEE,stroke:#B54A4A
+    style ST fill:#E8F5E9,stroke:#2E7D32
+    style RE fill:#E8EEF9,stroke:#3A5FA0
+```
+
 **The run.** Leaving first assumes others have not left already. The exit queue measures what a depositor recovers if every contract holder of the vault (other vaults, funds, multisigs) withdraws before it, since those can act in the same block as the news. A confidential share pool is counted as many slow depositors, not one fast holder.
 
 **Value at risk.** Each incident ends with one block a manager can read in a minute: the money in the markets the incident hits, the loss if it happens, the cost of leaving now against what it saves, the liquidity that liquidations would return, and the losses beyond the book in sibling markets.
@@ -210,6 +365,21 @@ Each alert has a level (info, warn, critical) set by a threshold in the registry
 
 The early warnings matter most for issuer-priced collateral, where the loss itself arrives in one transaction. On the Belem vault, the feed that prices mGLOeuro cannot report below 90 % of its value without new code, and that code goes in through a 48-hour timelock. The watch reports the band at start-up and the upgrade as soon as it is scheduled, two days before the price can move.
 
+```mermaid
+flowchart LR
+    W0["Start-up: the band's floor and the timelock reported"] --> W1["Upgrade scheduled on the timelock: warn"]
+    W1 --> W2["48 h: time to leave"]
+    W2 --> W3["Upgrade executed: critical"]
+    W3 --> W4["Lower NAV published: oracle falls, liquidatable debt and verdict"]
+    W4 --> W5["Bad debt in the market: critical"]
+    style W0 fill:#E8EEF9,stroke:#3A5FA0
+    style W1 fill:#F0F2F5,stroke:#78909C
+    style W2 fill:#E8F5E9,stroke:#2E7D32
+    style W3 fill:#FDEEEE,stroke:#B54A4A
+    style W4 fill:#FDEEEE,stroke:#B54A4A
+    style W5 fill:#FDEEEE,stroke:#B54A4A
+```
+
 ## 9. Results on the RockawayX book
 
 **One issuer, two vaults, two outside markets.** A 30 % markdown of Huma's PST, run on the seven-vault book:
@@ -222,6 +392,28 @@ The early warnings matter most for issuer-priced collateral, where the loss itse
 | **Book** | **99.1M** | **5,195,130** | **5.24 %** | **12.9 %** | |
 
 The system names the vault to leave first, the Confidential RWA vault, because leaving it pays at the lowest probability. Beyond the book, the same markdown costs the lenders of two sibling markets on PST 4.46 million PYUSD and 0.63 million AUSD. Once liquidators have repaid, 22.3 million USD of liquidity returns to the hit markets; if nobody liquidates, none does.
+
+```mermaid
+flowchart TD
+    P["Huma PST marked down 30 %"] --> M1["PST / USDC market"]
+    P --> M2["Sibling market PST / PYUSD"]
+    P --> M3["Sibling market PST / AUSD"]
+    M1 --> V1["Confidential RWA USDC: loses 3.27M USD"]
+    M1 --> V2["Huma USDC Main: loses 1.92M USD"]
+    M2 --> X1["Lenders outside the book: 4.46M PYUSD"]
+    M3 --> X2["Lenders outside the book: 0.63M AUSD"]
+    V1 --> B["Book of 7 vaults: 5.20M USD, 5.24 %"]
+    V2 --> B
+    style P fill:#FDEEEE,stroke:#B54A4A
+    style M1 fill:#E8EEF9,stroke:#3A5FA0
+    style M2 fill:#E8EEF9,stroke:#3A5FA0
+    style M3 fill:#E8EEF9,stroke:#3A5FA0
+    style V1 fill:#FDEEEE,stroke:#B54A4A
+    style V2 fill:#FDEEEE,stroke:#B54A4A
+    style X1 fill:#F0F2F5,stroke:#78909C
+    style X2 fill:#F0F2F5,stroke:#78909C
+    style B fill:#FDEEEE,stroke:#B54A4A
+```
 
 **One issuer per vault.** The same method gives a different answer on each vault, because each issuer, oracle and depositor base is different:
 
@@ -244,9 +436,67 @@ The system names the vault to leave first, the Confidential RWA vault, because l
 
 Every liquidated position was predicted and none was predicted in error. On the USDT market, liquidators repaid part of each position, which is why less debt was repaid than became liquidatable. A second episode, the market crash of 10 October 2025, is replayed the same way across six markets.
 
+```mermaid
+flowchart LR
+    E["A past incident: its liquidation blocks"] --> S0["State read 60 blocks before the first liquidation"]
+    S0 --> SH["Shock: the oracle's lowest price over the episode"]
+    SH --> PR["Prediction: positions and debt liquidatable, bad debt"]
+    E --> RE["On-chain record: every Liquidate event"]
+    PR --> CMP["Compared position by position"]
+    RE --> CMP
+    CMP --> OUT["Missed, extra, liquidated later, or defended by the borrower"]
+    style E fill:#F0F2F5,stroke:#78909C
+    style S0 fill:#E8EEF9,stroke:#3A5FA0
+    style SH fill:#E8EEF9,stroke:#3A5FA0
+    style PR fill:#E8EEF9,stroke:#3A5FA0
+    style RE fill:#E8F5E9,stroke:#2E7D32
+    style CMP fill:#F0F2F5,stroke:#78909C
+    style OUT fill:#F0F2F5,stroke:#78909C
+```
+
+A prediction made from the state before the episode, compared with what the chain recorded after it, is checked position by position: a borrower predicted but not liquidated is followed up to tell a later liquidation from a borrower who repaid in time.
+
 **A crisis on a mainnet fork.** The Belem vault was copied into a local fork of Ethereum, and the accounts that hold the real roles were used to play a crisis: the issuer publishes a 10 % markdown (within the feed's band), then installs an upgrade through the real 48-hour timelock, then publishes 70,000 EUR for a share worth 100,000. The watch reported the band and the exit gates at start-up, warned when the upgrade was scheduled, raised the oracle move with what it made liquidatable, and reported the bad debt. The bad debt predicted for a 30 % markdown before the crisis, 251,761 EURCV, matched the 252,914 observed after it within 0.5 %.
 
+```mermaid
+flowchart TD
+    P["Before the crisis: the incident model predicts 251,761 EURCV of bad debt at −30 %"] --> A1
+    A1["Start-up: band floor at −10 %, 48 h timelock, exit gates abdicated"] --> A2["Issuer publishes −10 %: oracle falls, liquidatable debt reported, no loss yet"]
+    A2 --> A3["Upgrade scheduled on the timelock: warn, 48 h ahead"]
+    A3 --> A4["Upgrade executed after 48 h: critical"]
+    A4 --> A5["Issuer publishes 70,000 EUR: bad debt reported, critical"]
+    A5 --> O["Observed: 252,914 EURCV, within 0.5 % of the prediction"]
+    P -.->|"compared"| O
+    style P fill:#E8EEF9,stroke:#3A5FA0
+    style A1 fill:#F0F2F5,stroke:#78909C
+    style A2 fill:#F0F2F5,stroke:#78909C
+    style A3 fill:#F0F2F5,stroke:#78909C
+    style A4 fill:#FDEEEE,stroke:#B54A4A
+    style A5 fill:#FDEEEE,stroke:#B54A4A
+    style O fill:#E8F5E9,stroke:#2E7D32
+```
+
 **Cross-checks.** Every run compares its block against a second, independent RPC node, and the vault's totals against the Morpho API, with a tolerance; a check that cannot run says so rather than passing silently. The full test suite runs offline from recorded mainnet responses.
+
+```mermaid
+flowchart LR
+    R["Each run, at a fixed block"] --> H["Block hash against a second, independent RPC node"]
+    R --> T["Vault and position totals against the Morpho API"]
+    H --> H1["Match: ok"]
+    H --> H2["Mismatch: critical, the data may be wrong"]
+    T --> T1["Within tolerance: ok"]
+    T --> T2["Outside: warn"]
+    H --> N["Cannot run: stated as not checked"]
+    T --> N
+    style R fill:#F0F2F5,stroke:#78909C
+    style H fill:#E8EEF9,stroke:#3A5FA0
+    style T fill:#E8EEF9,stroke:#3A5FA0
+    style H1 fill:#E8F5E9,stroke:#2E7D32
+    style T1 fill:#E8F5E9,stroke:#2E7D32
+    style H2 fill:#FDEEEE,stroke:#B54A4A
+    style T2 fill:#FDEEEE,stroke:#B54A4A
+    style N fill:#F0F2F5,stroke:#78909C
+```
 
 ## 11. Data and trust
 

@@ -182,8 +182,7 @@
      "class_basis": "Ojo PT Feed Pendle Chainlink-compatible Oracle combines 2 input(s): Pendle Chainlink-compatible Oracle: twapDuration() = 900, Pendle PendleChainlinkOracle: a TWAP of the Pendle AMM (900 s on PT-reUSD), so a pool move reaches the price",
      "tracks_market": "0x13285bcbc27f92b47b4edb99d744c07b48c977c0",
      "updated_at": 1791669887,
-     "freshness": "updated 2 min ago; no round history to learn its rhythm",
-     "stale": false,
+     "freshness": "computed on read: no update time (round 0)",
      "source": "oracle getter, description() on-chain; freshness from its rounds (D155)"
     }
    },
@@ -364,6 +363,7 @@
      "oracle_class": "constant-price",
      "class_basis": "0xcb8c\u2026640b: baseDiscountPerYear() = 235000000000000000, Pendle linear-discount oracle: a deterministic discount to maturity, no market input",
      "constant_kind": "linear discount",
+     "freshness": "computed on read: no update time (round 0)",
      "source": "oracle getter, description() on-chain; freshness from its rounds (D155)"
     }
    },
@@ -745,8 +745,7 @@
      "class_basis": "Chainlink-formatted InfiniFi RT Oracle: answers exactly 1.0 with no round history, a pegged or hardcoded value",
      "constant_kind": "fixed",
      "updated_at": 1791669887,
-     "freshness": "updated 2 min ago; no round history to learn its rhythm",
-     "stale": false,
+     "freshness": "computed on read: no update time (round 0)",
      "source": "oracle getter, description() on-chain; freshness from its rounds (D155)"
     }
    },
@@ -1124,8 +1123,7 @@
      "class_basis": "reUSD/USD exchange rate: matches 'exchange rate', an exchange rate between a token and its underlying, not a market price",
      "constant_kind": "exchange rate",
      "updated_at": 1791589535,
-     "freshness": "updated 22.4 h ago; no round history to learn its rhythm",
-     "stale": false,
+     "freshness": "computed on read: no update time (round 0)",
      "source": "oracle getter, description() on-chain; freshness from its rounds (D155)"
     }
    },
@@ -1433,6 +1431,7 @@
      "oracle_class": "constant-price",
      "class_basis": "0x7180\u20264d19: baseDiscountPerYear() = 225000000000000000, Pendle linear-discount oracle: a deterministic discount to maturity, no market input",
      "constant_kind": "linear discount",
+     "freshness": "computed on read: no update time (round 0)",
      "source": "oracle getter, description() on-chain; freshness from its rounds (D155)"
     }
    },

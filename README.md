@@ -29,7 +29,7 @@ What to read in the output:
 | Output line | Answers |
 |---|---|
 | `fxSAVE/USDC …: 1,494,648 of 25,324,668 USDC of debt liquidatable (19 borrowers); bad debt 2,284,812 …` | the impact, market by market, from the shock engine over the recorded graph |
-| `oracle constant-price; how fast: at its next published round, by a transaction …` | how fast it lands |
+| `oracle constant-price; how fast: at once, when the issuer's accounting records the loss …` | how fast it lands (fxSAVE's NAV is computed on read, so a loss reaches the oracle at once) |
 | `verdict given the incident: EXIT: withdraw the 2,500,571 that can leave now …` | stay or exit, if the incident happens |
 | `if the incident is not certain: … it pays if the incident's probability over 30 days is above 7.92%` | the breakeven: exiting is certain and costly, staying is uncertain |
 | `outside view: Nexus f(x) Protocol cover …` | an outside price to compare that probability with |

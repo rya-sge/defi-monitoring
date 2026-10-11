@@ -87,6 +87,7 @@ riskdep/
   watch_user.py       the watch --user loop
   # both watches
   market_risk.py      every borrower of the watched markets: unrealised bad debt, liquidation curves
+  exposure.py         worst-case exposure up to a Vault V2's caps: a market's limit, a group's under shared cap ids (pure)
   drain.py            drain threshold of each vault market: d*, the drainable amount, the Public Allocator
   scenario.py         incident mode: a known incident's impact, time to impact and verdict; alert impacts
   vault_incident.py   incident mode for a vault depositor: a collateral markdown (through the shock engine when the vault's graph is recorded) or a borrower default
@@ -126,7 +127,7 @@ riskdep/
   report.py           HTML + JSON report
 tests/                pytest, all offline (snapshot + recorded replays)
   test_watch_rules.py, test_watch_replay.py, test_borrower.py, test_watch_user_replay.py,
-  test_graph.py, test_siblings.py, test_oracle_class.py, test_engine.py, test_market_risk.py, test_exit_queue.py, test_drain.py, test_scenario.py, test_vault_incident.py, test_vault_book.py, test_pharos.py, test_breakeven.py, test_feeds.py, test_backtest.py, test_conditional.py, test_zama.py, test_detect.py, test_readme.py, test_depth.py, test_pendle_amm.py, test_exit_liquidity.py, test_concentration.py, test_ethena.py, test_sky.py, test_after.py, test_admin.py, test_decide.py, test_propagate.py, test_demo_snapshot.py, test_fixes.py, test_light_reads.py, test_api.py, test_dashboard.py, test_fork_replay.py, test_notify.py
+  test_graph.py, test_siblings.py, test_oracle_class.py, test_engine.py, test_market_risk.py, test_exit_queue.py, test_drain.py, test_scenario.py, test_vault_incident.py, test_vault_book.py, test_pharos.py, test_breakeven.py, test_feeds.py, test_backtest.py, test_conditional.py, test_zama.py, test_detect.py, test_readme.py, test_depth.py, test_pendle_amm.py, test_exit_liquidity.py, test_concentration.py, test_ethena.py, test_sky.py, test_after.py, test_gapv2_fixes.py, test_admin.py, test_decide.py, test_propagate.py, test_demo_snapshot.py, test_fixes.py, test_light_reads.py, test_api.py, test_dashboard.py, test_fork_replay.py, test_notify.py
 scripts/fork/          the crisis demo on a local mainnet fork (anvil): demo.sh (all in one), start-fork.sh, crisis-belem.sh, alt-*.sh, lib.sh,
                       addresses.env, src/ (two demo contracts, not protocol code), tapes/ (vhs); see its README.md
 pyproject.toml        project metadata, dependencies, ruff and pytest configuration
@@ -145,7 +146,7 @@ pyproject.toml        project metadata, dependencies, ruff and pytest configurat
 - `keys.example.ini` — template of the API keys and secrets (no values); the real `keys.ini` is git-ignored. `[alchemy]` (or `[rpc] url`) is an archive RPC, used only as a route by `backtest --record`: its URL embeds the key, so it is never cached, logged or printed.
 - `erpc.yaml` — configuration of the optional local eRPC proxy (eRPC 0.3.0, six free upstreams, no key); `docs/setup/erpc.md` is the setup guide. Its upstream list is mirrored in `docs/analysis/PROVIDERS.md`.
 - `docs/analysis/ANALYSIS_MONITORING.md` — design note: dependency graph, impact, monitoring, execution, and gaps of the current implementation (done / partial / missing).
-- `plan/` — the forty-five plans (`defi-risk-dependency`, `morpho-vault-v2-watcher`, `morpho-user-watcher`, `lenders-and-timelocks`, `market-borrowers`, `admin-surface`, `exit-queue`, `drain-threshold`, `sibling-markets`, `incident-mode`, `propagation-engine`, `vault-incident`, `vault-book`, `wrapped-collateral`, `borrower-concentration`, `pharos`, `one-number`, `breakeven`, `incident-api`, `judge-path`, `fork-demo`, `feed-quality`, `backtest`, `conditional`, `pt-channels`, `zama`, `mixed-book`, `detect`, `alerts-and-verdict`, `backtest-crash`, `depth`, `pool-move`, `oracle-kinds`, `stressed-exit`, `pendle-pool`, `exit-liquidity`, `shared-and-supply`, `venues`, `sky`, `value-at-risk`, `after`, `priors-k3-k4`, `priors-k5-k15-k17`, `cascade-and-liquidity`, and `web-graph-react-flow` for the SPA's graph).
+- `plan/` — the forty-six plans (`defi-risk-dependency`, `morpho-vault-v2-watcher`, `morpho-user-watcher`, `lenders-and-timelocks`, `market-borrowers`, `admin-surface`, `exit-queue`, `drain-threshold`, `sibling-markets`, `incident-mode`, `propagation-engine`, `vault-incident`, `vault-book`, `wrapped-collateral`, `borrower-concentration`, `pharos`, `one-number`, `breakeven`, `incident-api`, `judge-path`, `fork-demo`, `feed-quality`, `backtest`, `conditional`, `pt-channels`, `zama`, `mixed-book`, `detect`, `alerts-and-verdict`, `backtest-crash`, `depth`, `pool-move`, `oracle-kinds`, `stressed-exit`, `pendle-pool`, `exit-liquidity`, `shared-and-supply`, `venues`, `sky`, `value-at-risk`, `after`, `priors-k3-k4`, `priors-k5-k15-k17`, `cascade-and-liquidity`, `gapv2-fixes`, and `web-graph-react-flow` for the SPA's graph).
 - `examples/` — `rockawayx-ethereum.json`, the demo book of vaults and the template for any other (`analyze --book`); `brief-ten-pockets.json`, the brief's own book of ten 1M pockets (`pocket` weighting, with `--exit-cost 0.11`); `brief-mixed-book.json`, the same with the brief's PT loop as a borrow pocket (`kind: borrow`); `brief-three-shapes.json`, the loop, the same PT held without a borrow (`kind: pt`) and a vault, side by side.
 - `docs/` — the documentation, grouped; `docs/README.md` is the index:
   - `docs/model/` — how risk and impact are computed: `how-risk-is-computed.md`, `how-probabilities-are-computed.md` (where every probability comes from: hack base rates, oracle and market-event priors, the breakeven p\*, outside views), `monte-carlo.md` (how `analyze`'s simulation works), `scenarios-and-breakeven.md`, `vault-incident.md` (incident mode end to end: `analyze --vault` / `--book`, `POST /api/incident`), `vault-depositor-scenarios.md`, `shock-engine.md` (the shock engine and its rules), `shock-trace.md` (the propagation trace for a front end, example in `shock-trace-example.json`), `graph-propagation.md`, `zama-confidential-vaults.md` (what is computed for a Zama confidential vault, and what is not), `ethena.md` (the same for Ethena's USDe and sUSDe), `midas.md`, `fx-protocol.md` and `infinifi.md` (the same for Midas's mGLOeuro, f(x)'s fxSAVE and infiniFi's siUSD).
@@ -236,7 +237,7 @@ Python ≥ 3.10; CI runs the suite on 3.10, the floor `requires-python` in `pypr
 
 ```bash
 uv sync
-uv run pytest -q tests                                 # 389 tests, offline
+uv run pytest -q tests                                 # 394 tests, offline
 uv run python -m riskdep analyze --demo                # cached snapshot, no network → out/report.html/.json
 uv run python -m riskdep watch --replay                # re-run the recorded vault range offline
 uv run python -m riskdep watch --blocks 1000 --record  # live range, saved for --replay

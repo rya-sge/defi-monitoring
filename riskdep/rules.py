@@ -482,6 +482,42 @@ def assess_batch(events: list[Event], ctx: Ctx, dep: str | None, block: int) -> 
     return out
 
 
+def cap_exposure_findings(view: VaultView, st: VaultState, ctx) -> list[Alert]:
+    """D243 (GAPV2 G1): per oracle, the share of the vault that can sit behind it within the caps, at once and with no
+    notice (`allocate` is not timelocked), against today's: a warn past `watch.cap_exposure_warn` when it is at least
+    1.5 times today's share, info otherwise."""
+    from . import exposure as XP
+
+    groups: dict[str, list] = {}
+    for a in view.adapters:
+        for mp in a.markets.values():
+            groups.setdefault(mp.oracle, []).append((mp, cap_ids(a.address, mp)))
+    out = []
+    total = st.total_assets or 1
+    for oracle, ms in groups.items():
+        allowed = XP.group_limit([ids for _, ids in ms], st.caps, st.total_assets)
+        held = sum(st.markets[mp.id].vault_assets for mp, _ in ms if mp.id in st.markets)
+        if allowed <= held or allowed < ctx.unit:
+            continue
+        share, now = allowed / total, held / total
+        level = "warn" if share > W["cap_exposure_warn"] and share >= 1.5 * now else "info"
+        names = ", ".join(sorted({ctx.label(mp.id) for mp, _ in ms}))[:120]
+        out.append(
+            Alert(
+                level,
+                st.block,
+                None,
+                "CapExposure",
+                f"up to {share:.0%} of the vault can sit behind the oracle of {names} within its caps ({now:.0%} today)",
+                f"{ctx.amt(allowed)} allowed against {ctx.amt(held)} allocated: an allocator can move it there at once, "
+                "with no timelock, so an incident on that oracle can cost more than today's allocation shows",
+                None,
+                {"oracle": oracle, "allowed": allowed, "allocated": held},
+            )
+        )
+    return out
+
+
 def startup_findings(view: VaultView, st: VaultState) -> list[Alert]:
     """Standing conditions worth a line when the watch starts."""
     ctx = Ctx(view, st, st)
@@ -501,6 +537,7 @@ def startup_findings(view: VaultView, st: VaultState) -> list[Alert]:
                     {"market": mid},
                 )
             )
+    out += cap_exposure_findings(view, st, ctx)
     for a in view.adapters:
         for mp in a.markets.values():
             alloc, abs_cap, rel_cap = st.caps.get(cap_ids(a.address, mp)["market"], (0, 0, 0))

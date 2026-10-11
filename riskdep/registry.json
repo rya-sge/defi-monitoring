@@ -247,6 +247,8 @@
   },
   "watch": {
     "market_share_warn": 0.25,
+    "cap_exposure_warn": 0.25,
+    "cap_exposure_basis": "D243 (GAPV2 G1): an allocator can move capital up to the caps with no timelock, so the share of the vault that can sit behind one oracle within its caps is an exposure the allocation hides; warned past the same 25 % as market_share_warn, when it is at least 1.5 times today's share.",
     "utilization_warn": 0.99,
     "utilization_min_share": 0.1,
     "oracle_move_warn": 0.05,

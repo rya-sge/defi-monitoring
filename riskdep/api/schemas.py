@@ -463,6 +463,12 @@ class MarketHit(BaseModel):
     pharos_exposure: float = 0.0
     source: Literal["incident", "engine"] = "incident"
     engine: str = ""
+    band: dict[str, Any] | None = Field(
+        default=None,
+        description="A feed whose floor holds the oracle back: the floor's fall, the timelock above the feed, and the "
+        "stage now (liquidatable, bad debt, the vault's loss); the main figures apply once the feed is upgraded.",
+    )
+    cap_limit: float = Field(default=0.0, description="The most the vault can hold in this market within its caps.")
 
 
 class VaultIncident(BaseModel):
@@ -508,6 +514,10 @@ class VaultIncident(BaseModel):
     conditional: Conditional | None = None
     zama: list[str] = Field(
         default_factory=list, description="For a Zama confidential vault: the confidential share and the two exits."
+    )
+    at_caps_loss: float = Field(
+        default=0.0,
+        description="The vault's loss if the hit markets held their caps, which an allocator reaches at once.",
     )
     returned_liquidity: float = Field(
         default=0.0,

@@ -77,6 +77,7 @@ Alerts printed at **start-up** describe a standing condition, not a new event: t
 
 | Event · title | Level | What it means | Check | What you can do |
 |---|---|---|---|---|
+| `CapExposure` · up to X % of the vault can sit behind the oracle of *markets* within its caps | warn when above 25 % and at least 1.5 × today's share (start-up), info otherwise | An allocator can move capital up to the caps at once, with no timelock: an incident on that oracle can cost more than today's allocation shows. | The caps of those markets, the allocators, and what the incident would cost at the caps (`analyze --vault`). | Ask the curator why the caps sit so far above the allocation, or price the incident at the caps. |
 | `Exposure` · X % of the vault is in *market* | warn (start-up) | One market holds more than 25 % of the vault: a bad debt there hits every depositor. | That market's collateral, oracle and LLTV. | Accept the concentration or move to a more diversified vault. |
 | `Adapter.Allocate` / `Deallocate` | info, warn above 25 % or for a new market | The allocator moved money; the detail gives the new allocation and share. | — | Nothing, unless it crosses into a market you would not lend to. |
 | `Liquidity` · You can no longer exit in full with a plain withdrawal | warn | Idle assets plus the liquidity market no longer cover your position. | The detail: payable now, and how much more `forceDeallocate` can reach, at what penalty. | See [exit routes](#exit-routes-from-cheapest-to-most-expensive). |
