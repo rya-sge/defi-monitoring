@@ -157,6 +157,8 @@ The thresholds of `watch --vault` and `watch --user`. Changing them changes when
 | `feed_band_report_floor` | fraction | 0.5 | `FeedBand` at start-up: a custom feed whose `minAnswer` lies within this fraction below its latest answer is reported, with the timelock any upgrade must pass (D183). `feed_band_basis` holds the reason |
 | `drain_buy_cost` | fraction | 0.005 | the cost c of buying the collateral at the drain's size, in d\* = 1 − LLTV / (1 + c); low on purpose, so the threshold is early |
 | `drain_margin` | fraction (points of discount) | 0.02 | `DrainWindow` warn: the collateral's discount to its oracle within this distance of d\*; critical at d\* |
+| `impact_oracle_fall` | fraction | 0.02 | `OracleImpact`: a vault market's oracle falling this much since its last answer; the alert states the impact and the verdict (D187–D188) |
+| `impact_basis` | text | — | why |
 | `drain_check_every_blocks` | blocks | 25 | how often DefiLlama's prices are re-read for the drain threshold; oracle prices come with every state read |
 | `exit_queue_phi` | fraction of the other depositors' assets | 0.5 | the "behind φ of others" queue position of the exit-queue table; it also stands in for the contract holders in `ExitQueue` when the holder list is unavailable |
 | `concentration_top1_warn` | fraction of the market's debt | 0.5 | `BorrowerConcentration` warn: the largest borrower of a vault market holds at least this share (D129) |

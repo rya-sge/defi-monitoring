@@ -29,7 +29,7 @@ def test_recorded_belem_graph_flags_the_midas_nav_feed():
     """ROCK-VAULT-DEP.md: mGLOeuro's NAV feed was 17.5 days old on 2026-10-11."""
     g = pipeline.vault_graph(BELEM)
     by = {n["label"]: n["details"] for n in g["nodes"] if n["details"].get("freshness")}
-    assert by["mGLOeuro/EUR"]["stale"] and "17.6 days" in by["mGLOeuro/EUR"]["freshness"]
+    assert by["mGLOeuro/EUR"]["stale"] and "17.5 days" in by["mGLOeuro/EUR"]["freshness"]
     assert not by["WBTC / BTC"]["stale"]
 
 

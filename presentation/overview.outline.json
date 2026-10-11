@@ -1,0 +1,279 @@
+{
+  "output": "/home/ryan/Pictures/charrette/defi-monitoring/presentation/overview.odp",
+  "export": [
+    "pdf",
+    "pptx"
+  ],
+  "theme": {
+    "title_color": "0x1F4E79",
+    "text_color": "0x222222",
+    "font": "Liberation Sans",
+    "background": "0xF7F9FC"
+  },
+  "slides": [
+    {
+      "layout": "title",
+      "title": "riskdep: DeFi risk dependencies",
+      "subtitle": "How the project works · DeFi Risk Dependency Challenge, Belem Capital, EPFL Hackathon 2026",
+      "notes": "Sources: README.md, docs/analysis/ARCHITECTURE.md, docs/hackaton_instruction/GOAL.md, CLAUDE.md. riskdep is a Python CLI (python3 -m riskdep) with an HTTP API and a React web UI."
+    },
+    {
+      "layout": "bullets",
+      "title": "The question we answer",
+      "bullets": [
+        "A dependency of a position is hit",
+        [
+          "How much is lost?",
+          "How fast does it land?",
+          "Stay or exit, given what exiting costs?"
+        ],
+        "Judged on: discovery 30 %, impact 30 %",
+        [
+          "decision usefulness 25 %, working demo on real data 15 %"
+        ]
+      ],
+      "notes": "The brief's worked trade-off: a book in ten 10 % pockets, one is hit, unwinding costs 11 %: exiting is certain and costly, staying is cheap and uncertain."
+    },
+    {
+      "layout": "table",
+      "title": "Five modes, one command",
+      "table": [
+        [
+          "Mode",
+          "For whom",
+          "What it gives"
+        ],
+        [
+          "graph",
+          "anyone reviewing a position",
+          "the dependency graph, siblings, oracle classes"
+        ],
+        [
+          "shock",
+          "vault owner, risk analyst",
+          "what each market and depositor loses when a node fails"
+        ],
+        [
+          "analyze",
+          "risk or portfolio manager",
+          "loss, timing and STAY / REDUCE / EXIT"
+        ],
+        [
+          "watch --vault",
+          "a Vault V2 depositor",
+          "alerts, block by block"
+        ],
+        [
+          "watch --user",
+          "an address with Morpho positions",
+          "health, liquidation, rate alerts"
+        ]
+      ],
+      "notes": "analyze estimates a risk; the two watch modes detect events; graph draws dependencies; shock propagates a failure through them. All read the same sources through the same modules."
+    },
+    {
+      "layout": "bullets",
+      "title": "The pipeline",
+      "ordered": true,
+      "bullets": [
+        "Discover: from one address to everything it depends on",
+        "Price the risk: probabilities per layer, or a known incident",
+        "Propagate: the shock engine, market by market",
+        "Decide: verdict given the incident, breakeven p*",
+        "Watch: detect it live, alert the depositor"
+      ],
+      "notes": "Steps 1–4 answer 'how much and should I leave'; step 5 answers 'when' in real time. The fork demo plays all five on a real vault."
+    },
+    {
+      "layout": "bullets",
+      "title": "1. Dependency discovery",
+      "bullets": [
+        "Vault → adapters → Morpho Blue markets → oracles → feeds",
+        "Who controls each contract: proxy admins, owners, timelocks",
+        "Issuers and their backing (registry, Pharos)",
+        "Sibling markets sharing a collateral, asset or price input",
+        "Oracle class: price-tracking or constant-price"
+      ],
+      "notes": "graph.py, siblings.py, oracle_class.py, admin.py. The chain decides, the APIs find: the Morpho API lists positions and vaults, every amount is then read on-chain. Example: graph --vault 0xE018…1965 --replay (RockawayX USDC Yield)."
+    },
+    {
+      "layout": "two-column",
+      "title": "2–3. Impact: two engines",
+      "left_title": "Shock engine (shock, analyze --vault)",
+      "left": [
+        "A failure on a node of the graph",
+        "Each market re-evaluates every borrower",
+        "Edge rules carry it to the next node",
+        "Repeated to a fixed point"
+      ],
+      "right_title": "Monte Carlo (analyze, PT positions)",
+      "right": [
+        "A probability per layer, per year",
+        "20,000 simulated months",
+        "True value vs oracle value",
+        "Expected loss, CVaR 99 %"
+      ],
+      "font_size": 22,
+      "notes": "engine.py (pure) with rules in registry.json (engine) or a --rules file; simulate.py and propagate.py. Probabilities: exploit priors from DefiLlama's hack record by size band, category and age; market events from registry.json; see the probabilities deck."
+    },
+    {
+      "layout": "bullets",
+      "title": "4. Decision",
+      "bullets": [
+        "Verdict given the incident: EXIT or STAY, and why",
+        "Breakeven p*: how likely must it be for leaving to pay",
+        [
+          "Cost of leaving (yield given up, or an exit cost) ÷ loss saved"
+        ],
+        "A book of vaults: act first on the lowest p*",
+        "Outside view: Nexus cover prices, shown, never used"
+      ],
+      "notes": "Brief's example, examples/brief-ten-pockets.json, mGLOeuro -30 %, 11 % exit cost: 'Leaving Belem RWA EURCV costs 110,000 USD for sure, against 53,445 saved if the incident comes: stay.' f(x) vault, fxSAVE -30 %: EXIT, it pays above a 7.92 % probability over 30 days."
+    },
+    {
+      "layout": "bullets",
+      "title": "5. Monitoring: watch",
+      "bullets": [
+        "Polls every block (12 s), 2 blocks behind the head",
+        "Alerts: info, warn, critical, in the terminal and JSON",
+        [
+          "Bad debt, oracle moves, liquidations, utilisation",
+          "Upgrades, owners, feeds, timelock queues, mints"
+        ],
+        "Cursor saved last: a restart misses no block",
+        "Cross-checks: a second RPC, the API against the chain"
+      ],
+      "notes": "watch.py, rules.py, market_risk.py, drain.py, exit_queue.py, admin.py. What each alert means and what to do: docs/alert-runbook.md. Thresholds in registry.json (watch)."
+    },
+    {
+      "layout": "table",
+      "title": "Data sources, all public",
+      "table": [
+        [
+          "Source",
+          "Used for"
+        ],
+        [
+          "Ethereum RPC (publicnode)",
+          "all on-chain state, blocks, logs"
+        ],
+        [
+          "Morpho API",
+          "finding positions, borrowers, vault roles"
+        ],
+        [
+          "Pendle API",
+          "PT markets, implied yield, exit quotes"
+        ],
+        [
+          "DefiLlama",
+          "hack record, protocols, token prices"
+        ],
+        [
+          "Nexus, Pharos (optional)",
+          "outside prices, issuer grades, backing"
+        ],
+        [
+          "Etherscan (optional key)",
+          "oracle source verification"
+        ]
+      ],
+      "notes": "Trust model: the chain is authoritative; APIs only find things. A second RPC (dRPC) checks block hashes; the Morpho API is checked against the chain at 0.5 %. Endpoints and limits: docs/analysis/PROVIDERS.md."
+    },
+    {
+      "layout": "table",
+      "title": "Is the number defensible?",
+      "table": [
+        [
+          "PT-reUSD, 2026-08-25",
+          "Predicted",
+          "Real"
+        ],
+        [
+          "Oracle fall (USDC market)",
+          "-2.45 % (input: observed)",
+          "-2.45 %"
+        ],
+        [
+          "Positions liquidated",
+          "13",
+          "13, same borrowers"
+        ],
+        [
+          "Debt liquidatable / repaid",
+          "35.46M USDC",
+          "35.19M USDC"
+        ],
+        [
+          "Liquidation incentive",
+          "927,975",
+          "920,781"
+        ],
+        [
+          "Bad debt",
+          "0",
+          "0"
+        ]
+      ],
+      "notes": "riskdep backtest: reads the state 60 blocks before the real liquidations, applies the oracle's observed fall, compares with the 33 Liquidate events. Within 1 % where positions were fully liquidated. Not tested: the oracle's fall itself and the squeeze. The fork demo adds a second check: 251,761 predicted vs 252,914 observed."
+    },
+    {
+      "layout": "bullets",
+      "title": "Demos on real data",
+      "bullets": [
+        "Offline, from mainnet recordings: no network, no key",
+        [
+          "graph, analyze --vault, analyze --book, watch --replay"
+        ],
+        "Crisis on a mainnet fork: scripts/fork/demo.sh --short",
+        [
+          "Issuer markdown, timelocked upgrade, bad debt, in 2 min"
+        ],
+        "Sponsor's vault (Belem RWA EURCV) and its curator's book"
+      ],
+      "notes": "Recordings live in fixtures/ (snapshot and replay), committed so tests and CI run offline. The fork demo: see presentation/fork-demo and scripts/fork/DEMO-EXPLAINED.md."
+    },
+    {
+      "layout": "two-column",
+      "title": "Interfaces",
+      "left_title": "Command line",
+      "left": [
+        "python3 -m riskdep <mode>",
+        "HTML report and graph",
+        "JSON for every output"
+      ],
+      "right_title": "API and web",
+      "right": [
+        "HTTP API (uvicorn, OpenAPI)",
+        "React UI: vault, market, graph",
+        "Impact and alert pages"
+      ],
+      "font_size": 24,
+      "notes": "uv run uvicorn riskdep.api:app --reload (docs at /docs). web/: React single-page app, one page per mode; runs with mocks copied from real CLI output when no backend."
+    },
+    {
+      "layout": "bullets",
+      "title": "How it is built",
+      "bullets": [
+        "Design first: plans in plan/, numbered decisions",
+        "Pure rules and engine, I/O at the edges",
+        "No literal thresholds: registry.json, each with a basis",
+        "One cached fetcher, one clock: any live run can be a test",
+        "288 tests, all offline; ruff in pre-commit and CI"
+      ],
+      "notes": "Code comments cite plan decisions (D21, D182…). The cached fetcher keys every request; offline runs use the snapshot date as now (clock.py)."
+    },
+    {
+      "layout": "bullets",
+      "title": "Limits",
+      "bullets": [
+        "Ethereum only; Solana, Base and other chains not read",
+        "Probabilities are base rates, layers mostly independent",
+        "analyze covers Pendle PT collateral on Morpho Blue",
+        "Free RPC: short state window, no backfill",
+        "Issuer data (NAV, reserves) taken as published"
+      ],
+      "notes": "Gaps and next steps: docs/analysis/GAP.md, docs/analysis/NEXT_STEP.md, docs/analysis/ROCK-VAULT-DEP.md §9–§11."
+    }
+  ]
+}

@@ -49,6 +49,7 @@ Sizes: **S** about a day, **M** a few days, **L** more.
 | Backtest (B9) | `backtest`: the 2026-08-25 PT-reUSD liquidations, through an archive RPC, recorded keyless | `2026-10-11-backtest` |
 | Conditional Monte Carlo (A4) | `--conditional`: the loss of staying given the incident, drawn from real incident runs, against the certain cost of leaving | `2026-10-11-conditional` |
 | PT yield and rate channels (B1, B2 as incidents) | `--shock pt_yield=…`, `--shock borrow_rate=…` | `2026-10-11-pt-channels` |
+| Detection → impact for vaults (A3) | `OracleImpact` in both watches: the vault's and the depositor's loss and the verdict when an oracle falls; the fork crisis's act 6 states 215,003 EURCV when the price lands, 1.1 % from the loss realised | `2026-10-11-detect` |
 | The brief's book with its PT loop (most of A6) | a borrow pocket in a book (`kind: borrow`), the same verdict rule as a vault pocket; `examples/brief-mixed-book.json` | `2026-10-11-mixed-book` |
 | Zama confidential vaults (Z1–Z3 of `ZAMA-VAULT.md`) | 16 vaults verified; the cShare as a pool; a confidential depositor's two exits in incidents; the hidden layer in `graph` | `2026-10-11-zama` |
 | Push alerts (part of D2) | Telegram (`riskdep notify`, `TELEGRAM_BOT.md`) | — |
@@ -58,7 +59,7 @@ Sizes: **S** about a day, **M** a few days, **L** more.
 
 | # | Step | Gaps | Size | Builds on |
 |---|---|---|---|---|
-| **A3** | Detection → impact for vaults: a NAV update, a stale feed or a feed upgrade fires the vault incident, and the alert carries the loss, the timing and the verdict | K20, K22 | S–M | `vault_incident.py`, `feeds.py`, the fork demo's `admin.py` |
+| ~~**A3**~~ | ~~Detection → impact for vaults~~ **done** for an oracle fall (`OracleImpact`, plan `2026-10-11-detect`); left: a stale feed (`FeedStale`), a queued upgrade's impact before it lands | K20, K22 | S–M | `vault_incident.py`, `feeds.py`, the fork demo's `admin.py` |
 | **A6** | ~~Books mixing borrow and vault pockets, one rule~~ **done** (plan `2026-10-11-mixed-book`); left: the PT verdict's horizon to maturity and tail budget (K12, K13), the conditional distribution for a borrow, PT holdings without a borrow | K21, M6 | M | `decide.py`, `vault_book.py`, `conditional.py` |
 | **Z4** | Zama batcher and wrapper alerts (a confidential run forming, a batch cancelled, decryption delayed, a wrapper paused), after the fork demo's `watch.py` lands; then Z6 (a user's confidential position) and Z7 (a prior) | — | M | `zama.py`, the watches |
 | **A5** | The web page for vault and book incidents on `POST /api/incident` (the front end's) | demo | S | `web/` |

@@ -10,6 +10,7 @@ from pathlib import Path
 
 from . import admin as AD
 from . import crosscheck
+from . import detect as DT
 from . import drain as DR
 from . import exit_queue as EQ
 from . import market_risk as MR
@@ -228,6 +229,7 @@ def run(opts: Options) -> int:
         poller.head = lambda: pinned
 
     polls = 0
+    known = DT.last_prices({}, before)  # D187: each oracle's last answer
     last_check = last_full = state0
     live = opts.mode == "direct" and pinned is None
     backoff = opts.poll_seconds
@@ -293,8 +295,11 @@ def run(opts: Options) -> int:
             )
             + aw.step(f, batch.events, state_block, refresh)
             + aw.check_divergence(f, batch.to_block, {mid: m.oracle_price for mid, m in after.markets.items()})
+            # D188: after vrisk.step, whose risks are now at the batch's prices
+            + DT.impact_alerts(known, after, vrisk.risks, vrisk.markets, view.decimals, batch.to_block)
         ):
             p.alert(al)
+        known = DT.last_prices(known, after)
         poller.save(batch.to_block)
         unit = 10**view.decimals
         p.line(
