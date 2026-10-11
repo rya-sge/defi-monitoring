@@ -28,6 +28,7 @@ from eth_abi import decode
 
 from . import borrower as B
 from . import clock, discover
+from . import feeds as FD
 from . import market_risk as MR
 from . import oracle_class as OC
 from . import siblings as SB
@@ -143,6 +144,11 @@ def _oracle(g: Graph, f, oracle: str, block) -> str:
             g.edge(oracle, fid, "converts through", role=name)
         else:
             fcls = OC.classify_input(probes[addr]) if addr in probes else (None, None)
+            fresh = (
+                FD.freshness(probes[addr].updated_at, probes[addr].update_times, clock.now())
+                if addr in probes
+                else None
+            )
             fid = g.node(
                 addr,
                 "Oracle",
@@ -152,7 +158,10 @@ def _oracle(g: Graph, f, oracle: str, block) -> str:
                 oracle_class=fcls[0],
                 class_basis=fcls[1],
                 tracks_market=probes[addr].pendle_market() if addr in probes else None,
-                source="oracle getter, description() on-chain",
+                updated_at=probes[addr].updated_at if addr in probes else None,
+                freshness=fresh.text if fresh else None,
+                stale=fresh.stale if fresh else None,
+                source="oracle getter, description() on-chain; freshness from its rounds (D155)",
             )
             g.edge(oracle, fid, "reads", role=name)
     return oracle
@@ -623,6 +632,99 @@ def load(
             )
         )
     return g, block, users, vaults, siblings
+
+
+def annotate_zama(g: Graph) -> int:
+    """D175: for each vault of the graph entered through Zama's Confidential Vault protocol, the hidden layer a
+    confidential depositor depends on: the cShare pool that holds its shares, the deposit and redeem batchers (daily),
+    the confidential asset, Zama's decryption (KMS and coprocessors) that every exit needs, and the wrapper registry
+    that can pause the wrappers. From the registry's verified addresses; no read. Returns the number of vaults."""
+    from . import zama as ZM
+
+    n = 0
+    for vid in [i for i, x in g.nodes.items() if x["kind"] == "Actor"]:
+        e = ZM.entry(vid)
+        if e is None:
+            continue
+        n += 1
+        kms = g.node(
+            "zama:protocol",
+            "External",
+            "Zama Protocol (KMS, coprocessors)",
+            role="decrypts every batch aggregate and every unwrap: if it halts, no confidential exit completes",
+            source="docs/external/docs.zama.org-protocol-docs (D175)",
+        )
+        reg = g.node(
+            ZM.Z["wrapper_registry"],
+            "Admin",
+            "Zama token wrapper registry",
+            address=ZM.Z["wrapper_registry"],
+            role="its governance can pause a wrapper",
+        )
+        cs = g.node(
+            e["cshare"],
+            "Asset",
+            "cShare (confidential vault shares)",
+            address=e["cshare"],
+            zama_vault=e["name"],
+            pool=True,
+            role="holds the vault shares of every confidential depositor: one pool, not one holder",
+        )
+        ca = g.node(e["casset"], "Asset", "cAsset (confidential underlying)", address=e["casset"])
+        g.edge(cs, vid, "wraps")
+        if e["underlying"] in g.nodes:
+            g.edge(ca, e["underlying"], "wraps")
+        rb = g.node(
+            e["redeem_batcher"],
+            "Pool",
+            "Zama redeem batcher (daily)",
+            address=e["redeem_batcher"],
+            role="the confidential exit: one batch a day, settled after a decryption",
+        )
+        db = g.node(e["deposit_batcher"], "Pool", "Zama deposit batcher (daily)", address=e["deposit_batcher"])
+        g.edge(rb, vid, "redeems from")
+        g.edge(db, vid, "deposits into")
+        g.edge(rb, cs, "takes")
+        g.edge(db, ca, "takes")
+        for x in (cs, ca, rb, db):
+            g.edge(x, kms, "decrypted by")
+        for x in (cs, ca):
+            g.edge(x, reg, "can be paused by")
+        if e.get("deposit_gate"):
+            g.edge(vid, db, "accepts deposits only from", gate=e["deposit_gate"])
+    return n
+
+
+def annotate_tvl(g: Graph, protocols: list[dict]) -> int:
+    """D160: each Blue market, PT and issuer token of the graph points to the DefiLlama protocol it belongs to, an
+    External node carrying that protocol's TVL, its share of DeFi and of its category, and whether that is a
+    concentration (`tvl` in the registry). Returns the number of protocols drawn."""
+    from . import tvl as TV
+
+    drawn = {}
+    for nid, n in list(g.nodes.items()):
+        slug = TV.slug_of(n)
+        if slug is None:
+            continue
+        if slug not in drawn:
+            c = TV.concentration(protocols, slug)
+            if c is None:
+                continue
+            drawn[slug] = g.node(
+                f"protocol:{slug}",
+                "External",
+                c.name,
+                tvl_usd=round(c.tvl_usd),
+                category=c.category,
+                share_of_defi=round(c.share_defi, 5),
+                share_of_category=round(c.share_category, 4),
+                rank_in_category=c.rank,
+                concentrated=c.concentrated,
+                concentration=c.text,
+                source="DefiLlama /protocols (D158–D160)",
+            )
+        g.edge(nid, drawn[slug], "runs on" if n["kind"] == "Pool" else "issued by")
+    return len(drawn)
 
 
 def annotate_pharos(g: Graph, snap) -> int:

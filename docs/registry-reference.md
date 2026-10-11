@@ -25,6 +25,13 @@ Rules for editing:
 - [`exit_liquidity`](#exit_liquidity)
 - [`pharos`](#pharos)
 - [`nexus`](#nexus)
+- [`feeds`](#feeds)
+- [`tvl`](#tvl)
+- [`backtest`](#backtest)
+- [`conditional`](#conditional)
+- [`irm`](#irm)
+- [`zama`](#zama)
+- [`notify`](#notify)
 - [How to add a yield issuer](#how-to-add-a-yield-issuer)
 
 ## `chain`
@@ -147,6 +154,7 @@ The thresholds of `watch --vault` and `watch --user`. Changing them changes when
 | `mint_share_critical` | fraction of the supply | 0.05 | `Admin.Mint` critical: one transaction minting this share of a collateral or yield token |
 | `oracle_divergence_warn` | fraction | 0.03 | `OracleDivergence` warning: oracle price vs DefiLlama's collateral ÷ loan price |
 | `divergence_check_every_blocks` | blocks | 25 | `OracleDivergence` between full refreshes: the batch's oracle prices against DefiLlama prices at most this old (D97) |
+| `feed_band_report_floor` | fraction | 0.5 | `FeedBand` at start-up: a custom feed whose `minAnswer` lies within this fraction below its latest answer is reported, with the timelock any upgrade must pass (D183). `feed_band_basis` holds the reason |
 | `drain_buy_cost` | fraction | 0.005 | the cost c of buying the collateral at the drain's size, in d\* = 1 − LLTV / (1 + c); low on purpose, so the threshold is early |
 | `drain_margin` | fraction (points of discount) | 0.02 | `DrainWindow` warn: the collateral's discount to its oracle within this distance of d\*; critical at d\* |
 | `drain_check_every_blocks` | blocks | 25 | how often DefiLlama's prices are re-read for the drain threshold; oracle prices come with every state read |
@@ -233,6 +241,95 @@ Nexus Mutual's cover prices as an outside view next to the breakeven p\* (plan `
 | `products` | address → `{product, kind, token}` | trUSD, strUSD, etrUSD (Tori 446), fxSAVE (f(x) 137), fxUSD (depeg 311), iUSD, siUSD (infiniFi 308), mGLOeuro (Midas 356) | which Nexus product covers a collateral's protocol; `kind` is `protocol` (pays on an exploit) or `depeg` |
 
 **Adding a product.** Find the product id in `https://api.nexusmutual.io/v2/products`, read its wording (the IPFS annex in its metadata) to set `kind`, and add `"<token address>": {"product": <id>, "kind": "protocol" | "depeg", "token": "<symbol>"}`.
+
+## `feeds`
+
+When an oracle input is stale (plan `2026-10-11-feed-quality`, D155–D157). Read by `feeds.py` for `graph` and vault incidents; no alert depends on it yet.
+
+| Key | Unit | Default | What it controls |
+|---|---|---|---|
+| `stale_factor` | × cadence | 3 | stale when the last update is older than this many median update intervals, read from the feed's past rounds… |
+| `stale_min_hours` | hours | 25 | …and older than this (a daily heartbeat plus an hour) |
+| `no_history_max_days` | days | 7 | with fewer than `graph.oracle_history_min` rounds, stale past this age |
+| `basis` | text | — | why |
+
+## `tvl`
+
+TVL concentration of the protocols in a graph (plan `2026-10-11-feed-quality`, D158–D160). Read by `tvl.py` for `graph`.
+
+| Key | Unit | Default | What it controls |
+|---|---|---|---|
+| `warn_share_defi` | fraction of all DeFi TVL | 0.02 | a protocol at or above it is a concentration |
+| `warn_share_category` | fraction of its category | 0.25 | …or at or above this share of its DefiLlama category… |
+| `warn_category_min_usd` | USD | 1,000,000,000 | …when the category is at least this large |
+| `blue_markets` | slug | `morpho-blue` | the protocol of every Blue market |
+| `pt_assets` | slug | `pendle-v2` | the protocol of every Pendle PT |
+| `tokens` | address → slug | Re, Tori, infiniFi, Hastra, NUVA, Midas, Lido, Huma, AUTOfinance, f(x), Steakhouse | the protocol issuing a token; add a token by its address and the slug in `https://api.llama.fi/protocols` |
+| `basis`, `warn_basis` | text | — | why |
+
+## `backtest`
+
+Past incidents replayed (plan `2026-10-11-backtest`, D161–D164). Read by `backtest.py`.
+
+| Key | Unit | Default | What it controls |
+|---|---|---|---|
+| `lead_blocks` | blocks | 60 | the state before is read this long before the first liquidation (12 minutes) |
+| `episodes.<name>` | object | `pt-reusd-2026-08-25` | `title`, `markets` (Blue market ids), `window` (first and last block to search for liquidations), `source` |
+| `basis` | text | — | the method |
+
+**Adding an episode.** Find the markets and a block window around the event, add it, run `backtest --episode <name> --record` once (archive RPC and Etherscan key in `keys.ini`), commit `fixtures/replay/backtest-<name>/`, and pin the result in `tests/test_backtest.py`.
+
+## `conditional`
+
+The conditional Monte Carlo of vault and book incidents (plan `2026-10-11-conditional`, D165–D168), `--conditional`. A stated judgement, to calibrate on past markdowns before relying on the tails.
+
+| Key | Unit | Default | What it controls |
+|---|---|---|---|
+| `paths`, `seed` | count, integer | 10,000, 7 | the number of paths and the generator's seed (runs are reproducible) |
+| `grid` | multiples of the fall | 0.25 … 2 | where the real incident is run to measure the loss curve |
+| `recover_prob` | probability | 0.3 | the markdown is partly reversed: m uniform on 0–1 |
+| `deepen_sigma` | σ of ln m | 0.35 | otherwise m is lognormal with median 1 |
+| `no_liquidator_prob` | probability by exit route | none 0.5, thin 0.25, unknown 0.2, deep 0.05 | nobody liquidates: the loss is the shortfall, the liquidity locked |
+| `basis` | text | — | why |
+
+## `notify`
+
+Telegram delivery of the watch alerts (`riskdep/notify.py`, `TELEGRAM_BOT.md`). Nothing is sent unless there is an alert at or above `level`.
+
+| Key | Unit | Default | What it controls |
+|---|---|---|---|
+| `level` | info / warn / critical | warn | the lowest level posted; `--level` overrides it |
+| `dedup_blocks` | blocks | 1800 (about 6 h) | a standing finding (no transaction) is posted again only after this many blocks, since every watch restart prints it again |
+| `min_gap_seconds` | seconds | 3 | the spacing between two messages when several alerts arrive together; no effect when nothing is sent |
+| `burst_max` | messages | 10 | past this many messages in one pass, the rest goes as one digest |
+| `poll_seconds` | seconds | 2 | how often the alert files are read |
+| `max_retries` | count | 5 | waits on Telegram's 429 before giving up until the next pass |
+| `basis` | text | — | why |
+
+## `irm`
+
+Morpho's AdaptiveCurveIRM, for the timing of a `borrow_rate` incident (plan `2026-10-11-pt-channels`, D170).
+
+| Key | Unit | Default | What it controls |
+|---|---|---|---|
+| `target_utilization` | fraction | 0.9 | the utilisation the rate model steers to |
+| `curve_steepness` | × | 4 | the rate at 100 % utilisation is this times the rate at target |
+| `adjustment_speed_per_year` | per year | 50 | how fast the rate at target moves at full error: it doubles in ln 2 / 50 years, about 5 days |
+| `max_rate_at_target` | APY | 2.0 | its cap |
+| `basis` | text | — | the source |
+
+## `zama`
+
+Zama's Confidential Vault protocol (plan `2026-10-11-zama`, D171–D176). Read by `zama.py`, `vault.py`, `exit_queue.py`, `vault_incident.py` and `graph.py`.
+
+| Key | Unit | Default | What it controls |
+|---|---|---|---|
+| `vaults.<vault address>` | object | the 16 mainnet vaults | `name`, `deposit_batcher`, `redeem_batcher`, `cshare` (the pool), `casset`, `underlying`, `deploy_block`, optional `deposit_gate` |
+| `router`, `wrapper_registry` | address | chain-level contracts | drawn in `graph` |
+| `instant_exit_minutes` | minutes | 15 | the instant exit's duration (one decryption), a stated estimate |
+| `basis`, `instant_basis` | text | — | the source and the on-chain check |
+
+**Adding a vault.** From the Zama address list, add the vault's entry, and check its batchers' `vault()`, `fromToken()` and `toToken()` on-chain.
 
 ## How to add a yield issuer
 

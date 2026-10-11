@@ -62,6 +62,15 @@ Source: the Dune dashboard [rockawayxvault/rockawayx-dashboard](https://dune.com
 
 Bold rows are the Morpho vaults detailed in §3. The page's text names Plume, Etherlink and 0G, and DefiLlama adds Monad with $15.0M. No row on the page carries those chains, so they are either in the 8 hidden rows (which add up to almost nothing) or counted by DefiLlama outside this table.
 
+**Two of them are also Zama confidential vaults** (checked on-chain on 2026-10-11, addresses from `docs/external/docs.zama.org-protocol-docs/confidential-vault/reference/addresses.md`). Zama's Confidential Vault protocol puts a deposit and a redeem batcher and a confidential share token (cShare, ERC-7984) in front of a public Vault V2, so a depositor's amount stays encrypted; batches settle once a day. How `riskdep` could analyse them: `docs/analysis/ZAMA-VAULT.md`.
+
+| Vault | Zama app | Vault | cShare | Deposit batcher | Redeem batcher | Deposit gate | Held through cShare |
+|---|---|---|---|---|---|---|---|
+| RockawayX Confidential RWA USDC (#4) | [rockawayx-usdc-rwa](https://app.zama.org/earn/ethereum/0xc207d3f66537D7F66456808379A0E560cF20Da36/rockawayx-usdc-rwa) | `0xc207…Da36` | `0xB1B1…EB30` | `0x084f…eEc1` | `0x43e8…0E4b` | `0x51f6…D525`: only the deposit batcher may deposit | 99.1 % |
+| RockawayX USDC Yield (#6) | [rockawayx-usdc-high-yield](https://app.zama.org/earn/ethereum/0xE0181090c22579B6A217f1522cbf8c9f1F0C1965/rockawayx-usdc-high-yield) | `0xE018…1965` | `0x4FCC…B88f` | `0x2dEA…724d` | `0xf18A…d8a8` | none: public deposits too | 0.8 % |
+
+Both use cUSDC `0xe978…72B2`. So the "6 holders" of #4 are in practice one: the cShare wrapper, behind which the confidential depositors sit.
+
 ## 3. Morpho vaults: markets, collateral, oracles
 
 All 8 are Vault V2, each with a single `MorphoMarketV1` adapter. The Morpho API names vault 6 "RockawayX USDC Yield"; the dashboard calls it "RockawayX YIELD USDC".
@@ -276,3 +285,4 @@ Without these entries, every one of these tokens falls back to `unknown_issuer`,
 - Midas: [mGLOBAL on Aave Horizon](https://cfotech.co.uk/story/midas-launches-mglobal-as-collateral-on-aave-horizon)
 - OnRe: [ONyc docs](https://docs.onre.finance/introduction/onre-tokenized-reinsurance-onyc)
 - Ember Y10K: [Trading Strategy](https://tradingstrategy.ai/vaults/ember-y10k)
+- Zama Confidential Vault: [docs](https://docs.zama.org/protocol/confidential-vault) (local copy `docs/external/docs.zama.org-protocol-docs/`), the app pages of [rockawayx-usdc-rwa](https://app.zama.org/earn/ethereum/0xc207d3f66537D7F66456808379A0E560cF20Da36/rockawayx-usdc-rwa) and [rockawayx-usdc-high-yield](https://app.zama.org/earn/ethereum/0xE0181090c22579B6A217f1522cbf8c9f1F0C1965/rockawayx-usdc-high-yield)

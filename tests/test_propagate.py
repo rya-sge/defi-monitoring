@@ -36,3 +36,23 @@ def test_oracle_misprint_liquidates_without_real_loss_of_value():
 def test_limited_liability_caps_loss_at_equity():
     r = loss(100.0, 90.0, 0.915, 1.026, "fundamental", {"lending": 0.5})
     assert not r.liquidated and r.loss_usd == pytest.approx(10.0)
+
+
+# --- the PT loop's yield and rate channels (plan 2026-10-11-pt-channels, D169–D170)
+
+
+def test_pt_yield_rise_liquidates_only_through_a_market_tracking_oracle():
+    kw = {"pt_years": 1.0, "implied_apy": 0.10}
+    # +10 pts over one year: price × 1.10 / 1.20 = −8.3 %; at LTV 0.88 / LLTV 0.915 the oracle-seen fall liquidates
+    seen = loss(100.0, 88.0, 0.915, 1.03, "market-tracking", {"pt_yield": 0.10}, **kw)
+    assert seen.liquidated and seen.loss_usd > 0 and seen.oracle_value_usd == pytest.approx(100 * 1.10 / 1.20)
+    held = loss(100.0, 88.0, 0.915, 1.03, "fundamental", {"pt_yield": 0.10}, **kw)
+    assert not held.liquidated and held.loss_usd == 0  # held to maturity, the PT still redeems at par
+    assert loss(100.0, 88.0, 0.915, 1.03, "market-tracking", {"pt_yield": 0.10}).loss_usd == 0  # no maturity: no effect
+
+
+def test_borrow_rate_spike_grows_the_debt():
+    b = loss(100.0, 50.0, 0.915, 1.03, "none", {"borrow_rate": 0.40}, borrow_apy=0.04, horizon_years=0.5)
+    assert b.loss_usd == pytest.approx(50 * 0.36 * 0.5) and not b.liquidated
+    tight = loss(100.0, 85.0, 0.915, 1.03, "none", {"borrow_rate": 1.0}, borrow_apy=0.04, horizon_years=0.1)
+    assert tight.liquidated  # 85 × (1 + 0.96 × 0.1) = 93.2 > 91.5

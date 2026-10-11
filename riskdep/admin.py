@@ -50,7 +50,7 @@ ADMIN_EVENTS = [
     "RoleGranted(bytes32,address,address)",
     "RoleRevoked(bytes32,address,address)",
 ]
-# the queue of an OpenZeppelin TimelockController that controls a watched contract (fork-demo D3)
+# the queue of an OpenZeppelin TimelockController that controls a watched contract (D182)
 TIMELOCK_EVENTS = [
     "CallScheduled(bytes32,uint256,address,uint256,bytes,bytes32,uint256)",
     "CallExecuted(bytes32,uint256,address,uint256,bytes)",
@@ -88,7 +88,7 @@ class Contract:
     aggregator: str | None = None
     clone_of: str | None = None
     total_supply: int | None = None
-    # fork-demo D3–D4: a timelock or proxy admin found above a watched contract, and a custom feed's fixed band
+    # D182–D183: a timelock or proxy admin found above a watched contract, and a custom feed's fixed band
     timelock_delay: int | None = None  # seconds, when this contract is an OpenZeppelin TimelockController
     controls: list[str] = field(default_factory=list)  # addresses of the watched contracts it can change
     band: tuple[int, int, int, int] | None = None  # (minAnswer, maxAnswer, decimals, latest answer)
@@ -171,7 +171,7 @@ class AdminWatch:
             self._add(und, f"yield token of {m.collateral_symbol}", _symbol(f, und, block), mint_watch=True)
 
     def _discover_controllers(self, f: S.Fetcher, block: int) -> bool:
-        """D3: who can change a watched contract, one level up. The proxy admin of each proxy, the owner of that
+        """D182: who can change a watched contract, one level up. The proxy admin of each proxy, the owner of that
         proxy admin, and each contract's owner; any of them answering `getMinDelay()` is an OpenZeppelin
         TimelockController, whose queue is then watched: an upgrade is seen when it is scheduled, a full delay before
         it can land. False when it could not be read (a replay recorded before this check): the watch goes on."""
@@ -200,15 +200,17 @@ class AdminWatch:
             if delay is None and not proxy_admin:
                 continue
             for r, c in cands[a]:
-                kind = f"timelock ({delay / 3600:g} h)" if delay is not None else "proxy admin"
-                t = self._add(a, f"{kind}, {r} of {c.symbol or c.address[:10]}")
+                name = c.symbol or c.address[:10]
+                t = self._add(
+                    a, f"timelock ({delay / 3600:g} h), {r} of {name}" if delay is not None else f"{r} of {name}"
+                )
                 t.timelock_delay = delay
                 if c.address not in t.controls:
                     t.controls.append(c.address)
         return True
 
     def _read_bands(self, f: S.Fetcher, block: int) -> bool:
-        """D4: the fixed band of a custom feed (`minAnswer`/`maxAnswer` readable on the feed itself, e.g. Midas
+        """D183: the fixed band of a custom feed (`minAnswer`/`maxAnswer` readable on the feed itself, e.g. Midas
         CustomAggregatorV3CompatibleFeed). Below `minAnswer` the feed cannot report without new code, so a loss
         beyond the band reaches the oracle only through an upgrade. Chainlink proxies expose no band: skipped."""
         feeds = sorted(a for a, c in self.contracts.items() if any(r.startswith("feed of") for r in c.roles))
@@ -406,7 +408,7 @@ class AdminWatch:
             if c.band:
                 lo, hi, dec, ans = c.band
                 line(
-                    f"  feed band {c.symbol} {c.address[:10]}…: {lo / 10**dec:,.4g} – {hi / 10**dec:,.4g}, "
+                    f"  feed band {c.symbol} {c.address[:10]}…: {lo / 10**dec:,.6g} – {hi / 10**dec:,.6g}, "
                     f"now {ans / 10**dec:,.6g} ({lo / ans - 1:+.1%} to the floor)"
                 )
         if not (self.controllers_checked and self.bands_checked):
@@ -583,7 +585,7 @@ def assess_events(events: list[Event], contracts: dict[str, Contract], block: in
 
 
 def _timelock_alert(e: Event, tl: Contract, contracts: dict[str, Contract]) -> list[Alert]:
-    """D3: a call queued, executed or cancelled on a timelock that controls a watched contract. An upgrade (or a
+    """D182: a call queued, executed or cancelled on a timelock that controls a watched contract. An upgrade (or a
     change of the proxy's admin or owner) of a watched contract is a warn when scheduled: the depositor has the
     timelock's delay to act. Its execution is followed by the contract's own Upgraded event (critical)."""
     a = e.args
@@ -647,7 +649,7 @@ def _timelock_alert(e: Event, tl: Contract, contracts: dict[str, Contract]) -> l
 
 
 def band_findings(contracts: dict[str, Contract], timelock_over, block: int) -> list[Alert]:
-    """D4: a custom feed whose floor is close to its answer caps how far the oracle can fall: a larger loss stays
+    """D183: a custom feed whose floor is close to its answer caps how far the oracle can fall: a larger loss stays
     invisible to the market (no liquidation, hidden bad debt) until new code is installed."""
     out = []
     for c in contracts.values():

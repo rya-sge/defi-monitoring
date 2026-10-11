@@ -198,6 +198,15 @@ sequenceDiagram
 
 Details and a worked example: `docs/how-risk-is-computed.md`.
 
+### `analyze --vault` and `--book`: a known incident
+
+`pipeline.incident` (shared with `POST /api/incident`) parses the shocks (`token=<collateral>:<fall>`, `borrower=<target>:<recovery>[:<n>]`), reads Pharos and Nexus once, and for each vault of the book runs `vault_incident.run` at the vault's recorded or live block:
+1. **Hits.** Each shock is matched to the vault's markets through the collateral itself, what it wraps on-chain (PT, ERC-4626), or Pharos's off-chain backing.
+2. **Market loss.** Every borrower is valued at the shocked price (`market_risk.value`); a constant-price oracle on a wrapper does not move, so the loss is the hidden shortfall; a default removes the defaulters at their recovery. With a recorded graph, the shock engine replaces these figures on the markets it reaches and adds sibling markets.
+3. **Depositor.** The exit queue (`exit_queue.py`) gives the loss if the depositor stays and if it leaves first; `decide` gives STAY or EXIT given the incident; `breakeven` gives p\*, the incident probability above which leaving now pays.
+
+`vault_book.aggregate` adds the vaults in USD and names the vault to act on first (lowest p\*); `--conditional` reruns every vault at multiples of the fall and draws the loss of staying (`conditional.py`). Details, with diagrams and a worked example: `docs/vault-incident.md`.
+
 ### `watch --vault` and `watch --user`: one batch
 
 Both watches share the same loop; `watch --user` runs one target per kind of position (all borrows together, one target per vault).
@@ -313,6 +322,13 @@ The design decisions are numbered across twelve plans, in the order the incremen
 | `plan/2026-10-11-pharos.plan.md` | Pharos, keyless: grades, off-chain backing, common-mode groups | D133–D138 |
 | `plan/2026-10-11-one-number.plan.md` | the shock engine as the impact core of vault and book incidents | D139–D141 |
 | `plan/2026-10-11-breakeven.plan.md` | the breakeven probability p\* of vault and book incidents; Nexus as an outside view | D142–D146 |
+| `plan/2026-10-11-mixed-book.plan.md` | borrow pockets in a book, the brief's PT loop among them | D177–D178 |
+| `plan/2026-10-11-zama.plan.md` | Zama confidential vaults: the cShare pool, the two exits, the hidden layer | D171–D176 |
+| `plan/2026-10-11-pt-channels.plan.md` | the PT loop's implied-yield and borrow-rate incidents | D169–D170 |
+| `plan/2026-10-11-conditional.plan.md` | the loss of staying given the incident, drawn, against the certain cost of leaving | D165–D168 |
+| `plan/2026-10-11-backtest.plan.md` | `backtest`: the 2026-08-25 PT-reUSD liquidations replayed against the prediction | D161–D164 |
+| `plan/2026-10-11-feed-quality.plan.md` | feed freshness in `graph` and vault incidents; TVL concentration of the graph's protocols | D155–D160 |
+| `plan/2026-10-11-judge-path.plan.md` | the brief's ten pockets and `--exit-cost`; a reason on every verdict; the sampling error in the PT verdict | D150–D154 |
 | `plan/2026-10-11-incident-api.plan.md` | `POST /api/incident`, `GET /api/books`; the incident run moved to `pipeline` | D147–D149 |
 
 A change that departs from a decision is recorded in that plan's table.

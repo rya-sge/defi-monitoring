@@ -43,7 +43,15 @@ def post_incident(req: IncidentRequest) -> Any:
         else:
             book = vault_book.from_addresses(req.vaults, req.user)
         with fetch_lock:
-            res = pipeline.incident(book, req.shocks, req.user, req.horizon, "live" if req.live else "offline")
+            res = pipeline.incident(
+                book,
+                req.shocks,
+                req.user,
+                req.horizon,
+                "live" if req.live else "offline",
+                req.exit_cost,
+                req.conditional,
+            )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
     except FileNotFoundError as e:

@@ -217,6 +217,18 @@ def assess_event(e: Event, ctx: Ctx, held: set[str], dep: str | None) -> Alert |
     if e.name == "Submit":
         what, why = _timelocked_text(ctx, a["data"])
         tl = ctx.view.timelock_of(e.address, a["data"][2:10])
+        if tl and tl[2]:
+            # D184: an abdicated function can be submitted but never executed (VaultV2.timelocked)
+            return Alert(
+                "info",
+                e.block,
+                tx,
+                f"{who}.Submit",
+                "Submitted, but abdicated: " + what,
+                f"{tl[0].split('(')[0]} is abdicated on this contract: the call can never be executed",
+                None,
+                {"data": a["data"], "abdicated": True},
+            )
         no_notice = bool(tl and tl[1] == 0 and tl[0] in RISK_INCREASING_VAULT + RISK_INCREASING_ADAPTER)
         return Alert(
             "critical" if no_notice else "warn",
@@ -569,7 +581,7 @@ def startup_findings(view: VaultView, st: VaultState) -> list[Alert]:
                     "ExitGate",
                     "The curator can gate withdrawals with no notice",
                     f"{', '.join(open_now)}: timelock 0, not abdicated. Set to a gate that refuses you, it locks "
-                    "your shares in the vault from the next block (fork-demo D5)",
+                    "your shares in the vault from the next block (D184)",
                     None,
                     {"functions": open_now},
                 )

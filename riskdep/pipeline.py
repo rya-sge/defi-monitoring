@@ -131,7 +131,13 @@ def analyze(
     if shocks:
         recovery = next((p.recovery for p in prs if p.event == "issuer_depeg"), 0.0)
         incident = scenario.assess(
-            pos, shocks, recovery, quote, profile, quote_for=lambda q, fr: discover.partial_exit_quote(f, q, fr)
+            pos,
+            shocks,
+            recovery,
+            quote,
+            profile,
+            quote_for=lambda q, fr: discover.partial_exit_quote(f, q, fr),
+            horizon_days=horizon,
         )
 
     # a failed cross-check leads the reasons: the numbers below it are suspect
@@ -208,6 +214,14 @@ def nexus_prices(mode: str = "offline"):
     return nexus.load(_outside_fetcher("nexus", mode))
 
 
+def llama_protocols(mode: str = "offline") -> list[dict] | None:
+    """D158: DefiLlama's protocol list: the snapshot's copy offline (its as-of date), read live otherwise and not saved."""
+    try:
+        return S.llama_protocols(S.Fetcher("offline") if mode == "offline" else S.Fetcher("direct"))
+    except (S.CacheMiss, S.SourceError):
+        return None
+
+
 def vault_graph(vault: str) -> dict | None:
     """D139: the vault's recorded dependency graph (graph --vault … --record), for the shock engine; None without one.
     Loading a replay moves the clock to the recording's date, so the clock is put back."""
@@ -227,12 +241,23 @@ def vault_graph(vault: str) -> dict | None:
 
 
 def incident(
-    book: vault_book.Book, shocks: list[str], user: str | None = None, horizon: float = 30.0, mode: str = "offline"
+    book: vault_book.Book,
+    shocks: list[str],
+    user: str | None = None,
+    horizon: float = 30.0,
+    mode: str = "offline",
+    exit_cost: float | None = None,
+    conditional: bool = False,
 ) -> VaultIncidentResult:
     """A known incident on every vault of a book, added up (shared by `analyze --vault|--book` and the API).
 
-    `shocks` in the CLI's syntax (`token=<collateral>:<fall>`, `borrower=<target>:<recovery>[:<n>]`). Raises
-    ValueError (bad shocks), FileNotFoundError (a vault not recorded, offline), `sources.CacheMiss`, `SourceError`."""
+    `shocks` in the CLI's syntax (`token=<collateral>:<fall>`, `borrower=<target>:<recovery>[:<n>]`). `exit_cost`, a
+    share of what leaves, replaces the yield given up as the cost of leaving (the brief's 11 % unwind). `conditional`
+    adds the distribution of the loss of staying given the incident, from runs at multiples of the fall (D165–D168).
+    Raises ValueError (bad shocks), FileNotFoundError (a vault not recorded, offline), `sources.CacheMiss`,
+    `SourceError`."""
+    if exit_cost is not None and not 0 <= exit_cost < 1:
+        raise ValueError("exit_cost is a share of what leaves, between 0 and 1 (0.11 for 11 %)")
     if mode not in MODES:
         raise ValueError(f"mode must be one of {', '.join(MODES)}")
     parsed = vault_incident.parse_shocks(shocks)
@@ -241,22 +266,128 @@ def incident(
             "a vault incident needs a shock: token=<collateral address or symbol>:<fall>, e.g. token=mGLOeuro:0.30, "
             "or borrower=<collateral, market id or all>:<recovery>[:<n>], e.g. borrower=mGLOeuro:0.5"
         )
+    if conditional and not any(k == "token" for k, *_ in parsed):
+        raise ValueError("the conditional distribution draws the size of a markdown: it needs a token=… shock")
     ph, nx = pharos_snapshot(mode), nexus_prices(mode)
-    incidents = []
-    for v in book.vaults:
-        f, block, all_oracles = vault_source(v.address, mode)
-        incidents.append(
+    sources = [(v, *vault_source(v.address, mode), vault_graph(v.address)) for v in book.vaults if v.kind == "vault"]
+
+    def run_all(scaled):
+        return [
             vault_incident.run(
                 f,
                 v.address,
                 block,
                 v.depositor or user,
-                parsed,
+                scaled,
                 profile_all=all_oracles,
                 pharos=ph,
-                graph=vault_graph(v.address),
+                graph=g,
                 horizon_days=horizon,
                 nexus=nx,
+                exit_cost_rate=exit_cost,
             )
+            for v, f, block, all_oracles, g in sources
+        ]
+
+    incidents = run_all(parsed)
+    borrows, names = [], {}
+    for v in book.vaults:
+        if v.kind == "borrow":
+            ln, n = borrow_pocket(v, parsed, book.weighting, horizon, mode, exit_cost)
+            borrows.append(ln)
+            names.update(n)
+    result = vault_book.aggregate(book, parsed, incidents, borrows, names)
+    if conditional and any(ln.hit_markets for ln in borrows):
+        result.notes.append(
+            "the conditional distribution covers the vault pockets; a borrow pocket keeps its one figure"
         )
-    return VaultIncidentResult(book, incidents, vault_book.aggregate(book, parsed, incidents))
+    if conditional:
+        conditional_distribution(book, parsed, incidents, result, run_all)
+    return VaultIncidentResult(book, incidents, result)
+
+
+def borrow_pocket(v, parsed, weighting: str, horizon: float, mode: str, exit_cost: float | None):
+    """D177–D178: a Morpho Blue borrow in a book (the brief's PT loop). A token shock that names its collateral or the
+    collateral's underlying is, for the position, a loss of backing every oracle sees (`issuer_hack`); the incident
+    module of `analyze --shock` gives its loss and its exit cost. Offline from the analyze snapshot."""
+    f = S.Fetcher("offline") if mode == "offline" else S.Fetcher("direct")
+    as_of = clock.as_of()
+    if mode == "offline":
+        clock.set_as_of(json.loads((S.SNAPSHOT_DIR / "as_of.json").read_text())["as_of"])
+    try:
+        pos = discover.discover_morpho_position(f, v.address, v.depositor)
+        names = {
+            x.lower()
+            for x in (pos.collateral_symbol, pos.collateral_address, pos.underlying_symbol, pos.underlying_address)
+            if x
+        }
+        fall = max((s for k, t, s, _ in parsed if k == "token" and t in names), default=0.0)
+        label = v.label or pos.label
+        shown = {
+            t: (
+                pos.underlying_symbol
+                if t in {(pos.underlying_symbol or "").lower(), pos.underlying_address}
+                else pos.collateral_symbol
+            )
+            for k, t, _, _ in parsed
+            if k == "token" and t in names
+        }
+        if not fall:
+            line = vault_book.borrow_line(label, weighting, v.amount, pos.equity_usd, 0.0, 0.0, None, horizon, False)
+            return line, shown
+        res = analyze(f, market=v.address, user=v.depositor, horizon=horizon, paths=2000, shocks={"issuer_hack": fall})
+        inc = res.incident
+        line = vault_book.borrow_line(
+            label, weighting, v.amount, pos.equity_usd, inc.loss_usd, inc.exit_cost_usd, exit_cost, horizon, True
+        )
+        return line, shown
+    finally:
+        clock.set_as_of(as_of)
+
+
+def conditional_distribution(book, parsed, incidents, result, run_all) -> None:
+    """D165–D168: run the incident at each multiple of `conditional.grid`, build each vault's loss curve in its
+    depositor's terms (the book's pocket when it has one), and draw the distribution for each vault and the book."""
+    from dataclasses import asdict
+
+    from . import conditional as CD
+
+    grid = [m for m in CD.C["grid"] if m != 1.0]
+    runs = {1.0: incidents}
+    for m in grid:
+        scaled = [(k, t, min(0.99, v * m), n) if k == "token" else (k, t, v, n) for k, t, v, n in parsed]
+        runs[m] = run_all(scaled)
+    mults = [0.0] + sorted(runs)
+    amounts = {v.address: v.amount for v in book.vaults}
+    curves = []
+    for i, inc in enumerate(incidents):
+        stay, leave, ratio = [0.0], [0.0], [1.0]
+        for m in mults[1:]:
+            x = runs[m][i]
+            usd = x.asset_usd or 1.0
+            if book.weighting == "pocket":
+                ln = vault_book.line(x, None, "pocket", amounts.get(x.vault))
+                s, lv = ln.loss_usd, ln.loss_usd - ln.saved_usd
+            else:
+                s, lv = x.loss_if_stay * usd, x.loss_if_exit_first * usd
+            noliq = sum(
+                h.no_liquidator_shortfall if h.event == "markdown" and h.liquidatable_debt > 0 else h.vault_loss
+                for h in x.hits
+            )
+            stay.append(s)
+            leave.append(lv)
+            ratio.append(noliq / x.vault_loss if x.vault_loss > 0 else 1.0)
+        line = next(ln for ln in result.lines if ln.vault == inc.vault)
+        cost = line.exit_cost_usd if book.weighting == "pocket" else inc.exit_cost * (inc.asset_usd or 1.0)
+        liquidatable = [h.exit_route for h in inc.hits if h.liquidatable_debt > 0]
+        p_noliq = CD.C["no_liquidator_prob"][CD.worst_route(liquidatable)] if liquidatable else 0.0
+        curves.append(CD.Curve(line.name, mults, stay, leave, ratio, cost, p_noliq))
+    fall = max(v for k, _, v, _ in parsed if k == "token")
+    for inc, c in zip(incidents, curves):
+        if inc.hits:
+            d = CD.simulate([c], fall)
+            inc.conditional = {**asdict(d), "text": d.text()}
+    hit = [c for inc, c in zip(incidents, curves) if inc.hits]
+    if hit:
+        d = CD.simulate(hit, fall)
+        result.conditional = {**asdict(d), "text": d.text()}

@@ -258,7 +258,7 @@
     "drain_basis": "D70, D72. drain_buy_cost: the cost c of buying the collateral at the drain's size, in d* = 1 - LLTV / (1 + c); 0.5 % is low on purpose (a lower cost gives an earlier, more conservative threshold) and is not measured per token. drain_margin: warn when the collateral's discount to the oracle is within 2 points of d*. drain_check_every_blocks: DefiLlama's prices are re-read every 25 blocks (~5 min); oracle prices come with every state read.",
     "exit_queue_basis": "D64, D66. exit_queue_phi: the share of the other depositors' assets assumed to leave before you in a run, Team 2's single parameter phi; 0.5 is a middle case with no data behind it. exit_queue_stuck_warn: warn when at least half of the position would be stuck if every contract holder (vault, fund, multisig) withdrew first; critical when, in addition, the vault already carries unrealised bad debt.",
     "feed_band_report_floor": 0.5,
-    "feed_band_basis": "fork-demo D4 (plan/2026-10-11-fork-demo.plan.md). A custom feed whose minAnswer/maxAnswer are readable on the feed is reported (FeedBand) when its floor lies within this fraction below its latest answer. mGLOeuro/EUR (Midas, read 2026-10-11) has a band of 90,000-110,000 EUR around 100,000 and no setter, so a fund loss above 10 % reaches the Belem market's oracle only after an upgrade behind a 48 h timelock. Chainlink OCR bands are not exposed on the proxy and never trigger."
+    "feed_band_basis": "D183 (plan/2026-10-11-fork-demo.plan.md). A custom feed whose minAnswer/maxAnswer are readable on the feed is reported (FeedBand) when its floor lies within this fraction below its latest answer. mGLOeuro/EUR (Midas, read 2026-10-11) has a band of 90,000-110,000 EUR around 100,000 and no setter, so a fund loss above 10 % reaches the Belem market's oracle only after an upgrade behind a 48 h timelock. Chainlink OCR bands are not exposed on the proxy and never trigger."
   },
   "graph": {
     "sibling_min_tvl_usd": 1000000,
@@ -875,6 +875,252 @@
         "product": 356,
         "kind": "protocol",
         "token": "mGLOeuro"
+      }
+    }
+  },
+  "feeds": {
+    "stale_factor": 3,
+    "stale_min_hours": 25,
+    "no_history_max_days": 7,
+    "basis": "D156: a feed is stale when its last update is older than stale_factor × its own median update interval (read from its past rounds) and stale_min_hours (a daily heartbeat plus an hour's margin); without round history, older than no_history_max_days. Chainlink's heartbeat and deviation threshold are off-chain configuration, so the observed rhythm stands in for them. ROCK-VAULT-DEP.md: mGLOeuro's NAV feed was 17.5 days old on 2026-10-11."
+  },
+  "tvl": {
+    "basis": "D158-D160: DefiLlama /protocols (already the source of the incident base rates), the snapshot's copy offline (fixtures/snapshot, as of its date). A protocol's TVL against all of DeFi and against its DefiLlama category; the brief's 'protocols concentrating a large share of on-chain TVL'. Shares are of the total over every chain, as /protocols gives no per-chain split in the cached copy.",
+    "warn_share_defi": 0.02,
+    "warn_share_category": 0.25,
+    "warn_basis": "2 % of all DeFi is a top-10 protocol (Lido 4.1 %, Aave V3 2.9 %, Morpho Blue 1.9 % on 2026-10-10); a quarter of a category is a dominant venue for that kind of risk; a category share counts only for a category of at least warn_category_min_usd (fx Protocol is 57 % of a 220M category)",
+    "blue_markets": "morpho-blue",
+    "pt_assets": "pendle-v2",
+    "tokens": {
+      "0x5086bf358635b81d8c47c66d1c8b9e567db70c72": "re",
+      "0x280839980a7ed0d7717f64125fe241012e5f5815": "tori-finance",
+      "0xd0580192e98ea6ceb9c7b6191ed2e27560911697": "tori-finance",
+      "0x6f20ae2c98c2d34e6a57f3411f2c5af92e32592d": "tori-finance",
+      "0xdbdc1ef57537e34680b898e1febd3d68c7389bcb": "infinifi",
+      "0x48f9e38f3070ad8945dfeae3fa70987722e3d89c": "infinifi",
+      "0x19ebb35279a16207ec4ba82799cc64715065f7f6": "hastra",
+      "0x6ad038ca6c04e885630851278ca0a856ad9a66cc": "hastra",
+      "0xc360e625f19a7ea47e47810b13e386221d5187d1": "nuva",
+      "0x2f8bae126b8d416c009b82ccd60e4f9cabbd7702": "midas-rwa",
+      "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0": "lido",
+      "0x22ae3d9a738471f405169af055d31c687087d4c7": "huma",
+      "0x997e2efbce91d170b00ea402e35a66c887ee1da9": "autofinance",
+      "0x7743e50f534a7f9f1791dde7dcd89f7783eefc39": "fx-protocol",
+      "0x65c9a641afceb9c0e6034e558a319488fa0fa3be": "fx-protocol",
+      "0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f": "steakhouse-financial"
+    },
+    "warn_category_min_usd": 1000000000.0
+  },
+  "backtest": {
+    "basis": "D161-D164: a past incident replayed: the markets' borrowers (their Borrow events up to the block before), their positions, the market totals and the oracle price read at that block through an archive RPC (keys.ini), the oracle's lowest price over the liquidation blocks applied as the shock, the liquidation model of market_risk.value predicting what becomes liquidatable, against the Liquidate events. lead_blocks: how far before the first liquidation the 'before' state is read (60 blocks, 12 minutes: the episode's yield spike took nine).",
+    "lead_blocks": 60,
+    "episodes": {
+      "pt-reusd-2026-08-25": {
+        "title": "PT-reUSD liquidations on Morpho, 2026-08-25",
+        "markets": [
+          "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+          "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca"
+        ],
+        "window": [
+          25821306,
+          25842830
+        ],
+        "source": "GAP.md K8: trading in YT-reUSD pushed PT-reUSD's implied yield from about 11 % to over 20 % in nine minutes; the min(TWAP, linear) oracle fell; 33 positions liquidated, no bad debt. 33 Liquidate events confirmed on-chain on 2026-10-11 (blocks 25,829,868 to 25,829,936)."
+      }
+    }
+  },
+  "conditional": {
+    "paths": 10000,
+    "seed": 7,
+    "grid": [
+      0.25,
+      0.5,
+      0.75,
+      1.0,
+      1.25,
+      1.5,
+      2.0
+    ],
+    "recover_prob": 0.3,
+    "deepen_sigma": 0.35,
+    "no_liquidator_prob": {
+      "none": 0.5,
+      "thin": 0.25,
+      "unknown": 0.2,
+      "deep": 0.05
+    },
+    "basis": "D165-D168, a judgement stated so it can be argued with: given the incident, its size is drawn around the fall given, as a multiple m of it: with recover_prob the markdown is partly reversed (m uniform on 0-1), otherwise it holds or deepens (m lognormal, median 1, sigma deepen_sigma), the fall capped below 100 %. The losses at m come from real incident runs at the grid's multiples (engine included), interpolated. With no_liquidator_prob, by the hit collateral's worst exit route (exit_liquidity), nobody liquidates and the loss is the shortfall with the liquidity locked. Calibrate on past markdowns (the DeFi hack corpus, Pharos depeg events) before relying on the tails."
+  },
+  "notify": {
+    "level": "warn",
+    "dedup_blocks": 1800,
+    "min_gap_seconds": 3,
+    "burst_max": 10,
+    "poll_seconds": 2,
+    "max_retries": 5,
+    "basis": "Telegram delivery of the watch alerts (TELEGRAM_BOT.md). Nothing is sent unless there is an alert at or above level: warn by default, since info alerts (allocation moves, small flows) are context, not risk. A standing finding (no transaction) is posted again only after dedup_blocks (1800 blocks, about 6 h), because every watch restart prints it again. min_gap_seconds spaces messages only when several alerts arrive together, under Telegram's limit of about 20 messages a minute to one channel; past burst_max queued messages the rest goes as one digest. poll_seconds is how often the alert files are read; max_retries bounds the waits on Telegram's 429 answer."
+  },
+  "irm": {
+    "target_utilization": 0.9,
+    "curve_steepness": 4,
+    "adjustment_speed_per_year": 50,
+    "max_rate_at_target": 2.0,
+    "basis": "D169-D170: Morpho's AdaptiveCurveIRM (docs/external/morpho/docs.morpho.org-developers-docs, IRM): the borrow rate is the rate at target times a curve of utilisation (×4 at 100 %, ×1/4 at 0, 1 at the 90 % target); away from the target the rate at target moves exponentially at 50 per year times the normalised error, so at 100 % utilisation it doubles in about 5 days, capped at 200 %/yr."
+  },
+  "zama": {
+    "basis": "D171-D176: Zama's Confidential Vault protocol (docs/external/docs.zama.org-protocol-docs/confidential-vault/reference/addresses.md, Ethereum mainnet), every vault's deposit and redeem batchers, cShare and cAsset; each checked on-chain on 2026-10-11 (batcher vault(), fromToken(), toToken() match: 16 of 16). A cShare holds the vault shares of every confidential depositor: a pool, not one holder.",
+    "router": "0x11c6acfd368ddfab97d15649eb8043c0197fac4c",
+    "wrapper_registry": "0xeb5015ff021db115ace010f23f55c2591059bba0",
+    "instant_exit_minutes": 15,
+    "instant_basis": "unwrap the cShare to public vault shares (one Zama decryption, minutes) and redeem them: docs concepts; a stated estimate, to measure",
+    "vaults": {
+      "0xb344e331a3cda61d329fb3cca2be5942da87c418": {
+        "name": "bitwise-ausd-premium-rwa",
+        "deposit_batcher": "0xe396fd82a7aa2f89c16505c1ad46e91f3bc7d3b0",
+        "redeem_batcher": "0x52ffc3aa2372d42d1cb413c0e36659fff1e58ec1",
+        "cshare": "0x9abb8f3dc2863b1f108ded7ea41902fef6732a8c",
+        "casset": "0xea9a15a29dd180c40442142caeefc491d37bfdb2",
+        "underlying": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "deploy_block": 25976034
+      },
+      "0x3d5eccb62974178236a768a7ef14d3ce468fbe91": {
+        "name": "confidential-wintermute-wbtc",
+        "deposit_batcher": "0xac82e75fba31122c1feb575ebc371aa2ef78604d",
+        "redeem_batcher": "0x83540af3adfc4d3133139d57d4bab17828902f05",
+        "cshare": "0xf921a5b0634f4236b21a4e948317abf9a2e86b6f",
+        "casset": "0xd86ae89c089b380f064fe01899b4071f1eb6bb3d",
+        "underlying": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+        "deploy_block": 25976163,
+        "deposit_gate": "0x1460784324f78c293f6f4668a9ba047a5925e264"
+      },
+      "0x32401b9fb79065bc15949de0bd43927492f02f0c": {
+        "name": "flowdesk-ausd-rwa",
+        "deposit_batcher": "0xae09d50c6b6e91d9fbe50d168ea6567759e930f8",
+        "redeem_batcher": "0xe7761e3864b077728cafe4e18e9c8c23b6f896d0",
+        "cshare": "0x76a3f985315aac9789cb5bf8a5bb83bff55fd5a6",
+        "casset": "0xea9a15a29dd180c40442142caeefc491d37bfdb2",
+        "underlying": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "deploy_block": 25976042
+      },
+      "0xb48c056c5608ba2ee4cd94af2bf4b1f25295bd7e": {
+        "name": "flowdesk-usdt-high-yield",
+        "deposit_batcher": "0xbebee65445dad2f31628add14535fd0b3fc915b4",
+        "redeem_batcher": "0xd2f3f554f995c12e2bfe5e155397cb6272643744",
+        "cshare": "0xa28a369df348ac232e4daf7b0ef90280d8707d7f",
+        "casset": "0xae0207c757aa2b4019ad96edd0092ddc63ef0c50",
+        "underlying": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+        "deploy_block": 25976050,
+        "deposit_gate": "0x2bbba2fd0ae8976c798499477c03b47b88fba9fa"
+      },
+      "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965": {
+        "name": "rockawayx-usdc-high-yield",
+        "deposit_batcher": "0x2deafb36f3b118d434cde4708e8350eae918724d",
+        "redeem_batcher": "0xf18ad9f94a7ea994fdcbc5fd5c5da326a341d8a8",
+        "cshare": "0x4fccf8046fb7fb7ab76321bd39c27453e396b88f",
+        "casset": "0xe978f22157048e5db8e5d07971376e86671672b2",
+        "underlying": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "deploy_block": 25976058
+      },
+      "0xc207d3f66537d7f66456808379a0e560cf20da36": {
+        "name": "rockawayx-usdc-rwa",
+        "deposit_batcher": "0x084fd3a517d6dae1f8e3e5481b65107fd7e5eec1",
+        "redeem_batcher": "0x43e8f7b280b19637d2a7e3008657282aaf2c0e4b",
+        "cshare": "0xb1b18ad1f16d744c470cb6b09cb826affcc9eb30",
+        "casset": "0xe978f22157048e5db8e5d07971376e86671672b2",
+        "underlying": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "deploy_block": 25976066,
+        "deposit_gate": "0x51f667a68c2ebec5018019d7d75fd5c0ed70d525"
+      },
+      "0xbeeffabcd0db09589dd21854aa760c52ab4bf04f": {
+        "name": "steakhouse-tgbp",
+        "deposit_batcher": "0xfd899e481c7349d107005fefb1d19f33923b481a",
+        "redeem_batcher": "0x2fb51a8fe20d9cc830b9ca5251f8d845eb5baaa7",
+        "cshare": "0xba4cff6ed6f7cb2a58776deca4e984b498446762",
+        "casset": "0xa873750ccbafd5ec7dd13bfd5237d7129832edd9",
+        "underlying": "0x27f6c8289550fce67f6b50bed1f519966afe5287",
+        "deploy_block": 25976075
+      },
+      "0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757": {
+        "name": "steakhouse-usdc-high-yield",
+        "deposit_batcher": "0x321c9aab1390100f6e7fe1735a928ec0f16252f0",
+        "redeem_batcher": "0x807c367da7b9228643b06390e199e33cca7cc533",
+        "cshare": "0x501b014f86a73a7199e00cb31c0e9565ac51e51b",
+        "casset": "0xe978f22157048e5db8e5d07971376e86671672b2",
+        "underlying": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "deploy_block": 25976085
+      },
+      "0xbeef00a59b577423653a1526c7009bde103f542b": {
+        "name": "steakhouse-usdc-v3",
+        "deposit_batcher": "0xa07c00a3b955b805b3ea76b086f95a3e793715d5",
+        "redeem_batcher": "0x3a906d6509eb4171ee9fc71d083fb1638baf083d",
+        "cshare": "0x66bf74e96900d1a19c7070d939d124f2f565c458",
+        "casset": "0xe978f22157048e5db8e5d07971376e86671672b2",
+        "underlying": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "deploy_block": 25977975,
+        "deposit_gate": "0x47c591a3bc346913d0b6bdd96fb50e34efa268aa"
+      },
+      "0xbeeff07d991c04cd640de9f15c08ba59c4fedeb7": {
+        "name": "steakhouse-usdt-high-yield",
+        "deposit_batcher": "0xe1bc291cf6fd71173db73d58f1b25fc371b9aa6d",
+        "redeem_batcher": "0xfc659fa98ac62970cae2c594be32fe4f8b844ea3",
+        "cshare": "0x80ae7dbce3c1696d3eed04ec8348c3c432322273",
+        "casset": "0xae0207c757aa2b4019ad96edd0092ddc63ef0c50",
+        "underlying": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+        "deploy_block": 25976097
+      },
+      "0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9": {
+        "name": "steakhouse-usdt-prime",
+        "deposit_batcher": "0x737f4558c0cc7c29b56dd13c34b68e967c91e399",
+        "redeem_batcher": "0x7afb2cd6d41c379e3d8b46f206346b63a67f4d43",
+        "cshare": "0x1f6a937119c0c34db0a2c4f000386a3bfd4a9e73",
+        "casset": "0xae0207c757aa2b4019ad96edd0092ddc63ef0c50",
+        "underlying": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+        "deploy_block": 25976104
+      },
+      "0x55c1b6e461a6334b567baf0feb5d728715446f05": {
+        "name": "wintermute-usdc-pendle-looping",
+        "deposit_batcher": "0x1b731ec615165094ec4d695b0a1c8ee31366cf84",
+        "redeem_batcher": "0xd671b562fdece574da12295d1680f6a7a0af2963",
+        "cshare": "0xb6e5299fc56053dd5440104fd6fd2a3cd064edbc",
+        "casset": "0xe978f22157048e5db8e5d07971376e86671672b2",
+        "underlying": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "deploy_block": 25976114
+      },
+      "0x5dc53a23adc9f2bed98de6f59f7f309a7c71ff2b": {
+        "name": "wintermute-usdc-prime",
+        "deposit_batcher": "0xd26f1546e7afd5881f132967637957416802865a",
+        "redeem_batcher": "0x2b5eb25da24dcd00a825487c60401f9736091006",
+        "cshare": "0x2ebbd099f66b0ca94dd82b4c06fe3eef6aff853c",
+        "casset": "0xe978f22157048e5db8e5d07971376e86671672b2",
+        "underlying": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "deploy_block": 25976124
+      },
+      "0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd": {
+        "name": "wintermute-usdc-select",
+        "deposit_batcher": "0x87356ade88315aed3ac61b42cacc3a263730b1bd",
+        "redeem_batcher": "0x4f555b54842e609ba62843e0ab4ff184a436772e",
+        "cshare": "0x77f8207ee451441336538ba07a2f425780ded8db",
+        "casset": "0xe978f22157048e5db8e5d07971376e86671672b2",
+        "underlying": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "deploy_block": 25976134
+      },
+      "0xbf29043164660c60a2a72cd15ffe2304e87b6838": {
+        "name": "wintermute-usdt-prime",
+        "deposit_batcher": "0xfb21951f291e742f24ab4f5c0c11e7bc8864142a",
+        "redeem_batcher": "0x99384d982399a9d890873e402ec04dee7dad8737",
+        "cshare": "0x63a60acc304b84ef829b263f28e7b636bf77d45a",
+        "casset": "0xae0207c757aa2b4019ad96edd0092ddc63ef0c50",
+        "underlying": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+        "deploy_block": 25976144
+      },
+      "0x500ae64100d7dbdb640531085c2f5d40cdc8930d": {
+        "name": "wintermute-usdt-select",
+        "deposit_batcher": "0x7320830992a924e6d2f3d3e9a74fbd103e9a20ae",
+        "redeem_batcher": "0x79e621c35b93329bbb6f06d9635981b9a5f4a255",
+        "cshare": "0xbac6dedf2c10d6d381f9dbd9efd69d93ffcef50b",
+        "casset": "0xae0207c757aa2b4019ad96edd0092ddc63ef0c50",
+        "underlying": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+        "deploy_block": 25976153
       }
     }
   }

@@ -28,7 +28,7 @@ The survey that chose them, with the live checks of 2026-10-10, is `docs/analysi
 
 ### 1.1 What it is
 
-Pharos (`https://pharos.watch`, run by TokenBrice, code MIT-licensed) is a stablecoin analytics site. It covers 396 stablecoins and yield dollars, including several Morpho vaults, and publishes for each one:
+Pharos (`https://pharos.watch`, run by TokenBrice, code MIT-licensed) is a stablecoin analytics site. The full detail of its use and its impact is in `pharos.md`. It covers 396 stablecoins and yield dollars, including several Morpho vaults, and publishes for each one:
 
 - a **Safety Score** from 0 to 100 and a letter grade (A+ to F; `NR` when not rated);
 - what **backs** it, with weights: a wrapper (`serial-claim`, weight 1) or a share of a reserve basket (`basket-exposure`, weight w);
@@ -138,7 +138,7 @@ Unambiguous symbols need nothing.
 
 ## 2. Nexus Mutual
 
-Nexus Mutual sells cover against protocol exploits and depegs. Its API is keyless: `api.nexusmutual.io/v2/products` and `/v2/capacity`. These are the products relevant to the RockawayX book, as checked on 2026-10-11:
+Nexus Mutual sells cover against protocol exploits and depegs; the full detail of its use and its impact is in `nexus.md`. Its API is keyless: `api.nexusmutual.io/v2/products` and `/v2/capacity`. These are the products relevant to the RockawayX book, as checked on 2026-10-11:
 
 | Product (id) | Yearly price |
 |---|---|

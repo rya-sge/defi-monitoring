@@ -8,6 +8,12 @@ Shocks are severities in [0, 1] keyed by event id:
   amm           Pendle core / SY adapter exploit     value × (1 − s), every oracle sees it
   oracle        the oracle misreports downward       oracle reading × (1 − s), no real loss
   lending       collateral stolen from the market    value × (1 − s), no liquidation needed
+  pt_yield      the PT's implied yield rises by s    market price × ((1 + y) / (1 + y + s))^T, T years to maturity;
+                (D169)                               a market-tracking oracle sees it, a linear one does not; held to
+                                                     maturity the PT still redeems at par, so the loss is realised
+                                                     only through a liquidation at the depressed price
+  borrow_rate   the borrow APY is s over the horizon debt grows by (s − today's APY) × the horizon; it can cross the
+                (D170)                               liquidation threshold
 
 A borrower is liquidated when the oracle-seen collateral × LLTV < debt; the liquidator repays
 the debt and seizes debt × LIF worth of collateral at the oracle price. Without liquidation the
@@ -37,10 +43,33 @@ def loss(
     shocks: dict[str, float],
     recovery: float = 0.0,
     pt_stress_extra: float = 0.5,
+    pt_years: float = 0.0,
+    implied_apy: float = 0.0,
+    borrow_apy: float = 0.0,
+    horizon_years: float = 0.0,
 ) -> LossBreakdown:
     v_true = collateral_usd
     v_oracle = collateral_usd
     path: list[str] = []
+    equity0 = collateral_usd - debt_usd
+
+    s = shocks.get("borrow_rate", 0.0)
+    if s and debt_usd and horizon_years:
+        extra = debt_usd * (s - borrow_apy) * horizon_years
+        debt_usd += extra
+        path.append(f"borrow rate {s:.1%} instead of {borrow_apy:.1%}: debt +${extra:,.0f} over the horizon")
+
+    s = shocks.get("pt_yield", 0.0)
+    if s and pt_years > 0:
+        f = ((1 + implied_apy) / (1 + implied_apy + s)) ** pt_years
+        if oracle_mode == "market-tracking":
+            v_oracle *= f
+            path.append(
+                f"implied yield +{s:.1%} pts: PT price −{1 - f:.2%} ({pt_years:.2f} years to maturity), seen by the "
+                "oracle; held to maturity the PT still redeems at par"
+            )
+        else:
+            path.append(f"implied yield +{s:.1%} pts: PT price −{1 - f:.2%}, not seen by the oracle; no liquidation")
 
     for ev in ("chain", "issuer_hack", "amm"):
         s = shocks.get(ev, 0.0)
@@ -69,7 +98,6 @@ def loss(
         v_true *= 1 - s
         path.append(f"lending market exploit: −{s:.1%} of collateral stolen")
 
-    equity0 = collateral_usd - debt_usd
     liquidated = bool(debt_usd and lltv and v_oracle * lltv < debt_usd)
     if liquidated:
         seized_frac = min(1.0, debt_usd * (lif or 1.0) / v_oracle)

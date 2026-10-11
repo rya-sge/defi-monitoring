@@ -38,26 +38,27 @@ Corrections to `ROCK-VAULT.md` §4:
 | Sentinel (Base) | `0x8003…2E5f` | not probed |
 | Deposit gate, Confidential RWA USDC only | `0x51f6…D525` | `WhitelistSendAssetsGate` (KYC whitelist on deposits; explains its 6 holders) |
 
-Timelocks (days; 0 = immediate):
+Timelocks (days; 0 = immediate; **abd.** = abdicated, the function can never be called again). The gate columns were re-read on-chain with `abdicated(bytes4)` and `timelock(bytes4)` on 2026-10-11; a first reading of the Morpho API's durations missed the abdications and wrongly reported the exit gates as open with no delay.
 
-| Vault | addAdapter | increase caps | **setSendSharesGate / setReceiveAssetsGate** | setReceiveSharesGate | setIsAllocator | setAdapterRegistry | performance fee |
-|---|---|---|---|---|---|---|---|
-| Confidential RWA USDC | 3 | 3 | **0** | 0 | 0 | 0 | 3 |
-| f(x) Ecosystem | 3 | 3 | **0** | 0 | 0 | 0 | 0 |
-| USDC Yield | 3 | 3 | **0** | 0 | 0 | 0 | 3 |
-| Tori Ecosystem | 3 | 3 | **0** | 0 | 0 | 0 | 3 |
-| Huma USDC Main | 3 | 3 | **0** | 0 | 0 | 0 | 3 |
-| Belem RWA EURCV | 3 | 3 | **0** | 0 | 0 | 0 | 0 |
-| NUVA Ecosystem | 3 | 3 | **0** | 0 | 0 | 0 | 0 |
-| Midas USDC Prime (Base) | 7 | 7 | **0** | 0 | 0 | 0 | 0 |
+| Vault | addAdapter | increase caps | **setSendSharesGate / setReceiveAssetsGate** (exit) | setReceiveSharesGate | setSendAssetsGate (deposit) | setIsAllocator | setAdapterRegistry | performance fee |
+|---|---|---|---|---|---|---|---|---|
+| Confidential RWA USDC | 3 | 3 | **abd.** | abd. | 7 | 0 | abd. | 3 |
+| f(x) Ecosystem | 3 | 3 | **abd.** | abd. | abd. | 0 | abd. | 0 |
+| USDC Yield | 3 | 3 | **abd.** | abd. | abd. | 0 | abd. | 3 |
+| Tori Ecosystem | 3 | 3 | **abd.** | abd. | abd. | 0 | abd. | 3 |
+| Huma USDC Main | 3 | 3 | **abd.** | abd. | 0 | 0 | abd. | 3 |
+| Belem RWA EURCV | 3 | 3 | **abd.** | abd. | abd. | 0 | abd. | 0 |
+| NUVA Ecosystem | 3 | 3 | **abd.** | abd. | abd. | 0 | abd. | 0 |
+| Midas USDC Prime (Base) | 7 | 7 | **abd.** | abd. | abd. | 0 (API) | 0 (API) | 0 |
 
 What this means for a depositor:
-- **The curator Safe can lock every depositor out at once.** In `VaultV2.sol` the `sendSharesGate` and `receiveAssetsGate` "can lock users out of exiting the vault", and their timelock is 0 in all 8 vaults. A 4-of-8 Safe signature is the only barrier, and no sentinel can step in, since nothing is pending long enough to be revoked.
+- **No curator decision can lock depositors in.** In `VaultV2.sol` the `sendSharesGate` and `receiveAssetsGate` "can lock users out of exiting the vault", but on all 8 vaults both setters are abdicated: those gates stay at zero for good. What can stop an exit is liquidity (86–91 % utilisation), not governance. On a fork, the attempt reverts with `Abdicated` (`docs/analysis/FORK-PRESENTATION.md`, act 5).
+- **Deposits can still be gated on two vaults:** Confidential (7 days, where the KYC whitelist already sits) and Huma USDC Main (0 days). That cannot block funds already in.
 - `decreaseTimelock` takes the timelock of the function it targets (`submit`, line 314), so the 3-day timelocks on caps and adapters are real.
 - An allocator can only move funds within the caps, but five of them are hot EOAs.
 - The force-deallocate penalty is 1 % (Confidential, f(x), Tori, NUVA), 0.5 % (Yield, Huma) or 0 (Belem, Base). It is the price of forcing liquidity out of a market.
 
-Today `riskdep watch` alerts on gate and timelock events (`admin.py`, `rules.py`). It does not yet report "exit can be gated with no delay" as a standing risk.
+`riskdep watch` now states the exit-gate position at startup (`ExitGate`, D184): a warn when an exit gate can be set with no notice, an info when both are abdicated, as on these 8 vaults.
 
 ## 3. Oracle layer: every feed, its operator and its admin
 
@@ -203,7 +204,7 @@ Please add these under `docs/external/` (as submodules where there is a reposito
 - LayerZero V2: the OFT and DVN configuration docs (etrUSD).
 - RedStone: the "fundamental" feed methodology.
 - Issuer attestations and reports: Tori via Accountable, Huma pool reports, Re's capital stack, OnRe monthly attestations, the Fasanara fund NAV policy (mGLOeuro), SG-Forge EURCV terms.
-- RockawayX's own risk framework (curation limits, its policy on gates with no timelock) and any statement on who the main borrowers are (§6).
+- RockawayX's own risk framework (curation limits, its policy on the fee and allocator changes that have no timelock) and any statement on who the main borrowers are (§6).
 
 **Access:**
 - A **Dune API key** (in `keys.ini`, `[dune] api_key`) to read the 8 hidden rows and the vault history.
@@ -214,7 +215,7 @@ Please add these under `docs/external/` (as submodules where there is a reposito
 
 These follow from the findings above, in order of value:
 
-1. **A standing "exit gate" risk in `watch`**: report any vault whose `setSendSharesGate` or `setReceiveAssetsGate` timelock is 0, beyond today's event alerts.
+1. **A standing "exit gate" finding in `watch`**: done (`ExitGate`, D184). On these 8 vaults it reports the gates abdicated.
 2. **Feed-admin and feed-age facts in `oracle_class.py` and `admin.py`**: add the classes `linear-discount PT`, `on-chain NAV`, `issuer-published (custom aggregator)`, `dummy/constant`. Add a warning for an upgradeable feed under a Safe with no timelock (RedStone 2/3), and a staleness warning (mGLOeuro, 17.5 days).
 3. **Borrower concentration in `market_risk.py`**: show top-1 and top-3 shares, and flag markets with fewer than 5 borrowers.
 4. **Bridges as graph nodes**: CCIP (PST) and LayerZero (etrUSD) as Admin or Protocol nodes, with their owners and delays.

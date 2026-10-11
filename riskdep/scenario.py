@@ -14,6 +14,7 @@ The watches call `alert_impact` when an alert carries a measured incident (D93),
 from __future__ import annotations
 
 import copy
+import math
 from dataclasses import asdict, dataclass, field
 
 from . import decide
@@ -23,7 +24,7 @@ from .discover import REGISTRY, Position, morpho_lif
 from .propagate import LossBreakdown, loss
 from .vault import _call
 
-EVENTS = ("chain", "issuer_hack", "issuer_depeg", "amm", "oracle", "lending")
+EVENTS = ("chain", "issuer_hack", "issuer_depeg", "amm", "oracle", "lending", "pt_yield", "borrow_rate")
 META_ORACLE = "MetaOracleDeviationTimelock"
 META_GETTERS = [
     "challengeTimelockDuration()",
@@ -179,6 +180,19 @@ def time_to_impact(profile: OracleProfile | None, shocks: dict[str, float]) -> T
         )
     if shocks.get("lending"):
         return Timing(0.0, False, "now: collateral taken from the market; no liquidation is involved")
+    if shocks.get("pt_yield") and not shocks.get("issuer_depeg"):
+        # D169: a rise of the implied yield moves the PT's market price, which reaches the oracle as a depeg would
+        t = time_to_impact(profile, {"issuer_depeg": shocks["pt_yield"]})
+        return Timing(t.seconds, t.never, "the PT's market price falls with the yield: " + t.text)
+    if shocks.get("borrow_rate") and not shocks.get("issuer_depeg"):
+        irm = REGISTRY["irm"]
+        days = math.log(2) / irm["adjustment_speed_per_year"] * 365
+        return Timing(
+            None,
+            False,
+            f"gradual: the interest accrues every block; at 100 % utilisation Morpho's AdaptiveCurveIRM charges "
+            f"{irm['curve_steepness']}× its rate at target, which then doubles about every {days:.0f} days",
+        )
     if not shocks.get("issuer_depeg"):
         return Timing(None, False, "no shock")
     p = profile
@@ -261,6 +275,12 @@ def oracle_profile(f: S.Fetcher, oracle: str, block="latest") -> OracleProfile:
         return OracleProfile(OC.NOT_CLASSIFIED, f"not read: {str(e)[:80]}")
 
 
+def pt_fall(pos: Position, shocks: dict[str, float]) -> float:
+    """D169, pure: the PT's market price fall a rise of its implied yield causes."""
+    s, years = shocks.get("pt_yield", 0.0), pos.days_to_maturity / 365
+    return 1 - ((1 + pos.implied_apy) / (1 + pos.implied_apy + s)) ** years if s and years > 0 else 0.0
+
+
 def assess(
     pos: Position,
     shocks: dict[str, float],
@@ -268,13 +288,22 @@ def assess(
     quote: dict,
     profile: OracleProfile | None,
     quote_for=None,
+    horizon_days: float = 30.0,
 ) -> IncidentResult:
     """The impact of a given incident on an `analyze` position, its timing and the verdict (D89, D90)."""
     mode = oracle_mode_for(profile, pos.oracle_mode)
     extra = REGISTRY["pt_stress_extra_discount"]
+    kw = {
+        "pt_years": pos.days_to_maturity / 365,
+        "implied_apy": pos.implied_apy,
+        "borrow_apy": pos.borrow_apy,
+        "horizon_years": min(horizon_days, pos.days_to_maturity or horizon_days) / 365,
+    }
 
     def run(p: Position) -> LossBreakdown:
-        return loss(p.collateral_usd, p.debt_usd, p.lltv, p.lif, mode, shocks, recovery=recovery, pt_stress_extra=extra)
+        return loss(
+            p.collateral_usd, p.debt_usd, p.lltv, p.lif, mode, shocks, recovery=recovery, pt_stress_extra=extra, **kw
+        )
 
     b = run(pos)
     equity = max(pos.equity_usd, 1.0)
@@ -286,10 +315,10 @@ def assess(
         and profile.other
         and mode == "fundamental"
         and profile.other.kind == OC.PRICE_TRACKING
-        and shocks.get("issuer_depeg", 0) > (profile.deviation_threshold or 0)
+        and max(shocks.get("issuer_depeg", 0), pt_fall(pos, shocks)) > (profile.deviation_threshold or 0)
     ):
         # the depeg opens a challenge; once accepted, the oracle reads the source that follows the market
-        sw = loss(pos.collateral_usd, pos.debt_usd, pos.lltv, pos.lif, "market-tracking", shocks, recovery, extra)
+        sw = loss(pos.collateral_usd, pos.debt_usd, pos.lltv, pos.lif, "market-tracking", shocks, recovery, extra, **kw)
         lock = f"{profile.timelock_s / 3600:g} h" if profile.timelock_s is not None else "the challenge timelock"
         after_switch = {
             "after": lock,
@@ -330,6 +359,7 @@ def assess(
                     shocks,
                     recovery,
                     extra,
+                    **kw,
                 )
                 if after_switch
                 else run(smaller)
