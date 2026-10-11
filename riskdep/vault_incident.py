@@ -69,6 +69,7 @@ class MarketHit:
     source: str = "incident"  # D139: "engine" when the shock engine's propagation gave the figures
     engine: str = ""  # D139: what the engine saw: oracle and collateral market factors, liquidated, insolvent
     feeds: list[str] = field(default_factory=list)  # D157: each base feed of the market's oracle and its freshness
+    returned: float = 0.0  # D239: what the vault can withdraw more from this market once liquidators repaid
     stale_feed: bool = False
 
 
@@ -109,6 +110,7 @@ class VaultIncident:
     exit_cost_rate: float | None = None  # D151: a flat cost of leaving, as a share of what leaves (else the yield)
     conditional: dict | None = None  # D165: the loss of staying given the incident, drawn (USD, depositor's terms)
     zama: list[str] = field(default_factory=list)  # D174: a confidential depositor's two exits, for a Zama vault
+    returned_liquidity: float = 0.0  # D239: Σ hits' `returned`: freed once the liquidations have repaid their debt
 
     def lines(self) -> list[str]:
         s = self.symbol
@@ -156,6 +158,13 @@ class VaultIncident:
             out.append(f"    oracle {h.oracle_class}; how fast: {h.timing}")
         out.append(
             f"  vault loss {self.vault_loss:,.0f} {s} ({self.vault_loss / self.vault_total:.2%} of {self.vault_total:,.0f})"
+            + (
+                f"; if liquidators act, the debt they repay frees {self.returned_liquidity:,.0f} more for the vault to "
+                f"withdraw once they have (now {sum(self.liquidity[:2]):,.0f}; the market's other lenders can draw on it "
+                "too); if nobody liquidates, it stays locked"
+                if self.returned_liquidity > 0
+                else ""
+            )
             if self.vault_total
             else "  empty vault"
         )
@@ -286,6 +295,20 @@ def describe(shock: tuple, labels: dict[str, str] | None = None) -> str:
     who = "the largest borrower" if n == 1 else f"the {n} largest borrowers"
     where = "every market" if target == "all" else name
     return f"{who} of {where} default{'s' if n == 1 else ''}, collateral recovered at {v:.0%}"
+
+
+def returned_liquidity(h: MarketHit, vault_assets: float, free: float) -> float:
+    """D239, pure: when liquidators act, the debt they repay (what the seized collateral covers) is the market's free
+    liquidity again, so the vault can withdraw more from it, up to what it still has there after its loss; nothing when
+    nobody can liquidate (no exit route) or for a default (nothing is repaid). Asset units."""
+    if h.event != "markdown" or h.liquidatable_debt <= 0 or h.exit_route == "none":
+        return 0.0
+    # the shock engine's figure is the debt liquidators repaid (D139); this module's is the liquidatable positions'
+    # whole debt, of which the part their collateral does not cover is not repaid
+    repaid = h.liquidatable_debt if h.source == "engine" else max(0.0, h.liquidatable_debt - h.bad_debt)
+    now = min(vault_assets, free)
+    after = min(max(0.0, vault_assets - h.vault_loss), free + repaid)
+    return max(0.0, after - now)
 
 
 def live_exit(f: S.Fetcher, h: MarketHit, mp, price: int | None, info) -> None:
@@ -711,6 +734,8 @@ def run(
         siblings = apply_engine(graph, shocks, hits, risk.markets, shares, st, unit)
     for h in hits:
         live_exit(f, h, params[h.market_id], st.markets[h.market_id].oracle_price, risk.markets[h.market_id])
+        m = st.markets[h.market_id]
+        h.returned = returned_liquidity(h, m.vault_assets / unit, m.liquidity / unit)  # after live_exit's route
     for h in hits:
         loss_raw += int(h.vault_loss * unit)
         if h.bad_debt > 0:
@@ -866,6 +891,7 @@ def run(
         exit_cost_rate,
     )
     inc.zama = zama_lines
+    inc.returned_liquidity = sum(h.returned for h in hits)
     return inc
 
 

@@ -3761,6 +3761,12 @@
             "title": "Beyond By Unit",
             "description": "Their lenders' loss, by loan unit (USDC, EURCV\u2026)."
           },
+          "returned_usd": {
+            "type": "number",
+            "title": "Returned Usd",
+            "description": "Liquidity the liquidations free (repaid debt), withdrawable once they have; 0 if none.",
+            "default": 0.0
+          },
           "loss_is_whole_vaults": {
             "type": "boolean",
             "title": "Loss Is Whole Vaults",
@@ -4120,6 +4126,12 @@
             "type": "array",
             "title": "Zama",
             "description": "For a Zama confidential vault: the confidential share and the two exits."
+          },
+          "returned_liquidity": {
+            "type": "number",
+            "title": "Returned Liquidity",
+            "description": "What the vault can withdraw more once liquidators have repaid (asset units); 0 if nobody liquidates.",
+            "default": 0.0
           }
         },
         "type": "object",

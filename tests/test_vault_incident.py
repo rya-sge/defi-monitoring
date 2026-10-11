@@ -207,3 +207,28 @@ def test_no_saving_says_why(tmp_path):
     assert cli.main(["analyze", "--vault", BELEM, "--shock", "token=mGLOeuro:0.30", "--out", str(tmp_path)]) == 0
     r = json.loads((tmp_path / f"vault-incident-{BELEM}.json").read_text())
     assert r["verdict"] == "STAY" and "the depositor holds 99% of the vault" in r["reason"]
+
+
+# --- the liquidity liquidations return (D239, GAP K27)
+
+
+def test_returned_liquidity_pure():
+    def hit(**kw):
+        h = VI.MarketHit("m", "X/USDC", 0.3, 5, 100.0, 40.0, 10.0, 0.5, 5.0, "price-tracking", "")
+        h.exit_route = "deep"
+        for k, v in kw.items():
+            setattr(h, k, v)
+        return h
+
+    assert VI.returned_liquidity(hit(), vault_assets=80.0, free=20.0) == pytest.approx(30.0)  # 20 + 30 repaid, 75 left
+    assert VI.returned_liquidity(hit(exit_route="none"), 80.0, 20.0) == 0  # nobody liquidates: locked
+    assert VI.returned_liquidity(hit(source="engine"), 80.0, 20.0) == pytest.approx(40.0)  # the engine's repaid debt
+    assert VI.returned_liquidity(hit(), vault_assets=10.0, free=20.0) == 0  # already all withdrawable
+
+
+def test_fxsave_liquidations_free_liquidity(tmp_path, capsys):
+    fx = "0x2cA22cb25558fa2018ecb1CE4eD8AF92Ee7ea423"
+    assert cli.main(["analyze", "--vault", fx, "--shock", "token=fxSAVE:0.30", "--out", str(tmp_path)]) == 0
+    inc = json.loads((tmp_path / f"vault-incident-{fx.lower()}.json").read_text())
+    assert inc["returned_liquidity"] == pytest.approx(1_494_648, rel=1e-3)
+    assert "if nobody liquidates, it stays locked" in capsys.readouterr().out

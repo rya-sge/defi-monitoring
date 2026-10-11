@@ -27,6 +27,7 @@ Usage of every mode is in the repository's `README.md`; how the code is built is
 | `graph-propagation.md` (+ pdf) | The dependency graph as a propagation engine |
 | `midas.md` | Midas (mGLOeuro): the published NAV feed, its band and timelock, the Belem incident, and what is not computed |
 | `fx-protocol.md` | f(x) Protocol (fxSAVE, PT-fxSAVE): what backs fxSAVE, the RockawayX f(x) incident, exits, and what is not computed |
+| `infinifi.md` | infiniFi (iUSD, siUSD): the oracle, the loss waterfall, the RockawayX USDC Yield incident, and what is not computed |
 | `ethena.md` | Ethena (USDe, sUSDe): the backing by venue, the priors, a venue failure, funding stress, contagion, and what is not computed |
 | `zama-confidential-vaults.md` | Zama confidential vaults: the hidden layer, who loses, the two exits, contagion, alerts, and what is not computed |
 

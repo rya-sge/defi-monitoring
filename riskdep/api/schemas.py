@@ -421,6 +421,10 @@ class ValueAtRisk(BaseModel):
     saved_usd: float = Field(description="What leaving them saves if the incident happens.")
     beyond_markets: int = Field(description="Other markets the incident reaches, outside the book.")
     beyond_by_unit: dict[str, float] = Field(description="Their lenders' loss, by loan unit (USDC, EURCV…).")
+    returned_usd: float = Field(
+        default=0.0,
+        description="Liquidity the liquidations free (repaid debt), withdrawable once they have; 0 if none.",
+    )
     loss_is_whole_vaults: bool = Field(
         description="`vault` weighting: the loss counts each vault whole; the draw, the cost of leaving and the saving "
         "are the followed depositors'."
@@ -504,6 +508,11 @@ class VaultIncident(BaseModel):
     conditional: Conditional | None = None
     zama: list[str] = Field(
         default_factory=list, description="For a Zama confidential vault: the confidential share and the two exits."
+    )
+    returned_liquidity: float = Field(
+        default=0.0,
+        description="What the vault can withdraw more once liquidators have repaid (asset units); 0 if nobody "
+        "liquidates.",
     )
 
 

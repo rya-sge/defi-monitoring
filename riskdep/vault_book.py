@@ -343,6 +343,12 @@ def value_at_risk(book: BookIncident, incidents: list[VaultIncident], incident: 
         ),
         f"    leaving the hit pockets now{them}: costs {leave:,.0f} USD for sure, saves {saved:,.0f} if it happens",
     ]
+    returned = sum(inc.returned_liquidity * (inc.asset_usd or 1.0) for inc in incidents)
+    if returned > 0:
+        lines.append(
+            f"    liquidity returned by the liquidations: {returned:,.0f} USD more can be withdrawn once liquidators have "
+            "repaid; none if nobody liquidates"
+        )
     if per_unit:
         lines.append(
             f"    beyond the book: the lenders of {len(beyond)} other market(s) the incident reaches lose "
@@ -364,6 +370,7 @@ def value_at_risk(book: BookIncident, incidents: list[VaultIncident], incident: 
         "beyond_markets": len(beyond),
         "beyond_by_unit": per_unit,
         "loss_is_whole_vaults": whole,
+        "returned_usd": returned,
         "lines": lines,
     }
 
