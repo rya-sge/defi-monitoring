@@ -1,0 +1,1 @@
+{"method": "GET", "url": "https://coins.llama.fi/prices/current/ethereum:0x0000000000000000000000000000000000000000", "body": null, "fetched": "2026-10-11T06:16:06Z", "response": {"coins": {"ethereum:0x0000000000000000000000000000000000000000": {"decimals": 18, "symbol": "ETH", "price": 2501.515560322491, "timestamp": 1791699359, "confidence": 0.99}}}}

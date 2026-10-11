@@ -25,6 +25,11 @@ Usage of every mode is in the repository's `README.md`; how the code is built is
 | `shock-engine.md` | The shock engine: what happens to a vault when a node fails, and its rules |
 | `shock-trace.md`, `shock-trace-example.json` | The propagation as data, for a front end |
 | `graph-propagation.md` (+ pdf) | The dependency graph as a propagation engine |
+| `midas.md` | Midas (mGLOeuro): the published NAV feed, its band and timelock, the Belem incident, and what is not computed |
+| `fx-protocol.md` | f(x) Protocol (fxSAVE, PT-fxSAVE): what backs fxSAVE, the RockawayX f(x) incident, exits, and what is not computed |
+| `infinifi.md` | infiniFi (iUSD, siUSD): the oracle, the loss waterfall, the RockawayX USDC Yield incident, and what is not computed |
+| `ethena.md` | Ethena (USDe, sUSDe): the backing by venue, the priors, a venue failure, funding stress, contagion, and what is not computed |
+| `zama-confidential-vaults.md` | Zama confidential vaults: the hidden layer, who loses, the two exits, contagion, alerts, and what is not computed |
 
 ## `watch/`: detection and monitoring
 
@@ -58,7 +63,8 @@ Usage of every mode is in the repository's `README.md`; how the code is built is
 |---|---|
 | `examples/` | `graph-example.html/.json`, an example output of `graph` |
 | `img/` | Mindmaps and diagrams, each `.png` next to its `.puml` |
-| `analysis/` | Assessments and project notes: `ARCHITECTURE.md`, `PROVIDERS.md`, `NEXT_STEP.md`, `ANALYSIS_CURRENT.md`, `ANALYSIS_MONITORING.md`, `GAP.md`, `EXTERNAL_SOURCE.md`, `ROCK-VAULT.md`, `ROCK-VAULT-DEP.md`, `ZAMA-VAULT.md`, `FORK-PRESENTATION.md`, `REPOSITORY_ADD.md`, `comparison_team.md` |
+| `analysis/` | Assessments and project notes: `ARCHITECTURE.md`, `PROVIDERS.md`, `NEXT_STEP.md`, `ANALYSIS_MONITORING.md`, `GAP.md`, `EXTERNAL_SOURCE.md`, `ROCK-VAULT.md`, `ROCK-VAULT-DEP.md`, `ZAMA-VAULT.md`, `FORK-PRESENTATION.md`, `REPOSITORY_ADD.md`, `comparison_team.md` |
+| `archive/` | Superseded documents kept for their reasoning: `ANALYSIS_CURRENT.md` (the 2026-10-10 assessment behind the known-incident answers) |
 | `risk-assessment/` | Outside risk providers in riskdep: `outside-providers.md`, `nexus.md`, `pharos.md`, and the providers' own documentation (git-ignored) |
 | `external/` | Third-party documentation and source repositories (Morpho, Pendle, Chainlink, issuers), each with its own `README.md` |
 | `hackaton_instruction/` | The challenge brief (`GOAL.md`) |

@@ -15,6 +15,7 @@ from . import drain as DR
 from . import exit_queue as EQ
 from . import feeds as FD
 from . import market_risk as MR
+from . import roles as RL
 from . import sources as S
 from . import zama as ZM
 from .discover import REGISTRY
@@ -200,8 +201,15 @@ def run(opts: Options) -> int:
     exit_alerts = vx.startup(p.line, before, EQ.vault_cases(vrisk, before), state0, drained=vd.drained(before))
     aw.table(p.line)
     fw = FD.FeedWatch(f, aw, state0)  # D193: each feed's freshness
+    try:
+        # D245 (GAPV2 G2): what holds each role; a recording made before this read has none of it
+        role_alerts = RL.findings(RL.read(f, RL.discover(f, view.address, state0), state0), state0)
+    except (S.CacheMiss, S.SourceError):
+        role_alerts = []
+        p.line("  role holders: not checked (not in this recording)")
     for al in (
         startup_findings(view, before)
+        + role_alerts
         + vrisk.startup(before, state0)
         + drain_alerts
         + exit_alerts

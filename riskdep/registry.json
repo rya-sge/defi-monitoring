@@ -31,7 +31,15 @@
           "b": 18.0
         },
         "recovery": 0.75,
-        "basis": "USDe printed ~0.65 on a single CEX order book during the 2025-10-10 liquidation cascade while on-chain pools stayed near peg, and dipped ~0.3% in Apr-2024 on negative funding. Modelled: 12%/yr chance of a depeg averaging ~8%, 75% of it recovered by the horizon."
+        "basis": "USDe printed ~0.65 on a single CEX order book during the 2025-10-10 liquidation cascade while on-chain pools stayed near peg, and dipped ~0.3% in Apr-2024 on negative funding. Modelled: 12%/yr chance of a depeg averaging ~8%, 75% of it recovered by the horizon.",
+        "collapse": {
+          "p_year": 0.02,
+          "severity": {
+            "a": 6.0,
+            "b": 1.2
+          },
+          "basis": "D237 (GAP K5): a synthetic dollar can collapse rather than wick: USR fell 97 % on DEXs in 17 minutes, xUSD about 77 % in a day, deUSD to near zero (2025-2026). Three collapses among roughly twenty synthetic dollars above 100M USD over two years is about 7 %/yr for the family; 2 %/yr for an established issuer with a reserve fund and a mint/redeem desk is a judgement below it. Severity Beta(6, 1.2), mean 83 %, not recovered, and seen by every oracle (a loss of backing, not a market wick)."
+        }
       },
       "hack": {
         "severity": {
@@ -58,7 +66,15 @@
           "b": 18.0
         },
         "recovery": 0.75,
-        "basis": "As sUSDe."
+        "basis": "As sUSDe.",
+        "collapse": {
+          "p_year": 0.02,
+          "severity": {
+            "a": 6.0,
+            "b": 1.2
+          },
+          "basis": "D237 (GAP K5): a synthetic dollar can collapse rather than wick: USR fell 97 % on DEXs in 17 minutes, xUSD about 77 % in a day, deUSD to near zero (2025-2026). Three collapses among roughly twenty synthetic dollars above 100M USD over two years is about 7 %/yr for the family; 2 %/yr for an established issuer with a reserve fund and a mint/redeem desk is a judgement below it. Severity Beta(6, 1.2), mean 83 %, not recovered, and seen by every oracle (a loss of backing, not a market wick)."
+        }
       },
       "hack": {
         "severity": {
@@ -149,6 +165,8 @@
     },
     "morpho-blue": {
       "label": "Morpho Blue (isolated market)",
+      "isolated_markets": true,
+      "isolated_basis": "D233 (GAP K4): the Lending category's hack rate is driven by pooled forks with spot-price oracles; on Morpho Blue each market picks its oracle, so that risk is the per-market oracle layer's, and the core's prior is the TVL tier's rate alone. Anchors: no exploit of the Morpho Blue core is recorded (the 2024 PAXG market loss was a market's configuration, the April 2025 front-end incident off-chain); Credora puts a smart-contract default probability of 0.13 %/yr on Morpho.",
       "llama_slug": "morpho-blue",
       "category": "Lending",
       "severity": {
@@ -185,6 +203,9 @@
       0.5,
       2.0
     ],
+    "half_life_years": 2,
+    "decay_basis": "D234 (GAP K17): each hack weighs 2^(-age / half_life_years) in the counts, and the protocol-years of the window the same, so the rate stays a rate while the recent attack mix weighs more: the classifications shift every year (DefiLlama: access control and key compromise ahead in 2025-2026, oracle manipulation earlier), and Chainalysis and Sentora both find smart-contract bugs a shrinking share. Two years: the period over which the yearly top classifications change.",
+    "age_factor_basis": "D235 (GAP K15): a judgement, no survival study of DeFi protocols by age was found; evidence runs both ways (attacks on old unmaintained contracts such as Truebit and Yearn v1, against a falling loss per incident). Stated so it can be argued with.",
     "age_factor": {
       "lt_1y": 2.0,
       "1y_3y": 1.0,
@@ -211,8 +232,8 @@
     },
     "category": "Yield"
   },
-  "pt_stress_extra_discount": 0.5,
-  "pt_stress_basis": "During an underlying depeg, PT trades below its redemption value as LPs withdraw from the Pendle pool: market-tracking oracles see the depeg amplified by 1.5x.",
+  "pt_stress_yield_spike": 0.098,
+  "pt_stress_basis": "D236 (GAP K15): during a depeg, a market-tracking oracle sees the PT fall by the depeg and by a spike of its implied yield as LPs and holders leave the pool: PT price x ((1 + y) / (1 + y + spike))^T, T years to maturity, so a PT near maturity barely moves and a long one moves a lot. The spike is measured, not assumed: PT-reUSD on 2026-08-25, its Pendle pool read on-chain 60 blocks before the first liquidation and at it, 10.58 % to 20.37 % (+9.79 points; the backtest, plan 2026-10-11-pendle-pool). Replaces a flat x1.5 of the depeg",
   "gas_exit_usd": 25,
   "tail_budget": 0.5,
   "tail_budget_basis": "Recommend reducing when CVaR99, the average loss of the worst 1 % of simulated months, exceeds 50 % of equity.",
@@ -226,6 +247,8 @@
   },
   "watch": {
     "market_share_warn": 0.25,
+    "cap_exposure_warn": 0.25,
+    "cap_exposure_basis": "D243 (GAPV2 G1): an allocator can move capital up to the caps with no timelock, so the share of the vault that can sit behind one oracle within its caps is an exposure the allocation hides; warned past the same 25 % as market_share_warn, when it is at least 1.5 times today's share.",
     "utilization_warn": 0.99,
     "utilization_min_share": 0.1,
     "oracle_move_warn": 0.05,
@@ -266,7 +289,90 @@
     "zama_redeem_warn": 0.02,
     "zama_redeem_critical": 0.1,
     "zama_instant_warn": 0.01,
-    "zama_basis": "D191: the redeem batcher's daily aggregate is the public measure of confidential outflows: warn from 2 % of the vault in one batch, critical from 10 % (a confidential run forming); an instant exit (a cShare unwrap to anyone but the batcher) reveals its amount: warn from 1 % of the vault (an informed holder leaving fast)."
+    "zama_basis": "D191: the redeem batcher's daily aggregate is the public measure of confidential outflows: warn from 2 % of the vault in one batch, critical from 10 % (a confidential run forming); an instant exit (a cShare unwrap to anyone but the batcher) reveals its amount: warn from 1 % of the vault (an informed holder leaving fast).",
+    "admin_impact": {
+      "setReceiveAssetsGate(address)": {
+        "class": "retroactive",
+        "reach": "all",
+        "basis": "VaultV2.sol: a receive-assets gate 'can lock users out of exiting the vault'"
+      },
+      "setSendSharesGate(address)": {
+        "class": "retroactive",
+        "reach": "all",
+        "basis": "VaultV2.sol: a send-shares gate 'can lock users out of exiting the vault'"
+      },
+      "setReceiveSharesGate(address)": {
+        "class": "retroactive",
+        "reach": "all",
+        "basis": "VaultV2.sol: 'can lock users out of getting back their shares deposited on an other contract'; a reverting gate can block all vault interactions"
+      },
+      "setSendAssetsGate(address)": {
+        "class": "future",
+        "reach": "none",
+        "basis": "VaultV2.sol: gates depositing assets, 'cannot block users' funds'"
+      },
+      "burnShares(bytes32)": {
+        "class": "retroactive",
+        "reach": "market",
+        "basis": "MorphoMarketV1AdapterV2.sol:155: sets supplyShares[marketId] to 0, the vault's position in that market written off"
+      },
+      "setForceDeallocatePenalty(address,uint256)": {
+        "class": "retroactive",
+        "reach": "forced_exit",
+        "basis": "VaultV2.sol:524: applies to every forceDeallocate made after it, up to MAX_FORCE_DEALLOCATE_PENALTY (2 %)"
+      },
+      "setPerformanceFee(uint256)": {
+        "class": "future",
+        "reach": "future_interest",
+        "basis": "VaultV2.sol:445: accrueInterest() runs before the new fee is set, so interest already earned is charged at the old rate"
+      },
+      "setManagementFee(uint256)": {
+        "class": "future",
+        "reach": "future_interest",
+        "basis": "VaultV2.sol: accrueInterest() first, as for the performance fee"
+      },
+      "setPerformanceFeeRecipient(address)": {
+        "class": "future",
+        "reach": "none",
+        "basis": "where future fees go"
+      },
+      "setManagementFeeRecipient(address)": {
+        "class": "future",
+        "reach": "none",
+        "basis": "where future fees go"
+      },
+      "increaseAbsoluteCap(bytes,uint256)": {
+        "class": "enabler",
+        "reach": "caps",
+        "basis": "VaultV2.sol:484: moves no money itself; lets an allocator move existing money further, at once"
+      },
+      "increaseRelativeCap(bytes,uint256)": {
+        "class": "enabler",
+        "reach": "caps",
+        "basis": "VaultV2.sol: as increaseAbsoluteCap, relative to the vault's assets"
+      },
+      "addAdapter(address)": {
+        "class": "enabler",
+        "reach": "none",
+        "basis": "VaultV2.sol: lets the allocators deploy into a new adapter"
+      },
+      "setAdapterRegistry(address)": {
+        "class": "enabler",
+        "reach": "none",
+        "basis": "VaultV2.sol: changes which adapters can be added"
+      },
+      "setIsAllocator(address,bool)": {
+        "class": "enabler",
+        "reach": "none",
+        "basis": "VaultV2.sol: changes who can move existing money within the caps, at once"
+      },
+      "setSkimRecipient(address)": {
+        "class": "future",
+        "reach": "none",
+        "basis": "MorphoMarketV1AdapterV2.sol: redirects only tokens sent to the adapter outside its positions (rewards)"
+      }
+    },
+    "admin_impact_basis": "D244 (GAPV2 G10): each risk-increasing admin function classified from the pinned Vault V2 source: retroactive (can reach money already deposited), future (only future money or fees), enabler (moves nothing itself, lets another role move existing money). reach: what it can touch (all, market, forced_exit, future_interest, caps, none). The level of a Submit follows the class, not a flat list."
   },
   "graph": {
     "sibling_min_tvl_usd": 1000000,
@@ -359,10 +465,27 @@
     ],
     "oracle_basis": "D82-D84. One oracle input, first rule that applies: a base vault is an exchange rate; a composite (FEED_1/FEED_2) or wrapper (innerOracle) takes its children's class, price-tracking if one is; a structural getter of oracle_getters; at least oracle_history_min past rounds readable over the last oracle_history_rounds: price-tracking when falls are at least oracle_fall_share of the changes (probe 2026-10-10: USDC/USD, USDS/USD and ETH/USD fell 9-14 times in 24 rounds, three exchange-rate and NAV feeds never fell); no history and an answer of exactly 1.0: pegged; a case-insensitive pattern of oracle_patterns in description() or the verified contract name (Etherscan, optional); otherwise not classified."
   },
+  "sky": {
+    "usds": "0xdc035d45d973e3ec169d2276ddab16f1e407384f",
+    "susds": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+    "dai": "0x6b175474e89094c44da98b954eedeac495271d0f",
+    "sources": {
+      "LITE-PSM": "peg module",
+      "PSM": "peg module",
+      "ALLOCATOR-": "*",
+      "RWA": "RWA vaults",
+      "LSE": "staked SKY vaults"
+    },
+    "debt_auction_share": 0.25,
+    "basis": "D223-D226: Sky's core read on-chain through its ChainLog (0xdA0A...740F): each collateral type's debt in the Vat (Art x rate), grouped by name into sources (the peg module; each allocator, ALLOCATOR-<NAME>-A; RWA vaults; staked SKY; the rest crypto vaults); the LitePSM's USDC; the Vow's surplus Vat.dai(vow) and the system's bad debt Vat.sin(vow) (developers.skyeco.com, protocol/core/vow.md). A loss is absorbed in Sky's order: the net surplus, then debt auctions minting SKY, then USDS holders. debt_auction_share: a judgement, the share of SKY's market value debt auctions could raise before SKY's price gives way (the 2020 debt auctions raised about 5M DAI against a far larger MKR market value); stated so it can be argued with."
+  },
   "ethena": {
     "usde": "0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
     "susde": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
-    "custodians": ["Copper", "Ceffu"],
+    "custodians": [
+      "Copper",
+      "Ceffu"
+    ],
     "funding_stress": -0.1,
     "funding_basis": "D221: a sustained funding rate of -10 %/yr on the hedged notional, which Ethena pays from its reserve fund; the hedged notional is taken as the margin on exchanges (delta-neutral: about one for one). A stated scenario, not a forecast: funding was negative for weeks in 2022 and in parts of 2025.",
     "basis": "D218-D221: Ethena's transparency dashboard (app.ethena.fi/api, keyless): the backing by asset and by venue, the reserve fund, the yields. Custody: collateral held by off-exchange settlement providers (Copper, Ceffu; docs.ethena.fi backing-asset-custody) and delegated to exchanges as margin, PnL settled daily (Copper); the dashboard gives the split by exchange, not by custodian. A venue incident loses a share of what sits at that venue; the reserve fund absorbs it first; the rest marks USDe down, and sUSDe (a claim on USDe) by the same fraction."
@@ -370,7 +493,12 @@
   "exit_liquidity": {
     "basis": "KyberSwap aggregator quotes of a sale into USDC on Ethereum, measured 2026-10-11 (docs/analysis/ROCK-VAULT-DEP.md §7). route: none = no route at 0.1M USD, thin = price impact above thin_impact at 1M USD, deep = otherwise. impact: the price impact at each sale size in USD (null: no route). A liquidator who cannot sell the collateral does not liquidate (D131). Re-measure before relying on it; add any token by address.",
     "thin_impact": 0.05,
-    "sizes": [100000, 1000000, 5000000, 20000000],
+    "sizes": [
+      100000,
+      1000000,
+      5000000,
+      20000000
+    ],
     "live_basis": "D212-D214: each hit market's collateral is quoted live on KyberSwap's aggregator into the market's loan token at these sizes (loan units), the slippage measured against the oracle's price; the route at the size the incident liquidates (debt liquidatable x LIF) replaces the hand-measured one below, which stays as the fallback.",
     "tokens": {
       "0x22ae3d9a738471f405169af055d31c687087d4c7": {

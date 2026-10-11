@@ -178,7 +178,9 @@ def test_submit_decodes_the_pending_change_and_its_date():
             )
         ]
     )
-    assert al[0].level == "warn" and "setPerformanceFee" in al[0].title and "2027" in al[0].detail
+    # D244: a fee touches only future interest (accrueInterest runs first): info, and the title says so
+    assert al[0].level == "info" and "setPerformanceFee" in al[0].title and "2027" in al[0].detail
+    assert "future only" in al[0].title and al[0].data["class"] == "future"
 
 
 def test_submit_on_a_cap_names_the_market():
@@ -409,10 +411,32 @@ def test_zero_timelock_on_a_risk_increasing_function_warns_at_start():
 
 
 def test_submit_with_no_notice_is_critical_with_notice_is_warn():
+    """D244: the level follows the class: a fee change (future only) is info even with no notice."""
     fee = "0x" + selector("setPerformanceFee(uint256)") + encode(["uint256"], [10**17]).hex()
     al = run_view(view_with_timelocks(), [ev("Submit", "vault", selector="0x", data=fee, executableAt=1_800_000_000)])
-    assert al[0].level == "critical" and "no notice" in al[0].title
+    assert al[0].level == "info" and "no notice" in al[0].title and "future only" in al[0].title
     al = run_view(
         view_with_timelocks(t_fee=86400), [ev("Submit", "vault", selector="0x", data=fee, executableAt=1_800_000_000)]
     )
-    assert al[0].level == "warn" and "timelock 1 days" in al[0].detail
+    assert al[0].level == "info" and "timelock 1 days" in al[0].detail
+
+
+def test_admin_impact_by_class():
+    """D244 (GAPV2 G10): a gate that can lock withdrawals is retroactive and reaches every deposit; critical with no
+    notice, warn with one; its depositor impact is the depositor's assets."""
+    gate = "0x" + selector("setReceiveAssetsGate(address)") + encode(["address"], ["0x" + "77" * 20]).hex()
+    for t, level in ((0, "critical"), (3 * 86400, "warn")):
+        v = view()
+        v.timelocks = {(VAULT, "setReceiveAssetsGate(address)"): (t, False)}
+        (al,) = run_view(v, [ev("Submit", "vault", selector="0x", data=gate, executableAt=1_800_000_000)])
+        assert al.level == level and "retroactive" in al.title and al.data["reach"] == "all"
+        assert al.depositor_impact is not None and al.depositor_impact < 0
+
+
+def test_every_risk_increasing_function_is_classified():
+    from riskdep.abi import RISK_INCREASING_ADAPTER, RISK_INCREASING_VAULT
+    from riskdep.discover import REGISTRY
+
+    table = REGISTRY["watch"]["admin_impact"]
+    assert set(RISK_INCREASING_VAULT + RISK_INCREASING_ADAPTER) <= set(table)
+    assert {r["class"] for r in table.values()} == {"retroactive", "future", "enabler"}

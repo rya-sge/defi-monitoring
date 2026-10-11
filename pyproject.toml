@@ -26,6 +26,8 @@ package = false
 
 [tool.ruff]
 line-length = 120
+# third-party sources and docs (git submodules such as Sky's spells-mainnet): not ours to lint or format
+extend-exclude = ["docs/external"]
 
 [tool.ruff.lint]
 # Pinned explicitly: ruff 0.17 enables ~818 rules by default, so an

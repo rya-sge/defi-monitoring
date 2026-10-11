@@ -32,7 +32,7 @@ from . import scenario
 from . import sources as S
 from . import zama as ZM
 from .discover import REGISTRY
-from .vault import discover_vault, largest_depositor, read_state
+from .vault import cap_ids, discover_vault, largest_depositor, read_state
 
 TERMINAL = frozenset(REGISTRY["stables"])
 
@@ -69,6 +69,9 @@ class MarketHit:
     source: str = "incident"  # D139: "engine" when the shock engine's propagation gave the figures
     engine: str = ""  # D139: what the engine saw: oracle and collateral market factors, liquidated, insolvent
     feeds: list[str] = field(default_factory=list)  # D157: each base feed of the market's oracle and its freshness
+    returned: float = 0.0  # D239: what the vault can withdraw more from this market once liquidators repaid
+    band: dict | None = None  # D241: the feed's floor holds the oracle back; the stage now, the rest after an upgrade
+    cap_limit: float = 0.0  # D243: the most the vault can hold in this market within its caps, asset units
     stale_feed: bool = False
 
 
@@ -109,6 +112,8 @@ class VaultIncident:
     exit_cost_rate: float | None = None  # D151: a flat cost of leaving, as a share of what leaves (else the yield)
     conditional: dict | None = None  # D165: the loss of staying given the incident, drawn (USD, depositor's terms)
     zama: list[str] = field(default_factory=list)  # D174: a confidential depositor's two exits, for a Zama vault
+    returned_liquidity: float = 0.0  # D239: Σ hits' `returned`: freed once the liquidations have repaid their debt
+    at_caps_loss: float = 0.0  # D243: the vault's loss if the hit markets held their caps (the vault's share scaled)
 
     def lines(self) -> list[str]:
         s = self.symbol
@@ -154,8 +159,27 @@ class VaultIncident:
                 )
             out += [f"    feed {x}" for x in h.feeds]
             out.append(f"    oracle {h.oracle_class}; how fast: {h.timing}")
+            if h.band:
+                b = h.band
+                out.append(
+                    f"    now, held at the feed's floor: {b['now_liquidatable']:,.0f} {s} liquidatable, bad debt "
+                    f"{b['now_bad_debt']:,.0f}, the vault's loss {b['now_vault_loss']:,.0f}; the figures above once "
+                    f"the feed is upgraded" + (f", {b['timelock_h']:g} h at the earliest" if b["timelock_h"] else "")
+                )
         out.append(
             f"  vault loss {self.vault_loss:,.0f} {s} ({self.vault_loss / self.vault_total:.2%} of {self.vault_total:,.0f})"
+            + (
+                f"; at the caps, which an allocator can reach at once with no timelock, about {self.at_caps_loss:,.0f}"
+                if self.at_caps_loss > self.vault_loss * 1.01
+                else ""
+            )
+            + (
+                f"; if liquidators act, the debt they repay frees {self.returned_liquidity:,.0f} more for the vault to "
+                f"withdraw once they have (now {sum(self.liquidity[:2]):,.0f}; the market's other lenders can draw on it "
+                "too); if nobody liquidates, it stays locked"
+                if self.returned_liquidity > 0
+                else ""
+            )
             if self.vault_total
             else "  empty vault"
         )
@@ -288,6 +312,49 @@ def describe(shock: tuple, labels: dict[str, str] | None = None) -> str:
     return f"{who} of {where} default{'s' if n == 1 else ''}, collateral recovered at {v:.0%}"
 
 
+def returned_liquidity(h: MarketHit, vault_assets: float, free: float) -> float:
+    """D239, pure: when liquidators act, the debt they repay (what the seized collateral covers) is the market's free
+    liquidity again, so the vault can withdraw more from it, up to what it still has there after its loss; nothing when
+    nobody can liquidate (no exit route) or for a default (nothing is repaid). Asset units."""
+    if h.event != "markdown" or h.liquidatable_debt <= 0 or h.exit_route == "none":
+        return 0.0
+    # the shock engine's figure is the debt liquidators repaid (D139); this module's is the liquidatable positions'
+    # whole debt, of which the part their collateral does not cover is not repaid
+    repaid = h.liquidatable_debt if h.source == "engine" else max(0.0, h.liquidatable_debt - h.bad_debt)
+    now = min(vault_assets, free)
+    after = min(max(0.0, vault_assets - h.vault_loss), free + repaid)
+    return max(0.0, after - now)
+
+
+def feed_bands(f: S.Fetcher, graph: dict | None, market_ids: list[str], block: int) -> dict[str, dict] | None:
+    """D241 (GAPV2 G11): each market's feed with a fixed band (a Midas custom feed: below `minAnswer` it cannot report
+    without new code) and the timelock above it, read through the admin surface at `block`; None when not readable
+    (not in the recording)."""
+    from . import admin as AD
+
+    if graph is None or not market_ids:
+        return {}
+    try:
+        aw = AD.AdminWatch(f, market_ids, block)
+    except (S.CacheMiss, S.SourceError):
+        return None
+    oracles = {e["source"]: e["target"] for e in graph["edges"] if e["rel"] == "priced by"}
+    out = {}
+    for mid in market_ids:
+        for e in graph["edges"]:
+            c = aw.contracts.get(e["target"]) if e["rel"] == "reads" and e["source"] == oracles.get(mid) else None
+            if c is not None and c.band:
+                lo, hi, dec, ans = c.band
+                tl = aw.timelock_over(c.address)
+                out[mid] = {
+                    "feed": c.symbol or c.address[:10],
+                    "floor_fall": max(0.0, 1 - lo / ans),
+                    "floor": lo / 10**dec,
+                    "timelock_h": tl.timelock_delay / 3600 if tl and tl.timelock_delay else None,
+                }
+    return out
+
+
 def live_exit(f: S.Fetcher, h: MarketHit, mp, price: int | None, info) -> None:
     """D213–D214: the hit's exit liquidity quoted live on KyberSwap at the size its liquidations seize (debt × LIF),
     in place of the registry's; the registry's stays when no quote is available."""
@@ -386,7 +453,7 @@ def engine_shocks(graph: dict, shocks: list[tuple]) -> list[EN.Shock]:
     constant-price input (the issuer's rate or NAV feed) of the oracles of markets taking T as collateral reads f low.
     A price-tracking input follows T's price through the graph's `tracks` edges by itself. D205: a linear-discount or
     fixed input does not read the markdown: its market keeps its oracle, liquidates nobody, and its lenders hold the
-    shortfall (and the drain the gap opens)."""
+    shortfall (and the drain the gap opens). D240: an oracle that applies T's own ERC-4626 rate reads it low too."""
     nodes = {n["id"]: n for n in graph["nodes"]}
     out: dict[tuple, EN.Shock] = {}
     for kind, tok, fall, _ in normalise(shocks):
@@ -397,6 +464,7 @@ def engine_shocks(graph: dict, shocks: list[tuple]) -> list[EN.Shock]:
             out[(a, "price")] = EN.Shock(a, "price", -fall)
             markets = {e["source"] for e in graph["edges"] if e["rel"] == "takes as collateral" and e["target"] == a}
             oracles = {e["target"] for e in graph["edges"] if e["rel"] == "priced by" and e["source"] in markets}
+            seen = set()  # oracles that read the markdown through one of their feeds
             for e in graph["edges"]:
                 feed = nodes.get(e["target"], {})
                 if (
@@ -406,6 +474,13 @@ def engine_shocks(graph: dict, shocks: list[tuple]) -> list[EN.Shock]:
                     and feed["details"].get("constant_kind") not in (OC.LINEAR_DISCOUNT, OC.FIXED)
                 ):
                     out[(feed["id"], "misreport")] = EN.Shock(feed["id"], "reads-low", fall)
+                    seen.add(e["source"])
+            for e in graph["edges"]:
+                # D240 (GAPV2 G19): an oracle that applies the token's own ERC-4626 rate (BASE_VAULT) reads a loss of
+                # value the issuer books, as a rate oracle does; not twice when a feed already carries it
+                if e["rel"] == "converts through" and e["target"] == a and e["source"] in oracles:
+                    if e["source"] not in seen:
+                        out[(e["source"], "misreport")] = EN.Shock(e["source"], "reads-low", fall)
     return list(out.values())
 
 
@@ -648,6 +723,8 @@ def run(
         {mid: scenario.oracle_profile(f, params[mid].oracle, "latest") for mid in risk.markets} if profile_all else {}
     )
     hits, loss_raw, exposure_raw = [], 0, 0
+    direct = [m for m in drops if m in risk.markets and drops[m] > 0 and not vias.get(m)]
+    bands = feed_bands(f, graph, direct, block)  # D241: a feed whose floor holds the markdown back
     for mid in sorted(set(drops) | set(defaults), key=list(params).index):
         if mid not in risk.markets:
             continue  # below one whole token allocated: not followed (D47)
@@ -700,6 +777,22 @@ def run(
             h.no_liquidator_shortfall = (
                 hidden_shortfall(positions, totals, price, d) / lu + (dbad / lu if who else 0.0)
             ) * h.vault_share
+        b = (bands or {}).get(mid)
+        if b and d > b["floor_fall"] + 1e-9 and h.event == "markdown" and not h.via:
+            # D241: the oracle can fall only to the feed's floor now; the rest waits for an upgrade of the feed
+            now = market_hit(mid, risk.markets[mid], positions, totals, price, b["floor_fall"], h.vault_share, profile)
+            lock = f" through a {b['timelock_h']:g} h timelock" if b["timelock_h"] else ""
+            h.band = {
+                **b,
+                "now_liquidatable": now.liquidatable_debt,
+                "now_bad_debt": now.bad_debt,
+                "now_vault_loss": now.vault_loss,
+                "held_back": d - b["floor_fall"],
+            }
+            h.timing = (
+                f"the feed's floor ({b['feed']} {b['floor']:,.6g}) holds the oracle at −{b['floor_fall']:.1%} at its "
+                f"next round; the rest, −{d - b['floor_fall']:.1%}, reaches it only after the feed is upgraded{lock}"
+            )
         hits.append(h)
 
     for h in hits if graph is not None else []:
@@ -711,6 +804,8 @@ def run(
         siblings = apply_engine(graph, shocks, hits, risk.markets, shares, st, unit)
     for h in hits:
         live_exit(f, h, params[h.market_id], st.markets[h.market_id].oracle_price, risk.markets[h.market_id])
+        m = st.markets[h.market_id]
+        h.returned = returned_liquidity(h, m.vault_assets / unit, m.liquidity / unit)  # after live_exit's route
     for h in hits:
         loss_raw += int(h.vault_loss * unit)
         if h.bad_debt > 0:
@@ -755,6 +850,20 @@ def run(
         notes.append(
             "liquidating issuer-priced collateral needs a buyer of the issuer's token; if no liquidator acts, the bad "
             "debt stays unrealised and the market's liquidity stays locked"
+        )
+    one_key = [
+        n
+        for n in (graph or {}).get("nodes", [])
+        if n["kind"] == "Admin"
+        and n["details"].get("one_key")
+        and any(r in n["label"] for r in ("owner", "curator", "allocator"))  # a sentinel can only de-risk
+    ]
+    if one_key:
+        # D245 (GAPV2 G2): a role held by one key can change the vault with no notice to its depositors
+        notes.append(
+            "held by one key: "
+            + "; ".join(n["label"] for n in one_key)
+            + " — an owner so held can replace the curator at once, an allocator move money within the caps at once"
         )
     if any(h.exit_source == "KyberSwap" and h.exit_route != "deep" for h in hits):
         notes.append(
@@ -866,6 +975,18 @@ def run(
         exit_cost_rate,
     )
     inc.zama = zama_lines
+    inc.returned_liquidity = sum(h.returned for h in hits)
+    from . import exposure as XP
+
+    for h in hits:
+        a = next((ad for ad in view.adapters if h.market_id in ad.markets), None)
+        if a is not None:
+            h.cap_limit = XP.market_limit(cap_ids(a.address, params[h.market_id]), st.caps, st.total_assets) / unit
+    # D243: an allocator can move the vault up to the caps at once; the vault's share of each market's loss scales with
+    # what it holds there (approximately: the other lenders' supply unchanged)
+    inc.at_caps_loss = sum(
+        h.vault_loss * max(h.cap_limit, h.vault_exposure) / h.vault_exposure if h.vault_exposure else 0.0 for h in hits
+    )
     return inc
 
 

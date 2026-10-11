@@ -413,7 +413,7 @@ def assess(
 ) -> IncidentResult:
     """The impact of a given incident on an `analyze` position, its timing and the verdict (D89, D90)."""
     mode = oracle_mode_for(profile, pos.oracle_mode)
-    extra = REGISTRY["pt_stress_extra_discount"]
+    extra = REGISTRY["pt_stress_yield_spike"]
     kw = {
         "pt_years": pos.days_to_maturity / 365,
         "implied_apy": pos.implied_apy,
@@ -423,7 +423,7 @@ def assess(
 
     def run(p: Position) -> LossBreakdown:
         return loss(
-            p.collateral_usd, p.debt_usd, p.lltv, p.lif, mode, shocks, recovery=recovery, pt_stress_extra=extra, **kw
+            p.collateral_usd, p.debt_usd, p.lltv, p.lif, mode, shocks, recovery=recovery, pt_stress_spike=extra, **kw
         )
 
     b = run(pos)

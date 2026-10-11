@@ -1,0 +1,1 @@
+{"method": "GET", "url": "https://coins.llama.fi/prices/current/ethereum:0xb195b618ea52b77cb2a58846f452f59f8dfa9390", "body": null, "fetched": "2026-10-11T05:07:02Z", "response": {"coins": {"ethereum:0xb195b618ea52b77cb2a58846f452f59f8dfa9390": {"decimals": 18, "symbol": "PT-sUSDE-26NOV2026", "price": 0.9931608755758009, "timestamp": 1791695107, "confidence": 0.9}}}}

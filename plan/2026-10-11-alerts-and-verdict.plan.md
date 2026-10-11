@@ -59,6 +59,7 @@ Detection is the first link of the brief's chain: a stale issuer feed is the war
 | D194 | contract | On each refresh, `FeedStale` only for the feeds that turned stale since the last check | agreed, agent's default | — | S1 |
 | D195 | contract | K13: EXIT when the proposed de-lever still leaves the worst 1 % of outcomes at or above `tail_exit_budget` (90 %) of equity; otherwise the REDUCE rule stands | agreed, the demo's de-lever leaves 79 %: REDUCE unchanged | `GAP.md` K13 | S2 |
 | D196 | contract | K12: when the PT matures beyond the horizon, the verdict adds the hold-to-maturity path: the expected loss and the carry to maturity, against the one-off cost of leaving now, and which is cheaper | agreed, agent's default: a line, so the demo's verdict and numbers stay | `GAP.md` K12 | S2 |
+| D244 | contract | Changed by plan `2026-10-11-admin-impact`: a `Submit` is no longer a flat warn; its level follows the class of the change in `watch.admin_impact` (retroactive: critical with no notice, warn with one; enabler: warn with no notice, info with one; future only: info), with the amount it can reach | agreed, the person: "Do G10 with G2" | GAPV2 G10 | — |
 
 # Execution
 

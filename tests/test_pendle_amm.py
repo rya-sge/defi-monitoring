@@ -50,3 +50,23 @@ def test_the_reusd_pool_behind_the_oracle(tmp_path, capsys):
         s = m["from_sale"]
         assert s["positions"] == m["realised_positions"] and s["missed"] == 0 and s["extra"] == 0
     assert "came back to the markets as free liquidity" in capsys.readouterr().out
+
+
+def test_the_cascade_stops_at_the_pools_cap(tmp_path):
+    """D238 (K9): from the 2.36 % of the sale alone, the liquidations seize 40.5M PT; the pool takes only 98k more
+    before its 96 % cap, so the fall stops at 2.46 % (observed 2.45 % and 2.76 %), with the same borrowers."""
+    assert cli.main(["backtest", "--out", str(tmp_path)]) == 0
+    r = json.loads((tmp_path / "backtest-pt-reusd-2026-08-25.json").read_text())
+    c = r["pool"]["cascade"]
+    assert c["capped"] and c["fall"] == pytest.approx(0.0246, abs=3e-4) and c["unsold_pt"] > 0.99 * c["seized_pt"]
+    for m in r["markets"]:
+        s = m["from_cascade"]
+        assert s["positions"] == m["realised_positions"] and s["missed"] == 0 and s["extra"] == 0
+
+
+def test_cascade_pure():
+    pool = PA.Pool("m", 1, 0, 1_000_000.0, 2_000_000.0, 20.0, PA.YEAR, 0.0, 0.0, 0.05, 1.0)
+    none = PA.cascade(pool, 100_000.0, lambda fall: 0.0)
+    assert none["sold_pt"] == 0 and len(none["steps"]) == 1
+    grow = PA.cascade(pool, 100_000.0, lambda fall: 2_000_000.0 * fall)  # seizes more the deeper it falls
+    assert grow["fall"] > none["fall"] and len(grow["steps"]) > 1

@@ -59,6 +59,7 @@ class Probe:
     name: str | None = None  # verified contract name (Etherscan), the implementation's for a proxy
     market: str | None = None  # `market()` of a Pendle TWAP input: the pool whose PT price it reads (engine D115)
     updated_at: int | None = None  # D155: `updatedAt` of the latest round, from the batch above (no extra call)
+    round_id: int | None = None  # D242: round 0 is a value computed on read (an adapter over nav(), a price getter)
     update_times: list[int] = field(default_factory=list)  # D155: `updatedAt` of the rounds in `history`, oldest first
 
     def pendle_market(self) -> str | None:
@@ -137,6 +138,10 @@ def constant_kind(p: Probe, rules: dict = G) -> str | None:
         return PUBLISHED  # rounds pushed by a transaction: flat so far, the next one can carry a loss
     if not p.history[:-1] and p.answer is not None and p.decimals is not None and p.answer == 10**p.decimals:
         return FIXED
+    if p.round_id == 0 and p.answer is not None and p.decimals is not None and p.answer != 10**p.decimals:
+        # D242 (GAPV2 G12): no rounds, the answer computed when read (e.g. `token.nav()` behind f(x)'s NAV adapter):
+        # it moves with the accounting it reads, at once, like an exchange rate; exactly 1.0 stays a fixed value
+        return EXCHANGE_RATE
     text = f"{p.description or ''} {p.name or ''}".lower()
     return next((pat.get("kind") for pat in rules["oracle_patterns"] if pat["match"].lower() in text), None)
 
@@ -199,7 +204,7 @@ def probe(f: S.Fetcher, address: str, block, vault: bool = False, depth: int = 0
     if res[2]:
         try:
             latest = decode(ROUND_T, bytes.fromhex(res[2][2:]))
-            p.answer, p.updated_at = latest[1], latest[3] or None
+            p.answer, p.updated_at, p.round_id = latest[1], latest[3] or None, latest[0]
         except Exception:
             latest = None
     for sig, raw in zip(getters, res[3 + len(kids) :]):

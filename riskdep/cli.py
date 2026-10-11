@@ -68,8 +68,17 @@ def main(argv: list[str] | None = None) -> int:
         + ", ".join(scenario.EVENTS)
         + "; with --vault or --book: token=<collateral>:<fall> (a markdown) or "
         "borrower=<collateral, market id or all>:<recovery>[:<n>] (the n largest borrowers default); everywhere: "
-        "venue=<exchange>:<loss>, a share of USDe's backing at that venue lost (Ethena, e.g. venue=Binance:0.5)",
+        "venue=<exchange>:<loss>, a share of USDe's backing at that venue lost (Ethena, e.g. venue=Binance:0.5); "
+        "with --vault or --book: sky=<source>:<loss>, a share of a Sky source lost (e.g. sky=spark:0.2)",
     )
+    a.add_argument(
+        "--since",
+        type=int,
+        metavar="BLOCK",
+        help="with --vault and --shock token=…: after an incident that began at BLOCK, what has landed, what is still at "
+        "risk (unrealised, and pending until the oracle passes it on) and the verdict on that part only",
+    )
+    a.add_argument("--at", type=int, metavar="BLOCK", help="with --since: the block to read now (default: the head)")
     a.add_argument("--out", default=str(Path(__file__).resolve().parent.parent / "out"))
 
     w = sub.add_parser("watch", help="follow a Morpho Vault V2 block by block and alert on what affects a depositor")
@@ -303,6 +312,7 @@ def main(argv: list[str] | None = None) -> int:
             else S.Fetcher("direct")
         )
         measured = GR.annotate_supply(g, fs, block)
+        one_key = GR.annotate_roles(g, fs, block)
         title = "Morpho dependency graph: " + ", ".join([u[:10] + "…" for u in users] + [v[:10] + "…" for v in vaults])
         hp, jp = GR.write(g, Path(args.out), title, GR.subtitle_for(block))
         kinds = {}
@@ -316,8 +326,18 @@ def main(argv: list[str] | None = None) -> int:
         if confidential:
             print(f"Zama: {confidential} vault(s) entered confidentially, their batchers and decryption drawn")
         print(f"shared feeds and oracles: {shared} read by more than one market")
+        print(
+            f"role holders: {one_key} held by one key"
+            if one_key
+            else "role holders: none held by one key, or not checked"
+        )
         if venues:
             print(f"Ethena: {venues} venue(s) holding USDe's backing drawn behind USDe")
+        skies = GR.annotate_sky(
+            g, pipeline.sky_snapshot("record" if args.record else "offline" if args.replay else "live")
+        )
+        if skies:
+            print(f"Sky: {skies} source(s) of USDS and DAI's backing drawn")
         print(
             f"collateral supply: {measured} token(s) with their share posted in Morpho"
             if measured
@@ -493,6 +513,8 @@ def _vault_incident(ap, args) -> int:
     """`analyze --vault` / `--book`: a known incident on a collateral, for one vault or a book of vaults
     (plans 2026-10-11-vault-incident and 2026-10-11-vault-book); the work is `pipeline.incident`."""
     mode = "record" if args.record else "refresh" if args.refresh else "live" if args.live else "offline"
+    if args.since is not None:
+        return _after(ap, args, mode)
     try:
         book = vault_book.load(Path(args.book)) if args.book else vault_book.from_addresses(args.vault, args.user)
         res = pipeline.incident(book, args.shock, args.user, args.horizon, mode, args.exit_cost, args.conditional)
@@ -507,9 +529,37 @@ def _vault_incident(ap, args) -> int:
     if len(res.incidents) == 1 and not args.book:
         for line in res.incidents[0].lines():
             print(line)
+        for line in res.result.value_at_risk["lines"]:
+            print(line)
         print(f"json:   {vault_incident.write(res.incidents[0], Path(args.out))}")
         return 0
     for line in res.result.text():
         print(line)
     print(f"json:   {vault_book.write(res.result, Path(args.out))}")
+    return 0
+
+
+def _after(ap, args, mode: str) -> int:
+    """`analyze --vault V --since BLOCK --shock token=…`: plan 2026-10-11-after (D228–D231)."""
+    if args.book or len(args.vault or []) != 1:
+        ap.error("--since takes one --vault")
+    try:
+        res = pipeline.after_incident(
+            args.vault[0], args.since, args.at, args.shock, args.user, mode, args.exit_cost, args.horizon
+        )
+    except (ValueError, FileNotFoundError) as e:
+        ap.error(str(e))
+    except S.CacheMiss as e:
+        print(f"recording incomplete: {e}", file=sys.stderr)
+        return 2
+    except S.SourceError as e:
+        print(f"data source error: {e}", file=sys.stderr)
+        return 3
+    for line in res.lines():
+        print(line)
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    jp = out / f"after-{res.vault}-{res.since}-{res.at}.json"
+    jp.write_text(json.dumps(res.to_json(), indent=2, default=str))
+    print(f"json:   {jp}")
     return 0

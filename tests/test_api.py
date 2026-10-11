@@ -169,6 +169,7 @@ def test_openapi_is_served_and_names_every_route(client):
         "/api/analyze",
         "/api/books",
         "/api/incident",
+        "/api/incident/after",
         "/api/targets",
         "/api/alerts",
         "/api/vault/{address}",
