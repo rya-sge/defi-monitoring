@@ -25,6 +25,8 @@ Rules for editing:
 - [`exit_liquidity`](#exit_liquidity)
 - [`pharos`](#pharos)
 - [`nexus`](#nexus)
+- [`feeds`](#feeds)
+- [`tvl`](#tvl)
 - [How to add a yield issuer](#how-to-add-a-yield-issuer)
 
 ## `chain`
@@ -234,6 +236,31 @@ Nexus Mutual's cover prices as an outside view next to the breakeven p\* (plan `
 | `products` | address → `{product, kind, token}` | trUSD, strUSD, etrUSD (Tori 446), fxSAVE (f(x) 137), fxUSD (depeg 311), iUSD, siUSD (infiniFi 308), mGLOeuro (Midas 356) | which Nexus product covers a collateral's protocol; `kind` is `protocol` (pays on an exploit) or `depeg` |
 
 **Adding a product.** Find the product id in `https://api.nexusmutual.io/v2/products`, read its wording (the IPFS annex in its metadata) to set `kind`, and add `"<token address>": {"product": <id>, "kind": "protocol" | "depeg", "token": "<symbol>"}`.
+
+## `feeds`
+
+When an oracle input is stale (plan `2026-10-11-feed-quality`, D155–D157). Read by `feeds.py` for `graph` and vault incidents; no alert depends on it yet.
+
+| Key | Unit | Default | What it controls |
+|---|---|---|---|
+| `stale_factor` | × cadence | 3 | stale when the last update is older than this many median update intervals, read from the feed's past rounds… |
+| `stale_min_hours` | hours | 25 | …and older than this (a daily heartbeat plus an hour) |
+| `no_history_max_days` | days | 7 | with fewer than `graph.oracle_history_min` rounds, stale past this age |
+| `basis` | text | — | why |
+
+## `tvl`
+
+TVL concentration of the protocols in a graph (plan `2026-10-11-feed-quality`, D158–D160). Read by `tvl.py` for `graph`.
+
+| Key | Unit | Default | What it controls |
+|---|---|---|---|
+| `warn_share_defi` | fraction of all DeFi TVL | 0.02 | a protocol at or above it is a concentration |
+| `warn_share_category` | fraction of its category | 0.25 | …or at or above this share of its DefiLlama category… |
+| `warn_category_min_usd` | USD | 1,000,000,000 | …when the category is at least this large |
+| `blue_markets` | slug | `morpho-blue` | the protocol of every Blue market |
+| `pt_assets` | slug | `pendle-v2` | the protocol of every Pendle PT |
+| `tokens` | address → slug | Re, Tori, infiniFi, Hastra, NUVA, Midas, Lido, Huma, AUTOfinance, f(x), Steakhouse | the protocol issuing a token; add a token by its address and the slug in `https://api.llama.fi/protocols` |
+| `basis`, `warn_basis` | text | — | why |
 
 ## How to add a yield issuer
 

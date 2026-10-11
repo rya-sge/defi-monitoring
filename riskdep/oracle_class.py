@@ -46,6 +46,8 @@ class Probe:
     children: list[Probe] = field(default_factory=list)  # composite or wrapper inputs (`oracle_children_getters`)
     name: str | None = None  # verified contract name (Etherscan), the implementation's for a proxy
     market: str | None = None  # `market()` of a Pendle TWAP input: the pool whose PT price it reads (engine D115)
+    updated_at: int | None = None  # D155: `updatedAt` of the latest round, from the batch above (no extra call)
+    update_times: list[int] = field(default_factory=list)  # D155: `updatedAt` of the rounds in `history`, oldest first
 
     def pendle_market(self) -> str | None:
         """The Pendle pool this input, or one of its parts, reads with a TWAP (once `read_pendle_markets` ran)."""
@@ -152,7 +154,7 @@ def probe(f: S.Fetcher, address: str, block, vault: bool = False, depth: int = 0
     if res[2]:
         try:
             latest = decode(ROUND_T, bytes.fromhex(res[2][2:]))
-            p.answer = latest[1]
+            p.answer, p.updated_at = latest[1], latest[3] or None
         except Exception:
             latest = None
     for sig, raw in zip(getters, res[3 + len(kids) :]):
@@ -163,7 +165,7 @@ def probe(f: S.Fetcher, address: str, block, vault: bool = False, depth: int = 0
         p.children = [probe(f, c, block, depth=depth + 1) for c in dict.fromkeys(children)]
         return p
     if latest and latest[0] > 1:
-        p.history = _history(f, p.address, latest, block)
+        p.history, p.update_times = _history(f, p.address, latest, block)
     elif p.answer is not None:
         p.history = [p.answer]
     if classify_input(p)[0] == NOT_CLASSIFIED:  # the name is the last resort: it needs the optional Etherscan key
@@ -183,8 +185,9 @@ def read_pendle_markets(f: S.Fetcher, p: Probe, block) -> None:
         read_pendle_markets(f, c, block)
 
 
-def _history(f: S.Fetcher, address: str, latest: tuple, block) -> list[int]:
-    """Answers of the last `oracle_history_rounds` rounds with a distinct, older timestamp, oldest first."""
+def _history(f: S.Fetcher, address: str, latest: tuple, block) -> tuple[list[int], list[int]]:
+    """Answers of the last `oracle_history_rounds` rounds with a distinct, older timestamp, oldest first, and their
+    `updatedAt` timestamps."""
     rid, k = latest[0], G["oracle_history_rounds"]
     ids = [rid - i for i in range(1, k + 1) if rid - i > 0]
     res = S.rpc_batch(f, [_call(address, "getRoundData(uint80)", ["uint80"], [i]) for i in ids], block)
@@ -199,7 +202,8 @@ def _history(f: S.Fetcher, address: str, latest: tuple, block) -> list[int]:
         if not r[3] or r[3] >= points[-1][0]:
             break  # a feed without real rounds returns its latest answer for any id
         points.append((r[3], r[1]))
-    return [a for _, a in reversed(points)]
+    points.reverse()
+    return [a for _, a in points], [t for t, _ in points]
 
 
 MORPHO_ORACLE_GETTERS = [

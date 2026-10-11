@@ -62,6 +62,8 @@ class MarketHit:
     pharos_exposure: float = 0.0  # D135: > 0 when the market is reached through Pharos's off-chain backing edges
     source: str = "incident"  # D139: "engine" when the shock engine's propagation gave the figures
     engine: str = ""  # D139: what the engine saw: oracle and collateral market factors, liquidated, insolvent
+    feeds: list[str] = field(default_factory=list)  # D157: each base feed of the market's oracle and its freshness
+    stale_feed: bool = False
 
 
 @dataclass
@@ -140,6 +142,7 @@ class VaultIncident:
                         "if the markdown persists is counted as the loss (hidden)"
                     )
                 )
+            out += [f"    feed {x}" for x in h.feeds]
             out.append(f"    oracle {h.oracle_class}; how fast: {h.timing}")
         out.append(
             f"  vault loss {self.vault_loss:,.0f} {s} ({self.vault_loss / self.vault_total:.2%} of {self.vault_total:,.0f})"
@@ -334,6 +337,18 @@ def graded(snap: PH.Snapshot, collateral: str, chain: list[str], symbols: dict[s
         if g:
             return f"{symbols.get(t, t[:10])} {g}"
     return None
+
+
+def market_feeds(graph: dict, market_id: str) -> list[tuple[str, str, bool]]:
+    """D157, pure: (feed label, freshness, stale) for each input of the market's oracle the graph has a freshness for."""
+    nodes = {n["id"]: n for n in graph["nodes"]}
+    oracles = {e["target"] for e in graph["edges"] if e["source"] == market_id and e["rel"] == "priced by"}
+    out = []
+    for e in graph["edges"]:
+        d = nodes.get(e["target"], {}).get("details", {})
+        if e["rel"] == "reads" and e["source"] in oracles and d.get("freshness"):
+            out.append((nodes[e["target"]]["label"], d["freshness"], bool(d.get("stale"))))
+    return out
 
 
 def engine_shocks(graph: dict, shocks: list[tuple]) -> list[EN.Shock]:
@@ -648,6 +663,9 @@ def run(
             ) * h.vault_share
         hits.append(h)
 
+    for h in hits if graph is not None else []:
+        fs = market_feeds(graph, h.market_id)
+        h.feeds, h.stale_feed = [f"{lbl}: {txt}" for lbl, txt, _ in fs], any(s for *_, s in fs)
     engine_block, siblings = None, []
     if graph is not None and shocks:
         engine_block = graph.get("block")
@@ -682,6 +700,11 @@ def run(
         "bad debt is written off only when the positions are liquidated; until then the share price stays at par, "
         "and those who leave first leave the loss to those who stay"
     ]
+    if any(h.stale_feed for h in hits):
+        notes.append(
+            "a hit market's feed is stale: the price the incident starts from may already be out of date, and the "
+            "issuer's next update can land the markdown at once"
+        )
     if any(h.event == "default" for h in hits):
         notes.append(
             "a default on Morpho Blue has no due date: the defaulted debt keeps accruing until the collateral is "

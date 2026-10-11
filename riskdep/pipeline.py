@@ -208,6 +208,14 @@ def nexus_prices(mode: str = "offline"):
     return nexus.load(_outside_fetcher("nexus", mode))
 
 
+def llama_protocols(mode: str = "offline") -> list[dict] | None:
+    """D158: DefiLlama's protocol list: the snapshot's copy offline (its as-of date), read live otherwise and not saved."""
+    try:
+        return S.llama_protocols(S.Fetcher("offline") if mode == "offline" else S.Fetcher("direct"))
+    except (S.CacheMiss, S.SourceError):
+        return None
+
+
 def vault_graph(vault: str) -> dict | None:
     """D139: the vault's recorded dependency graph (graph --vault … --record), for the shock engine; None without one.
     Loading a replay moves the clock to the recording's date, so the clock is put back."""

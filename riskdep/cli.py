@@ -96,6 +96,13 @@ def main(argv: list[str] | None = None) -> int:
         "on a local fork is seen act by act",
     )
     w.add_argument(
+        "--poll",
+        type=float,
+        metavar="SECONDS",
+        help="seconds between polls in live mode (default watch.poll_seconds, 12 s, Ethereum's block time); "
+        "lower on a local fork, whose blocks come when a script mines them",
+    )
+    w.add_argument(
         "--record-as",
         metavar="NAME",
         help="with --record or --replay: the recording's folder under fixtures/replay/ instead of the vault address, "
@@ -247,6 +254,8 @@ def main(argv: list[str] | None = None) -> int:
             return 3
         ph = pipeline.pharos_snapshot("record" if args.record else "offline" if args.replay else "live")
         graded = GR.annotate_pharos(g, ph) if ph else 0
+        protocols = pipeline.llama_protocols("offline" if args.replay else "live")
+        drawn = GR.annotate_tvl(g, protocols) if protocols else 0
         title = "Morpho dependency graph: " + ", ".join([u[:10] + "…" for u in users] + [v[:10] + "…" for v in vaults])
         hp, jp = GR.write(g, Path(args.out), title, GR.subtitle_for(block))
         kinds = {}
@@ -254,6 +263,9 @@ def main(argv: list[str] | None = None) -> int:
             kinds[n["kind"]] = kinds.get(n["kind"], 0) + 1
         print(f"{len(g.nodes)} nodes ({', '.join(f'{v} {k}' for k, v in kinds.items())}), {len(g.edges)} edges")
         print(f"Pharos {ph.as_of}: {graded} asset(s) graded" if ph else "Pharos: not checked")
+        print(
+            f"TVL concentration: {drawn} protocol(s) from DefiLlama" if protocols else "TVL concentration: not checked"
+        )
         print(f"html: {hp}\njson: {jp}")
         return 0
 
@@ -311,6 +323,7 @@ def main(argv: list[str] | None = None) -> int:
             min_level=args.level,
             max_polls=args.max_polls,
             step=args.step,
+            **({"poll_seconds": args.poll} if args.poll else {}),
         )
         try:
             return run(opts)

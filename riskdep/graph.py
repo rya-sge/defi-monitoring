@@ -28,6 +28,7 @@ from eth_abi import decode
 
 from . import borrower as B
 from . import clock, discover
+from . import feeds as FD
 from . import market_risk as MR
 from . import oracle_class as OC
 from . import siblings as SB
@@ -143,6 +144,11 @@ def _oracle(g: Graph, f, oracle: str, block) -> str:
             g.edge(oracle, fid, "converts through", role=name)
         else:
             fcls = OC.classify_input(probes[addr]) if addr in probes else (None, None)
+            fresh = (
+                FD.freshness(probes[addr].updated_at, probes[addr].update_times, clock.now())
+                if addr in probes
+                else None
+            )
             fid = g.node(
                 addr,
                 "Oracle",
@@ -152,7 +158,10 @@ def _oracle(g: Graph, f, oracle: str, block) -> str:
                 oracle_class=fcls[0],
                 class_basis=fcls[1],
                 tracks_market=probes[addr].pendle_market() if addr in probes else None,
-                source="oracle getter, description() on-chain",
+                updated_at=probes[addr].updated_at if addr in probes else None,
+                freshness=fresh.text if fresh else None,
+                stale=fresh.stale if fresh else None,
+                source="oracle getter, description() on-chain; freshness from its rounds (D155)",
             )
             g.edge(oracle, fid, "reads", role=name)
     return oracle
@@ -623,6 +632,38 @@ def load(
             )
         )
     return g, block, users, vaults, siblings
+
+
+def annotate_tvl(g: Graph, protocols: list[dict]) -> int:
+    """D160: each Blue market, PT and issuer token of the graph points to the DefiLlama protocol it belongs to, an
+    External node carrying that protocol's TVL, its share of DeFi and of its category, and whether that is a
+    concentration (`tvl` in the registry). Returns the number of protocols drawn."""
+    from . import tvl as TV
+
+    drawn = {}
+    for nid, n in list(g.nodes.items()):
+        slug = TV.slug_of(n)
+        if slug is None:
+            continue
+        if slug not in drawn:
+            c = TV.concentration(protocols, slug)
+            if c is None:
+                continue
+            drawn[slug] = g.node(
+                f"protocol:{slug}",
+                "External",
+                c.name,
+                tvl_usd=round(c.tvl_usd),
+                category=c.category,
+                share_of_defi=round(c.share_defi, 5),
+                share_of_category=round(c.share_category, 4),
+                rank_in_category=c.rank,
+                concentrated=c.concentrated,
+                concentration=c.text,
+                source="DefiLlama /protocols (D158–D160)",
+            )
+        g.edge(nid, drawn[slug], "runs on" if n["kind"] == "Pool" else "issued by")
+    return len(drawn)
 
 
 def annotate_pharos(g: Graph, snap) -> int:

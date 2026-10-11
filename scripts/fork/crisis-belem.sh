@@ -42,7 +42,7 @@ act0() {
   say "vault $VAULT holds $(eur "$(assets)") EURCV; 86 % lent against mGLOeuro at 77 % LLTV"
   say "mGLOeuro NAV: $(python3 -c "print(f'{$(nav)/1e8:,.0f}')") EUR, written by the EOA $FEED_ADMIN alone, inside a fixed band 90,000–110,000"
   say "the only borrower $BORROWER sits at LTV $(ltv)"
-  say "in the other panes: riskdep graph --vault $VAULT   and   riskdep watch --vault $VAULT"
+  [[ -n "${DEMO:-}" ]] || say "in the other panes: riskdep graph --vault $VAULT   and   riskdep watch --vault $VAULT --step 1"
   [[ "$(nav)" == "$NAV_START" ]] || fail "the NAV is not 100,000 EUR: re-read the facts (FORK-PRESENTATION.md §1)"
 }
 

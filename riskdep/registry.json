@@ -877,5 +877,38 @@
         "token": "mGLOeuro"
       }
     }
+  },
+  "feeds": {
+    "stale_factor": 3,
+    "stale_min_hours": 25,
+    "no_history_max_days": 7,
+    "basis": "D156: a feed is stale when its last update is older than stale_factor × its own median update interval (read from its past rounds) and stale_min_hours (a daily heartbeat plus an hour's margin); without round history, older than no_history_max_days. Chainlink's heartbeat and deviation threshold are off-chain configuration, so the observed rhythm stands in for them. ROCK-VAULT-DEP.md: mGLOeuro's NAV feed was 17.5 days old on 2026-10-11."
+  },
+  "tvl": {
+    "basis": "D158-D160: DefiLlama /protocols (already the source of the incident base rates), the snapshot's copy offline (fixtures/snapshot, as of its date). A protocol's TVL against all of DeFi and against its DefiLlama category; the brief's 'protocols concentrating a large share of on-chain TVL'. Shares are of the total over every chain, as /protocols gives no per-chain split in the cached copy.",
+    "warn_share_defi": 0.02,
+    "warn_share_category": 0.25,
+    "warn_basis": "2 % of all DeFi is a top-10 protocol (Lido 4.1 %, Aave V3 2.9 %, Morpho Blue 1.9 % on 2026-10-10); a quarter of a category is a dominant venue for that kind of risk; a category share counts only for a category of at least warn_category_min_usd (fx Protocol is 57 % of a 220M category)",
+    "blue_markets": "morpho-blue",
+    "pt_assets": "pendle-v2",
+    "tokens": {
+      "0x5086bf358635b81d8c47c66d1c8b9e567db70c72": "re",
+      "0x280839980a7ed0d7717f64125fe241012e5f5815": "tori-finance",
+      "0xd0580192e98ea6ceb9c7b6191ed2e27560911697": "tori-finance",
+      "0x6f20ae2c98c2d34e6a57f3411f2c5af92e32592d": "tori-finance",
+      "0xdbdc1ef57537e34680b898e1febd3d68c7389bcb": "infinifi",
+      "0x48f9e38f3070ad8945dfeae3fa70987722e3d89c": "infinifi",
+      "0x19ebb35279a16207ec4ba82799cc64715065f7f6": "hastra",
+      "0x6ad038ca6c04e885630851278ca0a856ad9a66cc": "hastra",
+      "0xc360e625f19a7ea47e47810b13e386221d5187d1": "nuva",
+      "0x2f8bae126b8d416c009b82ccd60e4f9cabbd7702": "midas-rwa",
+      "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0": "lido",
+      "0x22ae3d9a738471f405169af055d31c687087d4c7": "huma",
+      "0x997e2efbce91d170b00ea402e35a66c887ee1da9": "autofinance",
+      "0x7743e50f534a7f9f1791dde7dcd89f7783eefc39": "fx-protocol",
+      "0x65c9a641afceb9c0e6034e558a319488fa0fa3be": "fx-protocol",
+      "0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f": "steakhouse-financial"
+    },
+    "warn_category_min_usd": 1000000000.0
   }
 }

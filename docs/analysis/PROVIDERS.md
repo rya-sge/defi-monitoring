@@ -134,7 +134,7 @@ Anvil fetches the state it needs from an upstream at the fork block, which must 
 
 | Path | Used for | Code |
 |---|---|---|
-| `/protocols` | each protocol's size, category and listing date, for incident base rates | `sources.llama_protocols`, `priors.py` |
+| `/protocols` | each protocol's size, category and listing date, for incident base rates and the graph's TVL concentration (D158–D160) | `sources.llama_protocols`, `priors.py`, `tvl.py`, `pipeline.llama_protocols` |
 | `/hacks` | the hack record of the last 5 years, for incident base rates | `sources.llama_hacks`, `priors.py` |
 
 **`https://coins.llama.fi`**, REST.

@@ -101,6 +101,8 @@ riskdep/
   graph.py            dependency graph as JSON + Cytoscape.js HTML
   siblings.py         sibling markets: other Blue markets sharing a held market's collateral, underlying or price input
   oracle_class.py     oracle class, price-tracking or constant-price, from structure and round history (pure + probe)
+  feeds.py            feed quality: each feed's freshness against its own update rhythm (pure)
+  tvl.py              TVL concentration of the graph's protocols, from DefiLlama (pure)
   # shock
   engine.py           propagation engine (pure): effects, rule matching, transmissions, the Blue market model, the squeeze
   shock.py            the shock command: resolve shocks, run the engine on a built or replayed graph, report, sweep
@@ -113,7 +115,7 @@ riskdep/
   report.py           HTML + JSON report
 tests/                pytest, all offline (snapshot + recorded replays)
   test_watch_rules.py, test_watch_replay.py, test_borrower.py, test_watch_user_replay.py,
-  test_graph.py, test_siblings.py, test_oracle_class.py, test_engine.py, test_market_risk.py, test_exit_queue.py, test_drain.py, test_scenario.py, test_vault_incident.py, test_vault_book.py, test_pharos.py, test_breakeven.py, test_admin.py, test_decide.py, test_propagate.py, test_demo_snapshot.py, test_fixes.py, test_light_reads.py, test_api.py, test_dashboard.py, test_fork_replay.py
+  test_graph.py, test_siblings.py, test_oracle_class.py, test_engine.py, test_market_risk.py, test_exit_queue.py, test_drain.py, test_scenario.py, test_vault_incident.py, test_vault_book.py, test_pharos.py, test_breakeven.py, test_feeds.py, test_admin.py, test_decide.py, test_propagate.py, test_demo_snapshot.py, test_fixes.py, test_light_reads.py, test_api.py, test_dashboard.py, test_fork_replay.py
 scripts/fork/          the crisis demo on a local mainnet fork (anvil): start-fork.sh, crisis-belem.sh, alt-*.sh, lib.sh,
                       addresses.env, src/ (two demo contracts, not protocol code), tapes/ (vhs); see its README.md
 pyproject.toml        project metadata, dependencies, ruff and pytest configuration
@@ -133,7 +135,7 @@ pyproject.toml        project metadata, dependencies, ruff and pytest configurat
 - `keys.example.ini` — template of the API keys and secrets (no values); the real `keys.ini` is git-ignored.
 - `erpc.yaml` — configuration of the optional local eRPC proxy (eRPC 0.3.0, six free upstreams, no key); `docs/erpc.md` is the setup guide. Its upstream list is mirrored in `docs/analysis/PROVIDERS.md`.
 - `docs/analysis/ANALYSIS_MONITORING.md` — design note: dependency graph, impact, monitoring, execution, and gaps of the current implementation (done / partial / missing).
-- `plan/` — the twenty-two plans (`defi-risk-dependency`, `morpho-vault-v2-watcher`, `morpho-user-watcher`, `lenders-and-timelocks`, `market-borrowers`, `admin-surface`, `exit-queue`, `drain-threshold`, `sibling-markets`, `incident-mode`, `propagation-engine`, `vault-incident`, `vault-book`, `wrapped-collateral`, `borrower-concentration`, `pharos`, `one-number`, `breakeven`, `incident-api`, `judge-path`, `fork-demo`, and `web-graph-react-flow` for the SPA's graph).
+- `plan/` — the twenty-three plans (`defi-risk-dependency`, `morpho-vault-v2-watcher`, `morpho-user-watcher`, `lenders-and-timelocks`, `market-borrowers`, `admin-surface`, `exit-queue`, `drain-threshold`, `sibling-markets`, `incident-mode`, `propagation-engine`, `vault-incident`, `vault-book`, `wrapped-collateral`, `borrower-concentration`, `pharos`, `one-number`, `breakeven`, `incident-api`, `judge-path`, `fork-demo`, `feed-quality`, and `web-graph-react-flow` for the SPA's graph).
 - `examples/` — `rockawayx-ethereum.json`, the demo book of vaults and the template for any other (`analyze --book`); `brief-ten-pockets.json`, the brief's own book of ten 1M pockets (`pocket` weighting, with `--exit-cost 0.11`).
 - `docs/` — `alert-runbook.md` (what each alert means and what to do), `glossary.md`, `registry-reference.md` (every `registry.json` key), `how-risk-is-computed.md`, `monte-carlo.md` (how `analyze`'s simulation works; its mindmap in `docs/img/`), `scenarios-and-breakeven.md`, `vault-depositor-scenarios.md`, `graph-propagation.md`, `how-a-block-is-analysed.md`, `websocket-vs-polling.md`, `user-watcher-options.md`, `exit-queue.md`, `erpc.md` (the optional local RPC proxy), `shock-engine.md` (the shock engine and its rules), `shock-trace.md` (the propagation trace for a front end, example in `shock-trace-example.json`), `drain-threshold.md`, `graph-example.html/.json`.
 - `docs/external/` — third-party references, read-only; check behaviour against them before changing a rule:
@@ -155,6 +157,7 @@ pyproject.toml        project metadata, dependencies, ruff and pytest configurat
     - `docs.nexusmutual.io-docs/` — Nexus Mutual (cover products and pricing, capacity, claims, the keyless `/v2/products` and `/v2/capacity` API); its cover prices are converted to yearly probabilities.
     - `pharos.watch-safety-scores-docs/` — Pharos (stablecoin safety grades and scores, the dependency graph and scenarios; keyless and supporter-key endpoints).
     **Git-ignored**: the three folders exist only in the local checkout, so read them there; a fresh clone does not have them.
+  - `docs.zama.org-protocol-docs/` — Zama Protocol documentation (FHEVM confidential smart contracts: protocol and litepaper, Solidity guides, the relayer SDK, confidential tokens, the confidential swap and confidential vault apps, examples, changelog). **Git-ignored**: it exists only in the local checkout, so read it there; a fresh clone does not have it.
 
   The seven source repositories are git submodules (`.gitmodules`), pinned at the commits above: after a clone, run `git submodule update --init`. To move a pin, check out the new commit inside the submodule and stage the submodule path.
 - `fixtures/snapshot/` (analyze demo cache + `as_of.json`) and `fixtures/replay/` (recorded watch ranges, graphs, vault incidents, the Pharos snapshot under `pharos/` and the Nexus prices under `nexus/`) — test fixtures; do not delete or regenerate casually. **Tracked in git, not ignored, on purpose:** every test runs offline from these cached responses, so CI and any fresh clone need them; a cache file present on one machine only makes a test pass locally and fail in CI. They used to live under `data/`, which `.gitignore` ignores, and new cache files were silently left out of commits (the exit-queue test failed in CI for that reason). So a new cached response (`--record`, `--live`, or a live fetch into these folders) is committed with the change that needs it: check `git status fixtures/`. They hold public responses only: API keys go on the request, never into a cache file (`sources.Fetcher`, `secret`).
@@ -213,7 +216,7 @@ Python ≥ 3.10; CI runs the suite on 3.10, the floor `requires-python` in `pypr
 
 ```bash
 uv sync
-uv run pytest -q tests                                 # 288 tests, offline
+uv run pytest -q tests                                 # 293 tests, offline
 uv run python -m riskdep analyze --demo                # cached snapshot, no network → out/report.html/.json
 uv run python -m riskdep watch --replay                # re-run the recorded vault range offline
 uv run python -m riskdep watch --blocks 1000 --record  # live range, saved for --replay

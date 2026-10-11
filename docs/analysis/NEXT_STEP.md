@@ -84,8 +84,8 @@ Steps of the two earlier versions that are now done, with their plans:
 | B8 | Market-price revaluation of loans; the drain as a loss channel | K16 | S–M | `market_risk.py`, `drain.py` |
 | B9 | Backtest the shock engine on the 2026-08-25 PT-reUSD liquidations | K8, K9 | M | `shock`, an archive RPC |
 | C1 | Discovery depth in `analyze`; watch the siblings; other venues | K19, R5, R6 | M | `admin.py`, `siblings.py` |
-| C2 | Feed quality | K23, R3 | S–M | `oracle_class.py` |
-| C3 | TVL concentration | K25 | S | `graph` market nodes |
+| C2 | Feed quality: ~~freshness against the feed's own rhythm~~ **done** (plan `2026-10-11-feed-quality`); left: `FeedStale` in the watches (after the fork demo's `admin.py`), one feed under several markets | K23, R3 | S | `feeds.py`, `admin.py` |
+| C3 | TVL concentration: ~~protocol share of DeFi and of its category~~ **done** (plan `2026-10-11-feed-quality`); left: a collateral's share of its supply held in Morpho | K25 | S | `tvl.py` |
 | C4 | External venues (perp, CEX) | K24 | M–L | registry |
 | C5 | Other chains, Vault V1, direct supply | C5, C3, C4 | M–L | `metamorpho-v1.1` submodule |
 | C6 | The rest of `ROCK-VAULT-DEP.md` §11: exit-gate standing risk, finer oracle classes with feed admin and age, bridges as graph nodes, issuer/oracle/bridge registry entries, PT expiry | K23, K19 | M | `admin.py`, `oracle_class.py`, `graph.py`, registry |
