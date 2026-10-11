@@ -149,6 +149,8 @@
     },
     "morpho-blue": {
       "label": "Morpho Blue (isolated market)",
+      "isolated_markets": true,
+      "isolated_basis": "D233 (GAP K4): the Lending category's hack rate is driven by pooled forks with spot-price oracles; on Morpho Blue each market picks its oracle, so that risk is the per-market oracle layer's, and the core's prior is the TVL tier's rate alone. Anchors: no exploit of the Morpho Blue core is recorded (the 2024 PAXG market loss was a market's configuration, the April 2025 front-end incident off-chain); Credora puts a smart-contract default probability of 0.13 %/yr on Morpho.",
       "llama_slug": "morpho-blue",
       "category": "Lending",
       "severity": {

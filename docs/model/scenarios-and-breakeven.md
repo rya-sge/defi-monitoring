@@ -1,5 +1,8 @@
 # Scenarios and breakeven probabilities
 
+> **Figures updated 2026-10-11 (D232–D233, GAP K3 and K4).** Oracle exploits are now counted by the oracle layer only, and Morpho Blue's core prior is the top band's rate without the Lending multiplier: 2.50 %/yr instead of 5.03 %. The demo's expected loss over 30 days is now **5,671 USD** (it was 6,265), its CVaR99 499,259 USD; the worked figures below were computed before, and their reasoning is unchanged.
+
+
 This document details point 4.2 of `docs/analysis/comparison_team.md`: how `analyze` decides today from estimated probabilities, why the teammates question that, and how named scenarios with a **breakeven probability** would complement it. Every number comes from the offline demo position (a Morpho Blue borrower using PT-sUSDE-26NOV2026 as collateral, data as of 2026-10-10) and was computed with the tool's own loss function, `propagate.loss()`. A [learn section](#learn-what-you-need-to-understand) at the end explains the concepts used.
 
 ## Contents

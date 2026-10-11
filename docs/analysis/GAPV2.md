@@ -3,6 +3,7 @@
 `GAP.md` challenges the risk model's assumptions (K1–K24). This file is narrower and newer (2026-10-11). It lists gaps found by:
 
 - comparing riskdep with DeFiScan's Morpho vault review (`deficollective/defiscan-skills`, `review-morpho-vault/SKILL.md`, read 2026-10-11, not run);
+- comparing it with DeFiScan's impact analysis of a permissioned function (`analyze-impact/SKILL.md`, in the local clone `../defiscan-skills/`, read 2026-10-11, not run): G10;
 - the Zama and Ethena write-ups of the same day (`docs/model/zama-confidential-vaults.md`, `docs/model/ethena.md`).
 
 Each gap gets an id `G<n>`, what is missing, why it matters for the brief (`docs/hackaton_instruction/GOAL.md`: discovery 30 %, impact 30 %, decision 25 %, demo 15 %), how to build it in this codebase, and a size (S, M, L). Decision numbers are left to the plan that builds each one.
@@ -22,6 +23,7 @@ DeFiScan's skill reviews a MetaMorpho (Vault V1) vault and treats Vault V2 as ou
 | G7 | Vault V1 (MetaMorpho) as a watch and incident target | discovery | M | 7 |
 | G8 | Other chains | discovery | L | later |
 | G9 | Audits, bug bounty, licence as provenance | — | S | optional |
+| G10 | Each admin change classified: hits existing deposits, only future ones, or enables another change; with the funds it can move | impact, decision | S | 2, with G2 |
 
 ## G1. Worst-case exposure up to the caps
 
@@ -156,6 +158,60 @@ For a Vault V1 (G7): `MAX_TIMELOCK` 2 weeks, `POST_INITIALIZATION_MIN_TIMELOCK` 
 ## G9. Audits, bug bounty, licence (optional)
 
 DeFiScan attaches Morpho's audits, its Immunefi bounty and the licence to every vault review. For riskdep they would be provenance in the report, not an input to a number or a verdict. A static `morpho.provenance` registry key and one line in the report would cover it. Size S, optional.
+
+## G10. What an admin change can do to money already deposited
+
+**Source.** DeFiScan's `analyze-impact` skill takes one permissioned function and decides whether it can affect funds already committed or only future allocations. It traces the storage the function writes to every place that value is read, follows the call chain to where funds move, and classifies the end of that chain:
+
+- a checkpoint or distribution path: the value is read only when new funds are allocated, so existing deposits are untouched;
+- a claim or withdraw path: the value is read when users take money out, so existing deposits are affected;
+- a swap or trade path: every current position is affected at once;
+- a configuration path: a parameter that takes effect at the next interaction.
+
+The verdict is FUTURE ONLY or RETROACTIVE, with an evidence chain of source lines, and the funds reachable along the path.
+
+**What riskdep does today.** The admin changes it watches are one flat list, `RISK_INCREASING_VAULT` and `RISK_INCREASING_ADAPTER` (`abi.py:425`). A `Submit` of any of them is a warn, a timelock of 0 on any of them is the start-up `Timelock` finding, and the exit gates have their own `ExitGate` finding (D184). Nothing says whether a given change can reach money already in the vault, how much, or how soon. A performance-fee change and a `burnShares` get the same treatment, although one touches only future interest and the other writes a market off.
+
+**Why.** Decision: the question a depositor asks on a `Submit` is "can this cost me what I already have, and before I can leave?". Impact: the amount a change can reach is a number the alert can carry (`Alert.depositor_impact` exists and is mostly empty for admin alerts).
+
+**The classification, read from the pinned Vault V2 source** (`docs/external/morpho/lib/vault-v2/src`):
+
+| Function | Who, delay | Class | Why (source) | Funds it can reach |
+|---|---|---|---|---|
+| `setReceiveAssetsGate`, `setSendSharesGate` | curator, timelocked | **Retroactive** | "Can lock users out of exiting the vault" (`VaultV2.sol`, gates note) | every deposit |
+| `setReceiveSharesGate` | curator, timelocked | **Retroactive** for shares held on other contracts | "Can lock users out of getting back their shares deposited on an other contract"; a reverting gate "can block all vault interactions" | every deposit, if the gate reverts |
+| `setSendAssetsGate` | curator, timelocked | **Future only** | "Gates depositing assets… cannot block users' funds" | none |
+| `burnShares` (adapter) | curator, timelocked | **Retroactive** | sets the adapter's `supplyShares[marketId]` to 0 (`MorphoMarketV1AdapterV2.sol:155`): the vault's position in that market is written off | the vault's allocation to that market |
+| `setForceDeallocatePenalty` | curator, timelocked | **Retroactive** for anyone who must force an exit | the penalty applies to a `forceDeallocate` made after it | the forced part of an exit, up to 2 % |
+| `setPerformanceFee`, `setManagementFee` | curator, timelocked | **Future only** | `accrueInterest()` runs before the new fee is set (`VaultV2.sol:445`), so interest already earned is charged at the old rate | future interest |
+| Fee recipients | curator, timelocked | **Future only** | where future fees go | none |
+| `increaseAbsoluteCap`, `increaseRelativeCap`, `addAdapter`, `setAdapterRegistry`, `setIsAllocator` | curator, timelocked | **Enabler** | moves no money itself; lets an allocator move existing money further | up to the new caps (G1) |
+| `allocate`, `deallocate`, `setLiquidityAdapterAndData` | allocator, **immediate** | **Retroactive** | moves existing money between markets, within caps | the cap headroom of the target markets (G1) |
+| `setMaxRate` | allocator, immediate | **Future only** | `accrueInterest()` first (`VaultV2.sol:600`): caps future accrual | future interest |
+| `setCurator`, `setIsSentinel`, `setOwner` | owner, **immediate** | **Enabler** | changes who can submit the changes above | depends on the next change (G2) |
+| An oracle's feed or aggregator, a proxy upgrade of a dependency (admin surface) | outside the vault | **Retroactive** | reprices collateral already posted | the vault's allocation to the markets that read it |
+
+So of the fourteen risk-increasing vault functions in `RISK_INCREASING_VAULT`, four can reach existing deposits by themselves, five are enablers, and five touch only future money. Of the two adapter functions, `burnShares` is retroactive; `setSkimRecipient` only redirects tokens the adapter is sent outside its positions (rewards), so it is future only. The allocator's own actions, which have no timelock at all, are the retroactive path that the enablers open.
+
+**How to build it.**
+
+1. **Registry, not code.** A `watch.admin_impact` table keyed by signature: `class` (`retroactive`, `future`, `enabler`), `reach` (`all`, `market`, `forced_exit`, `future_interest`, `caps`, `none`), and a `basis` citing the source line, as above. A new function is then a registry row. `registry-reference.md` documents the table.
+2. **The amount, pure, in `rules.py`.** From the decoded `Submit` data (`describe_call` already decodes it):
+   - `all`: the depositor's assets, or the vault's total;
+   - `market`: the vault's allocation to the market named in the data;
+   - `forced_exit`: the new penalty × what would leave by `forceDeallocate`;
+   - `caps`: the new limit minus today's allocation (G1);
+   - otherwise none.
+
+   Put it in `Alert.depositor_impact` (negative, in the vault's asset) and in the title: "Submit setReceiveAssetsGate: retroactive, can lock all 4,685,206 EURCV in; executable in 3 days".
+3. **Levels from the class, not the list.** Retroactive with no timelock: critical. Retroactive with a timelock: warn, with the execution date. Enabler: info, naming what it enables. Future only: info. This replaces the flat warn for every `Submit`, so the change belongs in the alerts plan's decision table (`plan/2026-10-11-alerts-and-verdict`), and every row in `alert-runbook.md` changes with it.
+4. **The start-up table.** The `Timelock` finding becomes one line per class: "retroactive with no notice: …; enablers with no notice: …; future only: …", so the depositor sees at once whether a no-notice change can reach their money.
+5. **Evidence.** Each alert's `data` carries the registry basis (the source line), so the runbook and the Telegram message can show why a change is retroactive.
+6. **Tests.** One per class on recorded `Submit` events (record a range that holds one with `watch --record` if no recording does yet), and a check that every signature in `RISK_INCREASING_*` has a row in `watch.admin_impact`.
+
+**What not to copy.** DeFiScan's skill finds the read sites by tracing a call graph over flattened sources, for any protocol. riskdep watches one known contract family whose source is pinned in `docs/external/morpho/`. The classification above is done once, from the source, and kept in the registry. A call-graph tracer would add a dependency and nothing the table does not already state.
+
+**Size.** S: one registry table, one rule, one start-up line, the runbook rows.
 
 ## Already covered, or not applicable
 

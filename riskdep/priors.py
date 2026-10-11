@@ -55,9 +55,14 @@ def hack_stats(f: S.Fetcher) -> dict:
             tier_n[_tier(tvl)] += 1
     cat_h: dict[str, int] = {}
     tier_h = {0: 0, 1: 0, 2: 0}
+    oracle_moved: dict[str, int] = {}
     for h in hacks:
         p = by_id.get(str(h.get("defillamaId")))
         if not p or (p.get("tvl") or 0) < cfg["min_tvl_usd"]:
+            continue
+        if h.get("technique") in REGISTRY["oracle"]["techniques"]:
+            # D232 (K3): an oracle exploit is the oracle layer's (`oracle_prior`), not the protocol's: counted once
+            oracle_moved[p.get("category") or "?"] = oracle_moved.get(p.get("category") or "?", 0) + 1
             continue
         if p.get("category"):
             cat_h[p["category"]] = cat_h.get(p["category"], 0) + 1
@@ -75,6 +80,7 @@ def hack_stats(f: S.Fetcher) -> dict:
         "overall": overall,
         "tier_rate": {t: tier_h[t] / (tier_n[t] * yrs) if tier_n[t] else overall for t in tier_n},
         "cat_rate": {c: cat_h.get(c, 0) / (n * yrs) for c, n in cat_n.items()},
+        "oracle_moved": oracle_moved,
     }
 
 
@@ -107,12 +113,25 @@ def exploit_p_year(st: dict, slug: str | None, category: str) -> tuple[float, st
     lo, hi = cfg["category_multiplier_clip"]
     cat_rate = st["cat_rate"].get(category)
     mult = 1.0 if cat_rate is None else min(hi, max(lo, cat_rate / st["overall"]))
+    reg = next((r for r in REGISTRY["protocols"].values() if r.get("llama_slug") == slug), {}) if slug else {}
+    isolated = bool(reg.get("isolated_markets"))
+    if isolated:
+        # D233 (K4): the category's rate is driven by pooled forks with spot-price oracles, a market-configuration
+        # risk that isolated markets carry per market, through the oracle layer: the core gets the tier rate alone
+        mult = 1.0
     factor, age = _age_factor(proto.get("listedAt") if proto else None)
     p = min(cfg["cap"], max(cfg["floor"], base * mult * factor))
     note = (
         f"tier {TIER_LABEL[tier]}: {st['tier_h'][tier]} hacks / {st['tier_n'][tier]} protocols / {st['years']}y "
-        f"= {base:.2%}/yr; × category '{category}' {mult:.2f} "
-        f"({st['cat_h'].get(category, 0)} hacks / {st['cat_n'].get(category, 0)} protocols); "
+        f"= {base:.2%}/yr; "
+        + (
+            f"category '{category}' not applied (isolated markets: their oracle and configuration risk is the oracle "
+            "layer's, per market) "
+            if isolated
+            else f"× category '{category}' {mult:.2f} ({st['cat_h'].get(category, 0)} hacks / "
+            f"{st['cat_n'].get(category, 0)} protocols) "
+        )
+        + f"(oracle exploits, {sum(st.get('oracle_moved', {}).values())} in the window, counted by the oracle layer only); "
         f"× age {factor} ({age}) → {p:.2%}/yr"
     )
     if not proto:

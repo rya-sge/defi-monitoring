@@ -1,5 +1,8 @@
 # How the risk of a position is computed
 
+> **Figures updated 2026-10-11 (D232–D233, GAP K3 and K4).** Oracle exploits are now counted by the oracle layer only, and Morpho Blue's core prior is the top band's rate without the Lending multiplier: 2.50 %/yr instead of 5.03 %. The demo's expected loss over 30 days is now **5,671 USD** (it was 6,265), its CVaR99 499,259 USD; the worked figures below were computed before, and their reasoning is unchanged.
+
+
 This document explains how `python3 -m riskdep analyze` turns one position into a verdict: **STAY**, **REDUCE** or **EXIT**. It follows the code (`riskdep/discover.py`, `priors.py`, `propagate.py`, `simulate.py`, `decide.py`) and uses the offline demo as a worked example: the largest borrower of the Morpho Blue market PT-sUSDE-26NOV2026 / USDC, with data as of 2026-10-10 10:30 UTC.
 
 The other command, `watch`, does not compute a risk score: it turns blockchain events into alerts. It is described in `docs/watch/how-a-block-is-analysed.md`.

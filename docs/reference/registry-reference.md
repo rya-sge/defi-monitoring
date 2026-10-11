@@ -85,6 +85,10 @@ The two protocols whose exploits the model includes: `pendle` and `morpho-blue`.
 
 Read by `priors.py`.
 
+## `protocols.<key>.isolated_markets`
+
+D233: a protocol whose markets are isolated (Morpho Blue) gets the TVL band's exploit rate without its category multiplier; `isolated_basis` states why. Read by `priors.exploit_p_year`.
+
 ## `oracle`
 
 The oracle-failure event of `analyze`.

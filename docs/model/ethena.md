@@ -1,5 +1,8 @@
 # Ethena (USDe, sUSDe): how riskdep computes its risk
 
+> **Figures updated 2026-10-11 (D232–D233, GAP K3 and K4).** Oracle exploits are now counted by the oracle layer only, and Morpho Blue's core prior is the top band's rate without the Lending multiplier: 2.50 %/yr instead of 5.03 %. The demo's expected loss over 30 days is now **5,671 USD** (it was 6,265), its CVaR99 499,259 USD; the worked figures below were computed before, and their reasoning is unchanged.
+
+
 USDe is Ethena's synthetic dollar. It is a delta-neutral position: crypto collateral, held by off-exchange settlement providers (Copper, Ceffu), is delegated to exchanges as margin for short perpetuals, and the rest sits in liquid stablecoins. sUSDe is the staked claim on USDe that earns the funding and staking yield. Ethena reaches riskdep's positions through sUSDe and its Pendle PTs: the `analyze` demo is a PT-sUSDE loop on Morpho, the brief's mixed book holds the same loop, and sUSDe is collateral in several Blue markets.
 
 This document says what is computed for Ethena, from which data, and what is not. The decisions are D218–D221 (plan `2026-10-11-venues`). The general method is in `how-risk-is-computed.md` and `how-probabilities-are-computed.md`. The figures are from the offline recordings: the demo position at block 26,162,041, and Ethena's backing as of 2026-10-10 22:58 UTC.

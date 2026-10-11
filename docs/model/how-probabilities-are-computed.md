@@ -82,13 +82,13 @@ The result is clipped between 0.5 % and 15 % a year. Every parameter lives in `r
 
 ### The demo's terms
 
-All three demo protocols sit in the top band, where 34 hacks among 256 protocols over five years give a base rate of **2.66 % a year**.
+All three demo protocols sit in the top band, where 32 hacks among 256 protocols over five years give a base rate of **2.50 % a year**. Oracle exploits (four in the window) are left out of these counts: the oracle layer counts them (D232, GAP K3). Morpho Blue's isolated markets carry the Lending category's oracle and configuration risk per market, through the oracle layer, so its core gets the band's rate alone (D233, GAP K4).
 
 | Protocol | Category | $m_{\text{cat}}$ | $f_{\text{age}}$ | Prior per year |
 |---|---|---|---|---|
-| Morpho Blue | Lending | 1.89 | 1 | 2.66 % × 1.89 × 1 = 5.03 % |
-| Ethena | Basis Trading | 0.50 (floor) | 1 | 2.66 % × 0.50 × 1 = 1.33 % |
-| Pendle | Yield | 0.65 | 0.7 | 2.66 % × 0.65 × 0.7 = 1.21 % |
+| Morpho Blue | Lending | not applied (isolated markets) | 1 | 2.50 % × 1 = 2.50 % |
+| Ethena | Basis Trading | 0.50 (floor) | 1 | 2.50 % × 0.50 × 1 = 1.25 % |
+| Pendle | Yield | 0.67 | 0.7 | 2.50 % × 0.67 × 0.7 = 1.17 % |
 
 ### Why the size band matters
 
@@ -136,9 +136,9 @@ For the sUSDe depeg over 30 days: $1 - 0.88^{30/365} = 1.05\%$.
 | Event | Per year | Severity mean | Over 30 days |
 |---|---|---|---|
 | sUSDe depeg | 12.0 % | 8.2 % (75 % recovered) | 1.05 % |
-| Morpho Blue exploit | 5.03 % | 9.1 % | 0.42 % |
+| Morpho Blue exploit | 2.50 % | 9.1 % | 0.21 % |
 | Oracle misprice | 2.68 % | 10.0 % | 0.22 % |
-| Ethena exploit or loss of backing | 1.33 % | 28.6 % | 0.11 % |
+| Ethena exploit or loss of backing | 1.25 % | 28.6 % | 0.10 % |
 | Pendle market or SY exploit | 1.21 % | 13.8 % | 0.10 % |
 | Ethereum incident | 1.00 % | 0.5 % | 0.08 % |
 
@@ -152,7 +152,7 @@ One dependency is built in: an exploit of the issuer always comes with a depeg a
 |---|---|
 | P(any loss) | 1.91 % |
 | P(liquidation) | 1.07 % |
-| Expected loss over 30 days | 6,265 USD |
+| Expected loss over 30 days | 5,671 USD |
 | CVaR 99 % | 510,184 USD, 98 % of the equity |
 
 With a carry of 5,697 USD and an exit cost of 78,946 USD, the verdict is REDUCE: the expected loss exceeds the carry, but not by enough to pay for leaving.
@@ -209,7 +209,7 @@ $$
 \end{aligned}
 $$
 
-A linear average of 5.03 % and 0.13 % is dominated by the larger number; the log pool keeps each source's influence proportional to its weight. With the proposed weights the Morpho exploit lands at 1.81 %, and a spread above ten-fold raises a "sources disagree" flag so the verdict is also run with the most pessimistic source.
+A linear average of 2.50 % and 0.13 % is dominated by the larger number; the log pool keeps each source's influence proportional to its weight. With the proposed weights the Morpho exploit lands at 1.81 %, and a spread above ten-fold raises a "sources disagree" flag so the verdict is also run with the most pessimistic source.
 
 ## Weaknesses of the priors
 
@@ -220,8 +220,8 @@ A linear average of 5.03 % and 0.13 % is dominated by the larger number; the log
 
 | Window | Hacks kept | Top band | Pendle | Morpho Blue |
 |---|---|---|---|---|
-| 5 years | 145 | 2.66 % | 1.21 % | 5.03 % |
-| 2 years | 85 | 4.30 % | 1.66 % | 8.59 % |
+| 5 years | 141 | 2.50 % | 1.17 % | 2.50 % |
+| 2 years | 82 | 4.10 % | 1.65 % | 4.10 % |
 
   The two-year figures are more relevant to today's attack mix and less reliable: the top band rests on 22 hacks. The review proposes weighting hacks by age with a half-life instead of cutting the window, and keeping the hack history as one input among several (audits, age, reputation) rather than the whole prior.
 - **Independence.** A depeg, a Pendle pool draining and an oracle lagging tend to happen together; the simulation treats them as independent apart from the issuer exploit.
@@ -307,9 +307,9 @@ The loss falls on that depositor whatever it does, so leaving only costs the yie
 
 A cover price includes an unknown loading for capital cost and margin, so converting it into a probability needs an assumption (a loading of 2 to 5), which is why the tool shows a range. The cover also pays on a narrower event than the one examined: protocol cover pays on an exploit, not on an issuer's NAV markdown or a borrower's default. Used as a check, it brackets the internal numbers; used as an input, it would mix events that do not match.
 
-**Q: Combining the hack-record prior (5.03 %) and Credora's parameter (0.13 %) for Morpho Blue, why does the proposed method give 1.81 % rather than about 2.6 %?**
+**Q: Combining the hack-record prior (2.50 %) and Credora's parameter (0.13 %) for Morpho Blue, why does the proposed method give 1.81 % rather than about 2.6 %?**
 
-A linear average of 5.03 % and 0.13 % is dominated by the larger number. Log pooling averages the logarithms, a weighted geometric mean, so each source's influence is proportional to its weight and not to its magnitude. With the proposed weights and the Nexus-implied 6.04 % as a third source, the result is 1.81 %; the 46-fold spread between sources itself raises a "sources disagree" flag.
+A linear average of 2.50 % and 0.13 % is dominated by the larger number. Log pooling averages the logarithms, a weighted geometric mean, so each source's influence is proportional to its weight and not to its magnitude. With the proposed weights and the Nexus-implied 6.04 % as a third source, the result is 1.81 %; the 46-fold spread between sources itself raises a "sources disagree" flag.
 
 ## References
 
