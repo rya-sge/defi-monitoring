@@ -7,6 +7,13 @@ borrowers weigh each market's debt and collateral by the vault's share of that m
 i.e. the part lent by the vault; the bad debt at a fall d, max(0, debt − collateral × (1 − d) / LIF),
 is then the vault's own loss.
 
+Each market also carries its borrower concentration (the largest and three largest borrowers' share of its debt) and,
+when the vault has a recorded graph (fixtures/replay/graph-<vault>/), its oracle class and the freshness of the feeds
+its oracle reads (D82, D155). The vault carries its exit liquidity at the block of its recorded state (the incident
+or watch recording, `pipeline.vault_source`): what a plain withdrawal and forceDeallocate can pay, the Public
+Allocator's reach, the largest depositor and the holders ahead of it (D62–D71). Both are read offline only, from
+recordings, and are null when there is none: they add no network call to the dashboard.
+
 `python -m riskdep.dashboard <vault>...` writes out/vaults.json and out/markets.json, the SPA's fixtures.
 """
 
@@ -78,6 +85,77 @@ def _markets(f: S.Fetcher, ids: list[str]) -> dict[str, dict]:
     return out
 
 
+def concentration(debts: list[float]) -> tuple[float | None, float | None]:
+    """D128, pure: the largest and the three largest borrowers' share of the market's debt; None with no debt."""
+    total = sum(debts)
+    if total <= 0:
+        return None, None
+    ranked = sorted(debts, reverse=True)
+    return ranked[0] / total, sum(ranked[:3]) / total
+
+
+def graph_oracles(graph: dict | None) -> dict[str, tuple[str | None, list[dict]]]:
+    """D82, D155, pure: market id → (oracle class, the feeds its oracle reads with their freshness), from a graph."""
+    if graph is None:
+        return {}
+    nodes = {n["id"]: n for n in graph["nodes"]}
+    priced = {e["source"]: e["target"] for e in graph["edges"] if e["rel"] == "priced by"}
+    reads: dict[str, list[dict]] = {}
+    for e in graph["edges"]:
+        if e["rel"] == "reads" and e["target"] in nodes:
+            d = nodes[e["target"]]["details"]
+            reads.setdefault(e["source"], []).append(
+                {"label": nodes[e["target"]]["label"], "freshness": d.get("freshness"), "stale": d.get("stale")}
+            )
+    return {
+        mid: (nodes[mid]["details"].get("oracle_class"), reads.get(orc, []))
+        for mid, orc in priced.items()
+        if nodes.get(mid, {}).get("kind") == "Pool"
+    }
+
+
+def exit_liquidity(address: str) -> dict | None:
+    """D62–D71: the vault's exit liquidity at its recorded state, in asset units; None without a recording."""
+    from . import drain as DR
+    from . import exit_queue as EQ
+    from . import pipeline
+    from . import vault as V
+    from . import zama as ZM
+
+    try:
+        f, block, _ = pipeline.vault_source(address.lower(), "offline")
+        view = V.discover_vault(f, address.lower(), block)
+        dep = V.largest_depositor(f, view.address, frozenset(ZM.POOLS))
+        st = V.read_state(f, view, block, dep)
+    except (FileNotFoundError, S.CacheMiss, S.SourceError):
+        return None
+    unit = 10**view.decimals
+    liq = EQ.liquidity(st)
+    pa = DR.read_pa(f, view, block)
+    holders, _ = EQ.holders(f, view.address, st.total_assets, st.total_supply)
+    if not holders:  # a recording made for an incident holds the depositor lookup, not the holders query
+        holders = [
+            EQ.Holder(a, n * st.total_assets // st.total_supply, None)
+            for a, n in V.holder_shares(f, view.address)
+            if st.total_supply
+        ]
+    reach = max((DR.pa_inflow(view, st, pa, mid) for mid in st.markets), default=0) if pa.known else None
+    return {
+        "block": block,
+        "total": liq.total / unit,
+        "plain": liq.plain / unit,
+        "forced": liq.forced / unit,
+        "penalty": liq.penalty,
+        "public_allocator": reach / unit if reach is not None else None,
+        "depositor": dep,
+        "position": liq.position / unit,
+        "holders": [
+            {"address": h.address, "assets": h.assets / unit, "fast": h.fast}
+            for h in sorted(holders, key=lambda h: -h.assets)
+        ],
+    }
+
+
 def market(f: S.Fetcher, market_id: str) -> dict:
     m = _markets(f, [market_id]).get(market_id.lower())
     if m is None:
@@ -98,17 +176,28 @@ def vault(f: S.Fetcher, address: str) -> dict:
                 alloc[p["market"]["marketId"].lower()] = usd
     info = _markets(f, list(alloc)) if alloc else {}
     total = v["totalAssetsUsd"] or 0
+    from .pipeline import vault_graph
+
+    oracles = graph_oracles(vault_graph(address))
     markets, liq = [], []
     for mid, usd in sorted(alloc.items(), key=lambda kv: -kv[1]):
         m = info[mid]
         # two queries, two reads a moment apart: a sole lender can read as 100.0003 % of its market
         share_of_market = min(1.0, usd / m["supply_usd"]) if m["supply_usd"] else 0.0
+        borrowers = liquidations(f, mid)
+        top1, top3 = concentration([x["debt_usd"] for x in borrowers])
+        cls, feeds = oracles.get(mid, (None, []))
         markets.append(
             {
                 **m,
                 "allocation_usd": usd,
                 "share_of_vault": usd / total if total else 0.0,
                 "share_of_market": share_of_market,
+                "borrowers": len(borrowers),
+                "top1_share": top1,
+                "top3_share": top3,
+                "oracle_class": cls,
+                "feeds": feeds,
             }
         )
         liq += [
@@ -118,7 +207,7 @@ def vault(f: S.Fetcher, address: str) -> dict:
                 "collateral_usd": x["collateral_usd"] * share_of_market,
                 "market": mid,
             }
-            for x in liquidations(f, mid)
+            for x in borrowers
         ]
     return {
         "address": v["address"].lower(),
@@ -128,6 +217,7 @@ def vault(f: S.Fetcher, address: str) -> dict:
         "liquidity_usd": v["liquidityUsd"],
         "markets": markets,
         "liquidations": sorted(liq, key=lambda x: x["drop"]),
+        "exit": exit_liquidity(address),
     }
 
 

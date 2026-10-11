@@ -1,5 +1,5 @@
 import { FormattedText } from './FormattedText';
-import { Bell, Gauge, Network, Scale, Waypoints, Zap } from 'lucide-react';
+import { Bell, Gauge, Network, Scale, ShieldAlert, Waypoints, Zap } from 'lucide-react';
 import { Link, Outlet, useNavigate, useRouterState, useSearch } from '@tanstack/react-router';
 import { useBooks, useGraph, useHealth, useSelectedTarget, useTargets } from '../api/hooks';
 import { INCIDENT } from '../mocks/incident';
@@ -22,6 +22,7 @@ import {
 
 const NAV = [
   { to: '/', label: 'Vault', icon: Gauge, exact: true },
+  { to: '/vault-risks', label: 'Vault risks', icon: ShieldAlert, exact: false },
   { to: '/graph', label: 'Dependency graph', icon: Network, exact: false },
   { to: '/cross', label: 'Cross-market', icon: Waypoints, exact: false },
   { to: '/incident', label: 'Incident', icon: Scale, exact: false },

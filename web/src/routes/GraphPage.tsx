@@ -8,6 +8,7 @@ import type { FlowNeighbour, GraphSelection } from '../components/GraphCanvas';
 import { DetailsTable } from '../components/DetailsTable';
 import { ErrorState, Loading } from '../components/States';
 import { KIND_COLOR, RISK_KEYS, edgeLabel, scopeToTarget } from '../lib/graph';
+import { detailValue } from '../lib/format';
 import { Button } from '@/components/ui/button';
 
 const PANEL_H3 = 'mt-5.5 mb-1 text-[0.82rem] font-bold text-muted-foreground';
@@ -25,10 +26,21 @@ function splitRisk(details: Record<string, unknown>) {
 
 export function GraphPage() {
   const { target, isPending: targetPending } = useSelectedTarget();
-  // One graph holds every vault the selector offers (the selector lists them from it), so
-  // scoping is done here rather than with a live `?vault=` read per selection.
-  const { data: full, dataUpdatedAt, isPending, error } = useGraph();
-  const data = useMemo(() => full && scopeToTarget(full, target), [full, target]);
+  // A Vault V2 gets its own graph: every market it allocates to, at its full size. The shared
+  // graph only holds the markets where it is a top lender. Any other target is scoped from it.
+  const shared = useGraph();
+  const ownGraph =
+    !!target &&
+    detailValue(shared.data?.nodes.find((n) => n.id === target)?.details.actor_type).startsWith(
+      'Vault V2',
+    );
+  const own = useGraph(ownGraph ? { vault: target } : {});
+  const { data: full, dataUpdatedAt, error } = own;
+  const isPending = shared.isPending || own.isPending;
+  const data = useMemo(
+    () => full && (ownGraph ? full : scopeToTarget(full, target)),
+    [full, ownGraph, target],
+  );
   const [hiddenKinds, setHiddenKinds] = useState<ReadonlySet<GraphNodeKind>>(new Set());
   const [selection, setSelection] = useState<GraphSelection>(null);
 

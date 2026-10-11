@@ -965,6 +965,42 @@
         ],
         "title": "ExitQuote"
       },
+      "Feed": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "freshness": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Freshness",
+            "description": "Last update against the feed's own rhythm (D155)."
+          },
+          "stale": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stale"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label"
+        ],
+        "title": "Feed"
+      },
       "GraphEdge": {
         "properties": {
           "source": {
@@ -1126,6 +1162,37 @@
           "data_as_of"
         ],
         "title": "Health"
+      },
+      "Holder": {
+        "properties": {
+          "address": {
+            "type": "string",
+            "title": "Address"
+          },
+          "assets": {
+            "type": "number",
+            "title": "Assets"
+          },
+          "fast": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fast",
+            "description": "A contract (reacts fast) or a plain wallet; null when unknown."
+          }
+        },
+        "type": "object",
+        "required": [
+          "address",
+          "assets",
+          "fast"
+        ],
+        "title": "Holder"
       },
       "IncidentRequest": {
         "properties": {
@@ -2431,6 +2498,17 @@
             "type": "array",
             "title": "Liquidations",
             "description": "Every borrower of the vault's markets, its debt weighted by the vault's share of the market."
+          },
+          "exit": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VaultExit"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Exit liquidity from the vault's recording; null without one."
           }
         },
         "type": "object",
@@ -2441,9 +2519,87 @@
           "total_assets_usd",
           "liquidity_usd",
           "markets",
-          "liquidations"
+          "liquidations",
+          "exit"
         ],
         "title": "Vault"
+      },
+      "VaultExit": {
+        "properties": {
+          "block": {
+            "type": "integer",
+            "title": "Block"
+          },
+          "total": {
+            "type": "number",
+            "title": "Total"
+          },
+          "plain": {
+            "type": "number",
+            "title": "Plain",
+            "description": "What a plain withdrawal pays now: idle plus the liquidity market."
+          },
+          "forced": {
+            "type": "number",
+            "title": "Forced",
+            "description": "The other markets' unborrowed part, through forceDeallocate."
+          },
+          "penalty": {
+            "type": "number",
+            "title": "Penalty",
+            "description": "forceDeallocate penalty on the forced part, as a fraction."
+          },
+          "public_allocator": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Public Allocator",
+            "description": "The most the Public Allocator lets anyone move out of the vault's liquid markets into one market; null when its settings could not be read."
+          },
+          "depositor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Depositor",
+            "description": "The largest depositor, whose position is shown."
+          },
+          "position": {
+            "type": "number",
+            "title": "Position"
+          },
+          "holders": {
+            "items": {
+              "$ref": "#/components/schemas/Holder"
+            },
+            "type": "array",
+            "title": "Holders",
+            "description": "The vault's holders (first 100), largest first."
+          }
+        },
+        "type": "object",
+        "required": [
+          "block",
+          "total",
+          "plain",
+          "forced",
+          "penalty",
+          "public_allocator",
+          "depositor",
+          "position",
+          "holders"
+        ],
+        "title": "VaultExit",
+        "description": "The vault's exit liquidity at its recorded state (D62\u2013D71), in the vault's asset units."
       },
       "VaultIncident": {
         "properties": {
@@ -2911,6 +3067,55 @@
           "share_of_market": {
             "type": "number",
             "title": "Share Of Market"
+          },
+          "borrowers": {
+            "type": "integer",
+            "title": "Borrowers",
+            "description": "Borrowers with debt in the market."
+          },
+          "top1_share": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Top1 Share",
+            "description": "The largest borrower's share of the market's debt; null with none."
+          },
+          "top3_share": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Top3 Share",
+            "description": "The three largest borrowers' share of the market's debt."
+          },
+          "oracle_class": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oracle Class",
+            "description": "price-tracking, constant-price or not classified, from the vault's recorded graph; null without."
+          },
+          "feeds": {
+            "items": {
+              "$ref": "#/components/schemas/Feed"
+            },
+            "type": "array",
+            "title": "Feeds",
+            "description": "The feeds the market's oracle reads; empty without a recorded graph."
           }
         },
         "type": "object",
@@ -2926,7 +3131,12 @@
           "borrow_apy",
           "allocation_usd",
           "share_of_vault",
-          "share_of_market"
+          "share_of_market",
+          "borrowers",
+          "top1_share",
+          "top3_share",
+          "oracle_class",
+          "feeds"
         ],
         "title": "VaultMarket"
       }

@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import type { Vault } from '../api/types';
 import { usd, percent } from '../lib/format';
+import { badDebt } from '../lib/risk';
 
 const AXIS = {
   axisLine: false,
@@ -20,19 +21,9 @@ const AXIS = {
 /** The vault's loss, in % of its assets, if every collateral fell by the same fraction at once. */
 export function VaultLossChart({ vault }: { vault: Vault }) {
   const data = useMemo(() => {
-    const lif = new Map(vault.markets.map((m) => [m.id, m.lif]));
     return Array.from({ length: 51 }, (_, i) => {
-      const drop = i / 100;
-      const loss = vault.liquidations.reduce(
-        (sum, l) =>
-          sum +
-          Math.max(
-            0,
-            l.debt_usd - (l.collateral_usd * (1 - drop)) / (lif.get(l.market ?? '') ?? 1),
-          ),
-        0,
-      );
-      return { drop, loss: loss / vault.total_assets_usd, usd: loss };
+      const loss = badDebt(vault, i / 100);
+      return { drop: i / 100, loss: loss / vault.total_assets_usd, usd: loss };
     });
   }, [vault]);
 

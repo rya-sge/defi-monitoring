@@ -369,6 +369,27 @@ export type VaultMarket = MarketSummary & {
   allocation_usd: number;
   share_of_vault: number;
   share_of_market: number;
+  borrowers: number;
+  /** The largest borrower's share of the market's debt; null without borrowers. */
+  top1_share: number | null;
+  top3_share: number | null;
+  /** From the vault's recorded graph (`oracle_class.py`); null when there is none. */
+  oracle_class: 'price-tracking' | 'constant-price' | 'not classified' | null;
+  feeds: { label: string; freshness: string | null; stale: boolean | null }[];
+};
+
+/** A depositor's exit, in the vault's asset units, from a recorded state (`exit_queue.py`, `drain.py`). */
+export type VaultExit = {
+  block: number;
+  total: number;
+  plain: number;
+  forced: number;
+  /** forceDeallocate penalty on the forced part, as a fraction. */
+  penalty: number;
+  public_allocator: number | null;
+  depositor: string | null;
+  position: number;
+  holders: { address: string; assets: number; fast: boolean | null }[];
 };
 
 /** `GET /api/vault/{address}`. Liquidations are weighted by the vault's share of each market. */
@@ -380,6 +401,8 @@ export type Vault = {
   liquidity_usd: number;
   markets: VaultMarket[];
   liquidations: Liquidation[];
+  /** Null when the vault has no recorded state. */
+  exit: VaultExit | null;
 };
 
 /* ----------------------------------------------------------------- requests */

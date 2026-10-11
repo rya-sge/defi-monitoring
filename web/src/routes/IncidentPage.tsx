@@ -1,7 +1,7 @@
 import { ChartTooltip } from '../components/ChartTooltip';
 import { FormattedText } from '../components/FormattedText';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
-import { ArrowRight, TriangleAlert } from 'lucide-react';
+import { ArrowRight, ChevronDown, TriangleAlert } from 'lucide-react';
 import {
   Bar,
   BarChart,
@@ -18,6 +18,7 @@ import { ErrorState, Loading } from '../components/States';
 import { usd, num, percent } from '../lib/format';
 import { INCIDENT } from '../mocks/incident';
 import { Button } from '@/components/ui/button';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   Table,
   TableBody,
@@ -26,11 +27,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  Tooltip as HoverTooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { Tooltip as HoverTooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 const VERDICT = { STAY: 'text-ok', REDUCE: 'text-warn', EXIT: 'text-critical' };
 const PRIORITY = { EXIT: 0, REDUCE: 1, STAY: 2 };
@@ -254,17 +251,50 @@ function DecisionPanel({ vault: v }: { vault: VaultIncident }) {
         ) : (
           <span className="text-sm text-muted-foreground">No direct exposure</span>
         )}
-        <div className="flex justify-between text-sm">
-          <HoverTooltip>
-            <TooltipTrigger asChild>
-              <span className="cursor-help">Other markets reached</span>
-            </TooltipTrigger>
-            <TooltipContent>
-              Morpho markets this vault does not supply where the same shock costs lenders a loss
-            </TooltipContent>
-          </HoverTooltip>
-          <b className="tabular-nums">{v.engine_block != null ? v.sibling_losses.length : '—'}</b>
-        </div>
+        <Collapsible className="grid gap-2 text-sm">
+          <div className="flex justify-between">
+            <HoverTooltip>
+              <TooltipTrigger asChild>
+                <span className="cursor-help">Other markets reached</span>
+              </TooltipTrigger>
+              <TooltipContent>
+                Morpho markets this vault does not supply where the same shock costs lenders a loss
+              </TooltipContent>
+            </HoverTooltip>
+            {v.sibling_losses.length ? (
+              <CollapsibleTrigger className="group flex cursor-pointer items-center gap-1 font-bold tabular-nums">
+                {v.sibling_losses.length}
+                <ChevronDown
+                  size={14}
+                  className="text-muted-foreground transition-transform group-data-[state=open]:rotate-180"
+                />
+              </CollapsibleTrigger>
+            ) : (
+              <b className="tabular-nums">{v.engine_block != null ? 0 : '—'}</b>
+            )}
+          </div>
+          <CollapsibleContent>
+            <ul className="m-0 grid list-none gap-1 p-0">
+              {[...v.sibling_losses]
+                .sort((a, b) => b[2] - a[2])
+                .map(([id, market, loss, unit]) => (
+                  <li key={id}>
+                    <Link
+                      to="/market/$marketId"
+                      params={{ marketId: id }}
+                      search={(prev) => prev}
+                      className="flex justify-between gap-4 rounded px-2 py-1 hover:bg-accent"
+                    >
+                      <span className="truncate">{market}</span>
+                      <span className="whitespace-nowrap tabular-nums">
+                        <FormattedText>{`${num(loss)} ${unit}`}</FormattedText>
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+            </ul>
+          </CollapsibleContent>
+        </Collapsible>
       </section>
       <section className="grid gap-2 border-t pt-4 text-sm" aria-label="Insurance coverage">
         <h3 className="m-0">Coverage</h3>

@@ -20,7 +20,18 @@
         "borrow_apy": 0.0796870002438838,
         "allocation_usd": 21863671.405353,
         "share_of_vault": 0.8269456087407716,
-        "share_of_market": 0.5753231473470045
+        "share_of_market": 0.5753231473470045,
+        "borrowers": 12,
+        "top1_share": 0.48095922296078464,
+        "top3_share": 0.8814792687824698,
+        "oracle_class": "constant-price",
+        "feeds": [
+          {
+            "label": "PST-USDC Exchange Rate (Calculated)",
+            "freshness": "updated 1.0 h ago; usually every 1.0 h (25 rounds)",
+            "stale": false
+          }
+        ]
       },
       {
         "id": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
@@ -36,7 +47,18 @@
         "borrow_apy": 0.07883779011980535,
         "allocation_usd": 3975824.807573409,
         "share_of_vault": 0.15037688797959553,
-        "share_of_market": 0.03072548893082525
+        "share_of_market": 0.03072548893082525,
+        "borrowers": 231,
+        "top1_share": 0.10345835558487777,
+        "top3_share": 0.23753733931954552,
+        "oracle_class": "price-tracking",
+        "feeds": [
+          {
+            "label": "Ojo PT Feed Pendle Chainlink-compatible Oracle",
+            "freshness": "updated 2 min ago; no round history to learn its rhythm",
+            "stale": false
+          }
+        ]
       },
       {
         "id": "0x2bbdd81580c750491207e798bdcd31596a6254c5e5d1541ad901ab08c75671e4",
@@ -52,7 +74,23 @@
         "borrow_apy": 0.06796679177839766,
         "allocation_usd": 599899.7705336821,
         "share_of_vault": 0.02268989831259383,
-        "share_of_market": 1.0
+        "share_of_market": 1.0,
+        "borrowers": 3,
+        "top1_share": 0.66820276677951,
+        "top3_share": 1.0,
+        "oracle_class": "constant-price",
+        "feeds": [
+          {
+            "label": "Hastra Auto / WYLDS Exchange Rate",
+            "freshness": "updated 8.1 h ago; usually every 24.0 h (25 rounds)",
+            "stale": false
+          },
+          {
+            "label": "USDC / USD",
+            "freshness": "updated 10.4 h ago; usually every 23.0 h (25 rounds)",
+            "stale": false
+          }
+        ]
       },
       {
         "id": "0xf8697bec3140fb8e046af586a1cda4f95e980bb7bc7551cad6e81cf701bc176d",
@@ -68,7 +106,23 @@
         "borrow_apy": 0.050532053188946754,
         "allocation_usd": 1.052282031935224,
         "share_of_vault": 3.980026910085189e-08,
-        "share_of_market": 0.5119597161532614
+        "share_of_market": 0.5119597161532614,
+        "borrowers": 1,
+        "top1_share": 1.0,
+        "top3_share": 1.0,
+        "oracle_class": "constant-price",
+        "feeds": [
+          {
+            "label": "Hastra Auto / WYLDS Exchange Rate PriceLowered",
+            "freshness": "updated 8.1 h ago; usually every 24.0 h (25 rounds)",
+            "stale": false
+          },
+          {
+            "label": "USDC / USD",
+            "freshness": "updated 10.4 h ago; usually every 23.0 h (25 rounds)",
+            "stale": false
+          }
+        ]
       }
     ],
     "liquidations": [
@@ -1554,7 +1608,39 @@
         "collateral_usd": 3222.4477843953455,
         "market": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64"
       }
-    ]
+    ],
+    "exit": {
+      "block": 26165059,
+      "total": 26446444.634897,
+      "plain": 3587300.256475,
+      "forced": 4037214.779271,
+      "penalty": 0.01,
+      "public_allocator": null,
+      "depositor": "0xcf46bbab1f7bdd392be98ec08e653cb8bb6cc94a",
+      "position": 235889.720217,
+      "holders": [
+        {
+          "address": "0xb1b18ad1f16d744c470cb6b09cb826affcc9eb30",
+          "assets": 26206630.495484,
+          "fast": null
+        },
+        {
+          "address": "0xcf46bbab1f7bdd392be98ec08e653cb8bb6cc94a",
+          "assets": 235889.720217,
+          "fast": null
+        },
+        {
+          "address": "0x4e6514b9118c64a4b3df41e03660e55d1e00b646",
+          "assets": 3923.415177,
+          "fast": null
+        },
+        {
+          "address": "0x084fd3a517d6dae1f8e3e5481b65107fd7e5eec1",
+          "assets": 0.0,
+          "fast": null
+        }
+      ]
+    }
   },
   "0x8ac91877b93330f52b2979a31a4879506021475c": {
     "address": "0x8ac91877b93330f52b2979a31a4879506021475c",
@@ -1577,7 +1663,18 @@
         "borrow_apy": 0.0796870002438838,
         "allocation_usd": 12840262.56954296,
         "share_of_vault": 1.00001243483323,
-        "share_of_market": 0.33788013629141533
+        "share_of_market": 0.33788013629141533,
+        "borrowers": 12,
+        "top1_share": 0.48095922296078464,
+        "top3_share": 0.8814792687824698,
+        "oracle_class": "constant-price",
+        "feeds": [
+          {
+            "label": "PST-USDC Exchange Rate (Calculated)",
+            "freshness": "updated 1 min ago; usually every 1.0 h (25 rounds)",
+            "stale": false
+          }
+        ]
       }
     ],
     "liquidations": [
@@ -1653,7 +1750,289 @@
         "collateral_usd": 3.4525077329740204,
         "market": "0x002278ea242ec722813b4fe3c8eeaa07dbc331c731cc0b4248a1bf0771f933ea"
       }
-    ]
+    ],
+    "exit": {
+      "block": 26165063,
+      "total": 12843738.707563,
+      "plain": 3587300.256475,
+      "forced": 0.0,
+      "penalty": 0.005,
+      "public_allocator": null,
+      "depositor": "0xd6093431539d91ce096cabe06099561fd30edbec",
+      "position": 10189098.495302,
+      "holders": [
+        {
+          "address": "0xd6093431539d91ce096cabe06099561fd30edbec",
+          "assets": 10189098.495302,
+          "fast": null
+        },
+        {
+          "address": "0xa371b2b3618b3bb7aedc381fb90858914fbc0199",
+          "assets": 1668063.564178,
+          "fast": null
+        },
+        {
+          "address": "0xc3342ef424b6d7327ca2cc4b134fab4ce287c35b",
+          "assets": 211203.440019,
+          "fast": null
+        },
+        {
+          "address": "0x014c2b6c66bdc59b20478e6407d3b436479406a8",
+          "assets": 204064.794229,
+          "fast": null
+        },
+        {
+          "address": "0xcd05f5b4b42374e51033ad52d0a8d6dd5c4e8773",
+          "assets": 177650.059401,
+          "fast": null
+        },
+        {
+          "address": "0xfcbe4436ddeaebf38b7d65fa9acea303bcda80f3",
+          "assets": 150397.916615,
+          "fast": null
+        },
+        {
+          "address": "0x44bc9f3d26a6d74ce759d4c98545c9eb61c6b278",
+          "assets": 100838.132931,
+          "fast": null
+        },
+        {
+          "address": "0x7a738dae1854009d1dccee25e3b5a7c1764a9b2e",
+          "assets": 40336.293209,
+          "fast": null
+        },
+        {
+          "address": "0x2ce7161a5c2376800930c673bd19bb774993a40e",
+          "assets": 33080.092498,
+          "fast": null
+        },
+        {
+          "address": "0xd6abfd034fa7794b5e35227a88d27b9f9f6bf3ae",
+          "assets": 10132.391357,
+          "fast": null
+        },
+        {
+          "address": "0xb711082838f41576271da8f8cb1be0b5517f47a7",
+          "assets": 10020.351702,
+          "fast": null
+        },
+        {
+          "address": "0xedfff158e711485f41341778ca6f6a1be27c21fe",
+          "assets": 10018.175386,
+          "fast": null
+        },
+        {
+          "address": "0x5a1a286c19801040f02234513467dfa5f81fa47b",
+          "assets": 8315.351441,
+          "fast": null
+        },
+        {
+          "address": "0xf7e026ef6fc9c3cbe99442dd3f8da6ce4278ae14",
+          "assets": 7701.021943,
+          "fast": null
+        },
+        {
+          "address": "0x000000e28faa823d5b53ff6c2922c28335840375",
+          "assets": 7059.825745,
+          "fast": null
+        },
+        {
+          "address": "0x2d508eefe594a37ec9ee5e0b20046d88e02ee69c",
+          "assets": 6682.222222,
+          "fast": null
+        },
+        {
+          "address": "0x7f23ac6d1d9ed5126a45eebea864da18c6bf3974",
+          "assets": 6509.814497,
+          "fast": null
+        },
+        {
+          "address": "0x650dae69af3c757f7af709e46f5a5af05bbf0b62",
+          "assets": 632.477054,
+          "fast": null
+        },
+        {
+          "address": "0x6d5bb64ed567afc906d834729ef4a99f8b5721d5",
+          "assets": 504.682159,
+          "fast": null
+        },
+        {
+          "address": "0x70e4b2ae43e09060132d2cc26e1d40f26cee2e57",
+          "assets": 401.844928,
+          "fast": null
+        },
+        {
+          "address": "0x5ed7bc6ec78393d44982f74c6f2a31e505476be4",
+          "assets": 396.471324,
+          "fast": null
+        },
+        {
+          "address": "0x6b32d1b646082ed89a16d514b7c00c4c24aaa474",
+          "assets": 220.06235,
+          "fast": null
+        },
+        {
+          "address": "0xc7f4704db477c04c6c32213e21969ec90d58b234",
+          "assets": 123.765275,
+          "fast": null
+        },
+        {
+          "address": "0xc4f6a288374bf4d17b3b09ab3d5115d4d5db6380",
+          "assets": 63.629166,
+          "fast": null
+        },
+        {
+          "address": "0xa244363c760ae69b64be631a3cfd2fb1e366578c",
+          "assets": 61.673694,
+          "fast": null
+        },
+        {
+          "address": "0xda8241ee675d9f7d40fefcfc29e749d970c44c17",
+          "assets": 30.567215,
+          "fast": null
+        },
+        {
+          "address": "0x23ecd326db297d875209d09c1612af0f87a51499",
+          "assets": 30.069143,
+          "fast": null
+        },
+        {
+          "address": "0x14ace5c3a967893692b4e6653c12b9709260a8c4",
+          "assets": 25.06403,
+          "fast": null
+        },
+        {
+          "address": "0xbab970c16fb228e37effcb8f48f52cecea51776a",
+          "assets": 23.384093,
+          "fast": null
+        },
+        {
+          "address": "0x4fe17d8a41195c42376bd074ffc07ff16f70fd3d",
+          "assets": 19.84165,
+          "fast": null
+        },
+        {
+          "address": "0x6fd2aca2fb362327bb987ee0006fbe1aed87fd9b",
+          "assets": 14.549391,
+          "fast": null
+        },
+        {
+          "address": "0x77ee72b01e06a4992b4c6c173ad678cca82fa56e",
+          "assets": 4.011108,
+          "fast": null
+        },
+        {
+          "address": "0x87345334bb512f23309eba84e3ebc7502c5a4351",
+          "assets": 3.369837,
+          "fast": null
+        },
+        {
+          "address": "0x000000000004444c5dc75cb358380d2e3de08a90",
+          "assets": 2.231947,
+          "fast": null
+        },
+        {
+          "address": "0xaad71d09e52c1ba3f829ceec171c5da246c39106",
+          "assets": 2.009423,
+          "fast": null
+        },
+        {
+          "address": "0x000000000000000000000000000000000000dead",
+          "assets": 1.018928,
+          "fast": null
+        },
+        {
+          "address": "0x609076bba6f0a303a5cac58e900c8ac611cb15b5",
+          "assets": 1.012683,
+          "fast": null
+        },
+        {
+          "address": "0x2c4825b200a8ed077b1e351e24849141ca6e0d9b",
+          "assets": 1.009703,
+          "fast": null
+        },
+        {
+          "address": "0xd5de5a673c2fafefbbe942b6a9cbd30599d65ec4",
+          "assets": 1.006657,
+          "fast": null
+        },
+        {
+          "address": "0xe29f229141adf4fb61462302fd7585df5d4bfbc6",
+          "assets": 1.002973,
+          "fast": null
+        },
+        {
+          "address": "0x57785ae4e59cfef2108424f967e3d78b1fdff0b0",
+          "assets": 1.000072,
+          "fast": null
+        },
+        {
+          "address": "0xfa9495513b7679ed534fcb59136712d2a7e6453f",
+          "assets": 0.455936,
+          "fast": null
+        },
+        {
+          "address": "0x720c5e85734d94c7d12f8a07fcdb616470fc5597",
+          "assets": 0.249823,
+          "fast": null
+        },
+        {
+          "address": "0x1121aff29666b91181568264ab0f2bc58bf90a11",
+          "assets": 0.139959,
+          "fast": null
+        },
+        {
+          "address": "0xc2780996936211d912f16048f7dcd0e0a91d6904",
+          "assets": 0.092375,
+          "fast": null
+        },
+        {
+          "address": "0xf200ef1dad3d0cee48380f860e61362b4f1eb96b",
+          "assets": 0.049792,
+          "fast": null
+        },
+        {
+          "address": "0xab1b3ab5315d4825fa151d01c211946ca4b4f4b7",
+          "assets": 0.021359,
+          "fast": null
+        },
+        {
+          "address": "0x4ae681bd6589af34f98cf7f1e2ca8508c704af1b",
+          "assets": 0.000668,
+          "fast": null
+        },
+        {
+          "address": "0xed78bf3ed3fa8bc72d39e6b4bcd99325462fd6d5",
+          "assets": 0.000128,
+          "fast": null
+        },
+        {
+          "address": "0x206845c8dce5502ad5e24161faeabdd9f1fe5c37",
+          "assets": 1.7e-05,
+          "fast": null
+        },
+        {
+          "address": "0x4253a77b0eff75bd211570c9cfa62e30fac1b07f",
+          "assets": 2e-06,
+          "fast": null
+        },
+        {
+          "address": "0x6a72e696bd73e660720d09537c187d6c8a303363",
+          "assets": 0.0,
+          "fast": null
+        },
+        {
+          "address": "0x1c9862c8754e5fd5cec19a25e72cc1bc90714250",
+          "assets": 0.0,
+          "fast": null
+        },
+        {
+          "address": "0x7db1eb589bd2fdfc3d2c34cfe568ccf271c437a9",
+          "assets": 0.0,
+          "fast": null
+        }
+      ]
+    }
   },
   "0xd95fe7adf5075fad9d6bf853e0f9fe53369e8d96": {
     "address": "0xd95fe7adf5075fad9d6bf853e0f9fe53369e8d96",
@@ -1676,7 +2055,12 @@
         "borrow_apy": 0.0796870002438838,
         "allocation_usd": 3183188.2980238087,
         "share_of_vault": 0.393594523966408,
-        "share_of_market": 0.08376278056250105
+        "share_of_market": 0.08376278056250105,
+        "borrowers": 12,
+        "top1_share": 0.48095922296078464,
+        "top3_share": 0.8814792687824698,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0x64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64",
@@ -1692,7 +2076,12 @@
         "borrow_apy": 0.06544938574425004,
         "allocation_usd": 2288791.2885850407,
         "share_of_vault": 0.2830042188356753,
-        "share_of_market": 0.006866670749058551
+        "share_of_market": 0.006866670749058551,
+        "borrowers": 435,
+        "top1_share": 0.5698883258417918,
+        "top3_share": 0.7344352460782957,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0x4565ac05d38b19374ccbb04c17cca60ca9353cd41824f0803d0fc7704f60eaed",
@@ -1708,7 +2097,12 @@
         "borrow_apy": 0.06579765230829246,
         "allocation_usd": 2105491.6676059207,
         "share_of_vault": 0.260339607035208,
-        "share_of_market": 0.2069286795778366
+        "share_of_market": 0.2069286795778366,
+        "borrowers": 26,
+        "top1_share": 0.33684848988634813,
+        "top3_share": 0.6334198679898803,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0xbf02d6c6852fa0b8247d5514d0c91e6c1fbde9a168ac3fd2033028b5ee5ce6d0",
@@ -1724,7 +2118,12 @@
         "borrow_apy": 0.06588563070140159,
         "allocation_usd": 409230.25525336387,
         "share_of_vault": 0.05060045854312029,
-        "share_of_market": 0.213977799224093
+        "share_of_market": 0.213977799224093,
+        "borrowers": 29,
+        "top1_share": 0.2900527491243966,
+        "top3_share": 0.714855591397224,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0xc7e49dd404825da16988955201ed22ecf8a7b25f0337db8a698d70d7a9f343ea",
@@ -1740,7 +2139,12 @@
         "borrow_apy": 0.08374488467894574,
         "allocation_usd": 100777.59224243312,
         "share_of_vault": 0.012460936875699885,
-        "share_of_market": 0.0575380844200974
+        "share_of_market": 0.0575380844200974,
+        "borrowers": 10,
+        "top1_share": 0.8357188518052743,
+        "top3_share": 0.9223362038159705,
+        "oracle_class": null,
+        "feeds": []
       }
     ],
     "liquidations": [
@@ -4816,7 +5220,8 @@
         "collateral_usd": 55.32225146655412,
         "market": "0x64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64"
       }
-    ]
+    ],
+    "exit": null
   },
   "0xb48c056c5608ba2ee4cd94af2bf4b1f25295bd7e": {
     "address": "0xb48c056c5608ba2ee4cd94af2bf4b1f25295bd7e",
@@ -4839,7 +5244,12 @@
         "borrow_apy": 0.05557025971253584,
         "allocation_usd": 12133404.557887651,
         "share_of_vault": 0.5201200161121892,
-        "share_of_market": 0.9379987260916122
+        "share_of_market": 0.9379987260916122,
+        "borrowers": 14,
+        "top1_share": 0.29137110620576445,
+        "top3_share": 0.6400206668649147,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0xe6151adff6709c6cea3276cfc940f54da76bc04199b0ec583d6a1a9d6410f5b0",
@@ -4855,7 +5265,12 @@
         "borrow_apy": 0.09442092117539252,
         "allocation_usd": 7366552.425393877,
         "share_of_vault": 0.3157804017748987,
-        "share_of_market": 1.0
+        "share_of_market": 1.0,
+        "borrowers": 5,
+        "top1_share": 0.8267951081371242,
+        "top3_share": 0.9993789551230798,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
@@ -4871,7 +5286,12 @@
         "borrow_apy": 0.06627062778935006,
         "allocation_usd": 3066920.389832176,
         "share_of_vault": 0.13146900978730913,
-        "share_of_market": 0.2705794797613584
+        "share_of_market": 0.2705794797613584,
+        "borrowers": 77,
+        "top1_share": 0.13953909849917187,
+        "top3_share": 0.3541626462140495,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0x4fe72543c5c95cd6b5f3cb516cd235ba882e2e705fe3424db6f99dfe5811d0d3",
@@ -4887,7 +5307,12 @@
         "borrow_apy": 0.031102787391211577,
         "allocation_usd": 483369.6868260933,
         "share_of_vault": 0.020720503309740495,
-        "share_of_market": 0.020368982642600945
+        "share_of_market": 0.020368982642600945,
+        "borrowers": 50,
+        "top1_share": 0.3936300538782539,
+        "top3_share": 0.6793327449899063,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0xb7843fe78e7e7fd3106a1b939645367967d1f986c2e45edb8932ad1896450877",
@@ -4903,7 +5328,12 @@
         "borrow_apy": 0.042308440598917404,
         "allocation_usd": 277839.0823836627,
         "share_of_vault": 0.011910067559071378,
-        "share_of_market": 0.09154126191159126
+        "share_of_market": 0.09154126191159126,
+        "borrowers": 163,
+        "top1_share": 0.17841791913198313,
+        "top3_share": 0.4601263503128091,
+        "oracle_class": null,
+        "feeds": []
       }
     ],
     "liquidations": [
@@ -6761,7 +7191,8 @@
         "collateral_usd": 187190.50517140416,
         "market": "0xd8dd3e1d051eee97d1353a113982afac90612c775f393edea45ef7f20caec489"
       }
-    ]
+    ],
+    "exit": null
   },
   "0x500ae64100d7dbdb640531085c2f5d40cdc8930d": {
     "address": "0x500ae64100d7dbdb640531085c2f5d40cdc8930d",
@@ -6784,7 +7215,12 @@
         "borrow_apy": 0.07525588257432694,
         "allocation_usd": 3511838.4366045264,
         "share_of_vault": 0.4037348149292976,
-        "share_of_market": 0.9985965326959806
+        "share_of_market": 0.9985965326959806,
+        "borrowers": 3,
+        "top1_share": 0.6291390204232066,
+        "top3_share": 1.0,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
@@ -6800,7 +7236,12 @@
         "borrow_apy": 0.06627062778935006,
         "allocation_usd": 1904255.0844627088,
         "share_of_vault": 0.21892068441709553,
-        "share_of_market": 0.16800317080125982
+        "share_of_market": 0.16800317080125982,
+        "borrowers": 77,
+        "top1_share": 0.13953909849917187,
+        "top3_share": 0.3541626462140495,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0xe7e9694b754c4d4f7e21faf7223f6fa71abaeb10296a4c43a54a7977149687d2",
@@ -6816,7 +7257,12 @@
         "borrow_apy": 0.030969824876986293,
         "allocation_usd": 1371743.1860224789,
         "share_of_vault": 0.15770101368181966,
-        "share_of_market": 0.009121516864072666
+        "share_of_market": 0.009121516864072666,
+        "borrowers": 268,
+        "top1_share": 0.5778608002318494,
+        "top3_share": 0.7487280105107739,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0xa921ef34e2fc7a27ccc50ae7e4b154e16c9799d3387076c421423ef52ac4df99",
@@ -6832,7 +7278,12 @@
         "borrow_apy": 0.031003587458361095,
         "allocation_usd": 869913.2805086476,
         "share_of_vault": 0.10000866601661601,
-        "share_of_market": 0.008972213185516846
+        "share_of_market": 0.008972213185516846,
+        "borrowers": 365,
+        "top1_share": 0.17604965028333547,
+        "top3_share": 0.33603904599280693,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0xd8dd3e1d051eee97d1353a113982afac90612c775f393edea45ef7f20caec489",
@@ -6848,7 +7299,12 @@
         "borrow_apy": 0.05557025971253584,
         "allocation_usd": 671606.5766326098,
         "share_of_vault": 0.07721054422544342,
-        "share_of_market": 0.05191997928616087
+        "share_of_market": 0.05191997928616087,
+        "borrowers": 14,
+        "top1_share": 0.29137110620576445,
+        "top3_share": 0.6400206668649147,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0x4fe72543c5c95cd6b5f3cb516cd235ba882e2e705fe3424db6f99dfe5811d0d3",
@@ -6864,7 +7320,12 @@
         "borrow_apy": 0.031102787391211577,
         "allocation_usd": 307612.11062084744,
         "share_of_vault": 0.035364302997832955,
-        "share_of_market": 0.012962636906406115
+        "share_of_market": 0.012962636906406115,
+        "borrowers": 50,
+        "top1_share": 0.3936300538782539,
+        "top3_share": 0.6793327449899063,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0xb7843fe78e7e7fd3106a1b939645367967d1f986c2e45edb8932ad1896450877",
@@ -6880,7 +7341,12 @@
         "borrow_apy": 0.042308440598917404,
         "allocation_usd": 61410.32726501067,
         "share_of_vault": 0.007059973731894863,
-        "share_of_market": 0.020233218465932536
+        "share_of_market": 0.020233218465932536,
+        "borrowers": 163,
+        "top1_share": 0.17841791913198313,
+        "top3_share": 0.4601263503128091,
+        "oracle_class": null,
+        "feeds": []
       }
     ],
     "liquidations": [
@@ -12524,7 +12990,8 @@
         "collateral_usd": 119.53473900904613,
         "market": "0xa921ef34e2fc7a27ccc50ae7e4b154e16c9799d3387076c421423ef52ac4df99"
       }
-    ]
+    ],
+    "exit": null
   },
   "0xb0c424116172b55cbb6dd3136f5989f7959e5b91": {
     "address": "0xb0c424116172b55cbb6dd3136f5989f7959e5b91",
@@ -12547,7 +13014,12 @@
         "borrow_apy": 0.030969824876986293,
         "allocation_usd": 58947557.70354803,
         "share_of_vault": 0.6415779044169555,
-        "share_of_market": 0.39197653552623424
+        "share_of_market": 0.39197653552623424,
+        "borrowers": 268,
+        "top1_share": 0.5778608002318494,
+        "top3_share": 0.7487280105107739,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0xa921ef34e2fc7a27ccc50ae7e4b154e16c9799d3387076c421423ef52ac4df99",
@@ -12563,7 +13035,12 @@
         "borrow_apy": 0.031003587458361095,
         "allocation_usd": 26749786.2901906,
         "share_of_vault": 0.291141355134191,
-        "share_of_market": 0.2758950698192267
+        "share_of_market": 0.2758950698192267,
+        "borrowers": 365,
+        "top1_share": 0.17604965028333547,
+        "top3_share": 0.33603904599280693,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b",
@@ -12579,7 +13056,12 @@
         "borrow_apy": 0.030908009946215512,
         "allocation_usd": 6181689.341085515,
         "share_of_vault": 0.06728073982565627,
-        "share_of_market": 0.4555827854271124
+        "share_of_market": 0.4555827854271124,
+        "borrowers": 58,
+        "top1_share": 0.5162056676257138,
+        "top3_share": 0.7280722693430113,
+        "oracle_class": null,
+        "feeds": []
       }
     ],
     "liquidations": [
@@ -16729,7 +17211,79 @@
         "collateral_usd": 3675.6867545188693,
         "market": "0xa921ef34e2fc7a27ccc50ae7e4b154e16c9799d3387076c421423ef52ac4df99"
       }
-    ]
+    ],
+    "exit": {
+      "block": 26165670,
+      "total": 91105400.361766,
+      "plain": 18469184.278174,
+      "forced": 31145628.759156,
+      "penalty": 0.0,
+      "public_allocator": null,
+      "depositor": "0x1601843c5e9bc251a3272907010afa41fa18347e",
+      "position": 90580576.723441,
+      "holders": [
+        {
+          "address": "0x1601843c5e9bc251a3272907010afa41fa18347e",
+          "assets": 90580576.723441,
+          "fast": null
+        },
+        {
+          "address": "0xb6cfd06adca55350fa314d4dea3a26cea9a46033",
+          "assets": 499559.163431,
+          "fast": null
+        },
+        {
+          "address": "0x236c2417c14e6dc5038a5b32c0bc050f13ad6111",
+          "assets": 25240.04909,
+          "fast": null
+        },
+        {
+          "address": "0xc84b4dfe541d50f45d42f5df2b61a62206f6bf57",
+          "assets": 10.153909,
+          "fast": null
+        },
+        {
+          "address": "0xf9224b2a7044563189ea40dcc351790283736794",
+          "assets": 8.275799,
+          "fast": null
+        },
+        {
+          "address": "0x6535d5f76f021fe65e2ac73d086df4b4bd7ee5d9",
+          "assets": 2.000422,
+          "fast": null
+        },
+        {
+          "address": "0xd74de0c9ea59307ca8f1befffb6f941947e93be3",
+          "assets": 1.46364,
+          "fast": null
+        },
+        {
+          "address": "0x7ee45bd335e66bea7e0da8d4c4ff551edb42b6b2",
+          "assets": 1.314771,
+          "fast": null
+        },
+        {
+          "address": "0x000000000000000000000000000000000000dead",
+          "assets": 1.015846,
+          "fast": null
+        },
+        {
+          "address": "0x1121aff29666b91181568264ab0f2bc58bf90a11",
+          "assets": 0.100668,
+          "fast": null
+        },
+        {
+          "address": "0xc2780996936211d912f16048f7dcd0e0a91d6904",
+          "assets": 0.091675,
+          "fast": null
+        },
+        {
+          "address": "0x000000000004444c5dc75cb358380d2e3de08a90",
+          "assets": 0.009066,
+          "fast": null
+        }
+      ]
+    }
   },
   "0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9": {
     "address": "0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9",
@@ -16752,7 +17306,12 @@
         "borrow_apy": 0.030969824876986293,
         "allocation_usd": 33137514.95067312,
         "share_of_vault": 0.5237212977852437,
-        "share_of_market": 0.22035057621279244
+        "share_of_market": 0.22035057621279244,
+        "borrowers": 268,
+        "top1_share": 0.5778608002318494,
+        "top3_share": 0.7487280105107739,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0xa921ef34e2fc7a27ccc50ae7e4b154e16c9799d3387076c421423ef52ac4df99",
@@ -16768,7 +17327,12 @@
         "borrow_apy": 0.031003587458361095,
         "allocation_usd": 18435319.77704448,
         "share_of_vault": 0.2913607014011647,
-        "share_of_market": 0.19014035408920707
+        "share_of_market": 0.19014035408920707,
+        "borrowers": 365,
+        "top1_share": 0.17604965028333547,
+        "top3_share": 0.33603904599280693,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0x4fe72543c5c95cd6b5f3cb516cd235ba882e2e705fe3424db6f99dfe5811d0d3",
@@ -16784,7 +17348,12 @@
         "borrow_apy": 0.031102787391211577,
         "allocation_usd": 6482343.847677075,
         "share_of_vault": 0.10245009433112806,
-        "share_of_market": 0.2731630735549419
+        "share_of_market": 0.2731630735549419,
+        "borrowers": 50,
+        "top1_share": 0.3936300538782539,
+        "top3_share": 0.6793327449899063,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b",
@@ -16800,7 +17369,12 @@
         "borrow_apy": 0.030908009946215512,
         "allocation_usd": 2971791.8370887246,
         "share_of_vault": 0.04696763411452148,
-        "share_of_market": 0.21901734754802316
+        "share_of_market": 0.21901734754802316,
+        "borrowers": 58,
+        "top1_share": 0.5162056676257138,
+        "top3_share": 0.7280722693430113,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0x3c5a244b778095e1e1b2e44b7c2ecc9bf4fda9cd85cc22740e09205a7a4bf510",
@@ -16816,7 +17390,12 @@
         "borrow_apy": 0.031048503715002847,
         "allocation_usd": 1438222.389818665,
         "share_of_vault": 0.022730361574211093,
-        "share_of_market": 0.2051494155925513
+        "share_of_market": 0.2051494155925513,
+        "borrowers": 31,
+        "top1_share": 0.1513706377759247,
+        "top3_share": 0.447846510999783,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0x6a57d77b9a173c5ed10d432e7009dd1ee9a97fac62a7bc970b4bd715e2fff5c8",
@@ -16832,7 +17411,12 @@
         "borrow_apy": 0.030925401699906277,
         "allocation_usd": 483862.7270770713,
         "share_of_vault": 0.0076472003332755485,
-        "share_of_market": 0.1369181026751469
+        "share_of_market": 0.1369181026751469,
+        "borrowers": 22,
+        "top1_share": 0.35235301243251027,
+        "top3_share": 0.6941717268396462,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0xb7843fe78e7e7fd3106a1b939645367967d1f986c2e45edb8932ad1896450877",
@@ -16848,7 +17432,12 @@
         "borrow_apy": 0.042308440598917404,
         "allocation_usd": 324130.122291454,
         "share_of_vault": 0.005122709067063637,
-        "share_of_market": 0.10679304064626008
+        "share_of_market": 0.10679304064626008,
+        "borrowers": 163,
+        "top1_share": 0.17841791913198313,
+        "top3_share": 0.4601263503128091,
+        "oracle_class": null,
+        "feeds": []
       }
     ],
     "liquidations": [
@@ -22594,7 +23183,8 @@
         "collateral_usd": 2533.196339764826,
         "market": "0xa921ef34e2fc7a27ccc50ae7e4b154e16c9799d3387076c421423ef52ac4df99"
       }
-    ]
+    ],
+    "exit": null
   },
   "0x55c1b6e461a6334b567baf0feb5d728715446f05": {
     "address": "0x55c1b6e461a6334b567baf0feb5d728715446f05",
@@ -22617,7 +23207,12 @@
         "borrow_apy": 0.07883779011980535,
         "allocation_usd": 41173818.079707064,
         "share_of_vault": 0.6516271479151533,
-        "share_of_market": 0.318194526388093
+        "share_of_market": 0.318194526388093,
+        "borrowers": 231,
+        "top1_share": 0.10345835558487777,
+        "top3_share": 0.23753733931954552,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0x22fe4c688161863c73571a2b8db65cc11a4a6bceee4f0dea4aa83e4b784f1bd9",
@@ -22633,7 +23228,12 @@
         "borrow_apy": 0.04315455474340926,
         "allocation_usd": 14256396.881123297,
         "share_of_vault": 0.2256253044400432,
-        "share_of_market": 1.0
+        "share_of_market": 1.0,
+        "borrowers": 12,
+        "top1_share": 0.4187934344823751,
+        "top3_share": 0.8971319144216444,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0x5613b170ded221c588b6e9637b910f49e5508680ceede207f44aa72e5c46cb05",
@@ -22649,7 +23249,12 @@
         "borrow_apy": 0.037463450636283764,
         "allocation_usd": 7756732.054811064,
         "share_of_vault": 0.12275998247803356,
-        "share_of_market": 1.0
+        "share_of_market": 1.0,
+        "borrowers": 13,
+        "top1_share": 0.4882757067822179,
+        "top3_share": 0.9600671300148995,
+        "oracle_class": null,
+        "feeds": []
       }
     ],
     "liquidations": [
@@ -24189,7 +24794,8 @@
         "collateral_usd": 33371.81220694399,
         "market": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64"
       }
-    ]
+    ],
+    "exit": null
   },
   "0x2ca22cb25558fa2018ecb1ce4ed8af92ee7ea423": {
     "address": "0x2ca22cb25558fa2018ecb1ce4ed8af92ee7ea423",
@@ -24212,7 +24818,18 @@
         "borrow_apy": 0.044805735553870955,
         "allocation_usd": 19859005.282263048,
         "share_of_vault": 0.9468674547165234,
-        "share_of_market": 0.707242251199215
+        "share_of_market": 0.707242251199215,
+        "borrowers": 19,
+        "top1_share": 0.35603680054346204,
+        "top3_share": 0.6473850923310144,
+        "oracle_class": "constant-price",
+        "feeds": [
+          {
+            "label": "Net Asset Value in USD",
+            "freshness": null,
+            "stale": null
+          }
+        ]
       },
       {
         "id": "0xae992849c5f544a32dfdfcc74c0695b73b8732f449727827af6ce3768e968382",
@@ -24228,7 +24845,18 @@
         "borrow_apy": 0.035033212724051375,
         "allocation_usd": 1114368.7452639227,
         "share_of_vault": 0.053132545283428964,
-        "share_of_market": 0.9003724825642935
+        "share_of_market": 0.9003724825642935,
+        "borrowers": 15,
+        "top1_share": 0.597753528068634,
+        "top3_share": 0.8424763762554389,
+        "oracle_class": "constant-price",
+        "feeds": [
+          {
+            "label": "BASE_FEED_1",
+            "freshness": null,
+            "stale": null
+          }
+        ]
       }
     ],
     "liquidations": [
@@ -24436,7 +25064,519 @@
         "collateral_usd": 1.4134194182116355,
         "market": "0xae992849c5f544a32dfdfcc74c0695b73b8732f449727827af6ce3768e968382"
       }
-    ]
+    ],
+    "exit": {
+      "block": 26165060,
+      "total": 20979234.027894,
+      "plain": 2752306.841457,
+      "forced": 201432.934463,
+      "penalty": 0.01,
+      "public_allocator": null,
+      "depositor": "0x4f87de7d21aef48090958f7342e1f69dff790545",
+      "position": 2500570.792275,
+      "holders": [
+        {
+          "address": "0x4f87de7d21aef48090958f7342e1f69dff790545",
+          "assets": 2500570.792275,
+          "fast": null
+        },
+        {
+          "address": "0x0a031d88732b13e855964bc11cf2f3747314ffdc",
+          "assets": 2000409.464858,
+          "fast": null
+        },
+        {
+          "address": "0xdc385c31c322351dac9ff4d7ded24e29b5d94768",
+          "assets": 1728109.321825,
+          "fast": null
+        },
+        {
+          "address": "0xa56da9bb528fedf8379b02e95fbbdad34d45846f",
+          "assets": 1144843.85083,
+          "fast": null
+        },
+        {
+          "address": "0xc095b764e0c30bf8aedb8f70d3f16dbb4f0d7516",
+          "assets": 959913.879305,
+          "fast": null
+        },
+        {
+          "address": "0x0f99bd83ef3c37cdf559a25cac642cacb41b62e7",
+          "assets": 958162.525183,
+          "fast": null
+        },
+        {
+          "address": "0x00c04ae980a41825fcb505797d394090295b5813",
+          "assets": 775508.513832,
+          "fast": null
+        },
+        {
+          "address": "0x70ac345ab736ce145e0d4b5deced7a8bcb0e4033",
+          "assets": 670286.757764,
+          "fast": null
+        },
+        {
+          "address": "0x8fb55e36b43c0d6dab2186542277f061ecda94b5",
+          "assets": 600659.132903,
+          "fast": null
+        },
+        {
+          "address": "0xfd4bf04bd8d0e7b8c7539f0cea970df25188e81b",
+          "assets": 558645.615636,
+          "fast": null
+        },
+        {
+          "address": "0xd33b22c00b9f30fe455c7a12d842685c98a817fe",
+          "assets": 398843.569024,
+          "fast": null
+        },
+        {
+          "address": "0xc73808f52ad42cb8b42daf7f332acd51cd7f5611",
+          "assets": 365141.938052,
+          "fast": null
+        },
+        {
+          "address": "0x732fe63200dd4a5eba02ffa11f150a4c81b01e84",
+          "assets": 353336.065711,
+          "fast": null
+        },
+        {
+          "address": "0x28d40bd11a820fcbf49b6f16d6c5f415d8772e93",
+          "assets": 333723.002203,
+          "fast": null
+        },
+        {
+          "address": "0xad6452a9b8f10b0fe084c83c396abae96411c761",
+          "assets": 309922.737048,
+          "fast": null
+        },
+        {
+          "address": "0x8d6d4eb6bdd44e21ca7c60928a8ec2e631d0a3c9",
+          "assets": 307365.106207,
+          "fast": null
+        },
+        {
+          "address": "0x08d49c032f268d3ac4265d1909c28dfaab440040",
+          "assets": 301120.19517,
+          "fast": null
+        },
+        {
+          "address": "0xe837770fc477522360cf620bc15ba34cb9e4a6d0",
+          "assets": 300536.816728,
+          "fast": null
+        },
+        {
+          "address": "0xb63a51e19de41b7561567e1db6a31020f9c664c7",
+          "assets": 300465.956095,
+          "fast": null
+        },
+        {
+          "address": "0x9acc2e91f6603c80f21c3e3c4b3462b8494230a8",
+          "assets": 297012.818506,
+          "fast": null
+        },
+        {
+          "address": "0x85aec83cfb3b0390f403107589b7ab11feee9a90",
+          "assets": 286388.903681,
+          "fast": null
+        },
+        {
+          "address": "0x854d52d023e4f3ef68cf5775732778f5a12f4602",
+          "assets": 279202.397477,
+          "fast": null
+        },
+        {
+          "address": "0x7c906dd9fbf91116c859c363c64a85547fd6865f",
+          "assets": 276060.809411,
+          "fast": null
+        },
+        {
+          "address": "0xedb7b1e92b8d3621b46843ad024949f10438374b",
+          "assets": 275456.660853,
+          "fast": null
+        },
+        {
+          "address": "0x0f7634e107ae5bcb43b5b1437f05ac71897dc916",
+          "assets": 273109.994069,
+          "fast": null
+        },
+        {
+          "address": "0x09d4f735d45909623e0a54215ad102717d258640",
+          "assets": 269712.220964,
+          "fast": null
+        },
+        {
+          "address": "0xf3ac4d503991ed1aba52b03f7cb4e7b4210ab92c",
+          "assets": 224576.226683,
+          "fast": null
+        },
+        {
+          "address": "0x5dd8bfa6c5c68d05d25ef6143e05c11e26c4cdb7",
+          "assets": 207672.630972,
+          "fast": null
+        },
+        {
+          "address": "0x2d29a9dc67418b7c8f20d2d6be3ac05d9ed28701",
+          "assets": 200282.297819,
+          "fast": null
+        },
+        {
+          "address": "0x48106734a3876f33749c34e52d3319e3a66baff7",
+          "assets": 163447.278172,
+          "fast": null
+        },
+        {
+          "address": "0x166247c91235e90b8514605dd73c0157b93d571b",
+          "assets": 151376.745634,
+          "fast": null
+        },
+        {
+          "address": "0xecd31a08c455ad38e04561955278c83ad3d43759",
+          "assets": 150583.489875,
+          "fast": null
+        },
+        {
+          "address": "0x0350c790ec806f34c24c74399272086663626f26",
+          "assets": 150413.917464,
+          "fast": null
+        },
+        {
+          "address": "0x4a3717a296ef36d8abd15dd4b709a7ddf84c3ddc",
+          "assets": 150215.856004,
+          "fast": null
+        },
+        {
+          "address": "0xd2aa7b53a41e52de10277241166d0378243c3173",
+          "assets": 150018.521834,
+          "fast": null
+        },
+        {
+          "address": "0x44bc9f3d26a6d74ce759d4c98545c9eb61c6b278",
+          "assets": 148169.028579,
+          "fast": null
+        },
+        {
+          "address": "0xfcbe4436ddeaebf38b7d65fa9acea303bcda80f3",
+          "assets": 137010.498976,
+          "fast": null
+        },
+        {
+          "address": "0x452f2aaeaed2d2acc5016ed1f3bb7bb14a30fd4d",
+          "assets": 134624.615056,
+          "fast": null
+        },
+        {
+          "address": "0x8d23a21ea40e81d00a13f55a774f842dcb5ff5e7",
+          "assets": 120327.515803,
+          "fast": null
+        },
+        {
+          "address": "0x29d9c0237440614e0206b9766059c31e17b8ffb3",
+          "assets": 114694.708518,
+          "fast": null
+        },
+        {
+          "address": "0x82343058f9508ac460e55dd30fc3fbc7f5c067ad",
+          "assets": 105201.802939,
+          "fast": null
+        },
+        {
+          "address": "0x62426210b9f03f90c23bb644615f64093e25e010",
+          "assets": 105000.893867,
+          "fast": null
+        },
+        {
+          "address": "0xc6d252fe5624d7656bed08dc7c7e507af390100e",
+          "assets": 100779.117733,
+          "fast": null
+        },
+        {
+          "address": "0xa19fbaec2008191e855591e409804d3fe88e480a",
+          "assets": 100018.404475,
+          "fast": null
+        },
+        {
+          "address": "0xbd576c3deb00675e3a1b94c798dc3d3960e895ed",
+          "assets": 100014.068035,
+          "fast": null
+        },
+        {
+          "address": "0x9380a5b2cba2d7b68bafea79595bc3e6e5f9b9e9",
+          "assets": 100011.525663,
+          "fast": null
+        },
+        {
+          "address": "0x2a3ee20c525cb28a906662c06ca2c73f86a4d58f",
+          "assets": 98907.758304,
+          "fast": null
+        },
+        {
+          "address": "0x89e2583c2dabc5451fa42e8c4f1d130ea0c1e636",
+          "assets": 95021.848456,
+          "fast": null
+        },
+        {
+          "address": "0xda0cb1711f5d9901f67df83882c21fb2d42999e4",
+          "assets": 82975.259089,
+          "fast": null
+        },
+        {
+          "address": "0x9de1471beaf74b33bb60f36302deb10d97d78ae6",
+          "assets": 69688.986625,
+          "fast": null
+        },
+        {
+          "address": "0xc693b4ffb338579467a541b2bf267b1955870920",
+          "assets": 64968.045373,
+          "fast": null
+        },
+        {
+          "address": "0xf5b00fe2456168a0afa5abb86fc6684c1c13086b",
+          "assets": 60017.504588,
+          "fast": null
+        },
+        {
+          "address": "0x029644c17cf80d7c031a316bd67ba7bfe8148893",
+          "assets": 58413.812987,
+          "fast": null
+        },
+        {
+          "address": "0x7165e9dbf803339d285975a28d58181d9fe78775",
+          "assets": 40159.504223,
+          "fast": null
+        },
+        {
+          "address": "0xe59b5d27c027278ca68bb25d7322166ceeb34e08",
+          "assets": 38484.019073,
+          "fast": null
+        },
+        {
+          "address": "0x82b02bd42b8a837228181ea34bf0679a51a37e39",
+          "assets": 37541.321677,
+          "fast": null
+        },
+        {
+          "address": "0xeb63e038f8a8fe81281e69e23d7c82b25b7f8d3c",
+          "assets": 35955.979848,
+          "fast": null
+        },
+        {
+          "address": "0x0135b3cfe4f832bcd35c6f497768b1a204161111",
+          "assets": 31274.179051,
+          "fast": null
+        },
+        {
+          "address": "0x2389be43186a5f97fe49368caff2119069ae8ce2",
+          "assets": 30690.587829,
+          "fast": null
+        },
+        {
+          "address": "0x1afb268b7585ba8e547f67fffb0d93ab3c0169f5",
+          "assets": 30410.215392,
+          "fast": null
+        },
+        {
+          "address": "0x5825d593ff4f67197b4f0aef08dc59e84c103d70",
+          "assets": 29211.359326,
+          "fast": null
+        },
+        {
+          "address": "0x708244b6cc139d603c9023c9397014a29f7cce00",
+          "assets": 28100.558947,
+          "fast": null
+        },
+        {
+          "address": "0xf3bce8e94c2f7a31ef16d02b6d64fcf1e9a427f1",
+          "assets": 28036.886951,
+          "fast": null
+        },
+        {
+          "address": "0xf7c40919a01780fe6f477c1535de0a969854bb48",
+          "assets": 26220.494204,
+          "fast": null
+        },
+        {
+          "address": "0x804d14f56a92c9ed85f82f3d01aa880e03b89ed2",
+          "assets": 25369.735644,
+          "fast": null
+        },
+        {
+          "address": "0x2d964f57f3abc008f7e41ed94683b61e08d3ac94",
+          "assets": 25093.643149,
+          "fast": null
+        },
+        {
+          "address": "0x236c2417c14e6dc5038a5b32c0bc050f13ad6111",
+          "assets": 25051.913838,
+          "fast": null
+        },
+        {
+          "address": "0x431d85c93246996be35cd8ef496af26f824b604b",
+          "assets": 23075.808861,
+          "fast": null
+        },
+        {
+          "address": "0xe7bb70998a0c0ba8c393e1079790e0c5a6582c6d",
+          "assets": 21389.332946,
+          "fast": null
+        },
+        {
+          "address": "0x787fd893a2fdaa15979aa36cf87320ce1603bd1e",
+          "assets": 21362.657781,
+          "fast": null
+        },
+        {
+          "address": "0xaac39511037bd39ccc54a37112dbab1292a15215",
+          "assets": 20433.656126,
+          "fast": null
+        },
+        {
+          "address": "0x2aea95fb1bfda92bc565f914459f54f6c4cda7e3",
+          "assets": 20275.470278,
+          "fast": null
+        },
+        {
+          "address": "0x055827b26f2109ea9c9a7e288febebae61be6446",
+          "assets": 20270.678837,
+          "fast": null
+        },
+        {
+          "address": "0x78262c9680ff0b15484d78c413aa209620320848",
+          "assets": 20022.667322,
+          "fast": null
+        },
+        {
+          "address": "0xea3f0eb45e63fc8f59ea2da15b188fa486ab3a96",
+          "assets": 17066.693231,
+          "fast": null
+        },
+        {
+          "address": "0xc8be49a9b1ca1a1cc654491a7cbbd27abfa06a81",
+          "assets": 11637.361145,
+          "fast": null
+        },
+        {
+          "address": "0xad0f19ba6735cb7f6669a07b6600b5cc14ab9c3a",
+          "assets": 11353.901982,
+          "fast": null
+        },
+        {
+          "address": "0x30343119f60aa43ff9a6ab9a0d07bdfad228caa2",
+          "assets": 11238.295483,
+          "fast": null
+        },
+        {
+          "address": "0xd09e80b3646f0b7a5c9bb922335088e6823b5a57",
+          "assets": 10234.323775,
+          "fast": null
+        },
+        {
+          "address": "0x16a4ec779ec71f9019ff79cbdd082a078c9ea06a",
+          "assets": 10028.172594,
+          "fast": null
+        },
+        {
+          "address": "0xf64540d0e1e4c86cdee9335feda5142acfca820d",
+          "assets": 10018.978885,
+          "fast": null
+        },
+        {
+          "address": "0xb711082838f41576271da8f8cb1be0b5517f47a7",
+          "assets": 10012.154522,
+          "fast": null
+        },
+        {
+          "address": "0xac2ab68e2b0a4458ec8ed58a302e4991f26ba296",
+          "assets": 9161.778186,
+          "fast": null
+        },
+        {
+          "address": "0xe51d05913b0951cf8b48596274bd086efdcc3ed9",
+          "assets": 8295.632902,
+          "fast": null
+        },
+        {
+          "address": "0x6201e621ded9ee58cf2559b322da55b024661d28",
+          "assets": 7354.983613,
+          "fast": null
+        },
+        {
+          "address": "0x72d8b0c06aba185b6fa872fdaa1a4818629e8464",
+          "assets": 7056.941148,
+          "fast": null
+        },
+        {
+          "address": "0x414ea63a51562986648a0ad5af669d123c97ec78",
+          "assets": 6948.244489,
+          "fast": null
+        },
+        {
+          "address": "0xa663476de16a3904f446c508e34a4851804480f9",
+          "assets": 6532.399536,
+          "fast": null
+        },
+        {
+          "address": "0x3135c461aea071fc041d331834a3131e919ec90f",
+          "assets": 6400.237067,
+          "fast": null
+        },
+        {
+          "address": "0x10676fc31d0558599ed0afd2cd9c47b30f26a19b",
+          "assets": 6074.820283,
+          "fast": null
+        },
+        {
+          "address": "0xfd49752aff21bb89c80e862a6fd8afb52a1aad00",
+          "assets": 6011.70068,
+          "fast": null
+        },
+        {
+          "address": "0xa932a950093c4c2c85ff4b8868cd46d9b0d6cd19",
+          "assets": 5617.759772,
+          "fast": null
+        },
+        {
+          "address": "0x1140d76684a631a97f28d6424385ea33a0424d9e",
+          "assets": 5399.715772,
+          "fast": null
+        },
+        {
+          "address": "0xbc2e07a461ef6194545c4bbad0e3f64679331ea9",
+          "assets": 5023.008652,
+          "fast": null
+        },
+        {
+          "address": "0xc7524109af43b8df4fa3bae2188bcabd0522914b",
+          "assets": 5012.376087,
+          "fast": null
+        },
+        {
+          "address": "0x907d8e9b66b06fc96fcd58caacb113cbdd586b43",
+          "assets": 5010.741424,
+          "fast": null
+        },
+        {
+          "address": "0xe1743ddce79d562663e9f2b1710ead2e4179ec65",
+          "assets": 4997.208289,
+          "fast": null
+        },
+        {
+          "address": "0xa7dfb48b36f9b76c04d65a696d972970c0f17c8f",
+          "assets": 3569.88393,
+          "fast": null
+        },
+        {
+          "address": "0xc5dcedacd85f180647c5471d75dde6ea3f21f427",
+          "assets": 3521.039433,
+          "fast": null
+        },
+        {
+          "address": "0x66b224b2220c20392e664556ed6972aa0ad12b33",
+          "assets": 3423.10472,
+          "fast": null
+        }
+      ]
+    }
   },
   "0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757": {
     "address": "0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757",
@@ -24459,7 +25599,12 @@
         "borrow_apy": 0.07071930295059903,
         "allocation_usd": 15570435.213220289,
         "share_of_vault": 0.318728094762855,
-        "share_of_market": 0.6355703135247226
+        "share_of_market": 0.6355703135247226,
+        "borrowers": 13,
+        "top1_share": 0.2632486187806949,
+        "top3_share": 0.6504877420391426,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0x2a0b893471c785a1f0fda00df7fca578b703eef7ae7186d2429c2824b5212467",
@@ -24475,7 +25620,12 @@
         "borrow_apy": 0.05909646279505648,
         "allocation_usd": 15522536.505281998,
         "share_of_vault": 0.317747604255447,
-        "share_of_market": 0.6452275668635195
+        "share_of_market": 0.6452275668635195,
+        "borrowers": 6,
+        "top1_share": 0.5325958675053152,
+        "top3_share": 0.9146788314540989,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
@@ -24491,7 +25641,12 @@
         "borrow_apy": 0.07883779011980535,
         "allocation_usd": 9998145.358096704,
         "share_of_vault": 0.20466286121806943,
-        "share_of_market": 0.07726645901092312
+        "share_of_market": 0.07726645901092312,
+        "borrowers": 231,
+        "top1_share": 0.10345835558487777,
+        "top3_share": 0.23753733931954552,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0x85252bb8485c99bba46fe149c7dd2aad83672640f53c630890673cf1848ba16e",
@@ -24507,7 +25662,12 @@
         "borrow_apy": 0.05883554161323883,
         "allocation_usd": 5787162.717495778,
         "share_of_vault": 0.11846369878370075,
-        "share_of_market": 0.13285894101519177
+        "share_of_market": 0.13285894101519177,
+        "borrowers": 7,
+        "top1_share": 0.9609160657563045,
+        "top3_share": 0.9913187807147869,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0x4565ac05d38b19374ccbb04c17cca60ca9353cd41824f0803d0fc7704f60eaed",
@@ -24523,7 +25683,12 @@
         "borrow_apy": 0.06579765230829246,
         "allocation_usd": 1571921.3543914058,
         "share_of_vault": 0.032177359947962496,
-        "share_of_market": 0.15448914629725294
+        "share_of_market": 0.15448914629725294,
+        "borrowers": 26,
+        "top1_share": 0.33684848988634813,
+        "top3_share": 0.6334198679898803,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0x61765602144e91e5ac9f9e98b8584eae308f9951596fd7f5e0f59f21cd2bf664",
@@ -24539,7 +25704,12 @@
         "borrow_apy": 0.06552424372342298,
         "allocation_usd": 401481.9032394759,
         "share_of_vault": 0.008218367717341251,
-        "share_of_market": 0.5167475217752013
+        "share_of_market": 0.5167475217752013,
+        "borrowers": 17,
+        "top1_share": 0.4728976505665821,
+        "top3_share": 0.7546540326898902,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0xeffa583f87a425f68b8ba0c62408b2afe5c30dac436c680fbd2ee3836f037e1d",
@@ -24555,7 +25725,12 @@
         "borrow_apy": 0.05879613367172573,
         "allocation_usd": 92.36184148651655,
         "share_of_vault": 1.8906545233103851e-06,
-        "share_of_market": 0.8840520049179643
+        "share_of_market": 0.8840520049179643,
+        "borrowers": 3,
+        "top1_share": 0.9892337676720127,
+        "top3_share": 1.0,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0xfb8d92086861bae6fb778917afd1de5dbbc4ec70edfb636fed48238e225e7e3d",
@@ -24571,7 +25746,12 @@
         "borrow_apy": 0.0588293990423622,
         "allocation_usd": 5.992152430573936,
         "share_of_vault": 1.2265985514032664e-07,
-        "share_of_market": 0.1060686351792823
+        "share_of_market": 0.1060686351792823,
+        "borrowers": 1,
+        "top1_share": 1.0,
+        "top3_share": 1.0,
+        "oracle_class": null,
+        "feeds": []
       }
     ],
     "liquidations": [
@@ -26399,7 +27579,8 @@
         "collateral_usd": 8103.601872972229,
         "market": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64"
       }
-    ]
+    ],
+    "exit": null
   },
   "0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd": {
     "address": "0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd",
@@ -26422,7 +27603,12 @@
         "borrow_apy": 0.06544938574425004,
         "allocation_usd": 20969785.676467367,
         "share_of_vault": 0.46153479561573374,
-        "share_of_market": 0.06291207705864849
+        "share_of_market": 0.06291207705864849,
+        "borrowers": 435,
+        "top1_share": 0.5698883258417918,
+        "top3_share": 0.7344352460782957,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
@@ -26438,7 +27624,12 @@
         "borrow_apy": 0.07883779011980535,
         "allocation_usd": 9323481.098166322,
         "share_of_vault": 0.20520528962288687,
-        "share_of_market": 0.07205260018821351
+        "share_of_market": 0.07205260018821351,
+        "borrowers": 231,
+        "top1_share": 0.10345835558487777,
+        "top3_share": 0.23753733931954552,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0x3a85e619751152991742810df6ec69ce473daef99e28a64ab2340d7b7ccfee49",
@@ -26454,7 +27645,12 @@
         "borrow_apy": 0.04866863026048699,
         "allocation_usd": 6797419.651394865,
         "share_of_vault": 0.14960790434027033,
-        "share_of_market": 0.05259249123655144
+        "share_of_market": 0.05259249123655144,
+        "borrowers": 614,
+        "top1_share": 0.07699141762938864,
+        "top3_share": 0.1902224740899658,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0x1d09bf979a167075f5608686642fd3cdb458de742a234175892fa03f23693f6b",
@@ -26470,7 +27666,12 @@
         "borrow_apy": 0.06754271661457721,
         "allocation_usd": 4322355.359088107,
         "share_of_vault": 0.09513294165300075,
-        "share_of_market": 0.9999916416114627
+        "share_of_market": 0.9999916416114627,
+        "borrowers": 18,
+        "top1_share": 0.33440215774046383,
+        "top3_share": 0.6343068874100942,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0xb323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc",
@@ -26486,7 +27687,12 @@
         "borrow_apy": 0.05004471893876401,
         "allocation_usd": 2292964.4801876405,
         "share_of_vault": 0.05046703428662898,
-        "share_of_market": 0.07035976685387961
+        "share_of_market": 0.07035976685387961,
+        "borrowers": 304,
+        "top1_share": 0.18800461613839986,
+        "top3_share": 0.4160441578372017,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0xc7e49dd404825da16988955201ed22ecf8a7b25f0337db8a698d70d7a9f343ea",
@@ -26502,7 +27708,12 @@
         "borrow_apy": 0.08374488467894574,
         "allocation_usd": 1228851.9397136308,
         "share_of_vault": 0.02704643421674082,
-        "share_of_market": 0.701602261710636
+        "share_of_market": 0.701602261710636,
+        "borrowers": 10,
+        "top1_share": 0.8357188518052743,
+        "top3_share": 0.9223362038159705,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0xe3df58f9d3011b7481ff36b939fa5f8da642f34ea5792d25d3958dbf1efa26d7",
@@ -26518,7 +27729,12 @@
         "borrow_apy": 0.07420860974531436,
         "allocation_usd": 500038.30910318746,
         "share_of_vault": 0.011005600264716461,
-        "share_of_market": 0.02328107863210218
+        "share_of_market": 0.02328107863210218,
+        "borrowers": 37,
+        "top1_share": 0.27111210001583685,
+        "top3_share": 0.5744689279877048,
+        "oracle_class": null,
+        "feeds": []
       }
     ],
     "liquidations": [
@@ -36416,7 +37632,8 @@
         "collateral_usd": 7556.779400945275,
         "market": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64"
       }
-    ]
+    ],
+    "exit": null
   },
   "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965": {
     "address": "0xe0181090c22579b6a217f1522cbf8c9f1f0c1965",
@@ -36439,7 +37656,18 @@
         "borrow_apy": 0.07883779011980535,
         "allocation_usd": 9298739.96592817,
         "share_of_vault": 0.5042724261704504,
-        "share_of_market": 0.071861398759199
+        "share_of_market": 0.071861398759199,
+        "borrowers": 231,
+        "top1_share": 0.10345835558487777,
+        "top3_share": 0.23753733931954552,
+        "oracle_class": "price-tracking",
+        "feeds": [
+          {
+            "label": "Ojo PT Feed Pendle Chainlink-compatible Oracle",
+            "freshness": "updated 2 min ago; no round history to learn its rhythm",
+            "stale": false
+          }
+        ]
       },
       {
         "id": "0x975c6e8b71073a82216ae464bc44f67d71988450d2542d635d88bc78fca344b1",
@@ -36455,7 +37683,23 @@
         "borrow_apy": 0.07282162005600007,
         "allocation_usd": 4908398.830252282,
         "share_of_vault": 0.2661833964400418,
-        "share_of_market": 0.3397304682685181
+        "share_of_market": 0.3397304682685181,
+        "borrowers": 59,
+        "top1_share": 0.18638447892153398,
+        "top3_share": 0.4567648844752,
+        "oracle_class": "constant-price",
+        "feeds": [
+          {
+            "label": "RedStone Price Feed for strUSD_FUNDAMENTAL",
+            "freshness": "updated 1.7 h ago; no round history to learn its rhythm",
+            "stale": false
+          },
+          {
+            "label": "USDC / USD",
+            "freshness": null,
+            "stale": null
+          }
+        ]
       },
       {
         "id": "0xbbf7ce1b40d32d3e3048f5cf27eeaa6de8cb27b80194690aab191a63381d8c99",
@@ -36471,7 +37715,23 @@
         "borrow_apy": 0.07214192956805837,
         "allocation_usd": 2356803.235755935,
         "share_of_vault": 0.12780988500116466,
-        "share_of_market": 0.29467644274634075
+        "share_of_market": 0.29467644274634075,
+        "borrowers": 12,
+        "top1_share": 0.9401897792461602,
+        "top3_share": 0.9992720713768417,
+        "oracle_class": "constant-price",
+        "feeds": [
+          {
+            "label": "Chainlink-formatted InfiniFi RT Oracle",
+            "freshness": "updated 2 min ago; no round history to learn its rhythm",
+            "stale": false
+          },
+          {
+            "label": "Dummy feed with 12 decimals",
+            "freshness": null,
+            "stale": null
+          }
+        ]
       },
       {
         "id": "0x755f954513d31d5f24aaf3d0cdc5e913a28383f8ea8ff85be9ffffa7371fb64d",
@@ -36487,7 +37747,23 @@
         "borrow_apy": 0.06531383438079122,
         "allocation_usd": 1505749.822693894,
         "share_of_vault": 0.08165709752910418,
-        "share_of_market": 0.9433358574366518
+        "share_of_market": 0.9433358574366518,
+        "borrowers": 8,
+        "top1_share": 0.9619689776056415,
+        "top3_share": 0.9998978949601549,
+        "oracle_class": "constant-price",
+        "feeds": [
+          {
+            "label": "PRIME / WYLDS Exchange Rate",
+            "freshness": "updated 17.4 h ago; usually every 24.0 h (25 rounds)",
+            "stale": false
+          },
+          {
+            "label": "USDC / USD",
+            "freshness": null,
+            "stale": null
+          }
+        ]
       },
       {
         "id": "0xf062a110320da27e0e7e7d9e1bdf458dd51e2d2089e55f63ff9fd54f415ce35d",
@@ -36503,7 +37779,28 @@
         "borrow_apy": 0.07285953227799016,
         "allocation_usd": 256944.95271484644,
         "share_of_vault": 0.013934173358167887,
-        "share_of_market": 0.3335150697719331
+        "share_of_market": 0.3335150697719331,
+        "borrowers": 39,
+        "top1_share": 0.17569183203035316,
+        "top3_share": 0.36796545680070936,
+        "oracle_class": "constant-price",
+        "feeds": [
+          {
+            "label": "BASE_FEED_1",
+            "freshness": null,
+            "stale": null
+          },
+          {
+            "label": "RedStone Price Feed for trUSD_FUNDAMENTAL",
+            "freshness": "updated 7.7 h ago; no round history to learn its rhythm",
+            "stale": false
+          },
+          {
+            "label": "USDC / USD",
+            "freshness": null,
+            "stale": null
+          }
+        ]
       },
       {
         "id": "0xff836cc9796e2889ebf73b26c2de2de74b35f985bb83e9d79380deb4229e365b",
@@ -36519,7 +37816,23 @@
         "borrow_apy": 0.07292305726532812,
         "allocation_usd": 113276.78567884273,
         "share_of_vault": 0.006143021501016712,
-        "share_of_market": 0.060617509256080095
+        "share_of_market": 0.060617509256080095,
+        "borrowers": 12,
+        "top1_share": 0.49372193680669946,
+        "top3_share": 0.8581796118228796,
+        "oracle_class": "constant-price",
+        "feeds": [
+          {
+            "label": "RedStone Price Feed for etrUSD_FUNDAMENTAL/USD",
+            "freshness": "updated 1.7 h ago; no round history to learn its rhythm",
+            "stale": false
+          },
+          {
+            "label": "USDC / USD",
+            "freshness": null,
+            "stale": null
+          }
+        ]
       }
     ],
     "liquidations": [
@@ -38689,7 +40002,519 @@
         "collateral_usd": 7536.72645328712,
         "market": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64"
       }
-    ]
+    ],
+    "exit": {
+      "block": 26165061,
+      "total": 18445039.846771,
+      "plain": 244951.004136,
+      "forced": 12216671.899631,
+      "penalty": 0.005,
+      "public_allocator": null,
+      "depositor": "0x16f2fbc7e6d722e8c5a0acf9cd347d063efc8bbf",
+      "position": 7152530.24614,
+      "holders": [
+        {
+          "address": "0x16f2fbc7e6d722e8c5a0acf9cd347d063efc8bbf",
+          "assets": 7152530.24614,
+          "fast": null
+        },
+        {
+          "address": "0x4ae681bd6589af34f98cf7f1e2ca8508c704af1b",
+          "assets": 3059229.687385,
+          "fast": null
+        },
+        {
+          "address": "0x4f87de7d21aef48090958f7342e1f69dff790545",
+          "assets": 1822870.055414,
+          "fast": null
+        },
+        {
+          "address": "0x64c8ce646e0ec31ef0e4d0801ef2e9731a606684",
+          "assets": 1304583.718518,
+          "fast": null
+        },
+        {
+          "address": "0xb459c8a41a4cef0fe752fb8bef1f7eea09acff10",
+          "assets": 707790.690615,
+          "fast": null
+        },
+        {
+          "address": "0x84d1b180d67ba40a4cb7aeb78af6a8bf80fc5c63",
+          "assets": 510427.403967,
+          "fast": null
+        },
+        {
+          "address": "0x5e2237255f7d80479b6d9e08b6fd7b39ddb6c5ac",
+          "assets": 408056.327363,
+          "fast": null
+        },
+        {
+          "address": "0x08d49c032f268d3ac4265d1909c28dfaab440040",
+          "assets": 357953.294615,
+          "fast": null
+        },
+        {
+          "address": "0x9acc2e91f6603c80f21c3e3c4b3462b8494230a8",
+          "assets": 300355.51325,
+          "fast": null
+        },
+        {
+          "address": "0x108cce613d753195b3754dea4bc65d05962be922",
+          "assets": 204134.334011,
+          "fast": null
+        },
+        {
+          "address": "0x5283e0c113402fc6d8b196f517cb5c7b5b4b41a5",
+          "assets": 200402.723468,
+          "fast": null
+        },
+        {
+          "address": "0xb9873a95f5ce2f7434ed036d7bb31fdf352b5589",
+          "assets": 183872.921741,
+          "fast": null
+        },
+        {
+          "address": "0xe121ae2e4dcdc6cd13b022272976eb2370ea9f09",
+          "assets": 174513.427827,
+          "fast": null
+        },
+        {
+          "address": "0xa95efade301350d074ae5d6e6703b3b71c2314ce",
+          "assets": 156318.807217,
+          "fast": null
+        },
+        {
+          "address": "0x4fccf8046fb7fb7ab76321bd39c27453e396b88f",
+          "assets": 155051.904871,
+          "fast": null
+        },
+        {
+          "address": "0x52799b498f0035bb91df5f9c2741733a6c85f85b",
+          "assets": 134941.914807,
+          "fast": null
+        },
+        {
+          "address": "0x32637927320ed532c1c9603b6a993e699890cde2",
+          "assets": 122532.216063,
+          "fast": null
+        },
+        {
+          "address": "0x3554d17e764529ade95de0c53ae16fd251a59fe3",
+          "assets": 119472.877889,
+          "fast": null
+        },
+        {
+          "address": "0xc3342ef424b6d7327ca2cc4b134fab4ce287c35b",
+          "assets": 108075.871657,
+          "fast": null
+        },
+        {
+          "address": "0x62426210b9f03f90c23bb644615f64093e25e010",
+          "assets": 95812.643676,
+          "fast": null
+        },
+        {
+          "address": "0xf189bda172ddc4b6250b8c2cfbc174af18d3ad29",
+          "assets": 85645.667208,
+          "fast": null
+        },
+        {
+          "address": "0x030e3872fd69b373cbd66c9a2ebba1faeeac2c94",
+          "assets": 71746.483575,
+          "fast": null
+        },
+        {
+          "address": "0x5cf500fe372c5e29e987e0e1f1791c45a072c2df",
+          "assets": 70252.540541,
+          "fast": null
+        },
+        {
+          "address": "0x4cf9d8acbf70af962e59d9e7d852c7b5607fe6fa",
+          "assets": 60119.10011,
+          "fast": null
+        },
+        {
+          "address": "0x2684454e59081151d935d4023fbe0c473cd42dae",
+          "assets": 52750.292504,
+          "fast": null
+        },
+        {
+          "address": "0x80863cdbb86033776ae010207090c1f66095723b",
+          "assets": 52538.756452,
+          "fast": null
+        },
+        {
+          "address": "0x0eacbbb1ed5b6ebc8770afa4465bf5c68258b3f6",
+          "assets": 50306.317305,
+          "fast": null
+        },
+        {
+          "address": "0x181e7834a2871ec9b840a59fa65954063c01a226",
+          "assets": 45537.987341,
+          "fast": null
+        },
+        {
+          "address": "0x1794f40a9b6dfc064ad4e801963720b08e632a79",
+          "assets": 40316.810317,
+          "fast": null
+        },
+        {
+          "address": "0x748f31c8e75ee94a3f55cc6b354313bf4a327699",
+          "assets": 38389.211698,
+          "fast": null
+        },
+        {
+          "address": "0x7a738dae1854009d1dccee25e3b5a7c1764a9b2e",
+          "assets": 37487.530243,
+          "fast": null
+        },
+        {
+          "address": "0xe8f37040325d9abcdbf077945eda152fadc3824e",
+          "assets": 34550.671776,
+          "fast": null
+        },
+        {
+          "address": "0x79bb3c66fde60a1ff52704b7ae4f48e4e8769c34",
+          "assets": 33789.446244,
+          "fast": null
+        },
+        {
+          "address": "0xb7b8588b087b2920e9ce14aebc1dd0de3cde26d7",
+          "assets": 28140.462724,
+          "fast": null
+        },
+        {
+          "address": "0xba5db9dee167845f502609eef56308a83f6ec4af",
+          "assets": 26678.838069,
+          "fast": null
+        },
+        {
+          "address": "0xc095b764e0c30bf8aedb8f70d3f16dbb4f0d7516",
+          "assets": 26162.3976,
+          "fast": null
+        },
+        {
+          "address": "0x236c2417c14e6dc5038a5b32c0bc050f13ad6111",
+          "assets": 25136.778694,
+          "fast": null
+        },
+        {
+          "address": "0xe976f01895063218feb2439cb985c40f5e141d5e",
+          "assets": 25088.625534,
+          "fast": null
+        },
+        {
+          "address": "0xbfb1a23058180254e8a6159fc2e7802e577d29a7",
+          "assets": 25088.608068,
+          "fast": null
+        },
+        {
+          "address": "0xb711082838f41576271da8f8cb1be0b5517f47a7",
+          "assets": 20113.200246,
+          "fast": null
+        },
+        {
+          "address": "0xb26448c94730629ecd54fa8c1261e7823ca3053f",
+          "assets": 17684.313277,
+          "fast": null
+        },
+        {
+          "address": "0x66471d6c5172d0302fe284e16c6692cdf13bfbda",
+          "assets": 17515.79441,
+          "fast": null
+        },
+        {
+          "address": "0x7740844aca0fec4749c0fb140b1fdb8e326699b3",
+          "assets": 16422.118253,
+          "fast": null
+        },
+        {
+          "address": "0xd2645f07b873553621042aa499e1da490fba47f4",
+          "assets": 15736.070762,
+          "fast": null
+        },
+        {
+          "address": "0x1b28728b06beed3a5363da146b59db372bbad047",
+          "assets": 14681.778425,
+          "fast": null
+        },
+        {
+          "address": "0x256b71b0c600faf46f03a651c117cbbdb6345dcf",
+          "assets": 13614.611867,
+          "fast": null
+        },
+        {
+          "address": "0x41d72e209e95a118bff34be653486625fd4c8041",
+          "assets": 12923.273981,
+          "fast": null
+        },
+        {
+          "address": "0xf6af1098bb6286752a9523c2344573f1b921d420",
+          "assets": 11834.880019,
+          "fast": null
+        },
+        {
+          "address": "0x6d56228937b11ae7dcf255d4895d35ed64a651da",
+          "assets": 10450.203046,
+          "fast": null
+        },
+        {
+          "address": "0xdd14eaed277fadda641c65a420055f8b5540c845",
+          "assets": 10016.854261,
+          "fast": null
+        },
+        {
+          "address": "0x2d965ad87c090625f0229f0a0365afa274124d5b",
+          "assets": 10011.836552,
+          "fast": null
+        },
+        {
+          "address": "0x32489513ce1da8edb90e1ac40bb3cc6dcd6ca094",
+          "assets": 9877.046669,
+          "fast": null
+        },
+        {
+          "address": "0x7d26651e92d28ceba82b248884f710b88680ef84",
+          "assets": 9090.814986,
+          "fast": null
+        },
+        {
+          "address": "0xb3780280d066017e8d0f7138a65110a0cca4ddad",
+          "assets": 8477.596054,
+          "fast": null
+        },
+        {
+          "address": "0xf59d25c5bd81af8e87aa0c8736a02c3ee236ceef",
+          "assets": 8372.085479,
+          "fast": null
+        },
+        {
+          "address": "0x7cdab4991d45f7a39e0ea502f29b29f92bc19cc2",
+          "assets": 8285.091212,
+          "fast": null
+        },
+        {
+          "address": "0xcf8be4f219053233b0de497573de92ae602b9ebc",
+          "assets": 8007.959034,
+          "fast": null
+        },
+        {
+          "address": "0x7eb93c56bf8278f2e354f48f3c33bd445d5561f7",
+          "assets": 7549.978999,
+          "fast": null
+        },
+        {
+          "address": "0x3147dc45636ca6f68ffe6a2746dde2fa7978ba57",
+          "assets": 7512.108845,
+          "fast": null
+        },
+        {
+          "address": "0x5efd6368649442c07dcbd3c20ea2cae07d165dbf",
+          "assets": 7046.397321,
+          "fast": null
+        },
+        {
+          "address": "0xf45b3cfbd6dfd60547db392d41c742ebc27697de",
+          "assets": 7006.460377,
+          "fast": null
+        },
+        {
+          "address": "0xd385831f8019dac4f0923bef50f37d149318f0fe",
+          "assets": 6919.431603,
+          "fast": null
+        },
+        {
+          "address": "0x02b957bb166ff99026ef6cfe72bcc6a3022f3d1f",
+          "assets": 6888.552089,
+          "fast": null
+        },
+        {
+          "address": "0xc8a3b83b64f54001cac41281ca80d22916d2191f",
+          "assets": 6710.258907,
+          "fast": null
+        },
+        {
+          "address": "0xd6abfd034fa7794b5e35227a88d27b9f9f6bf3ae",
+          "assets": 6237.812226,
+          "fast": null
+        },
+        {
+          "address": "0x8f5ef9b18407aeb7def2373c65d428e53741afe8",
+          "assets": 5607.164058,
+          "fast": null
+        },
+        {
+          "address": "0x2d70424130566b49a0708f20915317a1995c4e0b",
+          "assets": 5064.905331,
+          "fast": null
+        },
+        {
+          "address": "0xe1743ddce79d562663e9f2b1710ead2e4179ec65",
+          "assets": 5019.654358,
+          "fast": null
+        },
+        {
+          "address": "0x1577be81d4501d70326678348e8d2319670c7ffa",
+          "assets": 4613.639137,
+          "fast": null
+        },
+        {
+          "address": "0x98126c4b188aa487ff70e8e3750102eab18fbe78",
+          "assets": 4531.647988,
+          "fast": null
+        },
+        {
+          "address": "0x33dcb9d22bc12df3fcc9097714ef5ce98f979f1a",
+          "assets": 4033.625508,
+          "fast": null
+        },
+        {
+          "address": "0xb5a2a1d6721fdcbd2931802d18f2955df921de0d",
+          "assets": 3165.946357,
+          "fast": null
+        },
+        {
+          "address": "0x6fa62aba3a7b4c52e945ffce8c5465026980348f",
+          "assets": 2523.912019,
+          "fast": null
+        },
+        {
+          "address": "0xddcf022e89c2c73a90b7e34a549539db1f349f52",
+          "assets": 2453.924938,
+          "fast": null
+        },
+        {
+          "address": "0x53ef0ec3e7fed59e858414629e30668a1da4a618",
+          "assets": 2016.653998,
+          "fast": null
+        },
+        {
+          "address": "0x4bb5eb971952b143d26d44c20a7fa3ad208ebba8",
+          "assets": 2009.411902,
+          "fast": null
+        },
+        {
+          "address": "0x31fcfd648e1290e9fbe119837f3d1a32ab232e22",
+          "assets": 2008.262016,
+          "fast": null
+        },
+        {
+          "address": "0x260c1f6685f8d87fc6473d6ba5e848972a4e695b",
+          "assets": 2002.90741,
+          "fast": null
+        },
+        {
+          "address": "0xa11f5a64a730b39ba4a3bdede4824b348d4ddaa4",
+          "assets": 1820.173017,
+          "fast": null
+        },
+        {
+          "address": "0x4e6514b9118c64a4b3df41e03660e55d1e00b646",
+          "assets": 1775.409668,
+          "fast": null
+        },
+        {
+          "address": "0x9156f7c149e4848cdefbf8236c2710003413df72",
+          "assets": 1512.482719,
+          "fast": null
+        },
+        {
+          "address": "0x0485c21972604aabe567fe1b112bf00ea7e61b4c",
+          "assets": 1181.659637,
+          "fast": null
+        },
+        {
+          "address": "0x8ec9849d20fbc7d0c7f01ac39941ecce26f75eed",
+          "assets": 1002.705282,
+          "fast": null
+        },
+        {
+          "address": "0xed78bf3ed3fa8bc72d39e6b4bcd99325462fd6d5",
+          "assets": 601.667664,
+          "fast": null
+        },
+        {
+          "address": "0x003c58b659beb5a0342338fe391cd7aeb5f4ed18",
+          "assets": 504.042731,
+          "fast": null
+        },
+        {
+          "address": "0x8e4cac88ad234fb51ad60f2ac23b691413f551bb",
+          "assets": 501.356931,
+          "fast": null
+        },
+        {
+          "address": "0x6b32d1b646082ed89a16d514b7c00c4c24aaa474",
+          "assets": 460.404132,
+          "fast": null
+        },
+        {
+          "address": "0x9878f15d5ea0322827455703477a4ffbfc46890a",
+          "assets": 418.717105,
+          "fast": null
+        },
+        {
+          "address": "0x70e4b2ae43e09060132d2cc26e1d40f26cee2e57",
+          "assets": 402.058394,
+          "fast": null
+        },
+        {
+          "address": "0xf44588fa0da1c8a50788af0efd77e42eae83543a",
+          "assets": 327.533619,
+          "fast": null
+        },
+        {
+          "address": "0x880085e4094ec1dfd47dc8f79364894a3fba9178",
+          "assets": 314.404577,
+          "fast": null
+        },
+        {
+          "address": "0xce532a7f77558dcdf6859f9b782b0878a027294d",
+          "assets": 142.831086,
+          "fast": null
+        },
+        {
+          "address": "0xe99cb168877740b68cfce891e4929fd786bb6a16",
+          "assets": 140.207109,
+          "fast": null
+        },
+        {
+          "address": "0x5deccffbf211127efd9cf7a3dea60ba0ad94378e",
+          "assets": 102.499918,
+          "fast": null
+        },
+        {
+          "address": "0x52b77f91fa215fab7cbf68632b9dd77100bb5619",
+          "assets": 100.297542,
+          "fast": null
+        },
+        {
+          "address": "0xdeee0c1e2745a8f3b7b1e3891c5ec345626c299b",
+          "assets": 100.29738,
+          "fast": null
+        },
+        {
+          "address": "0x206845c8dce5502ad5e24161faeabdd9f1fe5c37",
+          "assets": 100.286388,
+          "fast": null
+        },
+        {
+          "address": "0xcaecac86ec534588ca9d70aa74270ed81f2e470f",
+          "assets": 100.134754,
+          "fast": null
+        },
+        {
+          "address": "0x48b415841165304f7efaa7d5dd5fc65cc7b4bd8e",
+          "assets": 86.704352,
+          "fast": null
+        },
+        {
+          "address": "0x06127bc0254f6629377adb3baab1ba41b3141e59",
+          "assets": 75.01746,
+          "fast": null
+        }
+      ]
+    }
   },
   "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf": {
     "address": "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
@@ -38712,7 +40537,12 @@
         "borrow_apy": 0.041067676153141844,
         "allocation_usd": 235170661.46891534,
         "share_of_vault": 0.5132737449411532,
-        "share_of_market": 1.0
+        "share_of_market": 1.0,
+        "borrowers": 21,
+        "top1_share": 0.7022458721741853,
+        "top3_share": 0.978021241373392,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0xea4bfb18df0ee6bffb7b3f0270899a8adb92ab6b684709634c8276128813cfd4",
@@ -38728,7 +40558,12 @@
         "borrow_apy": 0.03997497524611767,
         "allocation_usd": 105149424.28711608,
         "share_of_vault": 0.22949477815449393,
-        "share_of_market": 1.0
+        "share_of_market": 1.0,
+        "borrowers": 16,
+        "top1_share": 0.38562887759268694,
+        "top3_share": 0.8335317411443792,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0xd9d2fc090bdbab1804ea960dd6669b62357787e5816f575f14ca4e6d999614bf",
@@ -38744,7 +40579,12 @@
         "borrow_apy": 0.048331792979612556,
         "allocation_usd": 50023479.2743136,
         "share_of_vault": 0.1091791738890308,
-        "share_of_market": 1.0
+        "share_of_market": 1.0,
+        "borrowers": 10,
+        "top1_share": 0.3325615152406122,
+        "top3_share": 0.7429023813179522,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0xffd010618ed3cb39bb2c5de0e3e58d3d2ec9f52187a180f29723c31756a939bc",
@@ -38760,7 +40600,12 @@
         "borrow_apy": 0.03899085967018927,
         "allocation_usd": 13055939.7510886,
         "share_of_vault": 0.02849535332302955,
-        "share_of_market": 1.0
+        "share_of_market": 1.0,
+        "borrowers": 27,
+        "top1_share": 0.708077906381655,
+        "top3_share": 0.896485751930391,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0x4fa31e3f8ba345227d44e1cf48559eea53a90dd5311dc006984c060f2f311d96",
@@ -38776,7 +40621,12 @@
         "borrow_apy": 0.05288578610645478,
         "allocation_usd": 8950651.094313705,
         "share_of_vault": 0.01953532034202011,
-        "share_of_market": 1.0
+        "share_of_market": 1.0,
+        "borrowers": 51,
+        "top1_share": 0.3631862480296624,
+        "top3_share": 0.9064881289850907,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0xc0ae375fd761ff19b3f04de5534c0f1ec110f80e1c2ede27c42c1c43c3040394",
@@ -38792,7 +40642,12 @@
         "borrow_apy": 0.04414146847174003,
         "allocation_usd": 4745699.453557372,
         "share_of_vault": 0.01035776706021871,
-        "share_of_market": 1.0
+        "share_of_market": 1.0,
+        "borrowers": 12,
+        "top1_share": 0.7667367537687135,
+        "top3_share": 0.9400273742157416,
+        "oracle_class": null,
+        "feeds": []
       },
       {
         "id": "0x88abdf8693e663144c3544b9442e9b04520016d6ebc57aa76424c00ab1683c9d",
@@ -38808,7 +40663,12 @@
         "borrow_apy": 0.07466073901708127,
         "allocation_usd": 1385249.2338205858,
         "share_of_vault": 0.003023387600642252,
-        "share_of_market": 1.0
+        "share_of_market": 1.0,
+        "borrowers": 17,
+        "top1_share": 0.31597911194045275,
+        "top3_share": 0.6937854603526313,
+        "oracle_class": null,
+        "feeds": []
       }
     ],
     "liquidations": [
@@ -39736,6 +41596,7 @@
         "collateral_usd": 0.3175118992783851,
         "market": "0x88abdf8693e663144c3544b9442e9b04520016d6ebc57aa76424c00ab1683c9d"
       }
-    ]
+    ],
+    "exit": null
   }
 }

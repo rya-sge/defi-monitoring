@@ -2,6 +2,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useSearch } from '@tanstack/react-router';
 import { api } from './client';
 import type {
+  AlertPage,
   AnalyzeRequest,
   GraphQuery,
   GraphResponse,
@@ -84,6 +85,17 @@ export function useVault(address: string | undefined) {
     queryFn: ({ signal }) => api.vault(address!, signal),
     enabled: !!address,
     staleTime: 60_000,
+  });
+}
+
+/** Every alert of one watch target, read once; the Alerts page follows them live. */
+export function useAlerts(target: string | undefined) {
+  return useQuery<AlertPage>({
+    queryKey: ['alerts', target],
+    queryFn: ({ signal }) => api.alerts({ target }, signal),
+    enabled: !!target,
+    staleTime: 60_000,
+    retry: false,
   });
 }
 

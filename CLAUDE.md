@@ -190,8 +190,8 @@ web/src/
   lib/format.ts       usd / percent / num / shortHash / etherscanUrl…, all null-tolerant
   lib/utils.ts        re-exports `cn` from the `cn` package, where `components.json` tells `shadcn add` to import it
   lib/graph.ts        kind colours, shapes and icons, node amounts, dagre layout, flow reach, edge width, report-graph normalisation
-  routes/             VaultPage (follows the top-bar selector) · MarketPage · GraphPage · ImpactPage (a shock trace, one view per tab) · WatchPage
-  mocks/              report.json, graph.json, vaults.json, markets.json, shock-trace.json (a copy of docs/shock-trace-example.json), alerts.ts
+  routes/             VaultPage (follows the top-bar selector) · VaultRisksPage (the curator view: exit, bad debt, oracle class, cushion, borrower concentration, changes) · MarketPage · GraphPage · ImpactPage (a shock trace, one view per tab) · WatchPage
+  mocks/              report.json, graph.json, graphs.json (each Vault V2's own graph), vaults.json, markets.json, shock-trace.json (a copy of docs/shock-trace-example.json), alerts.ts
 ```
 
 **Invariants.**
@@ -260,5 +260,5 @@ pnpm lint && pnpm build                                # eslint + prettier, then
 - A behaviour change that departs from a plan decision is recorded in that plan's decision table.
 - Leave format and lint to ruff, at 120 columns, in pre-commit and in CI; never mix a style-only commit with a behaviour change.
 - `uv.lock` is committed: change a dependency with `uv add` / `uv lock`, never by editing the lock by hand — CI runs `uv sync --locked` and fails if the lock has drifted from `pyproject.toml`.
-- Never hand-edit `web/src/mocks/report.json`, `graph.json`, `vaults.json` or `markets.json`: regenerate them with `analyze --demo`, `graph --example` and `python -m riskdep.dashboard` with every Vault V2 of the fixture graph (offline, from the snapshot) and copy the files out of `out/`.
+- Never hand-edit `web/src/mocks/report.json`, `graph.json`, `graphs.json`, `vaults.json` or `markets.json`: regenerate them with `analyze --demo`, `graph --example`, `graph --vault <v>` for each Vault V2 of `vaults.json` (live, the JSON outputs gathered by lowercase address into `graphs.json`) and `python -m riskdep.dashboard` with every Vault V2 of the fixture graph (offline, from the snapshot) and copy the files out of `out/`.
 - Package version lives in `pyproject.toml` and must stay in step with `riskdep/__init__.py` `__version__` (currently `0.1.0`); nothing in the code reads `__version__`, only the docs cite it. There is no `CHANGELOG.md` yet.

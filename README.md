@@ -305,7 +305,7 @@ uv run python -c "import json,riskdep.api as a; print(json.dumps(a.app.openapi()
 | Endpoint | Serves |
 |---|---|
 | `GET /api/health` | `{status, mode, data_as_of}` — the mode chip in the header |
-| `GET /api/vault/{address}` | a Vault V2 read live from the Morpho API: its markets by allocation and their borrowers' liquidations |
+| `GET /api/vault/{address}` | a Vault V2 read live from the Morpho API: its markets by allocation, their borrowers' liquidations and concentration; from the vault's recordings when there are, each market's oracle class and feed freshness and the vault's exit liquidity and holders |
 | `GET /api/market/{market_id}` | a Blue market read live from the Morpho API: its state and every borrower's liquidating fall |
 | `GET /api/report` | the last `analyze` report written to `out/` |
 | `POST /api/analyze` | run `analyze` (market, user, horizon, paths, live) and return the report; writes nothing |

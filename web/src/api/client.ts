@@ -17,11 +17,13 @@ import type {
 import graphFixture from '../mocks/graph.json';
 import shockTraceFixture from '../mocks/shock-trace.json';
 import reportFixture from '../mocks/report.json';
+import { MOCK_ALERTS } from '../mocks/alerts';
 
 /** `VITE_USE_MOCKS` defaults to true: the frontend runs with no backend at all. */
 export const USE_MOCKS = import.meta.env.VITE_USE_MOCKS !== 'false';
 
 const MOCK_LATENCY_MS = 250;
+const MOCK_ALERTS_TARGET = '0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf';
 
 const MOCK_GRAPH = graphFixture as unknown as GraphResponse;
 const MOCK_SHOCK_TRACE = shockTraceFixture as unknown as ShockTrace;
@@ -121,7 +123,15 @@ export const api = {
     return get<Health>('/api/health', signal);
   },
 
-  graph(query: GraphQuery = {}, signal?: AbortSignal): Promise<GraphResponse> {
+  async graph(query: GraphQuery = {}, signal?: AbortSignal): Promise<GraphResponse> {
+    if (USE_MOCKS && query.vault) {
+      // Each Vault V2's own graph, built live; loaded on demand, it is a large fixture.
+      const graphs = (await import('../mocks/graphs.json')).default as unknown as Record<
+        string,
+        GraphResponse
+      >;
+      return fixture(graphs[query.vault], `graph of ${query.vault}`);
+    }
     if (USE_MOCKS) return delay(MOCK_GRAPH);
     return get<GraphResponse>(`/api/graph${queryString({ ...query })}`, signal);
   },
@@ -176,7 +186,17 @@ export const api = {
   },
 
   /** One page of alerts after a block cursor. Pass the returned `cursor` back as `since`. */
-  alerts(query: WatchQuery & { since?: number } = {}, signal?: AbortSignal): Promise<AlertPage> {
+  async alerts(
+    query: WatchQuery & { since?: number } = {},
+    signal?: AbortSignal,
+  ): Promise<AlertPage> {
+    if (USE_MOCKS) {
+      // The fixture alerts are the recorded run of one vault; every other target has none.
+      const alerts = query.target === MOCK_ALERTS_TARGET ? [...MOCK_ALERTS] : [];
+      const counts = { info: 0, warn: 0, critical: 0 };
+      for (const alert of alerts) counts[alert.level] += 1;
+      return delay({ target: query.target ?? '', cursor: 0, counts, alerts });
+    }
     return get<AlertPage>(
       `/api/alerts${queryString({
         target: query.target,

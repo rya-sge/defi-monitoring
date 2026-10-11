@@ -23,6 +23,12 @@ const vaultRoute = createRoute({
   component: lazyRouteComponent(() => import('./routes/VaultPage'), 'VaultPage'),
 });
 
+const vaultRisksRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/vault-risks',
+  component: lazyRouteComponent(() => import('./routes/VaultRisksPage'), 'VaultRisksPage'),
+});
+
 const marketRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/market/$marketId',
@@ -61,6 +67,7 @@ const crossRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   vaultRoute,
+  vaultRisksRoute,
   marketRoute,
   graphRoute,
   crossRoute,
