@@ -289,6 +289,24 @@ EVENTS: list[EventSpec] = [
     _ev("adapter", "BurnShares", "bytes32 indexed marketId", "uint256 supplyShares"),
     _ev("adapter", "SetSkimRecipient", "address indexed newSkimRecipient"),
     _ev("adapter", "Skim", "address indexed token", "uint256 assets"),
+    # Zama Confidential Vault: batchers and confidential wrappers (plan 2026-10-11-zama-alerts, D190; ABI of the verified
+    # RedeemVaultBatcherConfidential and the cShare implementation, read from Etherscan 2026-10-11)
+    _ev("zama", "BatchFinalized", "uint256 indexed batchId", "uint64 exchangeRate"),
+    _ev("zama", "BatchCanceled", "uint256 indexed batchId"),
+    _ev("zama", "BatchDispatched", "uint256 indexed batchId"),
+    _ev(
+        "zama",
+        "UnwrapFinalized",
+        "address indexed receiver",
+        "bytes32 indexed unwrapRequestId",
+        "bytes32 encryptedAmount",
+        "uint64 cleartextAmount",
+    ),
+    _ev("zama", "Paused", "address account"),
+    _ev("zama", "Unpaused", "address account"),
+    _ev("zama", "OwnershipTransferred", "address indexed previousOwner", "address indexed newOwner"),
+    _ev("zama", "Upgraded", "address indexed implementation"),
+    _ev("zama", "UserBlocked", "address indexed user"),
 ]
 
 # topic0 -> specs; the same topic can exist on several contracts (Withdraw on Blue and on the

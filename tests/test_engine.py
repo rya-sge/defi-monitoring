@@ -375,7 +375,7 @@ def test_sweep_ranks_the_pt_oracle_first_for_a_reading_too_high(rockawayx):
     assert rows[0]["vault_loss"] > 0
 
 
-EXAMPLE = Path(__file__).resolve().parent.parent / "docs" / "shock-trace-example.json"
+EXAMPLE = Path(__file__).resolve().parent.parent / "docs" / "model" / "shock-trace-example.json"
 
 
 def test_the_trace_of_the_ojo_shock_leads_from_the_feed_to_the_vault(rockawayx):
@@ -393,8 +393,8 @@ def test_the_trace_of_the_ojo_shock_leads_from_the_feed_to_the_vault(rockawayx):
 
 
 def test_the_committed_trace_example_is_current(rockawayx):
-    """docs/shock-trace-example.json is what `shock --replay --shock "Ojo PT:reads-low:10%"` writes today."""
+    """docs/model/shock-trace-example.json is what `shock --replay --shock "Ojo PT:reads-low:10%"` writes today."""
     ex = json.loads(EXAMPLE.read_text())
     res = EN.run(rockawayx, [EN.Shock(OJO, "reads-low", 0.1)])
     now = json.loads(json.dumps(shock.trace(rockawayx, res, ex["block"], ex["as_of"]), default=str))
-    assert now == ex, "regenerate docs/shock-trace-example.json (docs/shock-trace.md says how)"
+    assert now == ex, "regenerate docs/model/shock-trace-example.json (docs/model/shock-trace.md says how)"

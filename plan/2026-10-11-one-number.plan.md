@@ -3,7 +3,7 @@
 > **Status**: approved: the person, 2026-10-11, "Yes go for it" (step A0 of `docs/analysis/NEXT_STEP.md`, after the shock engine was merged). No interview: the decisions below are the agent's defaults.
 > **Delivers**: `analyze --vault` / `--book` runs the shock engine (plan `2026-10-10-propagation-engine`) on each vault's recorded dependency graph, so a markdown gets the same figure from both commands, plus the engine's squeeze and the sibling markets the same incident reaches. Proof: PRIME −30 % on RockawayX USDC Yield, 131,162 USDC from both paths; strUSD −30 % rises from 568k to 876k once the engine prices the liquidation sales.
 > **Hard rule**: no new provider; the engine and its rules are used as they are; what the engine cannot express (a borrower default, a Pharos-reached market) keeps this module's figures; the agent never commits.
-> **Read against**: plans `2026-10-11-vault-incident`, `2026-10-11-vault-book`, `2026-10-11-borrower-concentration`, `2026-10-11-pharos`; `docs/shock-engine.md`.
+> **Read against**: plans `2026-10-11-vault-incident`, `2026-10-11-vault-book`, `2026-10-11-borrower-concentration`, `2026-10-11-pharos`; `docs/model/shock-engine.md`.
 > **Left out**: §4 Flows and §5 State: one more pure step in an existing one-shot computation.
 
 ## The tracker
@@ -52,7 +52,7 @@ Two commands priced the same incident: `analyze --vault` (verdict, exit queue, b
 
 | id | Kind | Decision | Status | Source | Slice |
 |---|---|---|---|---|---|
-| D139 | contract | A markdown `token=T:f` becomes, in the engine: T `price` −f, and `reads-low` f on every constant-price input (the issuer's rate or NAV feed) of the oracles of markets taking T as collateral. A price-tracking input follows T through the graph's `tracks` edges. A `converts through` input is not shocked | agreed, checked: PRIME −30 % gives 131,162 from both paths | `docs/shock-engine.md` | S1 |
+| D139 | contract | A markdown `token=T:f` becomes, in the engine: T `price` −f, and `reads-low` f on every constant-price input (the issuer's rate or NAV feed) of the oracles of markets taking T as collateral. A price-tracking input follows T through the graph's `tracks` edges. A `converts through` input is not shocked | agreed, checked: PRIME −30 % gives 131,162 from both paths | `docs/model/shock-engine.md` | S1 |
 | D140 | contract | When the vault has a recorded graph, the engine's liquidated debt and lenders' loss replace this module's on every market of the vault it moves; a hit reached only through a borrower default or Pharos keeps this module's figures; a market of the vault only the engine reaches becomes a hit. The hit says which, with the engine's oracle and market factors and what was left insolvent | agreed, agent's default | — | S1 |
 | D141 | contract | The sibling markets the engine reaches, which the vault does not supply, are listed as "contagion beyond this vault" (lenders' loss, in their loan token); the book counts each once. Without a recorded graph, a note says so and the module's figures stand | agreed, agent's default | — | S1 |
 

@@ -10,7 +10,7 @@ A **separate local process, `riskdep notify`, that tails `out/watch-*.jsonl` and
 
 - Every alert of `watch` and `watch --user` is appended, one JSON object per line, to `out/watch-<target>.jsonl` (`Printer.alert` in `riskdep/watch.py`), whatever `--level` the terminal shows. Fields: `level` (`info` / `warn` / `critical`), `block`, `tx`, `event`, `title`, `detail`, `depositor_impact`, `data`.
 - `GET /api/alerts?target=…&since=<block>&level=…` reads the same files with a block cursor (`riskdep/api/routes/alerts.py`).
-- `docs/alert-runbook.md` says what each alert means and what to do: a message can link to its row.
+- `docs/reference/alert-runbook.md` says what each alert means and what to do: a message can link to its row.
 
 ## The options
 
@@ -47,7 +47,7 @@ block 26161886 · tx 0xab12… (Etherscan link) · runbook: DrainWindow
 ```
 
 - `critical` with sound; `warn` and `info` with `disable_notification=true`.
-- Vault name from the watch's target (address shortened otherwise); tx and addresses as Etherscan links; the runbook link to `docs/alert-runbook.md` on GitHub.
+- Vault name from the watch's target (address shortened otherwise); tx and addresses as Etherscan links; the runbook link to `docs/reference/alert-runbook.md` on GitHub.
 - Text from `title`, `detail` and `depositor_impact` only, escaped for HTML; `data` is not posted (it can be long and is for machines).
 
 **Rate limits.** Telegram allows about 20 messages a minute to one group or channel and answers `429` with `retry_after`. When several alerts arrive together, space them at least 3 s apart (no effect when there is nothing to send), honour `retry_after`, and above a burst threshold (say 10 queued) fall back to one digest message.
@@ -60,7 +60,7 @@ block 26161886 · tx 0xab12… (Etherscan link) · runbook: DrainWindow
 
 **Tests (offline).** `format` and `select` on the alerts of a recorded replay (`fixtures/replay/`): level filter, deduplication of standing findings, digest grouping, HTML escaping, length cap. `send` against a stubbed `requests` session: success, `429` with `retry_after`, network error leaving the offset unchanged.
 
-**Repository rules it triggers.** `docs/analysis/PROVIDERS.md` gains the Telegram Bot API (endpoint, limits, trust: it is an outward push, and messages are stored by Telegram); `README.md` gains the command; `registry.json` takes the thresholds (default level, dedup window, send interval, burst size) with their basis, documented in `docs/registry-reference.md`.
+**Repository rules it triggers.** `docs/analysis/PROVIDERS.md` gains the Telegram Bot API (endpoint, limits, trust: it is an outward push, and messages are stored by Telegram); `README.md` gains the command; `registry.json` takes the thresholds (default level, dedup window, send interval, burst size) with their basis, documented in `docs/reference/registry-reference.md`.
 
 ## What you need to create and provide
 
@@ -84,7 +84,7 @@ Status checked on 2026-10-11: `keys.ini` exists, is git-ignored and `chmod 600`,
 4. Give it a username ending in `bot`, unique across Telegram, e.g. `riskdep_belem_alerts_bot`.
 5. BotFather answers with the token, of the form `123456789:AAH...` (a number, a colon, about 35 characters). That is the bot's only credential: whoever has it can post as the bot and read its updates.
 
-Optional, in the same chat: `/setdescription` and `/setuserpic` for a cleaner look on screen; `/setjoingroups` → Disable, so nobody can add the bot elsewhere. All BotFather commands: `docs/telegram-botfather-commands.md`.
+Optional, in the same chat: `/setdescription` and `/setuserpic` for a cleaner look on screen; `/setjoingroups` → Disable, so nobody can add the bot elsewhere. All BotFather commands: `docs/setup/telegram-botfather-commands.md`.
 
 If the token ever leaks (pasted in a chat, committed, shown on the projector): `/revoke` in BotFather, pick the bot, and put the new token in `keys.ini`. The old one stops working at once.
 

@@ -45,7 +45,7 @@ The engineering is well above what a hackathon usually shows: real mainnet data,
 
 **Problem.** In the PST −30 % book run, *RockawayX Confidential RWA USDC* loses 3.27M USD (12.4 %) and reads `STAY` with p\* `—`; *Huma USDC Main* loses less and reads `EXIT`. The JSON shows why (`saved_usd: 0`: leaving first saves nothing, presumably because the loss is already realised or shared pro rata), but the output does not say it. To a reader it looks like a bug.
 
-**Status: done** (plan `2026-10-11-judge-path`): every book line says why ("nothing to save by leaving first: the depositor is 99% of the vault"), "n/a" replaces "—", and a vault's no-saving reason names its cause.
+**Status: done** (plan `2026-10-11-judge-path`): every book line says why, "n/a" replaces "—", and a vault's no-saving reason names its cause. The 99 % holder behind Confidential RWA's STAY turned out to be the Zama cShare, a pool of confidential depositors (plan `2026-10-11-zama`): the line now reads for its largest public holder, "leaving pays above a 6.6 % chance over 30 days".
 
 **How.** Give every vault line a one-clause reason, from the fields already computed: "leaving saves nothing: the loss is socialised at once", "exit blocked: no idle liquidity", "p\* above the outside view". Show "n/a (nothing to save)" instead of `—`. Size: S.
 

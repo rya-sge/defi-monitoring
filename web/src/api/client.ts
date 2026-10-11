@@ -89,7 +89,7 @@ export const api = {
 
   /**
    * A shock trace. No endpoint serves one yet: in both modes this is the committed example
-   * (`docs/shock-trace-example.json`: RockawayX USDC Yield, the Ojo PT feed reading 10 % low).
+   * (`docs/model/shock-trace-example.json`: RockawayX USDC Yield, the Ojo PT feed reading 10 % low).
    */
   shockTrace(): Promise<ShockTrace> {
     return delay(MOCK_SHOCK_TRACE);

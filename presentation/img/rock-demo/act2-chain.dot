@@ -1,0 +1,13 @@
+digraph G { rankdir=TB; newrank=true; nodesep=0.6; ranksep=0.6;
+#include "common.inc"
+a [label="1. The key holders\nreplace the feed's code", fillcolor="#FDECEA", color="#B03A2E"];
+b [label="2. The price now says\nstrUSD = 0.70\n(was 1.03: −32 %)"];
+c [label="3. Many loans are worth\nmore than their collateral"];
+d [label="4. Bad debt\n1.90M USDC not covered\n(the vault's share: 1.24M)"];
+e [label="5. Depositors who stay\nshare the loss", fillcolor="#FDECEA", color="#B03A2E"];
+a -> b -> c;
+c -> d [constraint=true];
+d -> e;
+{rank=same; a; b; c}
+{rank=same; e; d}
+}

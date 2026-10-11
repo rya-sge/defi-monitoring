@@ -24,7 +24,7 @@ flowchart TB
   end
 
   subgraph SL3["Slice 3 · US16, US17 · tests and docs"]
-    S3.1["✅ S3.1 tests/test_drain.py, docs/drain-threshold.md,<br/>runbook, registry reference<br/>went on: pytest 133 passed"]
+    S3.1["✅ S3.1 tests/test_drain.py, docs/watch/drain-threshold.md,<br/>runbook, registry reference<br/>went on: pytest 133 passed"]
   end
 
   ST ~~~ S1.1

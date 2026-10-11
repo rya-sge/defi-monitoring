@@ -226,7 +226,7 @@ The seven Ethereum vaults are in `examples/rockawayx-ethereum.json` and recorded
 
 | Token cut by 30 % | Vaults reached | In those markets | Book loss | Through |
 |---|---|---|---|---|
-| trUSD (Tori) | Tori Ecosystem, USDC Yield | 17.01M | 1.61M (1.63 %) | strUSD, PT-strUSD, PT-trUSD (oracles constant-price: hidden shortfall) |
+| trUSD (Tori) | Tori Ecosystem, USDC Yield | 17.01M | 1.61M (1.63 %); 2.03M (2.04 %) with the shock engine's squeeze (plan `2026-10-11-one-number`) | strUSD, PT-strUSD, PT-trUSD (oracles constant-price: hidden shortfall) |
 | wYLDS (Hastra) | Confidential RWA USDC, USDC Yield, NUVA Ecosystem | 3.40M | 0.09M (0.09 %) | PRIME, AUTO, nvPRIME |
 
 etrUSD, a vault of Tori vaults, answers no `asset()` and stays opaque.

@@ -147,8 +147,8 @@ The layers, from the bottom:
   - `vault_book.py` applies one incident to a user-defined book of vaults and adds it up in USD;
   - `vault_incident.py` is incident mode for a vault depositor: a collateral's oracle price falls, every borrower of the hit markets is valued at the new price, and the vault's and the depositor's losses, what can leave and a verdict follow;
   - `scenario.py` is incident mode: the impact of a known incident, its time to impact and the verdict with the incident certain, and the impact attached to `OracleDivergence` alerts in `watch --user`;
-  - `drain.py` computes each vault market's drain threshold d\* and what a drain would take (`docs/drain-threshold.md`);
-  - `exit_queue.py` models a run on a vault: what a depositor recovers at par and loses at each queue position (`docs/exit-queue.md`);
+  - `drain.py` computes each vault market's drain threshold d\* and what a drain would take (`docs/watch/drain-threshold.md`);
+  - `exit_queue.py` models a run on a vault: what a depositor recovers at par and loses at each queue position (`docs/watch/exit-queue.md`);
   - `priors.py`, `propagate.py`, `simulate.py` and `decide.py` form the `analyze` model.
 
   `market_risk.py`, `drain.py`, `exit_queue.py` and `admin.py` mix both kinds: `market_risk`'s `Tracker`, `drain`'s `read_pa`, `exit_queue`'s `holders` and `admin`'s `AdminWatch` read state, and their `value` and `assess_*` functions are pure. `admin.py` covers the contracts a market depends on beyond Morpho (oracles, feeds, tokens, Pendle SY): upgradeability, admins, owners, feeds, pauses, mints, and the oracle's gap to DefiLlama's price.
@@ -196,7 +196,7 @@ sequenceDiagram
   C->>R: HTML + JSON, with every assumption's basis
 ```
 
-Details and a worked example: `docs/how-risk-is-computed.md`.
+Details and a worked example: `docs/model/how-risk-is-computed.md`.
 
 ### `analyze --vault` and `--book`: a known incident
 
@@ -205,7 +205,7 @@ Details and a worked example: `docs/how-risk-is-computed.md`.
 2. **Market loss.** Every borrower is valued at the shocked price (`market_risk.value`); a constant-price oracle on a wrapper does not move, so the loss is the hidden shortfall; a default removes the defaulters at their recovery. With a recorded graph, the shock engine replaces these figures on the markets it reaches and adds sibling markets.
 3. **Depositor.** The exit queue (`exit_queue.py`) gives the loss if the depositor stays and if it leaves first; `decide` gives STAY or EXIT given the incident; `breakeven` gives p\*, the incident probability above which leaving now pays.
 
-`vault_book.aggregate` adds the vaults in USD and names the vault to act on first (lowest p\*); `--conditional` reruns every vault at multiples of the fall and draws the loss of staying (`conditional.py`). Details, with diagrams and a worked example: `docs/vault-incident.md`.
+`vault_book.aggregate` adds the vaults in USD and names the vault to act on first (lowest p\*); `--conditional` reruns every vault at multiples of the fall and draws the loss of staying (`conditional.py`). Details, with diagrams and a worked example: `docs/model/vault-incident.md`.
 
 ### `watch --vault` and `watch --user`: one batch
 
@@ -228,7 +228,7 @@ sequenceDiagram
   Note over P,O: every batch: oracle divergence from the batch's oracle prices and DefiLlama prices at most 25 blocks old (D97)<br/>every 300 blocks: cross-checks, lender refresh, borrowers refresh, admin-surface state, position rediscovery
 ```
 
-Details, with a real transaction decoded step by step: `docs/how-a-block-is-analysed.md`. Why polling rather than a WebSocket: `docs/websocket-vs-polling.md`.
+Details, with a real transaction decoded step by step: `docs/watch/how-a-block-is-analysed.md`. Why polling rather than a WebSocket: `docs/watch/websocket-vs-polling.md`.
 
 ### `graph`
 
@@ -255,7 +255,7 @@ Then, by default (plan `2026-10-10-sibling-markets`):
 3. **Edge rules.** For each changed effect, the first matching edge rule of `registry.json` (`engine`), or of a `--rules` file, picks the transmission that carries it to the next node.
 4. **Fixed point.** The run repeats until no input moves (ε) or the evaluation budget is spent.
 
-`shock.report` prints each market's outcome, each vault's and depositor's loss and the path (`engine.path`). `shock.trace` writes the same run as data for a front end (D119): the graph with edge ids, every step with its edge and wave, each node's final state (`docs/shock-trace.md`). `--sweep` runs one shock per oracle (or asset) and ranks them. Details and the rule format: `docs/shock-engine.md`.
+`shock.report` prints each market's outcome, each vault's and depositor's loss and the path (`engine.path`). `shock.trace` writes the same run as data for a front end (D119): the graph with edge ids, every step with its edge and wave, each node's final state (`docs/model/shock-trace.md`). `--sweep` runs one shock per oracle (or asset) and ranks them. Details and the rule format: `docs/model/shock-engine.md`.
 
 ## 5. State and files
 
@@ -265,7 +265,7 @@ Then, by default (plan `2026-10-10-sibling-markets`):
 | Date of the snapshot | `fixtures/snapshot/as_of.json` | `analyze --refresh` | offline runs use it as "now" through `clock.py` |
 | Recorded watch ranges | `fixtures/replay/<vault>/`, `fixtures/replay/user-<address>/` | `watch --blocks N --record` | re-run offline by `--replay` and by the tests |
 | Recorded graphs | `fixtures/replay/graph-<target>/` | `graph --record` | rebuilt offline by `graph --replay` and by `test_graph.py` |
-| Facts and thresholds | `riskdep/registry.json` | a person, by hand | every value has its basis; reference in `docs/registry-reference.md` |
+| Facts and thresholds | `riskdep/registry.json` | a person, by hand | every value has its basis; reference in `docs/reference/registry-reference.md` |
 | Cursor | `out/watch-*.cursor` | the watch loops, last in each batch | a restart resumes after it |
 | Alerts | `out/watch-*.jsonl` | the watch loops | one JSON object per alert |
 | Reports and graphs | `out/report.html/.json`, `out/graph.html/.json` | `report`, `graph` | `out/` is git-ignored |
@@ -322,6 +322,8 @@ The design decisions are numbered across twelve plans, in the order the incremen
 | `plan/2026-10-11-pharos.plan.md` | Pharos, keyless: grades, off-chain backing, common-mode groups | D133–D138 |
 | `plan/2026-10-11-one-number.plan.md` | the shock engine as the impact core of vault and book incidents | D139–D141 |
 | `plan/2026-10-11-breakeven.plan.md` | the breakeven probability p\* of vault and book incidents; Nexus as an outside view | D142–D146 |
+| `plan/2026-10-11-alerts-and-verdict.plan.md` | `FeedStale`; the Zama batcher and wrapper alerts; the PT verdict's horizon and tail (K12, K13) | D190–D196 |
+| `plan/2026-10-11-detect.plan.md` | detection → impact for a vault: `OracleImpact` in both watches | D187–D189 |
 | `plan/2026-10-11-mixed-book.plan.md` | borrow pockets in a book, the brief's PT loop among them | D177–D178 |
 | `plan/2026-10-11-zama.plan.md` | Zama confidential vaults: the cShare pool, the two exits, the hidden layer | D171–D176 |
 | `plan/2026-10-11-pt-channels.plan.md` | the PT loop's implied-yield and borrow-rate incidents | D169–D170 |
@@ -348,17 +350,17 @@ The full list, with impact and effort, is §5 of `ANALYSIS_MONITORING.md`.
 |---|---|
 | `README.md` | how to run each mode, the alert trigger tables |
 | `ANALYSIS_MONITORING.md` | the risk model (graph, impact, monitoring, execution) and the gaps |
-| `docs/how-risk-is-computed.md` | the `analyze` model, step by step |
-| `docs/scenarios-and-breakeven.md` | scenarios and breakeven probabilities as a complement to the Monte Carlo, with a learn section |
-| `docs/vault-depositor-scenarios.md` | a vault depositor's loss under a scenario, on Sentora RLUSD Main, with a learn section |
-| `docs/graph-propagation.md` | the dependency graph as a propagation engine (transmission functions, DebtRank), with a learn section |
-| `docs/how-a-block-is-analysed.md` | one watch batch, with a real transaction |
-| `docs/alert-runbook.md` | what each alert means and what to do |
-| `docs/glossary.md` | the terms |
-| `docs/registry-reference.md` | every key of `registry.json` |
-| `docs/websocket-vs-polling.md` | the choice of polling |
-| `docs/user-watcher-options.md` | the options behind `watch --user` |
-| `docs/graph-example.html` | a rendered dependency graph |
+| `docs/model/how-risk-is-computed.md` | the `analyze` model, step by step |
+| `docs/model/scenarios-and-breakeven.md` | scenarios and breakeven probabilities as a complement to the Monte Carlo, with a learn section |
+| `docs/model/vault-depositor-scenarios.md` | a vault depositor's loss under a scenario, on Sentora RLUSD Main, with a learn section |
+| `docs/model/graph-propagation.md` | the dependency graph as a propagation engine (transmission functions, DebtRank), with a learn section |
+| `docs/watch/how-a-block-is-analysed.md` | one watch batch, with a real transaction |
+| `docs/reference/alert-runbook.md` | what each alert means and what to do |
+| `docs/reference/glossary.md` | the terms |
+| `docs/reference/registry-reference.md` | every key of `registry.json` |
+| `docs/watch/websocket-vs-polling.md` | the choice of polling |
+| `docs/watch/user-watcher-options.md` | the options behind `watch --user` |
+| `docs/examples/graph-example.html` | a rendered dependency graph |
 | `PROVIDERS.md` | every external provider: endpoints, queries, measured limits, trust model |
 | `NEXT_STEP.md` | what comes next, and what each step needs |
 | `CLAUDE.md` / `AGENTS.md` | conventions for editing the code |

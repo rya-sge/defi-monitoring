@@ -25,7 +25,7 @@ N = REGISTRY["notify"]
 LEVELS = {"info": 0, "warn": 1, "critical": 2}
 ICON = {"critical": "🔴", "warn": "🟠", "info": "🔵"}
 API = "https://api.telegram.org/bot{token}/sendMessage"
-RUNBOOK = "https://github.com/rya-sge/defi-monitoring/blob/main/docs/alert-runbook.md"
+RUNBOOK = "https://github.com/rya-sge/defi-monitoring/blob/main/docs/reference/alert-runbook.md"
 MAX_LEN = 4096  # Telegram's limit on one message
 
 

@@ -1,0 +1,260 @@
+{
+  "output": "/home/ryan/Pictures/charrette/defi-monitoring/presentation/probabilities.odp",
+  "export": [
+    "pdf",
+    "pptx"
+  ],
+  "theme": {
+    "title_color": "0x1F4E79",
+    "text_color": "0x222222",
+    "font": "Liberation Sans",
+    "background": "0xF7F9FC"
+  },
+  "slides": [
+    {
+      "layout": "title",
+      "title": "How riskdep computes probabilities",
+      "subtitle": "Priors per layer, Monte Carlo, breakeven p*, outside views",
+      "notes": "Sources: docs/model/how-risk-is-computed.md; riskdep/priors.py, simulate.py, decide.py, vault_incident.py (breakeven), nexus.py (implied); riskdep/registry.json (frequency, oracle, issuers, nexus). Demo figures: the offline analyze demo, PT-sUSDE-26NOV2026 / USDC on Morpho Blue, data of 2026-10-10."
+    },
+    {
+      "layout": "two-column",
+      "title": "Two questions, two probabilities",
+      "left_title": "How likely is an incident?",
+      "left": [
+        "A prior per layer, per year",
+        "From the hack record and the registry",
+        "Drives the Monte Carlo of analyze"
+      ],
+      "right_title": "How likely must it be to leave?",
+      "right": [
+        "Breakeven p* of an incident",
+        "Cost of leaving vs loss saved",
+        "No prior needed: the reader judges"
+      ],
+      "font_size": 24,
+      "notes": "Outside prices (Nexus Mutual cover) give a third, independent view: shown next to p*, never used in a verdict (D146)."
+    },
+    {
+      "layout": "bullets",
+      "title": "A position depends on layers",
+      "bullets": [
+        "Settlement chain: Ethereum",
+        "Yield source (issuer): sUSDe, by Ethena",
+        "Pendle market: the PT/SY pool",
+        "Lending market: Morpho Blue, LLTV 91.5 %",
+        "Oracle: decides when liquidation happens"
+      ],
+      "notes": "Found from the data (discover.py), not by hand: the issuer is the Pendle market's underlying, looked up in registry.json. Each layer gets a yearly probability p and a severity distribution."
+    },
+    {
+      "layout": "text",
+      "title": "Exploit prior: from DefiLlama's hacks",
+      "text": "p = clip( r_tier × m_category × f_age ,  0.5 %,  15 % )\n\nr_tier: hacks per protocol per year, same size band, last 5 years\nm_category: the category's hack rate ÷ all categories, kept in 0.5–2\nf_age: 2 if listed < 1 year, 1 if 1–3 years, 0.7 beyond",
+      "font_size": 26,
+      "notes": "priors.py exploit_p_year; registry.json frequency: years 5, floor 0.005, cap 0.15, tiers 10M / 100M USD, category clip [0.5, 2], age factors 2 / 1 / 0.7. Sizing by protocol size matters: by category alone, Morpho Blue got 15 %/yr, because small lending forks are hacked often."
+    },
+    {
+      "layout": "table",
+      "title": "The terms, for the demo",
+      "table": [
+        [
+          "Term",
+          "Value",
+          "Why"
+        ],
+        [
+          "r_tier (> 100M USD)",
+          "2.66 %/yr",
+          "34 hacks / 256 protocols / 5 years"
+        ],
+        [
+          "m: Lending (Morpho)",
+          "1.89",
+          "lending is hacked more than average"
+        ],
+        [
+          "m: Basis Trading (Ethena)",
+          "0.50",
+          "kept at the floor of the clip"
+        ],
+        [
+          "m: Yield (Pendle)",
+          "0.65",
+          "below average"
+        ],
+        [
+          "Oracle misprice",
+          "2.68 %/yr",
+          "24 oracle exploits / 179 protocols / 5 y; ×2 if unverified"
+        ]
+      ],
+      "notes": "The oracle counts only misconfigured, stale or predictable-oracle exploits: spot manipulation of a thin token does not apply to a PT oracle. The demo oracle (MetaOracleDeviationTimelock) is verified on Etherscan, so no doubling."
+    },
+    {
+      "layout": "bullets",
+      "title": "Market events: from the registry",
+      "bullets": [
+        "A depeg is not an exploit: not in the hack record",
+        "registry.json sets p, severity and recovery, with a basis",
+        [
+          "sUSDe: 12 %/yr, average depeg 8 %, 75 % recovered",
+          "Basis: USDe near 0.65 on one CEX on 2025-10-10"
+        ],
+        "Unknown issuer: 15 %/yr default, 60 % recovered",
+        "Severity: a Beta(a, b) draw, mean a / (a + b)"
+      ],
+      "notes": "registry.json issuers.<address>.depeg and unknown_issuer. Every number carries its basis, shown in the report under Assumptions and their basis."
+    },
+    {
+      "layout": "table",
+      "title": "The demo's priors",
+      "table": [
+        [
+          "Event",
+          "Per year",
+          "Severity mean",
+          "Over 30 days"
+        ],
+        [
+          "sUSDe depeg",
+          "12.0 %",
+          "8.2 % (75 % back)",
+          "1.05 %"
+        ],
+        [
+          "Morpho Blue exploit",
+          "5.03 %",
+          "9.1 %",
+          "0.42 %"
+        ],
+        [
+          "Oracle misprice",
+          "2.68 %",
+          "10.0 %",
+          "0.22 %"
+        ],
+        [
+          "Ethena exploit",
+          "1.33 %",
+          "28.6 %",
+          "0.11 %"
+        ],
+        [
+          "Pendle market / SY exploit",
+          "1.21 %",
+          "13.8 %",
+          "0.10 %"
+        ],
+        [
+          "Ethereum incident",
+          "1.00 %",
+          "0.5 %",
+          "0.08 %"
+        ]
+      ],
+      "notes": "Horizon conversion: p_h = 1 - (1 - p)^(h/365). Depeg: 1 - 0.88^(30/365) = 1.05 %."
+    },
+    {
+      "layout": "bullets",
+      "title": "From probabilities to losses",
+      "bullets": [
+        "20,000 simulated months (simulate.py)",
+        "Each layer fails with its 30-day probability",
+        "A failure draws its severity from its Beta",
+        "propagate.py turns shocks into the position's loss",
+        [
+          "True value vs oracle value: only the oracle liquidates"
+        ],
+        "Only dependency: an issuer exploit brings a depeg"
+      ],
+      "notes": "Same 10 % shock, very different losses: an sUSDe depeg seen by a market-tracking oracle liquidates (whole equity lost); with a fundamental oracle only the unrecovered part is lost (80,651 USD). Layers are otherwise independent: a known limit."
+    },
+    {
+      "layout": "table",
+      "title": "What the simulation gives (demo)",
+      "table": [
+        [
+          "Measure",
+          "Value",
+          "Meaning"
+        ],
+        [
+          "P(any loss)",
+          "1.91 %",
+          "months where something happened"
+        ],
+        [
+          "P(liquidation)",
+          "1.07 %",
+          "months ending in a liquidation"
+        ],
+        [
+          "Expected loss",
+          "6,265 USD",
+          "the average month"
+        ],
+        [
+          "VaR 99 %",
+          "386,890 USD",
+          "exceeded in 1 % of months"
+        ],
+        [
+          "CVaR 99 %",
+          "510,184 USD",
+          "worst 1 %: 98 % of the equity"
+        ]
+      ],
+      "notes": "VaR 95 % is 0: incidents happen in only ~2 % of months, so the tail is read at 99 %. Attribution: depeg 3,760, Morpho 1,066, oracle 747, Ethena 511, Pendle 353, Ethereum 16 USD of the expected loss."
+    },
+    {
+      "layout": "bullets",
+      "title": "The verdict uses them",
+      "bullets": [
+        "EXIT if expected loss > carry + exit cost",
+        "REDUCE if carry < expected loss, or CVaR 99 % > half the equity, or the liquidation distance < the stress drop",
+        "STAY otherwise",
+        "Demo: REDUCE (6,265 > 5,697; CVaR 98 %; 5.2 % < 12.2 %)",
+        "Exit not worth it: 78,946 USD to leave"
+      ],
+      "notes": "decide.py verdict. The de-lever suggestion: sell 1.29M USD (33 %) to bring the liquidation distance to the stress drop; expected loss falls to 4,308 USD."
+    },
+    {
+      "layout": "text",
+      "title": "Breakeven p*: no prior needed",
+      "text": "p* = cost of leaving now ÷ loss saved by leaving first\n\nCost: the yield given up on what can leave, over the horizon\nSaving: loss if staying − loss if leaving first\nPer year: 1 − (1 − p*)^(365 / horizon)\nLeave only if you believe the incident is more likely than p*",
+      "font_size": 26,
+      "notes": "vault_incident.breakeven (D142–D143). p* ≥ 1: stay even if the incident is certain. Belem vault, mGLOeuro −30 %: leaving forgoes 2,229 EURCV of yield over 30 days, more than leaving first saves (383), so stay. f(x) vault, fxSAVE −30 %: p* 7.9 % over 30 days. A book acts first on the vault with the lowest p* (D144)."
+    },
+    {
+      "layout": "two-column",
+      "title": "Outside view: Nexus cover prices",
+      "left_title": "How",
+      "left": [
+        "Implied p = price ÷ (loading × severity)",
+        "Loading 2–5: capital cost and margin",
+        "Gives a range, per year"
+      ],
+      "right_title": "How it is used",
+      "right": [
+        "Shown next to p*",
+        "Never in a verdict",
+        "Says what the cover pays on"
+      ],
+      "font_size": 22,
+      "notes": "nexus.implied (D146). Example: f(x) cover implies 1.2–13.7 %/yr for an exploit at the shock's severity. Protocol cover pays on an exploit, not on an issuer's NAV markdown or a borrower's default: the line says so."
+    },
+    {
+      "layout": "bullets",
+      "title": "Limits",
+      "bullets": [
+        "Base rates, not an audit of each protocol",
+        "Layers independent, except issuer exploit → depeg",
+        "Market-event priors are judgements, with a basis",
+        "A 5-year hack window: DeFi changes fast",
+        "Carry assumes today's rates over the horizon"
+      ],
+      "notes": "docs/analysis/GAP.md discusses a shorter window (2 years) with a limited weight, and other signals (audits, reputation). docs/analysis/EXTERNAL_SOURCE.md §7 proposes a weighted blend of the internal priors with Credora, Nexus and Pharos."
+    }
+  ]
+}

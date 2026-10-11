@@ -1,0 +1,19 @@
+digraph G { rankdir=LR; newrank=true;
+#include "common.inc"
+you [label="Depositor\n(puts USDC in)", fillcolor="#E8F0FA"];
+vault [label="RockawayX Tori\nEcosystem vault\n13.6M USDC"];
+market [label="Lending market\nstrUSD / USDC\n69 % of the vault"];
+borrowers [label="Borrowers\npost strUSD,\nborrow USDC"];
+oracle [label="Oracle\n\"what is strUSD worth?\""];
+feed [label="RedStone price feed\n(code can be replaced)"];
+safe [label="2-of-3 multisig\nholds the upgrade key\nno delay", fillcolor="#FDECEA", color="#B03A2E"];
+you -> vault [label="deposits"];
+vault -> market [label="lends"];
+market -> borrowers [label="loans"];
+market -> oracle [label="asks the price"];
+feed -> oracle [label="feeds the price"];
+safe -> feed [label="can rewrite", color="#B03A2E", fontcolor="#B03A2E", style=dashed];
+{rank=same; market; oracle}
+{rank=same; vault; feed}
+{rank=same; you; safe}
+}

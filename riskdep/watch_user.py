@@ -14,6 +14,7 @@ from . import admin as AD
 from . import borrower as B
 from . import borrower_rules as BR
 from . import crosscheck, discover, scenario
+from . import detect as DT
 from . import drain as DR
 from . import exit_queue as EQ
 from . import market_risk as MR
@@ -53,6 +54,7 @@ class VaultTarget:
     risk: object = None  # market_risk.VaultRisk: unrealised bad debt and curves of the vault's markets
     exit: object = None  # exit_queue.VaultExit: the user's place in a run on the vault
     drain: object = None  # drain.VaultDrain: drain thresholds of the vault's markets
+    known: dict = None  # D187: each market oracle's last answer
 
     @property
     def addresses(self) -> set[str]:
@@ -360,6 +362,10 @@ def run_user(opts: UserOptions) -> int:
                 f if refresh else None,
                 drained=vt.drain.drained(after_v),
             )
+            # D188: a vault market's oracle fell: the impact on the user's deposit, and the verdict
+            known = vt.known if vt.known is not None else DT.last_prices({}, vt.state)
+            alerts += DT.impact_alerts(known, after_v, vt.risk.risks, vt.risk.markets, vt.view.decimals, batch.to_block)
+            vt.known = DT.last_prices(known, after_v)
             vt.state = after_v
         admin_alerts = aw.step(f, batch.events, state_block, refresh)
         raw = {mid: st.price for mid, st in after_b.items()}

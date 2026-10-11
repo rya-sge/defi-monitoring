@@ -1,0 +1,39 @@
+@startuml
+title riskdep - where each probability comes from
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam component {
+  BackgroundColor #EAF6F0
+  BorderColor #2E8B67
+}
+skinparam database {
+  BackgroundColor #EAF6F0
+  BorderColor #2E8B67
+}
+database "DefiLlama\nhack record" as H
+database "registry.json\n(judged events, parameters)" as REG
+database "Nexus Mutual\ncover prices" as NX
+component "Exploit prior\nr_tier x m_cat x f_age" as EP
+component "Oracle prior\n2.68 %/yr, x2 if unverified" as OP
+component "Market-event prior\n(depeg, recovery)" as MP
+component "Severity\nBeta(a, b)" as SEV
+component "Horizon conversion\n1 - (1 - p)^(h/365)" as HZ
+component "Monte Carlo\n20,000 months" as MC
+component "Verdict\nSTAY / REDUCE / EXIT" as V
+component "Known incident\nloss if stay / leave first" as KI
+component "Breakeven p*" as PS
+component "Implied probability\n(shown only)" as IMP
+H --> EP
+H --> OP
+REG --> MP
+REG --> SEV
+EP --> HZ
+OP --> HZ
+MP --> HZ
+HZ --> MC
+SEV --> MC
+MC --> V
+KI --> PS
+NX --> IMP
+IMP ..> PS : compared with
+@enduml

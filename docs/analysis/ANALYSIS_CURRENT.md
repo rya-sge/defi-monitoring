@@ -82,7 +82,7 @@ The pieces that compute an impact exist, but none takes an observed incident as 
 | `market_risk.py` | each watched market's liquidation curve at 2, 5, 10, 20 % and the bad debt it leaves | fixed drops, not the observed one; no link to the user's loss |
 | `exit_queue.py` | what a vault depositor recovers at par and loses, by queue position | loss cases are uniform drops, not the incident |
 | `drain.py` | how much a depeg past d\* lets an arbitrageur borrow, and the bad debt | the discount is measured, but the impact is not passed on to the user's position |
-| `graph` | which other markets share the hit asset, oracle or feed, and their curves | drawn, not computed: the propagation engine of `docs/graph-propagation.md` is not built |
+| `graph` | which other markets share the hit asset, oracle or feed, and their curves | drawn, not computed: the propagation engine of `docs/model/graph-propagation.md` is not built |
 
 So the tool can say "the oracle diverges by 4 %" and, separately, "a 5 % drop liquidates 68 % of this market", but not "this 4 % divergence costs your book X, through these markets".
 
@@ -109,7 +109,7 @@ Nothing in the tool outputs "liquidation in about 15 min; exit takes one block; 
 
 ### What it does today
 
-`simulate.run` draws, for each layer, whether it fails over the horizon (a yearly probability converted to 30 days) and how badly (a Beta severity), runs `propagate.loss` on each of 20,000 paths, and reports the expected loss, VaR and CVaR (`docs/monte-carlo.md`). This is an ex-ante, insurance-style view: what to expect before anything has happened. Its weakest input is the yearly probabilities, built from a hack history that is biased and quickly out of date (`GAP.md` K1, K17).
+`simulate.run` draws, for each layer, whether it fails over the horizon (a yearly probability converted to 30 days) and how badly (a Beta severity), runs `propagate.loss` on each of 20,000 paths, and reports the expected loss, VaR and CVaR (`docs/model/monte-carlo.md`). This is an ex-ante, insurance-style view: what to expect before anything has happened. Its weakest input is the yearly probabilities, built from a hack history that is biased and quickly out of date (`GAP.md` K1, K17).
 
 ### Against the brief
 

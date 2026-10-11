@@ -1,0 +1,313 @@
+{
+  "output": "/home/ryan/Pictures/charrette/defi-monitoring/presentation/rock-demo.odp",
+  "export": [
+    "pdf",
+    "pptx"
+  ],
+  "theme": {
+    "title_color": "0x1F4E79",
+    "text_color": "0x222222",
+    "font": "Liberation Sans",
+    "background": "0xF7F9FC"
+  },
+  "slides": [
+    {
+      "layout": "title",
+      "title": "RockawayX vaults under attack",
+      "subtitle": "riskdep on a mainnet fork, step by step · alerts on Telegram",
+      "notes": "Demo: scripts/demo-rock/demo-rock.sh (README next to it). Vaults and dependencies: docs/analysis/ROCK-VAULT.md. Run of scripts/demo-rock/demo-rock.sh on a fork at block 26,165,572, 2026-10-11; alerts from out/demo-rock/watch-*.jsonl."
+    },
+    {
+      "layout": "bullets",
+      "title": "The question we answer",
+      "bullets": [
+        "One deposit hides a chain of other contracts and people",
+        "If one link breaks: how much do I lose, and how fast?",
+        "Leaving costs something for sure; staying may cost more",
+        "riskdep finds the chain, watches it, and says stay or exit"
+      ],
+      "notes": "The challenge brief (Belem Capital): identify a position's dependencies, estimate the impact when one fails, and help decide stay or exit despite execution costs."
+    },
+    {
+      "layout": "image",
+      "title": "What a deposit really depends on",
+      "image": "/home/ryan/Pictures/charrette/defi-monitoring/presentation/img/rock-demo/dependencies.png",
+      "placement": {
+        "x_cm": 1.5,
+        "y_cm": 3.4,
+        "width_cm": 25.0,
+        "height_cm": 5.23
+      },
+      "bullets": [
+        "Your USDC goes into the vault, which lends it to borrowers who post strUSD",
+        "Those loans are safe only while the oracle prices strUSD correctly",
+        "The oracle reads a RedStone feed whose code can be replaced",
+        "Two signatures out of three are enough to do it, with no delay"
+      ],
+      "bullets_placement": {
+        "x_cm": 1.6,
+        "y_cm": 8.93,
+        "width_cm": 25,
+        "height_cm": 6.47
+      },
+      "font_size": 22,
+      "notes": "Tori Ecosystem: 13.6M USDC, 69 % of it lent against strUSD (ROCK-VAULT.md, demo prediction). The 2-of-3 Safe owns RedStone's ProxyAdmin (scripts/fork/addresses.env, alt-redstone.sh)."
+    },
+    {
+      "layout": "image",
+      "title": "How the demo works",
+      "image": "/home/ryan/Pictures/charrette/defi-monitoring/presentation/img/rock-demo/setup.png",
+      "placement": {
+        "x_cm": 4.75,
+        "y_cm": 3.4,
+        "width_cm": 18.5,
+        "height_cm": 7.49
+      },
+      "bullets": [
+        "A fork is a private copy of Ethereum on the laptop",
+        "Scripts act as the real key holders: nothing real is touched",
+        "riskdep reads every new block, as it would on mainnet",
+        "Only real risks (warn and critical) reach Telegram"
+      ],
+      "bullets_placement": {
+        "x_cm": 1.6,
+        "y_cm": 11.19,
+        "width_cm": 25,
+        "height_cm": 4.21
+      },
+      "font_size": 19,
+      "notes": "Fork at block 26,165,572 (anvil). Two watches: RockawayX Tori Ecosystem and Huma USDC Main. notify posts alerts at warn and above; start-up findings stay in the terminal."
+    },
+    {
+      "layout": "table",
+      "title": "The words, in plain language",
+      "table": [
+        [
+          "Word",
+          "What it means"
+        ],
+        [
+          "Vault",
+          "A pool of deposits lent out by a curator"
+        ],
+        [
+          "Oracle",
+          "The contract that tells the market what collateral is worth"
+        ],
+        [
+          "Bad debt",
+          "A loan worth more than what backs it: someone loses"
+        ],
+        [
+          "Multisig",
+          "A wallet that needs several signatures (here 2 of 3)"
+        ],
+        [
+          "Fork",
+          "A private copy of the blockchain, for rehearsing a crisis"
+        ],
+        [
+          "warn / critical",
+          "Something changed / money is being lost now"
+        ]
+      ],
+      "placement": {
+        "x_cm": 1.4,
+        "y_cm": 3.6,
+        "width_cm": 25.2,
+        "height_cm": 8.4
+      },
+      "notes": "Levels: docs/reference/alert-runbook.md (critical: money is being lost now, or can be lost in the next block; warn: the risk changed, a decision may be needed)."
+    },
+    {
+      "layout": "two-column",
+      "title": "Act 1 · A forecast before the event",
+      "left_title": "What we ask",
+      "left": [
+        "What if strUSD lost 32 % of its value?",
+        "Computed from recorded vaults, offline",
+        "Before anything happens on the fork"
+      ],
+      "right_title": "What riskdep answers",
+      "right": [
+        "The book of 7 vaults loses 2.80M USD (2.8 %)",
+        "Tori: 1.83M (13.5 %) · USDC Yield: 0.97M (5.3 %)",
+        "Act first on Tori: leaving pays if the risk is above 4.9 % over 30 days"
+      ],
+      "font_size": 20,
+      "notes": "Command: analyze --book examples/rockawayx-ethereum.json --shock token=strUSD:0.32. Same −32 % as act 2 causes, so the forecast comes before the event."
+    },
+    {
+      "layout": "image",
+      "title": "Act 2 · The price feed is rewritten",
+      "image": "/home/ryan/Pictures/charrette/defi-monitoring/presentation/img/rock-demo/act2-chain.png",
+      "placement": {
+        "x_cm": 2.5,
+        "y_cm": 3.4,
+        "width_cm": 23.0,
+        "height_cm": 5.18
+      },
+      "bullets": [
+        "RedStone's multisig swaps the code of the strUSD price feed",
+        "The new code says strUSD is worth 0.70 instead of 1.03",
+        "Loans become bigger than their collateral: 1.90M USDC of bad debt",
+        "Until it is written off, whoever stays in the vault carries it"
+      ],
+      "bullets_placement": {
+        "x_cm": 1.6,
+        "y_cm": 8.88,
+        "width_cm": 25,
+        "height_cm": 6.52
+      },
+      "font_size": 22,
+      "notes": "alt-redstone.sh: oracle 1.0300 → 0.7001. UnrealisedBadDebt: 1,902,392 USDC, the vault's share 1,236,933 (9.09 % of the vault)."
+    },
+    {
+      "layout": "table",
+      "title": "Act 2 · What riskdep said",
+      "table": [
+        [
+          "Alert",
+          "Level",
+          "In plain words"
+        ],
+        [
+          "Admin.Upgraded",
+          "critical",
+          "The code behind the price changed"
+        ],
+        [
+          "Oracle moved −32 %",
+          "warn",
+          "The collateral lost a third of its value"
+        ],
+        [
+          "UnrealisedBadDebt",
+          "critical",
+          "1.90M USDC of loans no longer covered"
+        ],
+        [
+          "ExitQueue",
+          "critical",
+          "In a rush to the exit, this depositor gets stuck"
+        ],
+        [
+          "OracleDivergence",
+          "warn",
+          "The oracle is 32 % below the market price"
+        ],
+        [
+          "OracleImpact",
+          "critical",
+          "The loss, and the decision: EXIT"
+        ]
+      ],
+      "placement": {
+        "x_cm": 1.4,
+        "y_cm": 3.6,
+        "width_cm": 25.2,
+        "height_cm": 8.4
+      },
+      "notes": "All six at block 26,165,574, the block after the upgrade. On Telegram: one summary (bad debt, exit queue, oracle move), the upgrade, and a second summary (divergence, impact)."
+    },
+    {
+      "layout": "two-column",
+      "title": "Act 2 · Stay or exit?",
+      "left_title": "Stay",
+      "left": [
+        "Loses 454,103 USDC: its share of the bad debt",
+        "Waits for the debt to be written off"
+      ],
+      "right_title": "Exit now: riskdep's verdict",
+      "right": [
+        "2,374,262 USDC can leave at full value",
+        "The loss falls to 293,378 USDC",
+        "2,620,422 USDC cannot leave yet"
+      ],
+      "font_size": 20,
+      "notes": "Depositor followed: the vault's largest, 0xddcd…cdd1, 4,994,682 USDC (36.7 %). Figures from the OracleImpact alert. Leaving first moves part of the loss onto those who stay: that is why speed matters."
+    },
+    {
+      "layout": "table",
+      "title": "Is this a hack?",
+      "table": [
+        [
+          "Who sends the upgrade",
+          "What it is",
+          "Effect"
+        ],
+        [
+          "Someone with 2 stolen keys",
+          "A hack",
+          "Price set by the attacker"
+        ],
+        [
+          "The real signers, by mistake",
+          "A bad upgrade",
+          "Same damage"
+        ],
+        [
+          "The real signers, announced",
+          "Maintenance",
+          "Nothing bad"
+        ]
+      ],
+      "placement": {
+        "x_cm": 1.4,
+        "y_cm": 3.6,
+        "width_cm": 25.2,
+        "height_cm": 5.0
+      },
+      "notes": "In the demo nothing is hacked: the fork is local. On-chain the three cases look identical; riskdep flags any upgrade, and the runbook says to check whether the new code is verified and announced, and to de-lever or exit until it is explained."
+    },
+    {
+      "layout": "image",
+      "title": "Act 3 · Coins from nowhere",
+      "image": "/home/ryan/Pictures/charrette/defi-monitoring/presentation/img/rock-demo/act3-mint.png",
+      "placement": {
+        "x_cm": 4.5,
+        "y_cm": 3.4,
+        "width_cm": 19.0,
+        "height_cm": 7.29
+      },
+      "bullets": [
+        "The bridge pool creates 15M PST, +7 % of the supply",
+        "Nothing backs these new coins",
+        "The oracle reads a rate, not the supply: it still says 1.138",
+        "riskdep flags the mint itself, in the same block"
+      ],
+      "bullets_placement": {
+        "x_cm": 1.6,
+        "y_cm": 10.99,
+        "width_cm": 25,
+        "height_cm": 4.41
+      },
+      "font_size": 19,
+      "notes": "alt-pst-mint.sh 15000000: supply 213.9M → 228.9M PST. Admin.Mint is critical above 5 % of the supply in one transaction (watch.mint_share_critical); 10M (4.7 %) would stay silent."
+    },
+    {
+      "layout": "bullets",
+      "title": "Reading a Telegram alert",
+      "bullets": [
+        "Red (critical) rings the phone; orange (warn) arrives silently",
+        "First line: the level and the vault",
+        "Then what happened, the amounts, the block and a runbook link",
+        "Alerts of one block can arrive as one short summary",
+        "On the fork, the Etherscan link finds nothing: the transaction is local"
+      ],
+      "notes": "riskdep notify: only alerts at warn and above, no heartbeat; standing findings once per 1800 blocks; criticals with sound."
+    },
+    {
+      "layout": "bullets",
+      "title": "What to remember",
+      "bullets": [
+        "A position depends on people and code you never see",
+        "riskdep names them, watches them and prices the damage",
+        "Each alert says what happened, what it costs and what to do",
+        "It cannot tell a hack from an upgrade: it flags both",
+        "Limits: a simulated crisis, prices read block by block"
+      ],
+      "notes": "Run it: scripts/demo-rock/demo-rock.sh --manual (or PAUSE=10 for a slower pace; --no-telegram to rehearse)."
+    }
+  ]
+}

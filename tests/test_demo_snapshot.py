@@ -43,3 +43,13 @@ def test_offline_miss_is_reported(tmp_path):
     f = S.Fetcher("offline", tmp_path)
     with pytest.raises(S.CacheMiss):
         discover.discover_morpho_position(f, pipeline.DEMO_MARKET, pipeline.DEMO_USER)
+
+
+def test_demo_compares_holding_to_maturity(tmp_path):
+    """D196 (K12): the demo's PT matures in 47 days, beyond the 30-day horizon: the verdict states the hold-to-maturity
+    path (the PT redeems at par) against leaving now."""
+    import json
+
+    assert cli.main(["analyze", "--demo", "--out", str(tmp_path), "--paths", "4000"]) == 0
+    reasons = json.loads((tmp_path / "report.json").read_text())["decision"]["reasons"]
+    assert any(r.startswith("Held to maturity (47 days)") and "cheaper path" in r for r in reasons)

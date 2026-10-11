@@ -56,7 +56,7 @@
 - **Alert levels** are `info` / `warn` / `critical`; the trigger tables are in `README.md`.
 - **Watch loop invariant:** discover, read state, poll, assess, alert, and save the cursor **last** (`out/watch-*.cursor`), so a restart resumes without skipping blocks. Polling runs 2 blocks behind the head every 12 s; deeper reorgs are not handled. A live batch with no event reads only what moves without one (`vault.read_light`, `borrower.read_prices`); any event, gap, undecoded log or refresh, and `watch.full_state_every_blocks`, force a full read (D61). Replays and `--blocks` runs always read in full.
 - **Cross-checks never stop a run:** block hash against a second RPC (critical on mismatch), Morpho API against chain state (warn, 0.5 % tolerance); a check that cannot run prints "not checked". On a local fork (`RISKDEP_FORK=1`, which requires `RISKDEP_RPC_URL`) both read "not checked": the fork's blocks exist nowhere else (D180); a recording made there replays as one.
-- **Free-RPC limits:** state is servable only ~64–90 blocks back (state-based rules on older ranges start at the oldest servable block); at most 9 addresses per `eth_getLogs` filter (the poller splits longer lists); recent ranges are intermittently refused as "archive" (the poller retries). Admin-surface filters are optional: a refusal is a warning, not a gap. Under a burst publicnode answers HTTP 429, and a local eRPC answers 200, both with a rate-limit error per batch item: `sources.Fetcher` waits and resends either (`_throttled`, up to 6 times) and never caches it. For long live runs, the optional local eRPC proxy (`erpc.yaml`, `docs/erpc.md`) spreads the calls over six free endpoints; it must never list dRPC, the cross-check's independent node.
+- **Free-RPC limits:** state is servable only ~64–90 blocks back (state-based rules on older ranges start at the oldest servable block); at most 9 addresses per `eth_getLogs` filter (the poller splits longer lists); recent ranges are intermittently refused as "archive" (the poller retries). Admin-surface filters are optional: a refusal is a warning, not a gap. Under a burst publicnode answers HTTP 429, and a local eRPC answers 200, both with a rate-limit error per batch item: `sources.Fetcher` waits and resends either (`_throttled`, up to 6 times) and never caches it. For long live runs, the optional local eRPC proxy (`erpc.yaml`, `docs/setup/erpc.md`) spreads the calls over six free endpoints; it must never list dRPC, the cross-check's independent node.
 
 ## File tree
 
@@ -105,6 +105,7 @@ riskdep/
   feeds.py            feed quality: each feed's freshness against its own update rhythm (pure)
   tvl.py              TVL concentration of the graph's protocols, from DefiLlama (pure)
   backtest.py         a past incident replayed: the prediction against the Liquidate events (backtest subcommand)
+  detect.py           detection → impact for a vault: an oracle fall's loss and verdict in the watches (pure)
   zama.py             Zama confidential vaults: the cShare pool, the batchers, a confidential depositor's two exits
   conditional.py      the conditional Monte Carlo of vault and book incidents: the loss of staying given the incident (pure)
   # shock
@@ -119,7 +120,7 @@ riskdep/
   report.py           HTML + JSON report
 tests/                pytest, all offline (snapshot + recorded replays)
   test_watch_rules.py, test_watch_replay.py, test_borrower.py, test_watch_user_replay.py,
-  test_graph.py, test_siblings.py, test_oracle_class.py, test_engine.py, test_market_risk.py, test_exit_queue.py, test_drain.py, test_scenario.py, test_vault_incident.py, test_vault_book.py, test_pharos.py, test_breakeven.py, test_feeds.py, test_backtest.py, test_conditional.py, test_zama.py, test_admin.py, test_decide.py, test_propagate.py, test_demo_snapshot.py, test_fixes.py, test_light_reads.py, test_api.py, test_dashboard.py, test_fork_replay.py, test_notify.py
+  test_graph.py, test_siblings.py, test_oracle_class.py, test_engine.py, test_market_risk.py, test_exit_queue.py, test_drain.py, test_scenario.py, test_vault_incident.py, test_vault_book.py, test_pharos.py, test_breakeven.py, test_feeds.py, test_backtest.py, test_conditional.py, test_zama.py, test_detect.py, test_readme.py, test_admin.py, test_decide.py, test_propagate.py, test_demo_snapshot.py, test_fixes.py, test_light_reads.py, test_api.py, test_dashboard.py, test_fork_replay.py, test_notify.py
 scripts/fork/          the crisis demo on a local mainnet fork (anvil): demo.sh (all in one), start-fork.sh, crisis-belem.sh, alt-*.sh, lib.sh,
                       addresses.env, src/ (two demo contracts, not protocol code), tapes/ (vhs); see its README.md
 pyproject.toml        project metadata, dependencies, ruff and pytest configuration
@@ -136,11 +137,17 @@ pyproject.toml        project metadata, dependencies, ruff and pytest configurat
 - `docs/risk-assessment/outside-providers.md` — the outside risk providers and how each is used: Pharos and Nexus Mutual (both in use, keyless); the rules any outside provider follows. `docs/analysis/EXTERNAL_SOURCE.md` is the survey that chose them.
 - `docs/analysis/PROVIDERS.md` — every external provider (RPC, APIs, CDNs): endpoints, queries, limits, trust model. Keep it current.
 - `keys.example.ini` — template of the API keys and secrets (no values); the real `keys.ini` is git-ignored. `[alchemy]` (or `[rpc] url`) is an archive RPC, used only as a route by `backtest --record`: its URL embeds the key, so it is never cached, logged or printed.
-- `erpc.yaml` — configuration of the optional local eRPC proxy (eRPC 0.3.0, six free upstreams, no key); `docs/erpc.md` is the setup guide. Its upstream list is mirrored in `docs/analysis/PROVIDERS.md`.
+- `erpc.yaml` — configuration of the optional local eRPC proxy (eRPC 0.3.0, six free upstreams, no key); `docs/setup/erpc.md` is the setup guide. Its upstream list is mirrored in `docs/analysis/PROVIDERS.md`.
 - `docs/analysis/ANALYSIS_MONITORING.md` — design note: dependency graph, impact, monitoring, execution, and gaps of the current implementation (done / partial / missing).
-- `plan/` — the twenty-eight plans (`defi-risk-dependency`, `morpho-vault-v2-watcher`, `morpho-user-watcher`, `lenders-and-timelocks`, `market-borrowers`, `admin-surface`, `exit-queue`, `drain-threshold`, `sibling-markets`, `incident-mode`, `propagation-engine`, `vault-incident`, `vault-book`, `wrapped-collateral`, `borrower-concentration`, `pharos`, `one-number`, `breakeven`, `incident-api`, `judge-path`, `fork-demo`, `feed-quality`, `backtest`, `conditional`, `pt-channels`, `zama`, `mixed-book`, and `web-graph-react-flow` for the SPA's graph).
+- `plan/` — the thirty plans (`defi-risk-dependency`, `morpho-vault-v2-watcher`, `morpho-user-watcher`, `lenders-and-timelocks`, `market-borrowers`, `admin-surface`, `exit-queue`, `drain-threshold`, `sibling-markets`, `incident-mode`, `propagation-engine`, `vault-incident`, `vault-book`, `wrapped-collateral`, `borrower-concentration`, `pharos`, `one-number`, `breakeven`, `incident-api`, `judge-path`, `fork-demo`, `feed-quality`, `backtest`, `conditional`, `pt-channels`, `zama`, `mixed-book`, `detect`, `alerts-and-verdict`, and `web-graph-react-flow` for the SPA's graph).
 - `examples/` — `rockawayx-ethereum.json`, the demo book of vaults and the template for any other (`analyze --book`); `brief-ten-pockets.json`, the brief's own book of ten 1M pockets (`pocket` weighting, with `--exit-cost 0.11`); `brief-mixed-book.json`, the same with the brief's PT loop as a borrow pocket (`kind: borrow`).
-- `docs/` — `alert-runbook.md` (what each alert means and what to do), `glossary.md`, `registry-reference.md` (every `registry.json` key), `how-risk-is-computed.md`, `monte-carlo.md` (how `analyze`'s simulation works; its mindmap in `docs/img/`), `scenarios-and-breakeven.md`, `vault-depositor-scenarios.md`, `graph-propagation.md`, `how-a-block-is-analysed.md`, `websocket-vs-polling.md`, `user-watcher-options.md`, `exit-queue.md`, `erpc.md` (the optional local RPC proxy), `shock-engine.md` (the shock engine and its rules), `shock-trace.md` (the propagation trace for a front end, example in `shock-trace-example.json`), `drain-threshold.md`, `vault-incident.md` (incident mode end to end: `analyze --vault` / `--book`, `POST /api/incident`), `graph-example.html/.json`.
+- `docs/` — the documentation, grouped; `docs/README.md` is the index:
+  - `docs/model/` — how risk and impact are computed: `how-risk-is-computed.md`, `how-probabilities-are-computed.md` (where every probability comes from: hack base rates, oracle and market-event priors, the breakeven p\*, outside views), `monte-carlo.md` (how `analyze`'s simulation works), `scenarios-and-breakeven.md`, `vault-incident.md` (incident mode end to end: `analyze --vault` / `--book`, `POST /api/incident`), `vault-depositor-scenarios.md`, `shock-engine.md` (the shock engine and its rules), `shock-trace.md` (the propagation trace for a front end, example in `shock-trace-example.json`), `graph-propagation.md`.
+  - `docs/watch/` — detection and monitoring: `how-a-block-is-analysed.md`, `how-an-incident-is-detected.md` (each kind of incident: its signal, detector, threshold, timing and alert; OracleImpact; the early warnings; what is not detected), `drain-threshold.md`, `exit-queue.md`, `user-watcher-options.md`, `websocket-vs-polling.md`.
+  - `docs/reference/` — look-up material: `alert-runbook.md` (what each alert means and what to do), `registry-reference.md` (every `registry.json` key), `glossary.md`.
+  - `docs/setup/` — running it: `erpc.md` (the optional local RPC proxy), `telegram-botfather-commands.md`.
+  - `docs/examples/` — `graph-example.html/.json`.
+  - `docs/img/` — the mindmaps and diagrams, each `.png` next to its `.puml`.
 - `docs/external/` — third-party references, read-only; check behaviour against them before changing a rule:
   - `morpho/docs.morpho.org-developers-docs/` — Morpho developer docs (contracts, Bundles, addresses, Midnight, Vault V2 exit routes); `tests/test_watch_replay.py` checks the event selectors in `abi.py` against its `contracts/` pages, and skips that check when the folder is absent. **Git-ignored**: it exists only in the local checkout, so read it there; a fresh clone does not have it.
   - `morpho/lib/morpho-blue` (`8e26ca6a`) and `morpho/lib/vault-v2` (`d992cb84`) — Morpho Blue and Vault V2 sources: events, liquidation and shares maths, authorisation, adapters, timelocks, gates.
@@ -191,7 +198,7 @@ web/src/
   lib/utils.ts        re-exports `cn` from the `cn` package, where `components.json` tells `shadcn add` to import it
   lib/graph.ts        kind colours, shapes and icons, node amounts, dagre layout, flow reach, edge width, report-graph normalisation
   routes/             VaultPage (follows the top-bar selector) · MarketPage · GraphPage · ImpactPage (a shock trace, one view per tab) · WatchPage
-  mocks/              report.json, graph.json, vaults.json, markets.json, shock-trace.json (a copy of docs/shock-trace-example.json), alerts.ts
+  mocks/              report.json, graph.json, vaults.json, markets.json, shock-trace.json (a copy of docs/model/shock-trace-example.json), alerts.ts
 ```
 
 **Invariants.**
@@ -202,9 +209,9 @@ web/src/
 - **The node colours are duplicated from `riskdep/graph.py` into `lib/graph.ts`** (with the edge width curve), so the SPA and the CLI's standalone HTML read alike. A colour change touches both files. The shapes are not shared: the SPA draws by role (`nodeRole`: circle asset; near-square vault or pool, rounded for an address; hexagon for what holds no assets, smaller for a price feed than for its oracle — D64), the CLI keeps its Cytoscape shapes (D66). It lives in TypeScript and not in the Tailwind theme on purpose: there colour is *data*, keyed to the shape that repeats it, and not part of the interface palette.
 - **`index.css` holds the raw palette; the Tailwind theme is a naming layer over it, never a second palette.** `--bg`, `--fg`, `--muted`, `--line` and `--edge` are a contract with two consumers that cannot read Tailwind: Recharts takes `var(--line)` strings that land in SVG attributes, and the graph's nodes, edges and arrowheads use `var(--bg)`, `var(--fg)` and `var(--edge)` in inline styles. Renaming one means updating `GraphElements` and `GraphCanvas` in the same commit. shadcn's own token names (`--color-background`, `--color-border`, `--color-card`…) are aliased onto the same values, so a vendored component that still says `bg-card` paints the one ground instead of introducing a surface.
 - **The vendored shadcn components are stock** (`pnpm dlx shadcn add --overwrite` is safe), with two local edits: `TableRow` draws its hairline at `border-border/50`, and Prettier reformats them. The sidebar's colours are mapped onto the palette in `@theme` (`--color-sidebar*`), not the hsl values the CLI writes; the CLI's `tw-animate-css` import and `.dark` class variant are dropped (dark mode follows the system and the `data-theme` attribute), so `animate-*` classes are inert; `eslint.config.js` turns `react-hooks/purity` off for `components/ui/**` because the stock `SidebarMenuSkeleton` calls `Math.random` in a `useMemo`. The theme gives every control a light radius (`--radius: 0.5rem`, shadcn's scale), and the quiet surfaces (`muted`, `accent`, `secondary`) are the ground with 5–6 % ink. Colour is reserved for severity — `info` / `warn` / `critical` / `ok`, plus the graph's data palette — and is carried by a **word**, never by a number: no figure is ever coloured. Prose, labels **and numbers** use the system UI stack, numbers with `tabular-nums`; the `mono` utility is for identifiers only (addresses, hashes, market ids, event names).
-- **Impact has no trace endpoint yet:** `api.shockTrace()` returns the committed example trace in both modes (`POST /api/incident` serves the vault and book incident, losses and verdict, but not the engine's trace, and no page uses it yet); refresh `mocks/shock-trace.json` by copying `docs/shock-trace-example.json` whenever the test that keeps that file current regenerates it.
+- **Impact has no trace endpoint yet:** `api.shockTrace()` returns the committed example trace in both modes (`POST /api/incident` serves the vault and book incident, losses and verdict, but not the engine's trace, and no page uses it yet); refresh `mocks/shock-trace.json` by copying `docs/model/shock-trace-example.json` whenever the test that keeps that file current regenerates it.
 - **Mocks are the default, including with no `.env`:** `USE_MOCKS` is `import.meta.env.VITE_USE_MOCKS !== 'false'`. Every endpoint added to `api/client.ts` needs its fixture branch in the same commit, or mock mode breaks on that page.
-- **Two fixture alerts are invented.** The `critical` entries in `mocks/alerts.ts` are modelled on `docs/alert-runbook.md` because no recorded run has one; the header of that file says so. Never cite their `data` keys as the real event payload.
+- **Two fixture alerts are invented.** The `critical` entries in `mocks/alerts.ts` are modelled on `docs/reference/alert-runbook.md` because no recorded run has one; the header of that file says so. Never cite their `data` keys as the real event payload.
 - **SSE, not WebSocket:** named events `alert` and `tick`, one JSON object each. `min_level` is a server-side filter, so `WatchPage` restarts the stream by remounting on `key={minLevel}` rather than resetting state in an effect. The browser reconnects on its own; `onStatus` only reports the gap.
 - **Routes are lazy because Recharts and React Flow are heavy; only Impact needs both.** A new heavy dependency belongs behind `lazyRouteComponent`, not in the shell.
 - **`GraphCanvas` lays out once per mount.** dagre runs in the initial state, and the page remounts the canvas with `key` to re-lay out (on new data or Re-layout), which also drops the user's drags. Focus, kind filter and search are derived from props, never stored. Names and edge labels counter-scale with the zoom (`clamp(1/zoom, 1, 2.5)`, D65); the amount inside a node scales with it. React Flow's `base.css` only is imported, and its `<Controls>` are not used: zoom and fit are shadcn `Button`s over `useReactFlow()` in a `<Panel>`.
@@ -219,7 +226,7 @@ Python ≥ 3.10; CI runs the suite on 3.10, the floor `requires-python` in `pypr
 
 ```bash
 uv sync
-uv run pytest -q tests                                 # 311 tests, offline
+uv run pytest -q tests                                 # 319 tests, offline
 uv run python -m riskdep analyze --demo                # cached snapshot, no network → out/report.html/.json
 uv run python -m riskdep watch --replay                # re-run the recorded vault range offline
 uv run python -m riskdep watch --blocks 1000 --record  # live range, saved for --replay
@@ -228,7 +235,7 @@ uv run python -m riskdep graph --example               # out/graph.html + out/gr
 uv run python -m riskdep graph --vault 0xE0181090c22579B6A217f1522cbf8c9f1F0C1965 --replay  # recorded RockawayX graph, siblings and oracle classes, offline
 uv run python -m riskdep shock --vault 0xE0181090c22579B6A217f1522cbf8c9f1F0C1965 --replay --shock "Ojo PT:reads-low:10%"  # a failure propagated, offline
 uv run ruff format . && uv run ruff check .            # format and lint, 120 columns
-~/.local/bin/erpc erpc.yaml                            # optional local RPC proxy (docs/erpc.md), in its own terminal
+~/.local/bin/erpc erpc.yaml                            # optional local RPC proxy (docs/setup/erpc.md), in its own terminal
 export RISKDEP_RPC_URL=http://127.0.0.1:4000/main/evm/1  # route live runs through it; unset to go direct
 uv run uvicorn riskdep.api:app --reload                # the HTTP API for web/, docs at /docs
 uv run python -m riskdep notify                        # post watch alerts to Telegram (keys.ini [alerts]), next to watch
@@ -248,8 +255,8 @@ pnpm lint && pnpm build                                # eslint + prettier, then
 ## Conventions
 
 - Tests must stay offline: a new network call needs a cached snapshot or a recorded replay behind it.
-- New thresholds or assumptions go in `registry.json` with their basis, not as literals in code, and in `docs/registry-reference.md`.
-- A new or changed alert gets its row in `docs/alert-runbook.md`.
+- New thresholds or assumptions go in `registry.json` with their basis, not as literals in code, and in `docs/reference/registry-reference.md`.
+- A new or changed alert gets its row in `docs/reference/alert-runbook.md`.
 - Any change that adds, removes or replaces a data provider, endpoint, query or browser script (RPC, API, CDN) updates `docs/analysis/PROVIDERS.md` in the same commit.
 - Keys and secrets go only in `keys.ini` (git-ignored, `chmod 600`), never in code, docs or committed files; a new key gets its name, with no value, in `keys.example.ini`. Do not use `.env` files for this project.
 - Rule modules stay pure (no I/O); put fetching in the source/state modules.
