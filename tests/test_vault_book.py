@@ -50,6 +50,7 @@ def _inc(vault, total, loss, dep, stay, exposure, verdict="STAY", usd=1.0, hit=T
 
 def test_aggregate_in_both_weightings():
     incs = [_inc(A, 100, 10, 50, 5, 40, "EXIT"), _inc(B, 200, 0, 20, 0, 0, hit=False)]
+    incs[0].p_star, incs[0].p_star_year = 0.05, 0.46  # leaving A pays from a 5 % chance over the horizon
     v = VB.aggregate(VB.parse({"vaults": [A, B]}), [("x", 0.3)], incs)
     assert (v.value_usd, v.loss_usd, v.exposure_usd) == (300, 10, 40)
     assert v.headline.startswith("X −30%") and "Act first on" in v.headline

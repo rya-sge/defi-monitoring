@@ -24,6 +24,7 @@ from pathlib import Path
 from . import engine as EN
 from . import exit_queue as EQ
 from . import market_risk as MR
+from . import nexus as NX
 from . import oracle_class as OC
 from . import pharos as PH
 from . import scenario
@@ -90,6 +91,12 @@ class VaultIncident:
     common_mode: list[str] = field(default_factory=list)  # D137: collateral failing with the shocked token (Pharos)
     engine_block: int | None = None  # D139: the block of the graph the shock engine ran on; None when it did not run
     sibling_losses: list[tuple[str, str, float, str]] = field(default_factory=list)  # D141: (id, market, loss, unit)
+    apy: float | None = None  # D142: the vault's net yield (Morpho API), what a depositor gives up by leaving
+    horizon_days: float = 30.0
+    exit_cost: float = 0.0  # D142: the yield forgone over the horizon on what can leave now
+    p_star: float | None = None  # D143: the incident probability over the horizon above which leaving now pays
+    p_star_year: float | None = None
+    outside: list[str] = field(default_factory=list)  # D145: Nexus cover prices on the hit collateral's protocols
 
     def lines(self) -> list[str]:
         s = self.symbol
@@ -143,14 +150,47 @@ class VaultIncident:
                 f"leaving first recovers {self.can_leave_now:,.0f} at par, {self.stuck:,.0f} stays, loss {self.loss_if_exit_first:,.0f}"
             )
         out.append(f"  verdict given the incident: {self.verdict}: {self.reason}")
+        if self.hits and self.depositor:
+            out.append(f"  if the incident is not certain: {self.breakeven_text()}")
+        out += [f"  outside view: {o}" for o in self.outside]
         out += [f"  note: {n}" for n in self.notes]
         return out
+
+    def breakeven_text(self) -> str:
+        h = f"{self.horizon_days:g} days"
+        if self.apy is None:
+            return "the vault's yield could not be read: the breakeven probability is not computed"
+        if self.p_star is None:
+            return (
+                "leaving first does not lower the loss: exiting does not pay against this incident, whatever its odds"
+            )
+        cost = f"leaving now forgoes {self.exit_cost:,.0f} {self.symbol} of yield over {h} ({self.apy:.2%}/yr)"
+        if self.p_star >= 1:
+            return f"{cost}, more than leaving first saves: stay even if the incident is certain"
+        return (
+            f"{cost}; it pays if the incident's probability over {h} is above {self.p_star:.2%} "
+            f"({self.p_star_year:.1%}/yr)"
+        )
 
     def to_json(self) -> dict:
         return asdict(self)
 
 
 # --- pure
+
+
+def breakeven(stay: float, leave: float, par: float, apy: float | None, days: float):
+    """D142–D143, pure: (yield forgone by leaving now, p* over the horizon, p* per year). Leaving now costs the vault's
+    net yield on what can leave; it saves stay − leave if the incident comes. p* = cost / saving; None when leaving
+    saves nothing; ≥ 1 when the cost exceeds the saving even for a certain incident."""
+    if apy is None:
+        return 0.0, None, None
+    cost = par * apy * days / 365
+    saved = stay - leave
+    if saved <= 0:
+        return cost, None, None
+    p = cost / saved
+    return cost, p, (1 - (1 - p) ** (365 / days) if p < 1 else 1.0)
 
 
 def parse_token_shocks(items: list[str] | None) -> list[tuple[str, float]]:
@@ -476,13 +516,16 @@ def run(
     profile_all: bool = False,
     pharos: PH.Snapshot | None = None,
     graph: dict | None = None,
+    horizon_days: float = 30.0,
+    nexus: tuple[list[dict], list[dict]] | None = None,
 ) -> VaultIncident:
     """Read the vault and every borrower of its markets at `block`, then apply the incident (D98). `token_shocks` is
     `parse_shocks`' list (token markdowns and borrower defaults, D130) or `parse_token_shocks`' pairs. `profile_all`
     reads every market's oracle, not only the hit ones, so a recording serves any later shock (D121). `pharos`, when
     given, adds grades, the off-chain backing a token shock also reaches, and common-mode groups (D133–D138). `graph`,
     the vault's dependency graph (graph.py's nodes and edges, with its `block`), runs the shock engine on the markdowns:
-    its figures replace this module's on the markets it reaches, and it adds the sibling markets (D139–D141)."""
+    its figures replace this module's on the markets it reaches, and it adds the sibling markets (D139–D141).
+    `horizon_days` and the vault's yield give the breakeven probability; `nexus` adds cover prices (D142–D146)."""
     shocks = normalise(token_shocks)
     view = discover_vault(f, vault, block)
     dep = depositor.lower() if depositor else largest_depositor(f, vault)
@@ -595,6 +638,17 @@ def run(
 
     liq = EQ.liquidity(st)
     stay, par, stuck, leave, verdict, reason = decide(liq, loss_raw, exposure_raw, unit)
+    apy = vault_apy(f, view.address)
+    exit_cost, p_star, p_year = breakeven(stay, leave, par, apy, horizon_days)
+    outside = []
+    if nexus is not None and hits:
+        tokens = [
+            x
+            for h in hits
+            for x in [params[h.market_id].collateral_token] + chains.get(params[h.market_id].collateral_token, [])
+        ]
+        severity = max((v if k == "token" else 1 - v) for k, _, v, _ in shocks)
+        outside = [NX.outside_line(c, severity) for c in NX.covers(*nexus, tokens)]
     notes = [
         "bad debt is written off only when the positions are liquidated; until then the share price stays at par, "
         "and those who leave first leave the loss to those who stay"
@@ -690,6 +744,12 @@ def run(
         mates,
         engine_block,
         siblings,
+        apy,
+        horizon_days,
+        exit_cost,
+        p_star,
+        p_year,
+        outside,
     )
 
 
@@ -727,6 +787,15 @@ def collateral_chains(
         except (S.SourceError, S.CacheMiss):
             symbols[t] = t[:10]
     return chains, symbols
+
+
+def vault_apy(f: S.Fetcher, vault: str) -> float | None:
+    """D142: the vault's average net APY, rewards included (Morpho API); None when it cannot be read."""
+    try:
+        d = S.morpho(f, "query($a:String!){ vaultV2ByAddress(address:$a, chainId:1){ avgNetApy } }", {"a": vault})
+        return float(d["vaultV2ByAddress"]["avgNetApy"])
+    except (S.SourceError, S.CacheMiss, KeyError, TypeError):
+        return None
 
 
 def asset_usd(f: S.Fetcher, asset: str) -> float | None:

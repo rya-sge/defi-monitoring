@@ -385,6 +385,15 @@ def _pharos(args):
     return pharos.load(S.Fetcher(mode, REPLAY_DIR / "pharos") if mode != "direct" else S.Fetcher("direct"))
 
 
+def _nexus(args):
+    """D145: Nexus Mutual's products and cover prices, keyless and optional, recorded under fixtures/replay/nexus/
+    like Pharos (offline by default; --record and --refresh re-read; --live reads without saving)."""
+    from . import nexus
+
+    mode = "refresh" if args.record or args.refresh else "direct" if args.live else "offline"
+    return nexus.load(S.Fetcher(mode, REPLAY_DIR / "nexus") if mode != "direct" else S.Fetcher("direct"))
+
+
 def _vault_graph(vault: str) -> dict | None:
     """D139: the vault's recorded dependency graph (graph --vault … --record), for the shock engine; None without one.
     Loading a replay moves the clock to the recording's date, so the clock is put back."""
@@ -417,7 +426,7 @@ def _vault_incident(ap, args) -> int:
             "or --shock borrower=<collateral, market id or all>:<recovery>[:<n>], e.g. borrower=mGLOeuro:0.5"
         )
     incidents = []
-    ph = _pharos(args)
+    ph, nx = _pharos(args), _nexus(args)
     try:
         for v in book.vaults:
             f, block, all_oracles = _vault_source(v.address, args)
@@ -431,6 +440,8 @@ def _vault_incident(ap, args) -> int:
                     profile_all=all_oracles,
                     pharos=ph,
                     graph=_vault_graph(v.address),
+                    horizon_days=args.horizon,
+                    nexus=nx,
                 )
             )
     except FileNotFoundError as e:

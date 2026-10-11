@@ -53,6 +53,10 @@ class VaultLine:
     verdict: str
     hit_markets: list[str]
     priced: bool  # False: the asset's USD price was not available, 1 was assumed
+    p_star: float | None = None  # D144: the depositor's breakeven probability over the horizon (vault_incident D143)
+    p_star_year: float | None = None
+    exit_cost_usd: float = 0.0  # the yield forgone by leaving now
+    saved_usd: float = 0.0  # what leaving first saves if the incident comes
 
 
 @dataclass
@@ -66,16 +70,22 @@ class BookIncident:
     exposure_usd: float
     headline: str
     notes: list[str] = field(default_factory=list)
+    p_star: float | None = None  # D144: the book's breakeven: Σ yield forgone ÷ Σ loss saved, over the horizon
+    p_star_year: float | None = None
+    horizon_days: float = 30.0
 
     def text(self) -> list[str]:
         shock = "; ".join(self.shocks)
         out = [f"BOOK  {self.name}  ·  incident: {shock}  ·  weighting: {self.weighting}", f"  {self.headline}"]
-        out.append(f"    {'vault':<44} {'in the book':>14} {'in hit mkts':>14} {'loss':>12} {'loss %':>7}  verdict")
+        out.append(
+            f"    {'vault':<44} {'in the book':>14} {'in hit mkts':>14} {'loss':>12} {'loss %':>7} {'p*/yr':>7}  verdict"
+        )
         for ln in sorted(self.lines, key=lambda x: (-x.loss_usd, -x.exposure_usd)):
             pct = ln.loss_usd / ln.value_usd if ln.value_usd else 0.0
             out.append(
                 f"    {ln.name[:44]:<44} {ln.value_usd:>14,.0f} {ln.exposure_usd:>14,.0f} {ln.loss_usd:>12,.0f} "
-                f"{pct:>7.2%}  {ln.verdict if ln.hit_markets else '—'}"
+                f"{pct:>7.2%} {(f'{ln.p_star_year:.1%}' if ln.p_star_year is not None else '—'):>7}  "
+                f"{ln.verdict if ln.hit_markets else '—'}"
             )
         out.append(
             f"    {'book (USD)':<44} {self.value_usd:>14,.0f} {self.exposure_usd:>14,.0f} {self.loss_usd:>12,.0f} "
@@ -135,6 +145,7 @@ def from_addresses(addresses: list[str], depositor: str | None = None) -> Book:
 def line(inc: VaultIncident, label: str | None, weighting: str) -> VaultLine:
     """D122, pure: one vault's line in USD, in the book's weighting."""
     usd = inc.asset_usd if inc.asset_usd else 1.0
+    p_ok = inc.p_star is not None and inc.p_star < 1
     exposure = sum(h.vault_exposure for h in inc.hits)
     if weighting == "depositor":
         frac = inc.depositor_assets / inc.vault_total if inc.vault_total else 0.0
@@ -150,6 +161,10 @@ def line(inc: VaultIncident, label: str | None, weighting: str) -> VaultLine:
         inc.verdict,
         [h.label for h in inc.hits],
         inc.asset_usd is not None,
+        inc.p_star if p_ok else None,
+        inc.p_star_year if p_ok else None,
+        inc.exit_cost * usd,
+        max(0.0, inc.loss_if_stay - inc.loss_if_exit_first) * usd,
     )
 
 
@@ -161,6 +176,7 @@ def aggregate(book: Book, shocks: list[tuple], incidents: list[VaultIncident]) -
         names.update(i.labels)
     shocks = [describe(s, names) for s in shocks]
     lines = [line(i, labels.get(i.vault), book.weighting) for i in incidents]
+    days = incidents[0].horizon_days if incidents else 30.0
     value = sum(ln.value_usd for ln in lines)
     loss = sum(ln.loss_usd for ln in lines)
     exposure = sum(ln.exposure_usd for ln in lines)
@@ -175,14 +191,16 @@ def aggregate(book: Book, shocks: list[tuple], incidents: list[VaultIncident]) -
         )
     else:
         worst = max(hit, key=lambda x: x.loss_usd)
-        act = [ln for ln in hit if ln.verdict == "EXIT"]
+        act = [ln for ln in hit if ln.p_star is not None]
+        first = min(act, key=lambda x: x.p_star) if act else None
         headline = (
             f"{shock}: the book loses {loss:,.0f} USD ({loss / value:.2%} of {value:,.0f}) in {len(hit)} vault(s); "
             f"largest in {worst.name} ({worst.loss_usd:,.0f}). "
             + (
-                f"Act first on {max(act, key=lambda x: x.loss_usd).name}: leaving first lowers its loss."
-                if act
-                else "No vault's loss falls by leaving first: the depositors carry it either way."
+                f"Act first on {first.name}: leaving it now pays if the incident's probability over {days:g} days "
+                f"is above {first.p_star:.2%} ({first.p_star_year:.1%}/yr)."
+                if first
+                else "No vault's loss falls enough by leaving first to pay for the yield given up: stay."
             )
         )
     notes = []
@@ -209,7 +227,24 @@ def aggregate(book: Book, shocks: list[tuple], incidents: list[VaultIncident]) -
     if incidents and all(i.pharos is None for i in incidents):
         notes.append("Pharos: not checked")
     notes.append("each vault is read at its own recorded or live block; the vaults' blocks can differ by minutes")
-    return BookIncident(book.name, book.weighting, shocks, lines, value, loss, exposure, headline, notes)
+    cost, saved = sum(ln.exit_cost_usd for ln in hit), sum(ln.saved_usd for ln in hit)
+    bp = cost / saved if saved > 0 and cost < saved else None
+    if bp is not None:
+        notes.insert(0, f"the book's breakeven, leaving every vault reached: {bp:.2%} over {days:g} days")
+    return BookIncident(
+        book.name,
+        book.weighting,
+        shocks,
+        lines,
+        value,
+        loss,
+        exposure,
+        headline,
+        notes,
+        bp,
+        (1 - (1 - bp) ** (365 / days)) if bp is not None else None,
+        days,
+    )
 
 
 def write(b: BookIncident, out_dir: Path) -> Path:
