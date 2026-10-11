@@ -101,7 +101,7 @@ flowchart TB
 |---|---|
 | `cli` | `clock`, `crosscheck`, `decide`, `discover`, `engine`, `graph`, `pharos`, `priors`, `report`, `scenario`, `shock`, `simulate`, `sources`, `vault_book`, `vault_incident`, `watch`, `watch_user` |
 | `scenario` | `decide`, `discover`, `oracle_class`, `propagate`, `sources`, `vault` |
-| `vault_incident` | `discover`, `exit_queue`, `market_risk`, `oracle_class`, `scenario`, `sources`, `vault` |
+| `vault_incident` | `discover`, `engine`, `exit_queue`, `market_risk`, `oracle_class`, `pharos`, `scenario`, `sources`, `vault` |
 | `vault_book` | `vault_incident` |
 | `watch` | `admin`, `crosscheck`, `discover`, `drain`, `exit_queue`, `market_risk`, `poller`, `rules`, `sources`, `vault` |
 | `watch_user` | `abi`, `admin`, `borrower`, `borrower_rules`, `crosscheck`, `discover`, `drain`, `exit_queue`, `market_risk`, `poller`, `positions`, `rules`, `scenario`, `sources`, `vault`, `watch` |
@@ -310,6 +310,7 @@ The design decisions are numbered across twelve plans, in the order the incremen
 | `plan/2026-10-11-wrapped-collateral.plan.md` | a token shock reaches the markets whose collateral wraps it | D126–D127 |
 | `plan/2026-10-11-borrower-concentration.plan.md` | borrower concentration and default; exit liquidity; the no-liquidator branch | D128–D132 |
 | `plan/2026-10-11-pharos.plan.md` | Pharos, keyless: grades, off-chain backing, common-mode groups | D133–D138 |
+| `plan/2026-10-11-one-number.plan.md` | the shock engine as the impact core of vault and book incidents | D139–D141 |
 
 A change that departs from a decision is recorded in that plan's table.
 

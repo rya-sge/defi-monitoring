@@ -87,3 +87,10 @@ def test_book_borrower_default_reaches_every_vault(tmp_path, capsys):
     r = json.loads((tmp_path / "book-incident.json").read_text())
     assert all(ln["hit_markets"] for ln in r["lines"]) and r["loss_usd"] > 10e6
     assert r["shocks"] == ["the largest borrower of every market defaults, collateral recovered at 50%"]
+
+
+def test_book_contagion_skips_markets_the_book_holds(tmp_path):
+    """PRIME/USDC is a sibling in the NUVA vault's graph, but RockawayX USDC Yield holds it: not contagion."""
+    assert cli.main(["analyze", "--book", str(BOOK), "--shock", "token=PRIME:0.30", "--out", str(tmp_path)]) == 0
+    note = next(n for n in json.loads((tmp_path / "book-incident.json").read_text())["notes"] if "contagion" in n)
+    assert "PRIME/PYUSD" in note and "PRIME/USDC" not in note

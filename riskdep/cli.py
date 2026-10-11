@@ -385,6 +385,24 @@ def _pharos(args):
     return pharos.load(S.Fetcher(mode, REPLAY_DIR / "pharos") if mode != "direct" else S.Fetcher("direct"))
 
 
+def _vault_graph(vault: str) -> dict | None:
+    """D139: the vault's recorded dependency graph (graph --vault … --record), for the shock engine; None without one.
+    Loading a replay moves the clock to the recording's date, so the clock is put back."""
+    from . import graph as GR
+
+    rdir = REPLAY_DIR / f"graph-{vault.lower()}"
+    if not (rdir / "meta.json").exists():
+        return None
+    as_of = clock.as_of()
+    try:
+        g, block, *_ = GR.load([], [], True, "replay", rdir)
+    except S.CacheMiss:
+        return None
+    finally:
+        clock.set_as_of(as_of)
+    return {"nodes": list(g.nodes.values()), "edges": g.edges, "block": block}
+
+
 def _vault_incident(ap, args) -> int:
     """`analyze --vault` / `--book`: a known incident on a collateral, for one vault or a book of vaults
     (plans 2026-10-11-vault-incident and 2026-10-11-vault-book)."""
@@ -405,7 +423,14 @@ def _vault_incident(ap, args) -> int:
             f, block, all_oracles = _vault_source(v.address, args)
             incidents.append(
                 vault_incident.run(
-                    f, v.address, block, v.depositor or args.user, token_shocks, profile_all=all_oracles, pharos=ph
+                    f,
+                    v.address,
+                    block,
+                    v.depositor or args.user,
+                    token_shocks,
+                    profile_all=all_oracles,
+                    pharos=ph,
+                    graph=_vault_graph(v.address),
                 )
             )
     except FileNotFoundError as e:

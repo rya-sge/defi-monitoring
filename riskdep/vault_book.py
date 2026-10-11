@@ -192,6 +192,14 @@ def aggregate(book: Book, shocks: list[tuple], incidents: list[VaultIncident]) -
         notes.append(
             f"the incident reaches {len(hit)} vaults of the book at once: their losses add up, they do not offset"
         )
+    held = {h.market_id for i in incidents for h in i.hits}  # a sibling of one vault can be held by another
+    sib = {(m, u): v for i in incidents for mid, m, v, u in i.sibling_losses if mid not in held}  # each counted once
+    if sib:
+        top = sorted(sib.items(), key=lambda kv: -kv[1])[:3]
+        notes.append(
+            f"contagion beyond the book: the lenders of {len(sib)} sibling market(s) lose "
+            + ", ".join(f"{m} {v:,.0f} {u}" for (m, u), v in top)
+        )
     mates = list(dict.fromkeys(m for i in incidents for m in i.common_mode))
     if mates:
         notes.append("Pharos common-mode groups across the book: " + "; ".join(mates))
