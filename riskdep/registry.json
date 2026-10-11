@@ -479,6 +479,15 @@
     "debt_auction_share": 0.25,
     "basis": "D223-D226: Sky's core read on-chain through its ChainLog (0xdA0A...740F): each collateral type's debt in the Vat (Art x rate), grouped by name into sources (the peg module; each allocator, ALLOCATOR-<NAME>-A; RWA vaults; staked SKY; the rest crypto vaults); the LitePSM's USDC; the Vow's surplus Vat.dai(vow) and the system's bad debt Vat.sin(vow) (developers.skyeco.com, protocol/core/vow.md). A loss is absorbed in Sky's order: the net surplus, then debt auctions minting SKY, then USDS holders. debt_auction_share: a judgement, the share of SKY's market value debt auctions could raise before SKY's price gives way (the 2020 debt auctions raised about 5M DAI against a far larger MKR market value); stated so it can be argued with."
   },
+  "infinifi": {
+    "siusd": "0xdbdc1ef57537e34680b898e1febd3d68c7389bcb",
+    "basis": "D246-D247 (GAPV2 G18): infiniFi's loss order read from YieldSharingV3._handleNegativeYield (docs/external/infini-protocol/infinifi-protocol/src/finance/YieldSharingV3.sol:343-376): the safety buffer only if it covers the whole loss, then liUSD (LockingController.totalBalance), then siUSD, then every iUSD holder through the iUSD price; unaccruedYield() < 0 is a loss pending, siUSD exits closed until booked. All read from siUSD on-chain."
+  },
+  "fx": {
+    "fxsp": "0x65c9a641afceb9c0e6034e558a319488fa0fa3be",
+    "usdc": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "basis": "D248-D249 (GAPV2 G13): fxSP's NAV per share = (fxUSD held x fxUSD's price + USDC held, idle and lent on Aave through its strategy, x USDC's price) / supply (FxUSDBasePool.nav(), docs/external/fx-protocol/fx-protocol-contracts/contracts/core/FxUSDBasePool.sol:255); fxSAVE wraps fxSP, so a component's loss marks fxSAVE down by its share of fxSP's value. Addresses: docs/external/fx-protocol/README.md (Ethereum); the strategy is read live from fxSP.allocations(USDC), the README's AaveV3StrategyUSDC being no longer in use (2026-10-11)."
+  },
   "ethena": {
     "usde": "0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
     "susde": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",

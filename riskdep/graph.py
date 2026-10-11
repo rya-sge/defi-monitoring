@@ -735,6 +735,48 @@ def annotate_shared(g: Graph) -> int:
     return shared
 
 
+def annotate_issuers(g: Graph, infinifi=None, fx=None) -> int:
+    """D246, D248: behind siUSD, infiniFi's loss order (the safety buffer, liUSD, then siUSD, then iUSD); behind fxSAVE,
+    what fxSP's NAV is made of (fxUSD, USDC idle and lent on Aave). Returns the nodes drawn."""
+    from . import infinifi as IF
+
+    drawn = 0
+    for nid, n in list(g.nodes.items()):
+        addr = n["details"].get("address") or nid
+        if infinifi and addr == IF.K["siusd"]:
+            for key, label, usd, rel in (
+                (
+                    "buffer",
+                    "infiniFi safety buffer (only if it covers the whole loss)",
+                    infinifi.buffer,
+                    "loss absorbed first by",
+                ),
+                ("liusd", "liUSD (locked iUSD, first loss after the buffer)", infinifi.locked, "loss absorbed next by"),
+            ):
+                x = g.node(
+                    f"infinifi:{key}", "External", label, usd=round(usd), source="infiniFi YieldSharingV3 (D246)"
+                )
+                g.edge(nid, x, rel, round(usd), "iUSD")
+                drawn += 1
+        if fx and n["kind"] == "Asset" and n["label"] == "fxSAVE":
+            for comp, label in (
+                ("fxusd", "fxUSD held by fxSP"),
+                ("usdc", "USDC held by fxSP"),
+                ("aave", "USDC lent on Aave by fxSP"),
+            ):
+                share = fx.share(comp)
+                x = g.node(
+                    f"fx:{comp}",
+                    "External",
+                    f"{label} ({share:.1%})",
+                    share_of_nav=round(share, 4),
+                    source="f(x) FxUSDBasePool (D248)",
+                )
+                g.edge(nid, x, "NAV made of", round(share * fx.total), "USD")
+                drawn += 1
+    return drawn
+
+
 def annotate_roles(g: Graph, f: S.Fetcher, block: int) -> int:
     """D245 (GAPV2 G2): each admin node labelled with what holds the role (one key, a Safe n/m, a timelock, a contract);
     skipped when the reads are not recorded. Returns the holders held by one key."""
@@ -742,8 +784,8 @@ def annotate_roles(g: Graph, f: S.Fetcher, block: int) -> int:
 
     admins = {
         n["details"]["address"]: n["label"].rsplit(" ", 1)[0].split(" + ")
-        for n in g.nodes.values()
-        if n["kind"] == "Admin" and n["details"].get("address")
+        for nid, n in g.nodes.items()
+        if n["kind"] == "Admin" and nid.startswith("admin:") and n["details"].get("address")  # the vault's roles
     }
     if not admins:
         return 0

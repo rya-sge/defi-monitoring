@@ -69,7 +69,9 @@ def main(argv: list[str] | None = None) -> int:
         + "; with --vault or --book: token=<collateral>:<fall> (a markdown) or "
         "borrower=<collateral, market id or all>:<recovery>[:<n>] (the n largest borrowers default); everywhere: "
         "venue=<exchange>:<loss>, a share of USDe's backing at that venue lost (Ethena, e.g. venue=Binance:0.5); "
-        "with --vault or --book: sky=<source>:<loss>, a share of a Sky source lost (e.g. sky=spark:0.2)",
+        "with --vault or --book: sky=<source>:<loss>, a share of a Sky source lost (e.g. sky=spark:0.2); "
+        "infinifi=<share>, a loss of infiniFi's backing through its waterfall (e.g. infinifi=0.3); "
+        "fx=<fxusd|usdc|aave>:<loss>, a loss on one of fxSAVE's NAV components (e.g. fx=fxusd:0.1)",
     )
     a.add_argument(
         "--since",
@@ -313,6 +315,10 @@ def main(argv: list[str] | None = None) -> int:
         )
         measured = GR.annotate_supply(g, fs, block)
         one_key = GR.annotate_roles(g, fs, block)
+        mode_i = "record" if args.record else "offline" if args.replay else "live"
+        issuers = GR.annotate_issuers(
+            g, pipeline.block_snapshot("infinifi", mode_i), pipeline.block_snapshot("fx", mode_i)
+        )
         title = "Morpho dependency graph: " + ", ".join([u[:10] + "…" for u in users] + [v[:10] + "…" for v in vaults])
         hp, jp = GR.write(g, Path(args.out), title, GR.subtitle_for(block))
         kinds = {}
@@ -333,6 +339,8 @@ def main(argv: list[str] | None = None) -> int:
         )
         if venues:
             print(f"Ethena: {venues} venue(s) holding USDe's backing drawn behind USDe")
+        if issuers:
+            print(f"issuer stacks: {issuers} node(s) behind siUSD and fxSAVE (infiniFi's loss order, fxSAVE's NAV)")
         skies = GR.annotate_sky(
             g, pipeline.sky_snapshot("record" if args.record else "offline" if args.replay else "live")
         )

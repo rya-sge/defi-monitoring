@@ -63,7 +63,7 @@ Usage of every mode is in the repository's `README.md`; how the code is built is
 |---|---|
 | `examples/` | `graph-example.html/.json`, an example output of `graph` |
 | `img/` | Mindmaps and diagrams, each `.png` next to its `.puml` |
-| `analysis/` | Assessments and project notes: `ARCHITECTURE.md`, `PROVIDERS.md`, `NEXT_STEP.md`, `ANALYSIS_MONITORING.md`, `GAP.md`, `EXTERNAL_SOURCE.md`, `ROCK-VAULT.md`, `ROCK-VAULT-DEP.md`, `ZAMA-VAULT.md`, `FORK-PRESENTATION.md`, `REPOSITORY_ADD.md`, `comparison_team.md` |
+| `analysis/` | Assessments and project notes: `ARCHITECTURE.md`, `PROVIDERS.md`, `NEXT_STEP.md`, `ANALYSIS_MONITORING.md`, `GAP.md`, `GAPV2.md`, `GAPV3.md`, `EXTERNAL_SOURCE.md`, `ROCK-VAULT.md`, `ROCK-VAULT-DEP.md`, `ZAMA-VAULT.md`, `FORK-PRESENTATION.md`, `REPOSITORY_ADD.md`, `comparison_team.md` |
 | `archive/` | Superseded documents kept for their reasoning: `ANALYSIS_CURRENT.md` (the 2026-10-10 assessment behind the known-incident answers) |
 | `risk-assessment/` | Outside risk providers in riskdep: `outside-providers.md`, `nexus.md`, `pharos.md`, and the providers' own documentation (git-ignored) |
 | `external/` | Third-party documentation and source repositories (Morpho, Pendle, Chainlink, issuers), each with its own `README.md` |

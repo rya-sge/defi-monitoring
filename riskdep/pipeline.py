@@ -386,6 +386,8 @@ def sky_snapshot(mode: str = "offline"):
 
 def incident_words(info: dict) -> str:
     """D227: a venue or Sky incident in a few words, with the markdown it becomes."""
+    if info.get("words") and not info["losses"]:
+        return info["words"]
     parts = []
     for x in info["losses"]:
         share = x["lost_usd"] / x["exposed_usd"] if x["exposed_usd"] else 0.0
@@ -397,6 +399,63 @@ def incident_words(info: dict) -> str:
     return f"{'; '.join(parts)} → {tokens} −{info['markdown']:.2%}"
 
 
+def block_snapshot(name: str, mode: str = "offline"):
+    """D246, D248: an issuer's state read on-chain at one block (`infinifi`, `fx`), recorded under fixtures/replay/<name>/
+    with its block offline; at the head, saved, in `record` and `refresh`; at the head, not saved, `live`."""
+    import importlib
+
+    mod = importlib.import_module(f"riskdep.{name}")
+    rdir = REPLAY_DIR / name
+    if mode in ("record", "refresh"):
+        block = int(S.rpc(S.Fetcher("direct"), "eth_blockNumber", []), 16) - 2
+        rdir.mkdir(parents=True, exist_ok=True)
+        (rdir / "meta.json").write_text(json.dumps({"block": block}, indent=1))
+        return mod.load(S.Fetcher("refresh", rdir), block)
+    if mode == "live":
+        f = S.Fetcher("direct")
+        return mod.load(f, int(S.rpc(f, "eth_blockNumber", []), 16) - 2)
+    if not (rdir / "meta.json").exists():
+        return None
+    return mod.load(S.Fetcher("offline", rdir), json.loads((rdir / "meta.json").read_text())["block"])
+
+
+def issuer_shocks(items: list[str] | None, mode: str, target: str) -> tuple[list[str], list[str]]:
+    """D247, D249: `infinifi=<share of its backing>` through infiniFi's loss waterfall, `fx=<fxusd|usdc|aave>:<loss>`
+    through fxSAVE's NAV components, each as the `token=` markdowns they cause, with their words."""
+    from . import fx as FX
+    from . import infinifi as IF
+
+    rest, found = FX.parse(items)
+    if not found:
+        return rest, []
+    if target == "position":
+        raise ValueError(
+            "infinifi= and fx= apply with --vault or --book: the analyze position is not on siUSD or fxSAVE"
+        )
+    words = []
+    for name, comp, v in found:
+        snap = block_snapshot(name, mode)
+        if snap is None:
+            raise ValueError(f"an {name} incident needs its state: no recording under fixtures/replay/{name}/")
+        if name == "infinifi":
+            w = IF.waterfall(snap, v * snap.backing_usd)
+            words.append(IF.describe(snap, v, w))
+            if w["siusd_markdown"] > 0:
+                rest.append(f"token=siUSD:{min(0.99, w['siusd_markdown'])}")
+            if w["iusd_markdown"] > 0:
+                rest.append(f"token=iUSD:{min(0.99, w['iusd_markdown'])}")
+        else:
+            m = FX.markdown(snap, comp, v)
+            words.append(m["text"])
+            if m["markdown"] > 0:
+                rest.append(f"token=fxSAVE:{min(0.99, m['markdown'])}")
+    if not any(x.startswith("token=") for x in rest) and not any(
+        x.split("=")[0] in ("sky", "venue", "borrower") for x in rest
+    ):
+        raise ValueError("; ".join(words) + ": nothing reaches the markets")
+    return rest, words
+
+
 def venue_shocks(items: list[str] | None, mode: str, target: str) -> tuple[list[str], dict | None]:
     """D220: `venue=<exchange>:<loss>` replaced by the USDe markdown it leaves once the reserve fund absorbed what it
     can: `issuer_depeg=<markdown>` for `analyze` (`target` "position"), `token=` markdowns of USDe and sUSDe for a
@@ -404,6 +463,7 @@ def venue_shocks(items: list[str] | None, mode: str, target: str) -> tuple[list[
     from . import ethena as ET
     from . import sky as SK
 
+    items, issuer_words = issuer_shocks(items, mode, target)
     rest, skies = SK.parse_sky(items)
     if skies:
         # D226: a loss on one of Sky's sources, after its surplus and its debt auctions, marks USDS, DAI and sUSDS down
@@ -424,6 +484,13 @@ def venue_shocks(items: list[str] | None, mode: str, target: str) -> tuple[list[
         sky_info = None
     rest, venues = ET.parse_venue(items)
     if not venues:
+        if issuer_words:
+            words = "; ".join(issuer_words)
+            sky_info = (
+                {**sky_info, "text": f"{sky_info['text']}; {words}"}
+                if sky_info
+                else {"losses": [], "markdown": 0.0, "text": words, "words": words}
+            )
         return list(items or []), sky_info
     snap = ethena_snapshot(mode)
     if snap is None:
