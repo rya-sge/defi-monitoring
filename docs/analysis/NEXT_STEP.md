@@ -137,6 +137,8 @@ The README opens with it (§ "The answer in five minutes"):
 4. **Is it defensible:** `backtest`: the 2026-08-25 liquidations predicted, the same 20 borrowers.
 5. **The crisis live:** the fork demo (`docs/analysis/FORK-PRESENTATION.md`, `scripts/fork/`).
 
+**Checked on 2026-10-11** (a judge's pass): every command above runs offline and prints what the README quotes; `tests/test_readme.py` runs the README's commands and fails when a quoted fragment is no longer printed. Figures that moved since they were written (trUSD −30 % now 2.03M, fxSAVE −30 % 1.81M, through the shock engine) are updated where quoted, with the earlier figure kept in dated findings.
+
 ## 9. What is needed from you
 
 - [ ] **Decisions:** who owns the single verdict (A6) with the shock engine's author; the borrow and PT pockets of the demo book; the calibration incidents for the conditional draw (B5).

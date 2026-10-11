@@ -95,10 +95,10 @@ Recorded book `examples/rockawayx-ethereum.json`, Pharos snapshot of 2026-10-10:
 
 | Finding | Before Pharos | With Pharos |
 |---|---|---|
-| fxSAVE −30 % | 1 vault hit (f(x) Ecosystem, 2.01M USD) | 2 vaults: the siUSD market of RockawayX USDC Yield (2.36M of the vault) is reached, because fxSAVE backs 16.4 % of iUSD. Its oracle is an exchange rate, so the 4.9 % fall is hidden and below the borrowers' margin: no loss yet, but a new dependency |
+| fxSAVE −30 % | 1 vault hit (f(x) Ecosystem, 1.81M USD; 2.01M before vault incidents ran through the shock engine) | 2 vaults: the siUSD market of RockawayX USDC Yield (2.36M of the vault) is reached, because fxSAVE backs 16.4 % of iUSD. Its oracle is an exchange rate, so the 4.9 % fall is hidden and below the borrowers' margin: no loss yet, but a new dependency |
 | mGLOBAL (Midas) −50 % | not in any market: no hit | 43.4 % of iUSD's backing: a 21.7 % fall on the siUSD market, a 143k USD hidden shortfall in USDC Yield |
 | fxUSD −30 % | no hit (fxSAVE's on-chain asset is the stability pool) | fxSAVE is a wrapper of fxUSD: 1.63M USD hidden shortfall in f(x) Ecosystem (its oracle is fxSAVE's exchange rate, which does not follow fxUSD), plus the iUSD path |
-| trUSD −30 % | 1.61M USD, two vaults | the same loss, plus: trUSD and strUSD share their mint key and upgrade admin |
+| trUSD −30 % | 2.03M USD, two vaults (1.61M before the shock engine priced the squeeze on strUSD's thin market) | the same loss, plus: trUSD and strUSD share their mint key and upgrade admin |
 | Grades of the book's collateral | none | fxSAVE F 36, iUSD D 49, strUSD D 46, trUSD C- 54, reUSD F 38, EURCV A- 81, steakEURCV F 19 |
 
 PST (Huma), mGLOeuro (Midas), AUTO, PRIME, nvPRIME and wYLDS are not covered by Pharos, or not rated there. Pharos rates stablecoins and yield dollars, not tokenised credit or fund shares.
@@ -157,7 +157,7 @@ Nexus Mutual sells cover against protocol exploits and depegs; the full detail o
 
 ```
 if the incident is not certain: leaving now forgoes 17,042 USDC of yield over 30 days (8.29%/yr); it pays if the incident's probability over 30 days is above 7.92% (63.3%/yr)
-outside view: Nexus f(x) Protocol cover 1.82%–8.20%/yr, capacity 2,539,099 USDC: implies 1.2%–13.7%/yr for an exploit of the protocol at this severity; it pays on that, not on an issuer's markdown or a borrower's default
+outside view: Nexus f(x) Protocol cover 1.82%–8.20%/yr, capacity 2,539,669 USDC: implies 1.2%–13.7%/yr for an exploit of the protocol at this severity; it pays on that, not on an issuer's markdown or a borrower's default
 ```
 
 The implied probability is price ÷ (loading × severity): a price is the expected payout plus a loading for capital and margin, taken as 2 to 5 (`nexus.loading`); the severity is the shock's fall (1 − recovery for a default). It is the probability of the **covered** event, an exploit, which is one cause among others of the incident priced: a reader compares it with p\*, the tool never does.

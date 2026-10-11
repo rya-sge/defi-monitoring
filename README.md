@@ -27,7 +27,7 @@ What to read in the output:
 
 | Output line | Answers |
 |---|---|
-| `fxSAVE/USDC …: 1,494,648 of 25,324,668 USDC of debt liquidatable; bad debt 2,284,812 …` | the impact, market by market, from the shock engine over the recorded graph |
+| `fxSAVE/USDC …: 1,494,648 of 25,324,668 USDC of debt liquidatable (19 borrowers); bad debt 2,284,812 …` | the impact, market by market, from the shock engine over the recorded graph |
 | `oracle constant-price; how fast: at once when the issuer publishes …` | how fast it lands |
 | `verdict given the incident: EXIT: withdraw the 2,500,571 that can leave now …` | stay or exit, if the incident happens |
 | `if the incident is not certain: … it pays if the incident's probability over 30 days is above 7.92%` | the breakeven: exiting is certain and costly, staying is uncertain |
@@ -228,7 +228,7 @@ The incident is a fall of a collateral's oracle price, such as an issuer marking
 
 ```
 if the incident is not certain: leaving now forgoes 17,042 USDC of yield over 30 days (8.29%/yr); it pays if the incident's probability over 30 days is above 7.92% (63.3%/yr)
-outside view: Nexus f(x) Protocol cover 1.82%–8.20%/yr, capacity 2,539,099 USDC: implies 1.2%–13.7%/yr for an exploit of the protocol at this severity; it pays on that, not on an issuer's markdown or a borrower's default
+outside view: Nexus f(x) Protocol cover 1.82%–8.20%/yr, capacity 2,539,669 USDC: implies 1.2%–13.7%/yr for an exploit of the protocol at this severity; it pays on that, not on an issuer's markdown or a borrower's default
 ```
 
 **Zama confidential vaults.** For a vault entered through Zama's Confidential Vault protocol (16 on mainnet, `registry.json` `zama`), the cShare that holds every confidential depositor's shares is treated as a pool, not as the vault's depositor nor a holder ahead in a run; the incident states the confidential share and a confidential depositor's two exits (the daily batch, which does not beat a NAV markdown that lands at once; the instant exit, which does and reveals the amount); `graph` draws the batchers and Zama's decryption every exit needs. See `docs/analysis/ZAMA-VAULT.md`.

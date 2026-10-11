@@ -378,7 +378,7 @@ A V2 vault holding V1.1 shares through `MorphoVaultV1Adapter` inherits the V1.1 
 
 A vault incident (`--shock token=<collateral>:<fall>`) hits the markets whose collateral **is** that token. A markdown of a token reaches more markets than that: those whose collateral wraps it. In the RockawayX book, `token=trUSD:0.30` and `token=wYLDS:0.30` hit nothing, although PT-trUSD, PT-strUSD, etrUSD (a vault of Tori vaults) and wYLDS-based markets depend on them (`ROCK-VAULT.md` §5.2).
 
-- *(done 2026-10-11, plan `2026-10-11-wrapped-collateral`: `token=trUSD:0.30` now reaches the PT-trUSD, PT-strUSD and strUSD markets of two vaults, 1.61M USD; a market whose oracle does not track a market counts a hidden shortfall, D127.)*
+- *(done 2026-10-11, plan `2026-10-11-wrapped-collateral`: `token=trUSD:0.30` now reaches the PT-trUSD, PT-strUSD and strUSD markets of two vaults, 1.61M USD (2.03M since vault incidents run through the shock engine, which prices the squeeze on strUSD's thin market); a market whose oracle does not track a market counts a hidden shortfall, D127.)*
 - **Fix:** resolve each market's collateral to what it wraps, through a PT's SY and yield token, an ERC-4626 share's `asset()` and a vault of vaults' underlying (`siblings.underlyings` and the `wraps` edges already resolve the first two), and pass the fall through, according to the oracle's class (`NEXT_STEP.md` A1).
 
 ### K27. Liquidations of issuer-priced collateral are assumed (found 2026-10-11)
