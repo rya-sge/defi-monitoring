@@ -472,7 +472,7 @@ def incident(
 
     incidents = run_all(parsed)
     borrows, names = [], {}
-    pockets = [v for v in book.vaults if v.kind == "borrow"]
+    pockets = [v for v in book.vaults if v.kind in ("borrow", "pt")]
 
     def run_borrows(scaled):
         return [borrow_pocket(v, scaled, book.weighting, horizon, mode, exit_cost, venue)[0] for v in pockets]
@@ -490,15 +490,23 @@ def incident(
 
 
 def borrow_pocket(v, parsed, weighting: str, horizon: float, mode: str, exit_cost: float | None, venue=None):
-    """D177–D178: a Morpho Blue borrow in a book (the brief's PT loop). A token shock that names its collateral or the
-    collateral's underlying is, for the position, a loss of backing every oracle sees (`issuer_hack`); the incident
-    module of `analyze --shock` gives its loss and its exit cost. Offline from the analyze snapshot."""
+    """D177–D178: a Morpho Blue borrow in a book (the brief's PT loop), or D222 a PT held without a borrow (`kind`
+    "pt": its Pendle market, sized to the pocket's amount at the PT's price). A token shock that names its collateral
+    or the collateral's underlying is, for the position, a loss of backing every oracle sees (`issuer_hack`); the
+    incident module of `analyze --shock` gives its loss and its exit cost. Offline from the analyze snapshot."""
     f = S.Fetcher("offline") if mode == "offline" else S.Fetcher("direct")
     as_of = clock.as_of()
     if mode == "offline":
         clock.set_as_of(json.loads((S.SNAPSHOT_DIR / "as_of.json").read_text())["as_of"])
     try:
-        pos = discover.discover_morpho_position(f, v.address, v.depositor)
+        if v.kind == "pt":
+            price = discover.discover_pt_holding(f, v.address, 1.0).pt_price_usd
+            units = v.amount / price if price else 0.0
+            pos = discover.discover_pt_holding(f, v.address, units)
+            where = {"pendle_market": v.address, "pt_amount": units}
+        else:
+            pos = discover.discover_morpho_position(f, v.address, v.depositor)
+            where = {"market": v.address, "user": v.depositor}
         names = {
             x.lower()
             for x in (pos.collateral_symbol, pos.collateral_address, pos.underlying_symbol, pos.underlying_address)
@@ -520,9 +528,7 @@ def borrow_pocket(v, parsed, weighting: str, horizon: float, mode: str, exit_cos
             return line, shown
         # D220: a venue's loss of USDe backing is a depeg the oracle's class decides on, as in `analyze`
         event = "issuer_depeg" if venue else "issuer_hack"
-        res = analyze(
-            f, market=v.address, user=v.depositor, horizon=horizon, paths=2000, shocks={event: fall}, venue=venue
-        )
+        res = analyze(f, **where, horizon=horizon, paths=2000, shocks={event: fall}, venue=venue)
         inc = res.incident
         line = vault_book.borrow_line(
             label, weighting, v.amount, pos.equity_usd, inc.loss_usd, inc.exit_cost_usd, exit_cost, horizon, True

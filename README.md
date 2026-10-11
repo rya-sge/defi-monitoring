@@ -53,6 +53,8 @@ A second episode tests a different mechanism, price-tracking oracles in a market
 
 The impact given the incident is right to within 1 % where positions were liquidated in full, and the oracle's fall itself is predicted from the sale into the pool (above). Not tested: the cascade, the liquidations' own sales feeding back into the pool's price. Recorded through an archive RPC (`keys.ini`), it replays offline with no key.
 
+The brief's three shapes of pocket side by side, `analyze --book examples/brief-three-shapes.json --shock token=sUSDe:0.08 --exit-cost 0.11`: the PT-sUSDe loop loses 776,708 of its 1M (EXIT), the same PT held without a borrow loses 80,000, less than the 110,000 it costs to leave (STAY): the leverage, not the asset, makes the decision.
+
 The brief's book with its own worked example, the PT-sUSDe loop on Morpho, as one pocket next to nine vaults: `analyze --book examples/brief-mixed-book.json --shock token=sUSDe:0.08 --exit-cost 0.11` ("leaving it costs 110,000 USD … for sure and saves 776,708 if the incident comes": EXIT).
 
 **The brief's PT example, discovered in depth.** `analyze --demo` now also reports what its dependency graph knows beyond the five layers: the meta-oracle's two sources and its 16 h switch, who can change the tokens and through which timelock (sUSDe: a 24 h timelock; Pendle's SY and USDC: none seen), the three sibling markets on sUSDe (at a 10 % fall, 97M PYUSD liquidatable in sUSDe/PYUSD alone), sUSDe's grade and its backing by USDe, and Ethena's and Pendle's concentration. Its incident names the sibling contagion.

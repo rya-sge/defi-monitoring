@@ -154,3 +154,26 @@ def test_the_briefs_own_pt_loop_as_a_pocket(tmp_path):
     assert r["shocks"] == ["sUSDe −8%"] and "in 1 pocket(s)" in r["headline"]
     with pytest.raises(ValueError):
         VB.parse({"vaults": [{"kind": "borrow", "market": "0x12"}]})
+
+
+THREE = ROOT / "examples" / "brief-three-shapes.json"
+
+
+def test_a_pt_pocket_needs_its_pendle_market_and_amount():
+    """D222: a PT held without a borrow."""
+    ok = VB.parse({"weighting": "pocket", "vaults": [{"kind": "pt", "market": "0x" + "ab" * 20, "amount": 5}]})
+    assert ok.vaults[0].kind == "pt" and ok.vaults[0].amount == 5
+    for bad in ({"kind": "pt", "market": "0x12", "amount": 5}, {"kind": "pt", "market": "0x" + "ab" * 20}):
+        with pytest.raises(ValueError):
+            VB.parse({"weighting": "pocket", "vaults": [bad]})
+
+
+def test_the_three_shapes_under_one_shock(tmp_path):
+    """sUSDe −8 % with an 11 % unwind: the loop loses 78 % of its pocket and exits; the same PT held without a borrow
+    loses 8 %, less than the cost of leaving, and stays."""
+    args = ["analyze", "--book", str(THREE), "--shock", "token=sUSDe:0.08", "--exit-cost", "0.11"]
+    assert cli.main([*args, "--out", str(tmp_path)]) == 0
+    lines = {ln["name"]: ln for ln in json.loads((tmp_path / "book-incident.json").read_text())["lines"]}
+    loop, held = lines["PT-sUSDe loop on Morpho (the brief's example)"], lines["PT-sUSDe held, no borrow"]
+    assert loop["verdict"] == "EXIT" and loop["loss_usd"] == pytest.approx(776_708, rel=1e-3)
+    assert held["verdict"] == "STAY" and held["loss_usd"] == pytest.approx(80_000, rel=1e-3)

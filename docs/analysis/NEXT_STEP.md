@@ -63,7 +63,7 @@ Sizes: **S** about a day, **M** a few days, **L** more.
 
 | # | Step | Gaps | Size | Builds on |
 |---|---|---|---|---|
-| **A6** | ~~Books mixing borrow and vault pockets, one rule~~ **done** (plan `2026-10-11-mixed-book`); K12 and K13 **done** (plan `2026-10-11-alerts-and-verdict`); the conditional distribution for a borrow **done** (D203); left: PT holdings without a borrow | K21, M6 | M | `decide.py`, `vault_book.py`, `conditional.py` |
+| **A6** | ~~Books mixing borrow and vault pockets, one rule~~ **done** (plan `2026-10-11-mixed-book`); K12 and K13 **done** (plan `2026-10-11-alerts-and-verdict`); the conditional distribution for a borrow **done** (D203); PT holdings without a borrow **done** (D222) | K21, M6 | M | `decide.py`, `vault_book.py`, `conditional.py` |
 | **A5** | The web page for vault and book incidents on `POST /api/incident` (the front end's) | demo | S | `web/` |
 | B4 | ~~Oracle structure, the rest~~ **done**: the pool move (plan `2026-10-11-pool-move`), constant-price split by kind and drain by class through the engine (plan `2026-10-11-oracle-kinds`) | K7, K8 | M | `oracle_class.py`, `engine.py` |
 | B5 | *Secondary: the priors feed only `analyze --demo`'s ex-ante view; no known-incident answer uses them.* Priors: decayed window, survivorship, two-part depeg, protocol multiplier, the RockawayX issuers; calibrate the conditional draw | K1–K5, K17, K18 | M | `priors.py`, `registry.json` |

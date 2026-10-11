@@ -37,9 +37,7 @@ class BookVault:
     label: str | None = None
     depositor: str | None = None
     amount: float | None = None  # D152: `pocket` weighting: the book's position in this vault, in USD
-    kind: str = (
-        "vault"  # D177: "vault" (a Vault V2 deposit) or "borrow" (a Morpho Blue borrow: `address` is the market)
-    )
+    kind: str = "vault"  # D177, D222: "vault" (a Vault V2 deposit), "pt" (a PT held) or "borrow" (a Morpho Blue borrow: `address` is the market)
 
 
 @dataclass
@@ -130,14 +128,21 @@ def parse(d: dict, where: str = "book") -> Book:
     for i, v in enumerate(d["vaults"]):
         v = {"address": v} if isinstance(v, str) else v
         kind = v.get("kind", "vault")
-        if kind not in ("vault", "borrow"):
-            raise ValueError(f'{where}: pocket #{i + 1}: "kind" is "vault" or "borrow"')
+        if kind not in ("vault", "borrow", "pt"):
+            raise ValueError(f'{where}: pocket #{i + 1}: "kind" is "vault", "borrow" or "pt"')
         if kind == "borrow":
             # D177: a Morpho Blue borrow, e.g. the brief's PT loop: the market id, and the borrower as "depositor"
             a = str(v.get("market") or v.get("address") or "").lower()
             if not (a.startswith("0x") and len(a) == 66):
                 raise ValueError(f'{where}: pocket #{i + 1} (borrow) needs the Blue "market" id')
             v = {**v, "depositor": v.get("user") or v.get("depositor")}
+        elif kind == "pt":
+            # D222: a PT held without a borrow: its Pendle market, and the pocket's amount in USD
+            a = str(v.get("market") or v.get("address") or "").lower()
+            if not (a.startswith("0x") and len(a) == 42):
+                raise ValueError(f'{where}: pocket #{i + 1} (pt) needs the Pendle "market" address')
+            if not (isinstance(v.get("amount"), (int, float)) and v["amount"] > 0):
+                raise ValueError(f'{where}: pocket #{i + 1} (pt) needs a positive "amount" (USD)')
         else:
             a = str(v.get("address", "")).lower()
             if not (a.startswith("0x") and len(a) == 42):

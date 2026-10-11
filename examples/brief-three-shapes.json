@@ -1,0 +1,9 @@
+{
+  "name": "The brief's three shapes of pocket, 1M USD each: the PT-sUSDe loop on Morpho, the same PT held without a borrow, and a vault deposit",
+  "weighting": "pocket",
+  "vaults": [
+    {"kind": "borrow", "market": "0x5613b170ded221c588b6e9637b910f49e5508680ceede207f44aa72e5c46cb05", "user": "0xdf81987465681D0515058fe0A47A3bD174012730", "label": "PT-sUSDe loop on Morpho (the brief's example)", "amount": 1000000},
+    {"kind": "pt", "market": "0x47ad2cd1dd15739a7a035b9d3b7828d916fef77e", "label": "PT-sUSDe held, no borrow", "amount": 1000000},
+    {"address": "0xb0c424116172B55CbB6dD3136F5989F7959e5B91", "label": "Spark Blue Chip USDT Vault", "amount": 1000000}
+  ]
+}

@@ -279,8 +279,10 @@ class BookVaultIn(BaseModel):
     label: str | None = None
     depositor: str | None = Field(default=None, description="Whose position to weigh; default the largest depositor.")
     amount: float | None = Field(default=None, gt=0, description="`pocket` weighting: the book's position, in USD.")
-    kind: Literal["vault", "borrow"] = Field(
-        default="vault", description="`borrow`: a Morpho Blue borrow; `address` is then the market id."
+    kind: Literal["vault", "borrow", "pt"] = Field(
+        default="vault",
+        description="`borrow`: a Morpho Blue borrow, `address` is then the market id; `pt`: a PT held without a "
+        "borrow, `address` is then its Pendle market and `amount` is required.",
     )
 
 

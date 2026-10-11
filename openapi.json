@@ -1222,10 +1222,11 @@
             "type": "string",
             "enum": [
               "vault",
-              "borrow"
+              "borrow",
+              "pt"
             ],
             "title": "Kind",
-            "description": "`borrow`: a Morpho Blue borrow; `address` is then the market id.",
+            "description": "`borrow`: a Morpho Blue borrow, `address` is then the market id; `pt`: a PT held without a borrow, `address` is then its Pendle market and `amount` is required.",
             "default": "vault"
           }
         },
