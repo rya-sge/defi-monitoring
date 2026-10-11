@@ -15,8 +15,8 @@ Needs Foundry (`anvil`, `cast`, `forge`), `uv`, network access (the fork's upstr
 | Step | On the fork | `riskdep` | Telegram |
 |---|---|---|---|
 | Start | fork at block 26,165,572 | `watch` on RockawayX Tori Ecosystem (`VAULT_TORI`, 69 % strUSD) and Huma USDC Main (`VAULT_HUMA`, 100 % PST); start-up findings stay in the terminal | an intro message, marked as a scenario |
-| Act 1 | RedStone's 2-of-3 Safe upgrades the strUSD feed (`alt-redstone.sh`): the oracle −32 % in one transaction | Tori's watch: the feed upgrade, the oracle move, liquidations | each warn and critical alert |
-| Act 2 | a CCIP pool mints 15M unbacked PST, +7.0 % of the supply (`alt-pst-mint.sh 15000000`; the script's default 10M is 4.7 %, under the 5 % critical threshold); the oracle does not move | Huma's watch: the mint | each warn and critical alert |
+| Act 1 | RedStone's 2-of-3 Safe upgrades the strUSD feed (`alt-redstone.sh`): the oracle −32 % in one transaction | Tori's watch: the feed upgrade, the oracle move, the bad debt, the exit queue, the loss and the decision (EXIT) | one message: the cause in plain words, the loss and EXIT on top, six alerts folded underneath |
+| Act 2 | a CCIP pool mints 15M unbacked PST, +7.0 % of the supply (`alt-pst-mint.sh 15000000`; the script's default 10M is 4.7 %, under the 5 % critical threshold); the oracle does not move | Huma's watch: the mint, before any price moves | one message |
 | End | the fork stops | alert counts per vault | — |
 
 ## Files
