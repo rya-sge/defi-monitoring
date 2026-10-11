@@ -322,6 +322,7 @@ The design decisions are numbered across twelve plans, in the order the incremen
 | `plan/2026-10-11-pharos.plan.md` | Pharos, keyless: grades, off-chain backing, common-mode groups | D133–D138 |
 | `plan/2026-10-11-one-number.plan.md` | the shock engine as the impact core of vault and book incidents | D139–D141 |
 | `plan/2026-10-11-breakeven.plan.md` | the breakeven probability p\* of vault and book incidents; Nexus as an outside view | D142–D146 |
+| `plan/2026-10-11-alerts-and-verdict.plan.md` | `FeedStale`; the Zama batcher and wrapper alerts; the PT verdict's horizon and tail (K12, K13) | D190–D196 |
 | `plan/2026-10-11-detect.plan.md` | detection → impact for a vault: `OracleImpact` in both watches | D187–D189 |
 | `plan/2026-10-11-mixed-book.plan.md` | borrow pockets in a book, the brief's PT loop among them | D177–D178 |
 | `plan/2026-10-11-zama.plan.md` | Zama confidential vaults: the cShare pool, the two exits, the hidden layer | D171–D176 |

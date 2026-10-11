@@ -1,0 +1,33 @@
+@startuml
+title riskdep - deciding with a breakeven probability
+skinparam shadowing false
+skinparam activity {
+  BackgroundColor #EAF6F0
+  BorderColor #2E8B67
+}
+start
+:Known incident on a vault
+(e.g. collateral marked down 30 %);
+:Shock engine on the vault's graph:
+loss if the depositor stays;
+:Exit queue: loss if it leaves first;
+:Cost of leaving now:
+yield given up on what can leave;
+if (loss saved by leaving first > 0?) then (no)
+  :Leaving does not pay,
+whatever the odds;
+  stop
+else (yes)
+endif
+:p* = cost / loss saved;
+if (p* >= 1?) then (yes)
+  :Stay even if the incident
+is certain;
+else (no)
+  :Leave if the incident is more
+likely than p* over the horizon;
+endif
+:Show the Nexus-implied range
+next to p* (never in the verdict);
+stop
+@enduml

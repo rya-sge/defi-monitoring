@@ -191,7 +191,7 @@ Anvil fetches the state it needs from an upstream at the fork block, which must 
 
 ## Zama contracts (through the Ethereum RPC)
 
-No new endpoint: the Zama batchers and the vault's `balanceOf(cShare)` are read by `eth_call` on the main RPC (`zama.read`: `currentBatchId`, `batchCreatedAt`, `batchMinBatchAge`, `paused`, `balanceOf`, `totalSupply`). Recorded at the incident's block through the archive route below.
+No new endpoint: `watch --vault` subscribes to a Zama vault's batchers and wrappers through one more `eth_getLogs` filter on the main RPC (optional: a refusal is a warning); their real events since deployment were recorded once through Etherscan's logs API (`fixtures/replay/zama-events/`). The Zama batchers and the vault's `balanceOf(cShare)` are read by `eth_call` on the main RPC (`zama.read`: `currentBatchId`, `batchCreatedAt`, `batchMinBatchAge`, `paused`, `balanceOf`, `totalSupply`). Recorded at the incident's block through the archive route below.
 
 ## Archive RPC (Alchemy)
 

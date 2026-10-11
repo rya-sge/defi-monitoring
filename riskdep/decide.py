@@ -170,6 +170,15 @@ def verdict(
                     carry_usd(smaller, sim.horizon_days),
                     q["source"],
                 )
+                left = max(equity - cost, 1.0)
+                if s2.cvar99_usd >= REGISTRY["tail_exit_budget"] * left:
+                    # D195 (K13): de-levering does not make the tail survivable
+                    v = "EXIT"
+                    head = (
+                        f"EXIT: even after de-levering, the worst 1% of outcomes loses ${s2.cvar99_usd:,.0f} on "
+                        f"average ({s2.cvar99_usd / left:.0%} of equity), above the "
+                        f"{REGISTRY['tail_exit_budget']:.0%} budget; leaving costs ${exit_cost:,.0f}."
+                    )
                 reasons.append(
                     f"De-lever: sell ${sell:,.0f} of PT ({frac:.0%}) and repay debt → HF {smaller.health_factor:.3f}, "
                     f"liquidation at −{reduction.new_liquidation_drop:.1%}; costs ${cost:,.0f}; expected loss "

@@ -126,6 +126,13 @@ The conservative default for a yield token not in `issuers`: a 15 % yearly depeg
 | `incident.breakeven_basis` | text | the breakeven probability p\* of vault and book incidents: yield forgone on what can leave over `--horizon`, divided by the loss leaving first saves (D142–D144) | `vault_incident.py`, `vault_book.py` |
 | `incident.reduce_margin` | fraction | incident mode: the partial sale puts liquidation this far beyond the incident's oracle drop (0.01) | `scenario.py` |
 
+## `tail_exit_budget`
+
+| Key | Unit | Default | What it controls |
+|---|---|---|---|
+| `tail_exit_budget` | fraction of equity | 0.9 | the PT verdict EXITs when the de-lever still leaves CVaR99 at or above it (D195, K13); `tail_budget` (0.5) remains the REDUCE trigger |
+| `tail_exit_budget_basis` | text | — | why |
+
 ## `watch`
 
 The thresholds of `watch --vault` and `watch --user`. Changing them changes when alerts fire; `docs/alert-runbook.md` describes each alert.
@@ -157,6 +164,9 @@ The thresholds of `watch --vault` and `watch --user`. Changing them changes when
 | `feed_band_report_floor` | fraction | 0.5 | `FeedBand` at start-up: a custom feed whose `minAnswer` lies within this fraction below its latest answer is reported, with the timelock any upgrade must pass (D183). `feed_band_basis` holds the reason |
 | `drain_buy_cost` | fraction | 0.005 | the cost c of buying the collateral at the drain's size, in d\* = 1 − LLTV / (1 + c); low on purpose, so the threshold is early |
 | `drain_margin` | fraction (points of discount) | 0.02 | `DrainWindow` warn: the collateral's discount to its oracle within this distance of d\*; critical at d\* |
+| `zama_redeem_warn`, `zama_redeem_critical` | fraction of the vault | 0.02, 0.10 | `Zama.Unwrap` for the day's redeem batch (D191) |
+| `zama_instant_warn` | fraction of the vault | 0.01 | `Zama.Unwrap` for an instant exit (D191) |
+| `zama_basis` | text | — | why |
 | `impact_oracle_fall` | fraction | 0.02 | `OracleImpact`: a vault market's oracle falling this much since its last answer; the alert states the impact and the verdict (D187–D188) |
 | `impact_basis` | text | — | why |
 | `drain_check_every_blocks` | blocks | 25 | how often DefiLlama's prices are re-read for the drain threshold; oracle prices come with every state read |

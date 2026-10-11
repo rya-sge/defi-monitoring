@@ -126,6 +126,17 @@ def analyze(
             f"P(liquidation) {s2.p_liquidation:.2%} (vs {sim.p_liquidation:.2%}), verdict {d2.verdict}"
             + (" — the same." if same else " — the verdict depends on the oracle; check its source before acting.")
         )
+    if pos.days_to_maturity and pos.days_to_maturity > horizon:
+        # D196 (K12): a PT redeems at par at maturity: holding it there against leaving now, over the whole period
+        days = pos.days_to_maturity
+        sm = simulate.run(pos, prs, days, n=paths)
+        carry_m, exit_c = decide.carry_usd(pos, days), decide.exit_cost_usd(pos, quote)
+        cheaper = sm.expected_loss_usd < carry_m + exit_c
+        dec.reasons.append(
+            f"Held to maturity ({days:.0f} days), the PT redeems at par: expected loss ${sm.expected_loss_usd:,.0f} "
+            f"against ${carry_m:,.0f} of carry, while leaving now costs ${exit_c:,.0f} once"
+            + (" — holding to maturity is the cheaper path." if cheaper else " — leaving now is the cheaper path.")
+        )
 
     incident = None
     if shocks:

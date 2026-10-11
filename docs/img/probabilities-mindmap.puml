@@ -1,0 +1,49 @@
+@startmindmap
+<style>
+mindmapDiagram {
+  node {
+    BackgroundColor #EAF6F0
+    LineColor #2E8B67
+  }
+  :depth(1) {
+    BackgroundColor #2E8B67
+    FontColor white
+  }
+}
+</style>
+* Where DeFi risk\nprobabilities come from
+** Exploit priors
+*** DefiLlama hack record, 5 years
+*** Size-band base rate (2.66 %/yr > 100M USD)
+*** Category multiplier, clipped 0.5–2
+*** Age factor 2 / 1 / 0.7
+*** Clipped 0.5 % to 15 %/yr
+** Oracle prior
+*** Misconfigured, stale, predictable only
+*** 24 exploits / 179 protocols: 2.68 %/yr
+*** Doubled if source unverified
+** Market events
+*** Registry with a written basis
+*** sUSDe depeg 12 %/yr, 75 % recovered
+*** Unknown issuer 15 %/yr
+** Severity and horizon
+*** Beta(a, b), mean a / (a + b)
+*** p_h = 1 − (1 − p)^(h/365)
+left side
+** Monte Carlo verdict
+*** 20,000 months
+*** Expected loss vs carry vs exit cost
+*** Demo: REDUCE
+** Breakeven p*
+*** Cost of leaving ÷ loss saved
+*** p* ≥ 1: stay even if certain
+*** Book: act first on the lowest p*
+** Outside views
+*** Nexus price ÷ (loading × severity)
+*** Shown, never in a verdict
+*** Log pooling proposed
+** Weaknesses
+*** Survivorship: 305 of 450 hacks dropped
+*** Window: 2 years gives 8.59 % for Morpho
+*** Layers mostly independent
+@endmindmap

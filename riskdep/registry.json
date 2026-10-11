@@ -260,7 +260,11 @@
     "feed_band_report_floor": 0.5,
     "feed_band_basis": "D183 (plan/2026-10-11-fork-demo.plan.md). A custom feed whose minAnswer/maxAnswer are readable on the feed is reported (FeedBand) when its floor lies within this fraction below its latest answer. mGLOeuro/EUR (Midas, read 2026-10-11) has a band of 90,000-110,000 EUR around 100,000 and no setter, so a fund loss above 10 % reaches the Belem market's oracle only after an upgrade behind a 48 h timelock. Chainlink OCR bands are not exposed on the proxy and never trigger.",
     "impact_oracle_fall": 0.02,
-    "impact_basis": "D187: a vault market's oracle falling at least this much within a batch (an issuer marking its NAV down, a feed rewritten) is an incident that has landed: the watch states its impact on the vault and the depositor with the verdict, as analyze --vault would. 2 %: below it the move is a NAV's usual drift; the existing Oracle alert stays at oracle_move_warn."
+    "impact_basis": "D187: a vault market's oracle falling at least this much within a batch (an issuer marking its NAV down, a feed rewritten) is an incident that has landed: the watch states its impact on the vault and the depositor with the verdict, as analyze --vault would. 2 %: below it the move is a NAV's usual drift; the existing Oracle alert stays at oracle_move_warn.",
+    "zama_redeem_warn": 0.02,
+    "zama_redeem_critical": 0.1,
+    "zama_instant_warn": 0.01,
+    "zama_basis": "D191: the redeem batcher's daily aggregate is the public measure of confidential outflows: warn from 2 % of the vault in one batch, critical from 10 % (a confidential run forming); an instant exit (a cShare unwrap to anyone but the batcher) reveals its amount: warn from 1 % of the vault (an informed holder leaving fast)."
   },
   "graph": {
     "sibling_min_tvl_usd": 1000000,
@@ -1125,5 +1129,7 @@
         "deploy_block": 25976153
       }
     }
-  }
+  },
+  "tail_exit_budget": 0.9,
+  "tail_exit_budget_basis": "D195 (K13): EXIT when the worst 1 % of outcomes still costs at least this share of equity after the proposed de-lever: reducing does not make the tail survivable. 0.9: a position that loses nearly everything in its worst month even after de-levering should be left; below it, REDUCE stands."
 }

@@ -1,0 +1,39 @@
+@startuml
+title riskdep - where each detection signal comes from
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam component {
+  BackgroundColor #FDEEEE
+  BorderColor #B54A4A
+}
+skinparam database {
+  BackgroundColor #FDEEEE
+  BorderColor #B54A4A
+}
+database "Ethereum logs\n(eth_getLogs)" as LOGS
+database "Ethereum state\n(eth_call at one block)" as STATE
+database "DefiLlama prices" as LL
+database "Morpho API\n(borrowers, holders)" as API
+component "Event rules\nliquidation, upgrade, mint,\npause, Submit, CallScheduled" as EV
+component "State rules\noracle move, utilisation,\nexit capacity, gates" as SR
+component "Borrowers revalued\nunrealised bad debt,\nliquidation curve" as MR
+component "Market comparison\ndivergence, drain window" as MC
+component "Standing findings\nexposure, feed band,\nno-notice changes, gates" as SF
+component "OracleImpact\nloss now, liquidatable,\nverdict" as OI
+component "Alert\ninfo / warn / critical" as AL
+LOGS --> EV
+STATE --> SR
+STATE --> MR
+API --> MR
+STATE --> MC
+LL --> MC
+STATE --> SF
+SR --> OI
+MR --> OI
+EV --> AL
+SR --> AL
+MR --> AL
+MC --> AL
+SF --> AL
+OI --> AL
+@enduml

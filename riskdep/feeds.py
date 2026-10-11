@@ -54,3 +54,68 @@ def _dur(hours: float) -> str:
     if hours < 48:
         return f"{hours:.1f} h"
     return f"{hours / 24:.1f} days"
+
+
+# --- watch: FeedStale (plan 2026-10-11-feed-stale, D193–D194)
+
+
+class FeedWatch:
+    """The freshness of every feed of the watched markets' oracles (`admin.AdminWatch` found them), at start and on
+    each refresh: `FeedStale` when a feed turns stale, as early warning before an issuer's next update lands. Reads
+    each feed's rounds once per check (`oracle_class.probe`); a replay without them prints "not checked"."""
+
+    def __init__(self, f, aw, block):
+        self.feeds = {a: c for a, c in aw.contracts.items() if any(r.startswith("feed of the oracle") for r in c.roles)}
+        self.stale: dict[str, Freshness] = {}
+        self.checked = self._check(f, block)
+
+    def _check(self, f, block) -> bool:
+        from . import oracle_class as OC
+        from . import sources as S
+
+        try:
+            head = S.rpc(f, "eth_getBlockByNumber", [hex(block), False]) or {}
+            now = int(head.get("timestamp", "0x0"), 16)
+            fresh = {}
+            for a in self.feeds:
+                p = OC.probe(f, a, block)
+                x = freshness(p.updated_at, p.update_times, now)
+                if x:
+                    fresh[a] = x
+        except (S.CacheMiss, S.SourceError):
+            return False
+        self.now = {a: x for a, x in fresh.items() if x.stale}
+        return True
+
+    def _alerts(self, stale: dict, block) -> list:
+        from .rules import Alert
+
+        return [
+            Alert(
+                "warn",
+                block,
+                None,
+                "FeedStale",
+                f"Feed {self.feeds[a].symbol or a[:10]} is stale: {x.text}",
+                f"{', '.join(self.feeds[a].roles)}. A stale feed holds the last price: the issuer's next update can "
+                "land a markdown at once, with no market move before it; check the issuer's latest NAV",
+                None,
+                {"feed": a, "age_h": x.age_h, "cadence_h": x.cadence_h},
+            )
+            for a, x in stale.items()
+        ]
+
+    def startup(self, line, block) -> list:
+        if not self.checked:
+            line("  feed freshness: not checked (the feeds' rounds were not read)")
+            return []
+        self.stale = dict(self.now)
+        return self._alerts(self.stale, block)
+
+    def step(self, f, block) -> list:
+        """On a refresh: alert the feeds that turned stale since the last check (D194)."""
+        if not self._check(f, block):
+            return []
+        new = {a: x for a, x in self.now.items() if a not in self.stale}
+        self.stale = dict(self.now)
+        return self._alerts(new, block)

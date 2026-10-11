@@ -211,7 +211,9 @@ class routed_rpc:
             ROUTES[RPC] = self.before
 
 
-def etherscan_logs(f: Fetcher, address: str, topic0: str, topic1: str, from_block: int, to_block: int) -> list[dict]:
+def etherscan_logs(
+    f: Fetcher, address: str, topic0: str, topic1: str | None, from_block: int, to_block: int
+) -> list[dict]:
     """Event logs of one contract filtered by topic0 and topic1, through Etherscan (keyed; wide block ranges, which the
     free RPCs refuse), paged by 1,000; each log slimmed to block, time, topics, data and transaction (D161)."""
     key = api_key("etherscan")
@@ -219,7 +221,9 @@ def etherscan_logs(f: Fetcher, address: str, topic0: str, topic1: str, from_bloc
     while True:
         url = (
             f"{ETHERSCAN}?chainid=1&module=logs&action=getLogs&address={address.lower()}&fromBlock={from_block}"
-            f"&toBlock={to_block}&topic0={topic0}&topic0_1_opr=and&topic1={topic1}&page={page}&offset=1000"
+            f"&toBlock={to_block}&topic0={topic0}"
+            + (f"&topic0_1_opr=and&topic1={topic1}" if topic1 else "")
+            + f"&page={page}&offset=1000"
         )
 
         def slim(d):

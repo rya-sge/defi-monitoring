@@ -59,9 +59,9 @@ Sizes: **S** about a day, **M** a few days, **L** more.
 
 | # | Step | Gaps | Size | Builds on |
 |---|---|---|---|---|
-| ~~**A3**~~ | ~~Detection → impact for vaults~~ **done** for an oracle fall (`OracleImpact`, plan `2026-10-11-detect`); left: a stale feed (`FeedStale`), a queued upgrade's impact before it lands | K20, K22 | S–M | `vault_incident.py`, `feeds.py`, the fork demo's `admin.py` |
-| **A6** | ~~Books mixing borrow and vault pockets, one rule~~ **done** (plan `2026-10-11-mixed-book`); left: the PT verdict's horizon to maturity and tail budget (K12, K13), the conditional distribution for a borrow, PT holdings without a borrow | K21, M6 | M | `decide.py`, `vault_book.py`, `conditional.py` |
-| **Z4** | Zama batcher and wrapper alerts (a confidential run forming, a batch cancelled, decryption delayed, a wrapper paused), after the fork demo's `watch.py` lands; then Z6 (a user's confidential position) and Z7 (a prior) | — | M | `zama.py`, the watches |
+| ~~**A3**~~ | ~~Detection → impact for vaults~~ **done**: `OracleImpact` (plan `2026-10-11-detect`), `FeedStale` (plan `2026-10-11-alerts-and-verdict`); left: a queued upgrade's impact before it lands | K20, K22 | S–M | `vault_incident.py`, `feeds.py`, the fork demo's `admin.py` |
+| **A6** | ~~Books mixing borrow and vault pockets, one rule~~ **done** (plan `2026-10-11-mixed-book`); K12 and K13 **done** (plan `2026-10-11-alerts-and-verdict`); left: the conditional distribution for a borrow, PT holdings without a borrow | K21, M6 | M | `decide.py`, `vault_book.py`, `conditional.py` |
+| ~~**Z4**~~ | ~~Zama batcher and wrapper alerts~~ **done** (plan `2026-10-11-alerts-and-verdict`); left: a delayed decryption, Z6 (a user's confidential position), Z7 (a prior) | — | S | `zama.py` |
 | **A5** | The web page for vault and book incidents on `POST /api/incident` (the front end's) | demo | S | `web/` |
 | B4 | Oracle structure, the rest: the pool-move event (the backtest's mechanism), split constant-price, drain priority by class | K7, K8 | M | `oracle_class.py`, `engine.py` |
 | B5 | *Secondary: the priors feed only `analyze --demo`'s ex-ante view; no known-incident answer uses them.* Priors: decayed window, survivorship, two-part depeg, protocol multiplier, the RockawayX issuers; calibrate the conditional draw | K1–K5, K17, K18 | M | `priors.py`, `registry.json` |
@@ -72,7 +72,7 @@ Sizes: **S** about a day, **M** a few days, **L** more.
 | B1+, B2+ | The rate and yield channels as Monte Carlo layers, with Pendle's and Morpho's history | K10, K11 | S | `simulate.py` |
 | B8 | Loans at the market price; the drain as a loss channel | K16 | S–M | `market_risk.py`, `drain.py` |
 | C1 | Discovery depth in `analyze`: the graph's layers in the PT report | K19 | M | `discover.py`, `graph.py` |
-| C2+ | `FeedStale` in the watches; one feed under several markets | K23 | S | `feeds.py`, `admin.py` |
+| C2+ | ~~`FeedStale` in the watches~~ **done**; left: one feed under several markets | K23 | S | `feeds.py` |
 | C3+ | A collateral's share of its supply held in Morpho | K25 | S | `graph.py` |
 | C6 | Bridges as graph nodes, issuer and oracle registry entries, PT expiry in incidents | K19, K23 | M | `graph.py`, registry |
 | C4, C5 | External venues; Vault V1, other chains | K24, C5 | M–L | registry, `metamorpho-v1.1` |

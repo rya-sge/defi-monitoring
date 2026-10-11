@@ -67,3 +67,14 @@ def test_a_gap_inside_the_sampling_error_is_not_a_reason():
     d = verdict(p, noisy, QUOTE)
     assert d.verdict == "STAY" and "± $1" in d.reasons[0]
     assert verdict(p, sim(el=5.5), QUOTE).verdict == "REDUCE"
+
+
+def test_exit_when_de_levering_leaves_the_tail_unsurvivable():
+    """D195 (K13): the de-lever's simulated CVaR99 still above 90 % of equity: EXIT rather than REDUCE."""
+    p = pos()
+    d = verdict(p, sim(el=0.1, cvar99=1.0), QUOTE, depeg_mean=0.08, resimulate=lambda q: sim(el=0.05, cvar99=1e9))
+    assert d.verdict == "EXIT" and "even after de-levering" in d.headline
+    assert (
+        verdict(p, sim(el=0.1, cvar99=1.0), QUOTE, depeg_mean=0.08, resimulate=lambda q: sim(el=0.05)).verdict
+        == "REDUCE"
+    )

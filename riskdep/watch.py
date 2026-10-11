@@ -13,8 +13,10 @@ from . import crosscheck
 from . import detect as DT
 from . import drain as DR
 from . import exit_queue as EQ
+from . import feeds as FD
 from . import market_risk as MR
 from . import sources as S
+from . import zama as ZM
 from .discover import REGISTRY
 from .poller import Poller
 from .rules import LEVELS, Alert, Ctx, assess_batch, startup_findings
@@ -197,8 +199,14 @@ def run(opts: Options) -> int:
     vx = EQ.VaultExit(f, view, before)
     exit_alerts = vx.startup(p.line, before, EQ.vault_cases(vrisk, before), state0, drained=vd.drained(before))
     aw.table(p.line)
+    fw = FD.FeedWatch(f, aw, state0)  # D193: each feed's freshness
     for al in (
-        startup_findings(view, before) + vrisk.startup(before, state0) + drain_alerts + exit_alerts + aw.startup(state0)
+        startup_findings(view, before)
+        + vrisk.startup(before, state0)
+        + drain_alerts
+        + exit_alerts
+        + aw.startup(state0)
+        + fw.startup(p.line, state0)
     ):
         p.alert(al)
     _cross_check(f, p, view, before, state0)
@@ -210,14 +218,17 @@ def run(opts: Options) -> int:
     )
     if opts.mode in ("record", "replay") or opts.blocks:
         cursor_path.unlink(missing_ok=True)
+    # D190: a Zama confidential vault: its batchers and wrappers join the watched contracts
+    ze = ZM.entry(view.address)
+    zkinds, zfilters, zrate = (ZM.kinds(ze), ZM.filters(ze), ZM.share_rate(f, ze, state0)) if ze else ({}, [], 0)
     poller = Poller(
         f,
-        {**aw.kinds(), **view.kinds},
+        {**aw.kinds(), **view.kinds, **zkinds},
         view.market_ids,
         cursor_path,
         W["confirmations"],
         opts.step or W["max_range"],
-        extra_filters=aw.filters(),
+        extra_filters=aw.filters() + zfilters,
     )
     if start_cursor is not None:
         poller.cursor = start_cursor
@@ -273,7 +284,7 @@ def run(opts: Options) -> int:
             for e in batch.events
         ):
             view = discover_vault(f, opts.vault, state_block)
-            poller.kinds, poller.market_ids = view.kinds, view.market_ids
+            poller.kinds, poller.market_ids = {**view.kinds, **zkinds}, view.market_ids
             p.line(f"structure changed: rediscovered at block {state_block}")
         refresh = batch.to_block - last_check >= W["crosscheck_every_blocks"]
         if light_read(batch, live, refresh, last_full):
@@ -285,7 +296,7 @@ def run(opts: Options) -> int:
             vrisk = MR.VaultRisk(f, view, after, state_block)
             aw = AD.AdminWatch(f, list(vrisk.markets), state_block)
             vd = DR.VaultDrain(f, view, state_block)
-            poller.kinds, poller.extra_filters = {**aw.kinds(), **view.kinds}, aw.filters()
+            poller.kinds, poller.extra_filters = {**aw.kinds(), **view.kinds, **zkinds}, aw.filters() + zfilters
         for al in (
             assess_batch(batch.events, Ctx(view, before, after), dep, batch.to_block)
             + vrisk.step(f, batch.events, after, state_block, batch.to_block, refresh)
@@ -297,6 +308,8 @@ def run(opts: Options) -> int:
             + aw.check_divergence(f, batch.to_block, {mid: m.oracle_price for mid, m in after.markets.items()})
             # D188: after vrisk.step, whose risks are now at the batch's prices
             + DT.impact_alerts(known, after, vrisk.risks, vrisk.markets, view.decimals, batch.to_block)
+            + (ZM.assess_events(batch.events, ze, after.total_supply, zrate, batch.to_block) if ze else [])
+            + (fw.step(f, state_block) if refresh else [])
         ):
             p.alert(al)
         known = DT.last_prices(known, after)
