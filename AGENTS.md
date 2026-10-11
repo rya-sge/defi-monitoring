@@ -232,7 +232,7 @@ uv run ruff format . && uv run ruff check .            # format and lint, 120 co
 export RISKDEP_RPC_URL=http://127.0.0.1:4000/main/evm/1  # route live runs through it; unset to go direct
 uv run uvicorn riskdep.api:app --reload                # the HTTP API for web/, docs at /docs
 uv run python -m riskdep notify                        # post watch alerts to Telegram (keys.ini [alerts]), next to watch
-scripts/fork/demo.sh                                   # crisis demo on a mainnet fork, one command (--record: asciinema)
+scripts/fork/demo.sh --short                           # crisis demo on a mainnet fork, one command, ~2 min (--record: asciinema; --stop)
 scripts/fork/start-fork.sh 26165572                    # or step by step: an anvil fork (scripts/fork/README.md)
 RISKDEP_RPC_URL=http://127.0.0.1:8545 RISKDEP_FORK=1 uv run python -m riskdep watch --vault 0xD6d4b804014EF27836dBe9f8f6Bf6c71251548Ec --step 1
 scripts/fork/crisis-belem.sh                           # the Belem crisis, act by act, in another terminal
