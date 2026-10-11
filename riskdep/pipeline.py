@@ -230,6 +230,30 @@ def pool_move_shocks(f: S.Fetcher, pos, shocks: dict[str, float]) -> tuple[dict[
     return rest, moved
 
 
+def position_share(pos, market: dict) -> list[str]:
+    """D217: the position's share of its market (collateral and debt, from the borrower's recorded graph) and the PT the
+    market holds as collateral against its Pendle pool's PT reserves (the pool at the snapshot's block): how much of
+    the market leaves if the position does, and how many times the pool's depth the market's liquidations would sell."""
+    out = []
+    coll, debt = float(market.get("collateral_of_borrowers") or 0), float(market.get("total_borrow") or 0)
+    if coll and debt and pos.collateral_units:
+        out.append(
+            f"the position is {pos.collateral_units / coll:.0%} of its market's collateral and "
+            f"{pos.debt_usd / debt:.0%} of its debt"
+        )
+    if coll and pos.pendle_market:
+        try:
+            f = S.Fetcher("offline")
+            pool = pendle_amm.read(f, pos.pendle_market, int(S.rpc(f, "eth_blockNumber", []), 16))
+        except S.CacheMiss:
+            return out
+        out.append(
+            f"the market holds {coll:,.0f} PT as collateral, {coll / pool.total_pt:.1f}× the PT in its Pendle pool "
+            f"({pool.total_pt:,.0f}); the pool accepts at most {pendle_amm.max_sale(pool):,.0f} more"
+        )
+    return out
+
+
 def position_depth(pos, profile=None) -> dict:
     """D199–D202: the borrow position's extra layers, from its borrower's recorded graph (`graph --user <borrower>
     --record`) and its market's admin surface read at that block; {} when the graph is not recorded. Offline only:
@@ -255,6 +279,8 @@ def position_depth(pos, profile=None) -> dict:
         GR.annotate_pharos(g, ph)
     if protocols:
         GR.annotate_tvl(g, protocols)
+    GR.annotate_shared(g)
+    GR.annotate_supply(g, S.Fetcher("offline", rdir), block)
     try:
         aw = AD.AdminWatch(S.Fetcher("offline", rdir), [pos.morpho_market], block)
         admin = DP.admin_rows(aw.contracts, aw.timelock_over)
@@ -263,6 +289,8 @@ def position_depth(pos, profile=None) -> dict:
     tokens = [x.lower() for x in (pos.collateral_address, pos.underlying_address) if x]
     gd = {"nodes": list(g.nodes.values()), "edges": g.edges}
     d = DP.position_depth(gd, pos.morpho_market, tokens, admin)
+    if d:
+        d["position_share"] = position_share(pos, g.nodes.get(pos.morpho_market, {}).get("details", {}))
     if d and profile is not None:
         d["oracle_profile"] = DP.profile_text(profile)  # D200: what the graph cannot see inside a meta-oracle
     if d:
@@ -351,6 +379,7 @@ def vault_graph(vault: str) -> dict | None:
         return None
     finally:
         clock.set_as_of(as_of)
+    GR.annotate_shared(g)  # D215: a hit's feed read by other markets too
     return {"nodes": list(g.nodes.values()), "edges": g.edges, "block": block}
 
 

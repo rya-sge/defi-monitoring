@@ -290,6 +290,15 @@ def main(argv: list[str] | None = None) -> int:
         protocols = pipeline.llama_protocols("offline" if args.replay else "live")
         drawn = GR.annotate_tvl(g, protocols) if protocols else 0
         confidential = GR.annotate_zama(g)
+        shared = GR.annotate_shared(g)
+        fs = (
+            S.Fetcher("offline", rdir)
+            if args.replay
+            else S.Fetcher("refresh", rdir)
+            if args.record
+            else S.Fetcher("direct")
+        )
+        measured = GR.annotate_supply(g, fs, block)
         title = "Morpho dependency graph: " + ", ".join([u[:10] + "…" for u in users] + [v[:10] + "…" for v in vaults])
         hp, jp = GR.write(g, Path(args.out), title, GR.subtitle_for(block))
         kinds = {}
@@ -302,6 +311,12 @@ def main(argv: list[str] | None = None) -> int:
         )
         if confidential:
             print(f"Zama: {confidential} vault(s) entered confidentially, their batchers and decryption drawn")
+        print(f"shared feeds and oracles: {shared} read by more than one market")
+        print(
+            f"collateral supply: {measured} token(s) with their share posted in Morpho"
+            if measured
+            else "collateral supply: not checked"
+        )
         print(f"html: {hp}\njson: {jp}")
         return 0
 

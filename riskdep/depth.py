@@ -44,6 +44,7 @@ def position_depth(graph: dict, market_id: str, tokens: list[str], admin: list[d
                     "kind": d.get("constant_kind"),
                     "freshness": d.get("freshness"),
                     "stale": bool(d.get("stale")),
+                    "shared": d.get("shared_text"),
                 }
             )
     siblings = []
@@ -64,11 +65,13 @@ def position_depth(graph: dict, market_id: str, tokens: list[str], admin: list[d
             }
         )
     siblings.sort(key=lambda s: -s["liquidatable_at_fall"])
-    backing, grades = [], {}
+    backing, grades, supply = [], {}, []
     for t in tokens:
         n = nodes.get(t)
         if n is None:
             continue
+        if n["details"].get("supply_text"):
+            supply.append(f"{n['label']}: {n['details']['supply_text']}")  # D216
         if n["details"].get("pharos_grade"):
             grades[n["label"]] = n["details"]["pharos_grade"]
         for e in out_edges.get(t, []):
@@ -93,6 +96,8 @@ def position_depth(graph: dict, market_id: str, tokens: list[str], admin: list[d
         "market": label,
         "market_curve": held["details"].get("liquidation_curve") or [],  # D206: what the incident liquidates
         "oracle": nodes[oracle]["details"].get("oracle_class") if oracle in nodes else None,
+        "oracle_shared": nodes[oracle]["details"].get("shared_text") if oracle in nodes else None,  # D215
+        "supply": supply,
         "feeds": feeds,
         "admin": admin or [],
         "siblings": siblings,
@@ -122,11 +127,14 @@ def lines(depth: dict) -> list[str]:
     if not depth:
         return []
     out = [f"oracle: {depth['oracle_profile']}"] if depth.get("oracle_profile") else []
+    if depth.get("oracle_shared"):
+        out.append(f"the oracle is {depth['oracle_shared']}")
     for f in depth["feeds"]:
         out.append(
             f"oracle input {f['label']} ({f['role'] or 'feed'}): {f['class'] or 'not classified'}"
             + (f", {f['kind']}" if f.get("kind") else "")
             + (f"; {f['freshness']}" if f["freshness"] else "")
+            + (f"; {f['shared']}" if f.get("shared") else "")
         )
     for a in depth["admin"]:
         out.append(f"who can change it: {a['text']}")
@@ -139,6 +147,8 @@ def lines(depth: dict) -> list[str]:
                 f"{s['label']} {s['liquidatable_at_fall']:,.0f} {s['unit']} liquidatable" for s in depth["siblings"][:4]
             )
         )
+    out += [f"concentration: {s}" for s in depth.get("supply", [])]
+    out += [f"concentration: {s}" for s in depth.get("position_share", [])]
     for t, g in depth["grades"].items():
         out.append(f"issuer grade (Pharos): {t} {g}")
     for b in depth["backing"]:

@@ -376,7 +376,8 @@ def market_feeds(graph: dict, market_id: str) -> list[tuple[str, str, bool]]:
     for e in graph["edges"]:
         d = nodes.get(e["target"], {}).get("details", {})
         if e["rel"] == "reads" and e["source"] in oracles and d.get("freshness"):
-            out.append((nodes[e["target"]]["label"], d["freshness"], bool(d.get("stale"))))
+            txt = d["freshness"] + (f"; {d['shared_text']}" if d.get("shared_text") else "")  # D215
+            out.append((nodes[e["target"]]["label"], txt, bool(d.get("stale"))))
     return out
 
 

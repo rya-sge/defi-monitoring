@@ -70,8 +70,8 @@ Sizes: **S** about a day, **M** a few days, **L** more.
 | B3 | ~~Stressed exit cost~~ **done** (plan `2026-10-11-stressed-exit`: the exit after the incident's own liquidations; the hold-to-maturity path in `2026-10-11-alerts-and-verdict`) | K12 | S | Pendle quotes at several sizes |
 | B1+, B2+ | The rate and yield channels as Monte Carlo layers, with Pendle's and Morpho's history | K10, K11 | S | `simulate.py` |
 | B8 | Loans at the market price; the drain as a loss channel | K16 | S–M | `market_risk.py`, `drain.py` |
-| C2+ | ~~`FeedStale` in the watches~~ **done**; left: one feed under several markets | K23 | S | `feeds.py` |
-| C3+ | A collateral's share of its supply held in Morpho | K25 | S | `graph.py` |
+| C2+ | ~~`FeedStale` in the watches; one feed under several markets~~ **done** (plan `2026-10-11-shared-and-supply`) | K23 | S | `feeds.py` |
+| C3+ | ~~A collateral's share of its supply held in Morpho~~ **done** (plan `2026-10-11-shared-and-supply`) | K25 | S | `graph.py` |
 | C6 | Bridges as graph nodes, issuer and oracle registry entries, PT expiry in incidents | K19, K23 | M | `graph.py`, registry |
 | C4, C5 | External venues; Vault V1, other chains | K24, C5 | M–L | registry, `metamorpho-v1.1` |
 | D | Validate on your positions; Slack/Discord/email alerts; infrastructure; execution | — | — | — |
