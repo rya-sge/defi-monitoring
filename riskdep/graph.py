@@ -145,9 +145,10 @@ def _oracle(g: Graph, f, oracle: str, block) -> str:
             g.edge(oracle, fid, "converts through", role=name)
         else:
             fcls = OC.classify_input(probes[addr]) if addr in probes else (None, None)
+            on_read = addr in probes and probes[addr].round_id == 0
             fresh = (
                 FD.freshness(probes[addr].updated_at, probes[addr].update_times, clock.now())
-                if addr in probes
+                if addr in probes and not on_read
                 else None
             )
             fid = g.node(
@@ -161,7 +162,8 @@ def _oracle(g: Graph, f, oracle: str, block) -> str:
                 constant_kind=OC.constant_kind(probes[addr]) if addr in probes else None,
                 tracks_market=probes[addr].pendle_market() if addr in probes else None,
                 updated_at=probes[addr].updated_at if addr in probes else None,
-                freshness=fresh.text if fresh else None,
+                # D242: a value computed on read has no update time: its `updatedAt` is 0 or the read's own block
+                freshness=fresh.text if fresh else "computed on read: no update time (round 0)" if on_read else None,
                 stale=fresh.stale if fresh else None,
                 source="oracle getter, description() on-chain; freshness from its rounds (D155)",
             )

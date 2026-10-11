@@ -70,6 +70,7 @@ class MarketHit:
     engine: str = ""  # D139: what the engine saw: oracle and collateral market factors, liquidated, insolvent
     feeds: list[str] = field(default_factory=list)  # D157: each base feed of the market's oracle and its freshness
     returned: float = 0.0  # D239: what the vault can withdraw more from this market once liquidators repaid
+    band: dict | None = None  # D241: the feed's floor holds the oracle back; the stage now, the rest after an upgrade
     stale_feed: bool = False
 
 
@@ -156,6 +157,13 @@ class VaultIncident:
                 )
             out += [f"    feed {x}" for x in h.feeds]
             out.append(f"    oracle {h.oracle_class}; how fast: {h.timing}")
+            if h.band:
+                b = h.band
+                out.append(
+                    f"    now, held at the feed's floor: {b['now_liquidatable']:,.0f} {s} liquidatable, bad debt "
+                    f"{b['now_bad_debt']:,.0f}, the vault's loss {b['now_vault_loss']:,.0f}; the figures above once "
+                    f"the feed is upgraded" + (f", {b['timelock_h']:g} h at the earliest" if b["timelock_h"] else "")
+                )
         out.append(
             f"  vault loss {self.vault_loss:,.0f} {s} ({self.vault_loss / self.vault_total:.2%} of {self.vault_total:,.0f})"
             + (
@@ -311,6 +319,35 @@ def returned_liquidity(h: MarketHit, vault_assets: float, free: float) -> float:
     return max(0.0, after - now)
 
 
+def feed_bands(f: S.Fetcher, graph: dict | None, market_ids: list[str], block: int) -> dict[str, dict] | None:
+    """D241 (GAPV2 G11): each market's feed with a fixed band (a Midas custom feed: below `minAnswer` it cannot report
+    without new code) and the timelock above it, read through the admin surface at `block`; None when not readable
+    (not in the recording)."""
+    from . import admin as AD
+
+    if graph is None or not market_ids:
+        return {}
+    try:
+        aw = AD.AdminWatch(f, market_ids, block)
+    except (S.CacheMiss, S.SourceError):
+        return None
+    oracles = {e["source"]: e["target"] for e in graph["edges"] if e["rel"] == "priced by"}
+    out = {}
+    for mid in market_ids:
+        for e in graph["edges"]:
+            c = aw.contracts.get(e["target"]) if e["rel"] == "reads" and e["source"] == oracles.get(mid) else None
+            if c is not None and c.band:
+                lo, hi, dec, ans = c.band
+                tl = aw.timelock_over(c.address)
+                out[mid] = {
+                    "feed": c.symbol or c.address[:10],
+                    "floor_fall": max(0.0, 1 - lo / ans),
+                    "floor": lo / 10**dec,
+                    "timelock_h": tl.timelock_delay / 3600 if tl and tl.timelock_delay else None,
+                }
+    return out
+
+
 def live_exit(f: S.Fetcher, h: MarketHit, mp, price: int | None, info) -> None:
     """D213–D214: the hit's exit liquidity quoted live on KyberSwap at the size its liquidations seize (debt × LIF),
     in place of the registry's; the registry's stays when no quote is available."""
@@ -409,7 +446,7 @@ def engine_shocks(graph: dict, shocks: list[tuple]) -> list[EN.Shock]:
     constant-price input (the issuer's rate or NAV feed) of the oracles of markets taking T as collateral reads f low.
     A price-tracking input follows T's price through the graph's `tracks` edges by itself. D205: a linear-discount or
     fixed input does not read the markdown: its market keeps its oracle, liquidates nobody, and its lenders hold the
-    shortfall (and the drain the gap opens)."""
+    shortfall (and the drain the gap opens). D240: an oracle that applies T's own ERC-4626 rate reads it low too."""
     nodes = {n["id"]: n for n in graph["nodes"]}
     out: dict[tuple, EN.Shock] = {}
     for kind, tok, fall, _ in normalise(shocks):
@@ -420,6 +457,7 @@ def engine_shocks(graph: dict, shocks: list[tuple]) -> list[EN.Shock]:
             out[(a, "price")] = EN.Shock(a, "price", -fall)
             markets = {e["source"] for e in graph["edges"] if e["rel"] == "takes as collateral" and e["target"] == a}
             oracles = {e["target"] for e in graph["edges"] if e["rel"] == "priced by" and e["source"] in markets}
+            seen = set()  # oracles that read the markdown through one of their feeds
             for e in graph["edges"]:
                 feed = nodes.get(e["target"], {})
                 if (
@@ -429,6 +467,13 @@ def engine_shocks(graph: dict, shocks: list[tuple]) -> list[EN.Shock]:
                     and feed["details"].get("constant_kind") not in (OC.LINEAR_DISCOUNT, OC.FIXED)
                 ):
                     out[(feed["id"], "misreport")] = EN.Shock(feed["id"], "reads-low", fall)
+                    seen.add(e["source"])
+            for e in graph["edges"]:
+                # D240 (GAPV2 G19): an oracle that applies the token's own ERC-4626 rate (BASE_VAULT) reads a loss of
+                # value the issuer books, as a rate oracle does; not twice when a feed already carries it
+                if e["rel"] == "converts through" and e["target"] == a and e["source"] in oracles:
+                    if e["source"] not in seen:
+                        out[(e["source"], "misreport")] = EN.Shock(e["source"], "reads-low", fall)
     return list(out.values())
 
 
@@ -671,6 +716,8 @@ def run(
         {mid: scenario.oracle_profile(f, params[mid].oracle, "latest") for mid in risk.markets} if profile_all else {}
     )
     hits, loss_raw, exposure_raw = [], 0, 0
+    direct = [m for m in drops if m in risk.markets and drops[m] > 0 and not vias.get(m)]
+    bands = feed_bands(f, graph, direct, block)  # D241: a feed whose floor holds the markdown back
     for mid in sorted(set(drops) | set(defaults), key=list(params).index):
         if mid not in risk.markets:
             continue  # below one whole token allocated: not followed (D47)
@@ -723,6 +770,22 @@ def run(
             h.no_liquidator_shortfall = (
                 hidden_shortfall(positions, totals, price, d) / lu + (dbad / lu if who else 0.0)
             ) * h.vault_share
+        b = (bands or {}).get(mid)
+        if b and d > b["floor_fall"] and h.event == "markdown" and not h.via:
+            # D241: the oracle can fall only to the feed's floor now; the rest waits for an upgrade of the feed
+            now = market_hit(mid, risk.markets[mid], positions, totals, price, b["floor_fall"], h.vault_share, profile)
+            lock = f" through a {b['timelock_h']:g} h timelock" if b["timelock_h"] else ""
+            h.band = {
+                **b,
+                "now_liquidatable": now.liquidatable_debt,
+                "now_bad_debt": now.bad_debt,
+                "now_vault_loss": now.vault_loss,
+                "held_back": d - b["floor_fall"],
+            }
+            h.timing = (
+                f"the feed's floor ({b['feed']} {b['floor']:,.6g}) holds the oracle at −{b['floor_fall']:.1%} at its "
+                f"next round; the rest, −{d - b['floor_fall']:.1%}, reaches it only after the feed is upgraded{lock}"
+            )
         hits.append(h)
 
     for h in hits if graph is not None else []:
