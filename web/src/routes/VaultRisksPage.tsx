@@ -17,7 +17,7 @@ import { useAlerts, useGraph, useIncidentImpact, useSelectedTarget, useVault } f
 import { GRAPH_NODE_KINDS } from '../api/types';
 import type { Alert, GraphNodeKind, Vault, VaultExit, VaultMarket } from '../api/types';
 import { ChartTooltip } from '../components/ChartTooltip';
-import { GraphCanvas, KindFilter } from '../components/GraphCanvas';
+import { ExpandAll, GraphCanvas, KindFilter } from '../components/GraphCanvas';
 import { LiquidationChart } from '../components/LiquidationChart';
 import { Stat } from '../components/Stat';
 import { Empty, ErrorState, Loading } from '../components/States';
@@ -43,15 +43,9 @@ import {
   usd,
 } from '../lib/format';
 import { badDebt, badDebtBy } from '../lib/risk';
-import {
-  KIND_COLOR,
-  adjacent,
-  flowLit,
-  nodeAmount,
-  pathNodes,
-  pointsOfFailure,
-} from '../lib/graph';
+import { KIND_COLOR, flowLit, nodeAmount, pointsOfFailure } from '../lib/graph';
 import type { Lit } from '../lib/graph';
+import { useReveal } from '../lib/useReveal';
 import { useTwinGroups } from '../lib/useTwinGroups';
 import { Button } from '@/components/ui/button';
 
@@ -638,20 +632,12 @@ function Dependencies({ vault }: { vault: Vault }) {
   const twins = useTwinGroups(data);
   const graph = twins.graph;
   const [picked, setPicked] = useState<string | null>(null);
-  // Level 1 around the vault by default; a click reveals more (D207).
-  const [revealed, setRevealed] = useState<ReadonlySet<string>>(new Set());
+  // Level 1 around the vault by default; a click opens or closes a node (D212).
+  const reveal = useReveal(graph, vault.address);
+  const shown = reveal.graph;
   const [hiddenKinds, setHiddenKinds] = useState<ReadonlySet<GraphNodeKind>>(
     new Set(['Admin', 'External']),
   );
-  const reveal = (ids: string[]) => setRevealed((previous) => new Set([...previous, ...ids]));
-  const shown = useMemo(() => {
-    if (!graph) return undefined;
-    const ids = new Set([vault.address, ...adjacent(vault.address, graph.edges), ...revealed]);
-    return {
-      nodes: graph.nodes.filter((n) => ids.has(n.id)),
-      edges: graph.edges.filter((e) => ids.has(e.source) && ids.has(e.target)),
-    };
-  }, [graph, vault.address, revealed]);
   const [fall, setFall] = useState<number | null>(null);
   const node = graph?.nodes.find((n) => n.id === picked);
   const shock = node?.kind === 'Asset' && fall != null ? `token=${node.label}:${fall}` : null;
@@ -722,6 +708,7 @@ function Dependencies({ vault }: { vault: Vault }) {
   if (isPending) return <Loading what="the dependency graph" />;
   if (error) return <ErrorState what="the dependency graph" error={error} />;
   if (!graph || !shown) return null;
+  const visibleKinds = new Set(GRAPH_NODE_KINDS.filter((kind) => !hiddenKinds.has(kind)));
 
   const pick = (id: string | null) => {
     setPicked(id);
@@ -733,22 +720,30 @@ function Dependencies({ vault }: { vault: Vault }) {
       <div className="grid gap-2">
         <div className="relative h-[560px] overflow-hidden rounded-md border">
           <GraphCanvas
-            key={`${vault.address}-${dataUpdatedAt}-${twins.layoutKey}-${shown.nodes.length}`}
+            key={`${vault.address}-${dataUpdatedAt}-${twins.layoutKey}`}
+            positions={reveal.positions}
             nodes={shown.nodes}
             edges={shown.edges}
-            visibleKinds={new Set(GRAPH_NODE_KINDS.filter((kind) => !hiddenKinds.has(kind)))}
+            visibleKinds={visibleKinds}
+            more={reveal.more(visibleKinds)}
             search=""
             selection={null}
             onSelect={(next) => {
               if (next?.type === 'node') {
                 if (!twins.open(next.node)) {
                   pick(next.node.id);
-                  reveal(adjacent(next.node.id, graph.edges));
+                  reveal.toggle(next.node.id);
                 }
               } else if (!next) pick(null);
             }}
             focus={focus}
             overlay={overlay}
+          />
+          <ExpandAll
+            all={reveal.all}
+            onExpand={reveal.expandAll}
+            onCollapse={reveal.collapseAll}
+            className="absolute top-3.5 left-3.5"
           />
           <KindFilter
             kinds={GRAPH_NODE_KINDS.filter((kind) => shown.nodes.some((n) => n.kind === kind))}
@@ -794,7 +789,7 @@ function Dependencies({ vault }: { vault: Vault }) {
                   className="cursor-pointer"
                   onClick={() => {
                     pick(p.id);
-                    reveal(pathNodes(vault.address, p.id, graph.edges));
+                    reveal.showPath(p.id);
                   }}
                 >
                   <TableCell className="w-full max-w-0">

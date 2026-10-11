@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { MarkerType, Panel, ReactFlow, useNodesState, useReactFlow } from '@xyflow/react';
 import type { XYPosition } from '@xyflow/react';
 import { Maximize, Minus, Plus } from 'lucide-react';
@@ -53,6 +53,8 @@ export type GraphCanvasProps = {
   focus?: Lit;
   /** Per node: a ring colour, and amount lines that replace the node's own. */
   overlay?: Record<string, { ring?: string; amount: string[] }>;
+  /** Per node: its neighbours not in view, drawn as "+N". */
+  more?: Record<string, number>;
   /** Node positions to use instead of the dagre layout. */
   positions?: Map<string, XYPosition>;
   /** Draw edges without arrowheads (a symmetric relation). */
@@ -175,7 +177,8 @@ function ZoomControls() {
 
 /**
  * Laid out once per mount: the caller remounts it (with `key`) to re-run the layout,
- * which also drops the user's drags.
+ * which also drops the user's drags. Given `positions`, a change of `nodes` adds and removes
+ * nodes in place instead.
  */
 export function GraphCanvas({
   nodes,
@@ -186,11 +189,24 @@ export function GraphCanvas({
   onSelect,
   focus = null,
   overlay,
+  more,
   positions,
   undirected = false,
 }: GraphCanvasProps) {
   const [initial] = useState(() => initialNodes(nodes, edges, positions));
-  const [rfNodes, , onNodesChange] = useNodesState(initial);
+  const [rfNodes, setNodes, onNodesChange] = useNodesState(initial);
+  // With given positions, nodes come and go in place: no new layout, no refit, drags kept.
+  useEffect(() => {
+    if (!positions) return;
+    // Kept nodes keep their object (position, measured size); only new ones are built.
+    setNodes((previous) => {
+      const kept = new Map(previous.map((n) => [n.id, n]));
+      return initialNodes(nodes, edges, positions).map((n) => {
+        const old = kept.get(n.id);
+        return old ? { ...old, data: n.data } : n;
+      });
+    });
+  }, [nodes, edges, positions, setNodes]);
 
   const rfEdges = useMemo<RiskEdgeType[]>(
     () =>
@@ -240,12 +256,12 @@ export function GraphCanvas({
     () =>
       rfNodes.map((n) => ({
         ...n,
-        data: overlay?.[n.id] ? { ...n.data, ...overlay[n.id] } : n.data,
+        data: { ...n.data, ...overlay?.[n.id], more: more?.[n.id] },
         hidden: !visibleKinds.has(n.data.node.kind),
         selected: selection?.type === 'node' && selection.node.id === n.id,
         style: dim(lit && !lit.nodes.has(n.id)),
       })),
-    [rfNodes, visibleKinds, lit, selection, overlay, dim],
+    [rfNodes, visibleKinds, lit, selection, overlay, more, dim],
   );
 
   const shownEdges = useMemo(
@@ -339,5 +355,30 @@ export function KindFilter({
         </Button>
       ))}
     </div>
+  );
+}
+
+/** Expand every node, or collapse back to the target's first level. */
+export function ExpandAll({
+  all,
+  onExpand,
+  onCollapse,
+  className,
+}: {
+  all: boolean;
+  onExpand: () => void;
+  onCollapse: () => void;
+  className?: string;
+}) {
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="xs"
+      onClick={all ? onCollapse : onExpand}
+      className={cn('font-normal', className)}
+    >
+      {all ? 'Collapse all' : 'Expand all'}
+    </Button>
   );
 }

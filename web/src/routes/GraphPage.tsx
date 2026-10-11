@@ -3,11 +3,12 @@ import { X } from 'lucide-react';
 import { useGraph, useSelectedTarget } from '../api/hooks';
 import { GRAPH_NODE_KINDS } from '../api/types';
 import type { GraphNodeKind } from '../api/types';
-import { GraphCanvas, KindFilter } from '../components/GraphCanvas';
+import { ExpandAll, GraphCanvas, KindFilter } from '../components/GraphCanvas';
 import type { FlowNeighbour, GraphSelection } from '../components/GraphCanvas';
 import { DetailsTable } from '../components/DetailsTable';
 import { ErrorState, Loading } from '../components/States';
 import { KIND_COLOR, RISK_KEYS, edgeLabel, scopeToTarget } from '../lib/graph';
+import { useReveal } from '../lib/useReveal';
 import { useTwinGroups } from '../lib/useTwinGroups';
 import { detailValue } from '../lib/format';
 import { Button } from '@/components/ui/button';
@@ -43,8 +44,12 @@ export function GraphPage() {
     [full, ownGraph, target],
   );
   const twins = useTwinGroups(scoped);
-  const data = twins.graph;
-  const [hiddenKinds, setHiddenKinds] = useState<ReadonlySet<GraphNodeKind>>(new Set());
+  // Opens at the target's first level; a click opens or closes a node (D212).
+  const reveal = useReveal(twins.graph, target?.replace(/^user-/, 'user:'));
+  const data = reveal.graph;
+  const [hiddenKinds, setHiddenKinds] = useState<ReadonlySet<GraphNodeKind>>(
+    new Set(['Admin', 'External']),
+  );
   const [selection, setSelection] = useState<GraphSelection>(null);
 
   const presentKinds = useMemo(
@@ -75,17 +80,30 @@ export function GraphPage() {
       {/* Remounting re-runs the layout when the target or data changes. */}
       <GraphCanvas
         key={`${target ?? ''}-${dataUpdatedAt}-${twins.layoutKey}`}
+        positions={reveal.positions}
         nodes={data.nodes}
         edges={data.edges}
         visibleKinds={visibleKinds}
+        more={reveal.more(visibleKinds)}
         search=""
         selection={selection}
         onSelect={(next) => {
           // A group of twins opens on click; it has nothing of its own to show.
-          setSelection(next?.type === 'node' && twins.open(next.node) ? null : next);
+          if (next?.type !== 'node') setSelection(next);
+          else if (twins.open(next.node)) setSelection(null);
+          else {
+            reveal.toggle(next.node.id);
+            setSelection(next);
+          }
         }}
       />
 
+      <ExpandAll
+        all={reveal.all}
+        onExpand={reveal.expandAll}
+        onCollapse={reveal.collapseAll}
+        className="absolute top-3.5 left-3.5"
+      />
       <KindFilter
         kinds={presentKinds}
         hidden={hiddenKinds}

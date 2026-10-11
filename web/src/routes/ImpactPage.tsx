@@ -16,6 +16,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 /**
  * The impact of a shock (`riskdep shock`'s trace, `docs/model/shock-trace.md`): a summary and
@@ -32,6 +33,15 @@ const STATUS_RING: Record<ShockStatus, string> = {
 };
 
 const ALL_KINDS = new Set(GRAPH_NODE_KINDS);
+
+/** The markets table's headers and their tooltips (`docs/model/shock-engine.md`). */
+const MARKET_COLUMNS = [
+  ['Market', 'A Blue market where positions were liquidated or lenders lose'],
+  ['Status', 'loss: lenders lose; liquidations: positions liquidated, no loss'],
+  ['Lenders lose', 'Written-off, insolvent and drained debt, net of the state before the shock'],
+  ['Liquidated', 'Debt repaid by liquidators, in the loan asset'],
+  ['Sold $', 'Collateral sold by liquidators, in USD'],
+] as const;
 
 const n = (value: unknown) => (typeof value === 'number' ? value : 0);
 
@@ -86,7 +96,9 @@ function finalSteps(trace: ShockTrace) {
 
 function Summary({ trace, label }: ViewProps) {
   const entries = reached(trace);
-  const markets = entries.filter(([, state]) => state.model === 'blue_market');
+  const markets = entries.filter(
+    ([, state]) => state.model === 'blue_market' && state.status !== 'moved',
+  );
   const assets = entries.filter(([, state]) => state.model === 'asset_price');
   const losers = entries.filter(
     ([, state]) => state.status === 'loss' && state.model === 'combine',
@@ -107,17 +119,14 @@ function Summary({ trace, label }: ViewProps) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Market</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Oracle ×</TableHead>
-              <TableHead className="text-right">Market ×</TableHead>
-              <TableHead className="text-right">Liquidated</TableHead>
-              <TableHead className="text-right">Positions</TableHead>
-              <TableHead className="text-right">Write-off</TableHead>
-              <TableHead className="text-right">Insolvent</TableHead>
-              <TableHead className="text-right">Drained</TableHead>
-              <TableHead className="text-right">Lenders lose</TableHead>
-              <TableHead className="text-right">Sold $</TableHead>
+              {MARKET_COLUMNS.map(([name, tip], index) => (
+                <TableHead key={name} className={index > 1 ? 'text-right' : undefined}>
+                  <Tooltip>
+                    <TooltipTrigger className="cursor-help">{name}</TooltipTrigger>
+                    <TooltipContent>{tip}</TooltipContent>
+                  </Tooltip>
+                </TableHead>
+              ))}
             </TableRow>
           </TableHeader>
           <TableBody className="tabular-nums">
@@ -125,16 +134,10 @@ function Summary({ trace, label }: ViewProps) {
               <TableRow key={id}>
                 <TableCell>{label(id)}</TableCell>
                 <TableCell>{status}</TableCell>
-                <TableCell className="text-right">{num(n(d.oracle_factor), 3)}</TableCell>
-                <TableCell className="text-right">{num(n(d.market_factor), 3)}</TableCell>
-                <TableCell className="text-right">{num(n(d.liquidated_debt))}</TableCell>
-                <TableCell className="text-right">{n(d.positions_liquidated)}</TableCell>
-                <TableCell className="text-right">{num(n(d.bad_debt))}</TableCell>
-                <TableCell className="text-right">{num(n(d.insolvent))}</TableCell>
-                <TableCell className="text-right">{num(n(d.drained))}</TableCell>
                 <TableCell className="text-right font-semibold">
                   {num(n(d.lender_loss))} {detailValue(d.loan_unit)}
                 </TableCell>
+                <TableCell className="text-right">{num(n(d.liquidated_debt))}</TableCell>
                 <TableCell className="text-right">{usd(n(d.collateral_sold_usd))}</TableCell>
               </TableRow>
             ))}

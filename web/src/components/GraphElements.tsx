@@ -20,6 +20,8 @@ export type RiskNodeData = {
   underlying?: GraphNode;
   /** A pool's assets, collateral first (two or more replace its icon); a vault's asset. */
   assets?: GraphNode[];
+  /** Neighbours not in view: a click on the node shows them. */
+  more?: number;
 };
 export type RiskEdgeData = { edge: GraphEdge; label: string; width: number; colour: string };
 export type RiskNodeType = Node<RiskNodeData, 'risk'>;
@@ -211,6 +213,12 @@ export function RiskNode({ data, selected }: NodeProps<RiskNodeType>) {
           </div>
         )}
       </div>
+
+      {data.more ? (
+        <div className="absolute -top-2 -right-2 rounded-full border bg-[var(--surface)] px-1.5 text-[10px] leading-4 text-muted-foreground tabular-nums">
+          +{data.more}
+        </div>
+      ) : null}
 
       {amount.length > 0 ? (
         <div className="absolute inset-x-0.5 bottom-1 flex flex-col items-center gap-px">
