@@ -236,8 +236,11 @@ def holders(f: S.Fetcher, vault: str, total_assets: int, total_supply: int) -> t
         codes = S.rpc_batch_methods(f, [("eth_getCode", [a, "latest"]) for a, _ in rows])
     except (S.SourceError, S.CacheMiss):
         codes = [None] * len(rows)
+    from .zama import is_pool
+
     out = [
-        Holder(a, sh * total_assets // total_supply if total_supply else 0, _is_contract(c))
+        # D172: a Zama cShare is a contract, but it pools many confidential depositors: not one fast holder ahead
+        Holder(a, sh * total_assets // total_supply if total_supply else 0, False if is_pool(a) else _is_contract(c))
         for (a, sh), c in zip(rows, codes)
     ]
     return sorted(out, key=lambda h: -h.assets), int(d["pageInfo"]["countTotal"] or 0)

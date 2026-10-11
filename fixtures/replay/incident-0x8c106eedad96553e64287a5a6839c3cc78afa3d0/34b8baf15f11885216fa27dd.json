@@ -1,0 +1,1 @@
+{"method": "GET", "url": "https://api.etherscan.io/v2/api?chainid=1&module=contract&action=getsourcecode&address=0xdddd770badd886df3864029e4b377b5f6a2b6b83", "body": null, "fetched": "2026-10-11T00:34:04Z", "response": {"verified": true, "name": "ChainlinkOracle", "proxy": false, "implementation": null}}

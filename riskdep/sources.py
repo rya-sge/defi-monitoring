@@ -185,6 +185,64 @@ def api_key(section: str, name: str = "api_key") -> str | None:
     return c.get(section, name, fallback="").strip() or None
 
 
+def archive_url() -> str | None:
+    """An RPC serving old state, from keys.ini: `[rpc] url`, else `[alchemy] alchemy_ethereum_endpoint`. It may embed a
+    key: it is only ever used as a route (`routed_rpc`), never cached, logged or printed."""
+    return api_key("rpc", "url") or api_key("alchemy", "alchemy_ethereum_endpoint")
+
+
+class routed_rpc:
+    """`with routed_rpc(url):` sends the main RPC's requests to `url`; responses stay cached under the public URL, so a
+    recording made through it replays offline with no key (D161)."""
+
+    def __init__(self, url: str | None):
+        self.url, self.before = url, None
+
+    def __enter__(self):
+        self.before = ROUTES.get(RPC)
+        if self.url:
+            ROUTES[RPC] = self.url
+        return self
+
+    def __exit__(self, *_):
+        if self.before is None:
+            ROUTES.pop(RPC, None)
+        else:
+            ROUTES[RPC] = self.before
+
+
+def etherscan_logs(f: Fetcher, address: str, topic0: str, topic1: str, from_block: int, to_block: int) -> list[dict]:
+    """Event logs of one contract filtered by topic0 and topic1, through Etherscan (keyed; wide block ranges, which the
+    free RPCs refuse), paged by 1,000; each log slimmed to block, time, topics, data and transaction (D161)."""
+    key = api_key("etherscan")
+    out, page = [], 1
+    while True:
+        url = (
+            f"{ETHERSCAN}?chainid=1&module=logs&action=getLogs&address={address.lower()}&fromBlock={from_block}"
+            f"&toBlock={to_block}&topic0={topic0}&topic0_1_opr=and&topic1={topic1}&page={page}&offset=1000"
+        )
+
+        def slim(d):
+            if str(d.get("status")) != "1" and d.get("message") != "No records found":
+                raise SourceError(f"Etherscan logs: {d.get('message')}: {str(d.get('result'))[:120]}")
+            return [
+                {
+                    "block": int(x["blockNumber"], 16),
+                    "time": int(x["timeStamp"], 16),
+                    "topics": x["topics"],
+                    "data": x["data"],
+                    "tx": x["transactionHash"],
+                }
+                for x in (d.get("result") or [])
+            ]
+
+        part = f.get_json(url, slim, {"apikey": key} if key else None)
+        out += part
+        if len(part) < 1000:
+            return out
+        page += 1
+
+
 def contract_source(f: Fetcher, address: str) -> dict | None:
     """Etherscan `getsourcecode`, slimmed to {verified, name, proxy, implementation}; None when it cannot be known
     (no key and no cached answer, or Etherscan refused). Only the slim answer is cached, never the key."""

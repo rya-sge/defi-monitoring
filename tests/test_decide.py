@@ -56,3 +56,14 @@ def test_reduce_when_liquidation_is_closer_than_the_stress():
     d = verdict(pos(), sim(el=0.1, cvar99=1.0), QUOTE, depeg_mean=0.08, resimulate=lambda p: sim(el=0.05))
     assert d.verdict == "REDUCE"
     assert d.reduction is not None and d.reduction.new_liquidation_drop == pytest.approx(d.stress_drop)
+
+
+def test_a_gap_inside_the_sampling_error_is_not_a_reason():
+    """IMPROVEMENT 2.2: carry 4.93 against an expected loss of 5.5; with ± 0.6 (95 %) the simulation cannot tell them
+    apart, so it is no reason to REDUCE; with no sampling error it is."""
+    p = pos(debt_usd=0.0, lltv=None)
+    noisy = sim(el=5.5)
+    noisy.expected_loss_se = 0.6 / 1.96
+    d = verdict(p, noisy, QUOTE)
+    assert d.verdict == "STAY" and "± $1" in d.reasons[0]
+    assert verdict(p, sim(el=5.5), QUOTE).verdict == "REDUCE"

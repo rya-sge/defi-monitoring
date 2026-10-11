@@ -260,7 +260,7 @@ EVENTS: list[EventSpec] = [
     _ev("admin", "RoleGranted", "bytes32 indexed role", "address indexed account", "address indexed sender"),
     _ev("admin", "RoleRevoked", "bytes32 indexed role", "address indexed account", "address indexed sender"),
     _ev("admin", "Transfer", "address indexed from", "address indexed to", "uint256 value"),
-    # OpenZeppelin TimelockController queue, on the timelocks that control a watched contract (fork-demo D3)
+    # OpenZeppelin TimelockController queue, on the timelocks that control a watched contract (D182)
     _ev(
         "admin",
         "CallScheduled",

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import '@xyflow/react/dist/base.css';
 import type { GraphEdge, GraphNode, GraphNodeKind } from '../api/types';
 import { detailValue } from '../lib/format';
-import { edgeLabel, edgeWidth, layoutGraph, nodeAmount, reach } from '../lib/graph';
+import { edgeLabel, edgeWidth, layoutGraph, nodeAmount, nodeRole, reach } from '../lib/graph';
 import { RiskEdge, RiskNode } from './GraphElements';
 import type { RiskEdgeType, RiskNodeType } from './GraphElements';
 
@@ -96,6 +96,9 @@ function searchLit(search: string, nodes: GraphNode[], edges: GraphEdge[]): Lit 
   return lit;
 }
 
+/** A pool's assets, in the order of its name: collateral, then loan. */
+const POOL_ASSET_RELS = ['takes as collateral', 'lends', 'yield source'];
+
 function initialNodes(
   nodes: GraphNode[],
   edges: GraphEdge[],
@@ -124,6 +127,19 @@ function initialNodes(
               ),
           ),
       ),
+      assets:
+        nodeRole(node) === 'vault'
+          ? // A vault's asset: the unit it supplies in.
+            nodes.filter(
+              (n) =>
+                n.kind === 'Asset' &&
+                n.label === edges.find((e) => e.source === node.id && e.rel === 'supplies')?.unit,
+            )
+          : POOL_ASSET_RELS.flatMap((rel) =>
+              edges
+                .filter((e) => e.source === node.id && e.rel === rel)
+                .flatMap((e) => nodes.find((n) => n.id === e.target && n.kind === 'Asset') ?? []),
+            ),
     },
   }));
 }

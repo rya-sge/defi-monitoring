@@ -29,6 +29,7 @@ from . import oracle_class as OC
 from . import pharos as PH
 from . import scenario
 from . import sources as S
+from . import zama as ZM
 from .discover import REGISTRY
 from .vault import discover_vault, largest_depositor, read_state
 
@@ -62,6 +63,8 @@ class MarketHit:
     pharos_exposure: float = 0.0  # D135: > 0 when the market is reached through Pharos's off-chain backing edges
     source: str = "incident"  # D139: "engine" when the shock engine's propagation gave the figures
     engine: str = ""  # D139: what the engine saw: oracle and collateral market factors, liquidated, insolvent
+    feeds: list[str] = field(default_factory=list)  # D157: each base feed of the market's oracle and its freshness
+    stale_feed: bool = False
 
 
 @dataclass
@@ -97,6 +100,10 @@ class VaultIncident:
     p_star: float | None = None  # D143: the incident probability over the horizon above which leaving now pays
     p_star_year: float | None = None
     outside: list[str] = field(default_factory=list)  # D145: Nexus cover prices on the hit collateral's protocols
+    liquidity: tuple[float, float, float] = (0.0, 0.0, 0.0)  # D150: plain, forced (asset units), forced penalty
+    exit_cost_rate: float | None = None  # D151: a flat cost of leaving, as a share of what leaves (else the yield)
+    conditional: dict | None = None  # D165: the loss of staying given the incident, drawn (USD, depositor's terms)
+    zama: list[str] = field(default_factory=list)  # D174: a confidential depositor's two exits, for a Zama vault
 
     def lines(self) -> list[str]:
         s = self.symbol
@@ -138,6 +145,7 @@ class VaultIncident:
                         "if the markdown persists is counted as the loss (hidden)"
                     )
                 )
+            out += [f"    feed {x}" for x in h.feeds]
             out.append(f"    oracle {h.oracle_class}; how fast: {h.timing}")
         out.append(
             f"  vault loss {self.vault_loss:,.0f} {s} ({self.vault_loss / self.vault_total:.2%} of {self.vault_total:,.0f})"
@@ -152,19 +160,26 @@ class VaultIncident:
         out.append(f"  verdict given the incident: {self.verdict}: {self.reason}")
         if self.hits and self.depositor:
             out.append(f"  if the incident is not certain: {self.breakeven_text()}")
+        if self.conditional:
+            out.append(f"  given the incident, drawn: {self.conditional['text']}")
+        out += [f"  confidential (Zama): {z}" for z in self.zama]
         out += [f"  outside view: {o}" for o in self.outside]
         out += [f"  note: {n}" for n in self.notes]
         return out
 
     def breakeven_text(self) -> str:
         h = f"{self.horizon_days:g} days"
-        if self.apy is None:
+        if self.apy is None and self.exit_cost_rate is None:
             return "the vault's yield could not be read: the breakeven probability is not computed"
         if self.p_star is None:
             return (
                 "leaving first does not lower the loss: exiting does not pay against this incident, whatever its odds"
             )
-        cost = f"leaving now forgoes {self.exit_cost:,.0f} {self.symbol} of yield over {h} ({self.apy:.2%}/yr)"
+        cost = (
+            f"leaving now costs {self.exit_cost:,.0f} {self.symbol} ({self.exit_cost_rate:.0%} of what leaves)"
+            if self.exit_cost_rate is not None
+            else f"leaving now forgoes {self.exit_cost:,.0f} {self.symbol} of yield over {h} ({self.apy:.2%}/yr)"
+        )
         if self.p_star >= 1:
             return f"{cost}, more than leaving first saves: stay even if the incident is certain"
         return (
@@ -179,13 +194,14 @@ class VaultIncident:
 # --- pure
 
 
-def breakeven(stay: float, leave: float, par: float, apy: float | None, days: float):
-    """D142–D143, pure: (yield forgone by leaving now, p* over the horizon, p* per year). Leaving now costs the vault's
-    net yield on what can leave; it saves stay − leave if the incident comes. p* = cost / saving; None when leaving
-    saves nothing; ≥ 1 when the cost exceeds the saving even for a certain incident."""
-    if apy is None:
+def breakeven(stay: float, leave: float, par: float, apy: float | None, days: float, rate: float | None = None):
+    """D142–D143, pure: (cost of leaving now, p* over the horizon, p* per year). Leaving now costs the vault's net
+    yield on what can leave, or `rate` × what leaves when a flat exit cost is given (D151: the brief's 11 % unwind); it
+    saves stay − leave if the incident comes. p* = cost / saving; None when leaving saves nothing; ≥ 1 when the cost
+    exceeds the saving even for a certain incident."""
+    if apy is None and rate is None:
         return 0.0, None, None
-    cost = par * apy * days / 365
+    cost = par * rate if rate is not None else par * apy * days / 365
     saved = stay - leave
     if saved <= 0:
         return cost, None, None
@@ -327,6 +343,18 @@ def graded(snap: PH.Snapshot, collateral: str, chain: list[str], symbols: dict[s
         if g:
             return f"{symbols.get(t, t[:10])} {g}"
     return None
+
+
+def market_feeds(graph: dict, market_id: str) -> list[tuple[str, str, bool]]:
+    """D157, pure: (feed label, freshness, stale) for each input of the market's oracle the graph has a freshness for."""
+    nodes = {n["id"]: n for n in graph["nodes"]}
+    oracles = {e["target"] for e in graph["edges"] if e["source"] == market_id and e["rel"] == "priced by"}
+    out = []
+    for e in graph["edges"]:
+        d = nodes.get(e["target"], {}).get("details", {})
+        if e["rel"] == "reads" and e["source"] in oracles and d.get("freshness"):
+            out.append((nodes[e["target"]]["label"], d["freshness"], bool(d.get("stale"))))
+    return out
 
 
 def engine_shocks(graph: dict, shocks: list[tuple]) -> list[EN.Shock]:
@@ -482,7 +510,21 @@ def decide(
             "the collateral still covers the debt after the fall: no bad debt reaches the vault",
         )
     gain = stay - leave
-    if gain > 1 and gain >= REGISTRY["incident"]["exit_min_gain"] * stay:
+    share = liq.position / liq.total if liq.total else 0.0
+    why = (
+        f"the depositor holds {share:.0%} of the vault, so the loss falls on it either way"
+        if share >= 0.5
+        else f"only {par:,.0f} can leave, and the {stuck:,.0f} left behind carries the loss"
+    )
+    if gain <= 1:
+        pen = (
+            f"; the forceDeallocate penalty on the way out ({first.penalty / unit:,.0f}) makes leaving cost "
+            f"{-gain:,.0f} more"
+            if first.penalty and -gain > 1
+            else ""
+        )
+        return stay, par, stuck, leave, "STAY", f"leaving first does not lower the loss: {why}{pen}"
+    if gain >= REGISTRY["incident"]["exit_min_gain"] * stay:
         return (
             stay,
             par,
@@ -498,9 +540,8 @@ def decide(
         stuck,
         leave,
         "STAY",
-        f"leaving first saves only {gain:,.0f} ({gain / stay:.1%} of the {stay:,.0f} loss): too little can leave, or the "
-        "depositor is most of the vault, so the loss falls on it either way; withdrawing what can leave still cuts "
-        f"its exposure to a further cut by {par:,.0f}",
+        f"leaving first saves only {gain:,.0f} ({gain / stay:.1%} of the {stay:,.0f} loss): {why}; withdrawing what "
+        f"can leave still cuts its exposure to a further cut by {par:,.0f}",
     )
 
 
@@ -518,6 +559,7 @@ def run(
     graph: dict | None = None,
     horizon_days: float = 30.0,
     nexus: tuple[list[dict], list[dict]] | None = None,
+    exit_cost_rate: float | None = None,
 ) -> VaultIncident:
     """Read the vault and every borrower of its markets at `block`, then apply the incident (D98). `token_shocks` is
     `parse_shocks`' list (token markdowns and borrower defaults, D130) or `parse_token_shocks`' pairs. `profile_all`
@@ -528,7 +570,7 @@ def run(
     `horizon_days` and the vault's yield give the breakeven probability; `nexus` adds cover prices (D142–D146)."""
     shocks = normalise(token_shocks)
     view = discover_vault(f, vault, block)
-    dep = depositor.lower() if depositor else largest_depositor(f, vault)
+    dep = depositor.lower() if depositor else largest_depositor(f, vault, frozenset(ZM.POOLS))
     st = read_state(f, view, block, dep)
     risk = MR.VaultRisk(f, view, st, block)
     shares = MR.vault_supply_shares(st, risk.markets)
@@ -627,6 +669,9 @@ def run(
             ) * h.vault_share
         hits.append(h)
 
+    for h in hits if graph is not None else []:
+        fs = market_feeds(graph, h.market_id)
+        h.feeds, h.stale_feed = [f"{lbl}: {txt}" for lbl, txt, _ in fs], any(s for *_, s in fs)
     engine_block, siblings = None, []
     if graph is not None and shocks:
         engine_block = graph.get("block")
@@ -639,7 +684,15 @@ def run(
     liq = EQ.liquidity(st)
     stay, par, stuck, leave, verdict, reason = decide(liq, loss_raw, exposure_raw, unit)
     apy = vault_apy(f, view.address)
-    exit_cost, p_star, p_year = breakeven(stay, leave, par, apy, horizon_days)
+    exit_cost, p_star, p_year = breakeven(stay, leave, par, apy, horizon_days, exit_cost_rate)
+    if exit_cost_rate is not None and verdict == "EXIT" and stay - leave <= exit_cost:
+        verdict, reason = (
+            "STAY",
+            (
+                f"leaving first would save {stay - leave:,.0f}, but leaving costs {exit_cost:,.0f} "
+                f"({exit_cost_rate:.0%} of the {par:,.0f} that leaves): staying is cheaper even if the incident is certain"
+            ),
+        )
     outside = []
     if nexus is not None and hits:
         tokens = [
@@ -653,6 +706,11 @@ def run(
         "bad debt is written off only when the positions are liquidated; until then the share price stays at par, "
         "and those who leave first leave the loss to those who stay"
     ]
+    if any(h.stale_feed for h in hits):
+        notes.append(
+            "a hit market's feed is stale: the price the incident starts from may already be out of date, and the "
+            "issuer's next update can land the markdown at once"
+        )
     if any(h.event == "default" for h in hits):
         notes.append(
             "a default on Morpho Blue has no due date: the defaulted debt keeps accruing until the collateral is "
@@ -718,7 +776,14 @@ def run(
             )
     if dep and st.total_supply:
         notes.append(f"the depositor holds {st.depositor_shares / st.total_supply:.2%} of the vault")
-    return VaultIncident(
+    zama_lines = []
+    if ZM.entry(view.address):
+        try:
+            zs = ZM.read(f, view.address, block)
+            zama_lines = ZM.exits(zs, any(h.oracle_class == OC.CONSTANT_PRICE and h.vault_loss > 0 for h in hits))
+        except (S.CacheMiss, S.SourceError, TypeError):
+            zama_lines = ["a Zama confidential vault: its batchers could not be read (record the vault again)"]
+    inc = VaultIncident(
         view.address,
         view.name,
         view.asset_symbol,
@@ -750,7 +815,11 @@ def run(
         p_star,
         p_year,
         outside,
+        (liq.plain / unit, liq.forced / unit, liq.penalty),
+        exit_cost_rate,
     )
+    inc.zama = zama_lines
+    return inc
 
 
 def collateral_chains(

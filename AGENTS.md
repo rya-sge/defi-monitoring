@@ -55,7 +55,7 @@
 - **Registry, not constants.** Facts, assumptions, priors and watch thresholds live in `riskdep/registry.json` (`watch` key for alert thresholds), each with a stated basis. So do the shock engine's propagation rules (`engine`): a new propagation behaviour is a rule first, and a new transmission function in `engine.py` only when no rule can express it.
 - **Alert levels** are `info` / `warn` / `critical`; the trigger tables are in `README.md`.
 - **Watch loop invariant:** discover, read state, poll, assess, alert, and save the cursor **last** (`out/watch-*.cursor`), so a restart resumes without skipping blocks. Polling runs 2 blocks behind the head every 12 s; deeper reorgs are not handled. A live batch with no event reads only what moves without one (`vault.read_light`, `borrower.read_prices`); any event, gap, undecoded log or refresh, and `watch.full_state_every_blocks`, force a full read (D61). Replays and `--blocks` runs always read in full.
-- **Cross-checks never stop a run:** block hash against a second RPC (critical on mismatch), Morpho API against chain state (warn, 0.5 % tolerance); a check that cannot run prints "not checked".
+- **Cross-checks never stop a run:** block hash against a second RPC (critical on mismatch), Morpho API against chain state (warn, 0.5 % tolerance); a check that cannot run prints "not checked". On a local fork (`RISKDEP_FORK=1`, which requires `RISKDEP_RPC_URL`) both read "not checked": the fork's blocks exist nowhere else (D180); a recording made there replays as one.
 - **Free-RPC limits:** state is servable only ~64–90 blocks back (state-based rules on older ranges start at the oldest servable block); at most 9 addresses per `eth_getLogs` filter (the poller splits longer lists); recent ranges are intermittently refused as "archive" (the poller retries). Admin-surface filters are optional: a refusal is a warning, not a gap. Under a burst publicnode answers HTTP 429, and a local eRPC answers 200, both with a rate-limit error per batch item: `sources.Fetcher` waits and resends either (`_throttled`, up to 6 times) and never caches it. For long live runs, the optional local eRPC proxy (`erpc.yaml`, `docs/erpc.md`) spreads the calls over six free endpoints; it must never list dRPC, the cross-check's independent node.
 
 ## File tree
@@ -93,6 +93,7 @@ riskdep/
   pharos.py           Pharos, keyless: issuer grades, off-chain backing, common-mode groups (optional)
   nexus.py            Nexus Mutual, keyless: cover prices as an outside probability next to the breakeven p* (optional)
   vault_book.py       a book of vaults (file or --vault flags) under one incident, added up in USD
+  notify.py           the notify command: posts the watch alerts at or above a level to a Telegram channel (TELEGRAM_BOT.md)
   exit_queue.py       a depositor's place in a run on a vault: recovery and loss by queue position
   admin.py            admin surface of the watched markets: upgrades, owners, feeds, pauses, mints, oracle divergence
   # web dashboard
@@ -101,6 +102,11 @@ riskdep/
   graph.py            dependency graph as JSON + Cytoscape.js HTML
   siblings.py         sibling markets: other Blue markets sharing a held market's collateral, underlying or price input
   oracle_class.py     oracle class, price-tracking or constant-price, from structure and round history (pure + probe)
+  feeds.py            feed quality: each feed's freshness against its own update rhythm (pure)
+  tvl.py              TVL concentration of the graph's protocols, from DefiLlama (pure)
+  backtest.py         a past incident replayed: the prediction against the Liquidate events (backtest subcommand)
+  zama.py             Zama confidential vaults: the cShare pool, the batchers, a confidential depositor's two exits
+  conditional.py      the conditional Monte Carlo of vault and book incidents: the loss of staying given the incident (pure)
   # shock
   engine.py           propagation engine (pure): effects, rule matching, transmissions, the Blue market model, the squeeze
   shock.py            the shock command: resolve shocks, run the engine on a built or replayed graph, report, sweep
@@ -113,7 +119,9 @@ riskdep/
   report.py           HTML + JSON report
 tests/                pytest, all offline (snapshot + recorded replays)
   test_watch_rules.py, test_watch_replay.py, test_borrower.py, test_watch_user_replay.py,
-  test_graph.py, test_siblings.py, test_oracle_class.py, test_engine.py, test_market_risk.py, test_exit_queue.py, test_drain.py, test_scenario.py, test_vault_incident.py, test_vault_book.py, test_pharos.py, test_breakeven.py, test_admin.py, test_decide.py, test_propagate.py, test_demo_snapshot.py, test_fixes.py, test_light_reads.py, test_api.py, test_dashboard.py
+  test_graph.py, test_siblings.py, test_oracle_class.py, test_engine.py, test_market_risk.py, test_exit_queue.py, test_drain.py, test_scenario.py, test_vault_incident.py, test_vault_book.py, test_pharos.py, test_breakeven.py, test_feeds.py, test_backtest.py, test_conditional.py, test_zama.py, test_admin.py, test_decide.py, test_propagate.py, test_demo_snapshot.py, test_fixes.py, test_light_reads.py, test_api.py, test_dashboard.py, test_fork_replay.py, test_notify.py
+scripts/fork/          the crisis demo on a local mainnet fork (anvil): demo.sh (all in one), start-fork.sh, crisis-belem.sh, alt-*.sh, lib.sh,
+                      addresses.env, src/ (two demo contracts, not protocol code), tapes/ (vhs); see its README.md
 pyproject.toml        project metadata, dependencies, ruff and pytest configuration
 ```
 
@@ -123,17 +131,16 @@ pyproject.toml        project metadata, dependencies, ruff and pytest configurat
 - `docs/hackaton_instruction/GOAL.md` — the challenge brief: what to build, what is expected, the judging criteria and their weights, and where the repository answers each.
 - `docs/analysis/ARCHITECTURE.md` — how the system is built: modes, components and their imports, data sources and trust, data flow, state, testing, decision index.
 - `README.md` — usage of every mode, alert trigger tables, limits.
-- `docs/analysis/ANALYSIS_CURRENT.md` — the latest assessment (2026-10-10): the brief read as detect → impact → how fast → decide, where the tool stands on each step, why the Monte Carlo should become conditional on the observed incident, and the resulting order of work. Read it before `docs/analysis/NEXT_TASK.md`.
-- `docs/analysis/NEXT_TASK.md` — the task-level detail of incident mode (done) and of the book and the conditional Monte Carlo; `NEXT_STEP.md` holds the current order.
+- `docs/analysis/ANALYSIS_CURRENT.md` — the latest assessment (2026-10-10): the brief read as detect → impact → how fast → decide, where the tool stands on each step, why the Monte Carlo should become conditional on the observed incident, and the resulting order of work. Read it before `docs/analysis/NEXT_STEP.md`.
 - `docs/analysis/NEXT_STEP.md` — the next steps, in recommended order (phases A to D), with how each would be built and what it needs; it records what has been built and merges the earlier versions 1 and 2. Keep it current when a step is done.
 - `docs/risk-assessment/outside-providers.md` — the outside risk providers and how each is used: Pharos and Nexus Mutual (both in use, keyless); the rules any outside provider follows. `docs/analysis/EXTERNAL_SOURCE.md` is the survey that chose them.
 - `docs/analysis/PROVIDERS.md` — every external provider (RPC, APIs, CDNs): endpoints, queries, limits, trust model. Keep it current.
-- `keys.example.ini` — template of the API keys and secrets (no values); the real `keys.ini` is git-ignored.
+- `keys.example.ini` — template of the API keys and secrets (no values); the real `keys.ini` is git-ignored. `[alchemy]` (or `[rpc] url`) is an archive RPC, used only as a route by `backtest --record`: its URL embeds the key, so it is never cached, logged or printed.
 - `erpc.yaml` — configuration of the optional local eRPC proxy (eRPC 0.3.0, six free upstreams, no key); `docs/erpc.md` is the setup guide. Its upstream list is mirrored in `docs/analysis/PROVIDERS.md`.
 - `docs/analysis/ANALYSIS_MONITORING.md` — design note: dependency graph, impact, monitoring, execution, and gaps of the current implementation (done / partial / missing).
-- `plan/` — the twenty plans (`defi-risk-dependency`, `morpho-vault-v2-watcher`, `morpho-user-watcher`, `lenders-and-timelocks`, `market-borrowers`, `admin-surface`, `exit-queue`, `drain-threshold`, `sibling-markets`, `incident-mode`, `propagation-engine`, `vault-incident`, `vault-book`, `wrapped-collateral`, `borrower-concentration`, `pharos`, `one-number`, `breakeven`, `incident-api`, and `web-graph-react-flow` for the SPA's graph).
-- `examples/` — `rockawayx-ethereum.json`, the demo book of vaults and the template for any other (`analyze --book`).
-- `docs/` — `alert-runbook.md` (what each alert means and what to do), `glossary.md`, `registry-reference.md` (every `registry.json` key), `how-risk-is-computed.md`, `monte-carlo.md` (how `analyze`'s simulation works; its mindmap in `docs/img/`), `scenarios-and-breakeven.md`, `vault-depositor-scenarios.md`, `graph-propagation.md`, `how-a-block-is-analysed.md`, `websocket-vs-polling.md`, `user-watcher-options.md`, `exit-queue.md`, `erpc.md` (the optional local RPC proxy), `shock-engine.md` (the shock engine and its rules), `shock-trace.md` (the propagation trace for a front end, example in `shock-trace-example.json`), `drain-threshold.md`, `graph-example.html/.json`.
+- `plan/` — the twenty-eight plans (`defi-risk-dependency`, `morpho-vault-v2-watcher`, `morpho-user-watcher`, `lenders-and-timelocks`, `market-borrowers`, `admin-surface`, `exit-queue`, `drain-threshold`, `sibling-markets`, `incident-mode`, `propagation-engine`, `vault-incident`, `vault-book`, `wrapped-collateral`, `borrower-concentration`, `pharos`, `one-number`, `breakeven`, `incident-api`, `judge-path`, `fork-demo`, `feed-quality`, `backtest`, `conditional`, `pt-channels`, `zama`, `mixed-book`, and `web-graph-react-flow` for the SPA's graph).
+- `examples/` — `rockawayx-ethereum.json`, the demo book of vaults and the template for any other (`analyze --book`); `brief-ten-pockets.json`, the brief's own book of ten 1M pockets (`pocket` weighting, with `--exit-cost 0.11`); `brief-mixed-book.json`, the same with the brief's PT loop as a borrow pocket (`kind: borrow`).
+- `docs/` — `alert-runbook.md` (what each alert means and what to do), `glossary.md`, `registry-reference.md` (every `registry.json` key), `how-risk-is-computed.md`, `monte-carlo.md` (how `analyze`'s simulation works; its mindmap in `docs/img/`), `scenarios-and-breakeven.md`, `vault-depositor-scenarios.md`, `graph-propagation.md`, `how-a-block-is-analysed.md`, `websocket-vs-polling.md`, `user-watcher-options.md`, `exit-queue.md`, `erpc.md` (the optional local RPC proxy), `shock-engine.md` (the shock engine and its rules), `shock-trace.md` (the propagation trace for a front end, example in `shock-trace-example.json`), `drain-threshold.md`, `vault-incident.md` (incident mode end to end: `analyze --vault` / `--book`, `POST /api/incident`), `graph-example.html/.json`.
 - `docs/external/` — third-party references, read-only; check behaviour against them before changing a rule:
   - `morpho/docs.morpho.org-developers-docs/` — Morpho developer docs (contracts, Bundles, addresses, Midnight, Vault V2 exit routes); `tests/test_watch_replay.py` checks the event selectors in `abi.py` against its `contracts/` pages, and skips that check when the folder is absent. **Git-ignored**: it exists only in the local checkout, so read it there; a fresh clone does not have it.
   - `morpho/lib/morpho-blue` (`8e26ca6a`) and `morpho/lib/vault-v2` (`d992cb84`) — Morpho Blue and Vault V2 sources: events, liquidation and shares maths, authorisation, adapters, timelocks, gates.
@@ -153,6 +160,7 @@ pyproject.toml        project metadata, dependencies, ruff and pytest configurat
     - `docs.nexusmutual.io-docs/` — Nexus Mutual (cover products and pricing, capacity, claims, the keyless `/v2/products` and `/v2/capacity` API); its cover prices are converted to yearly probabilities.
     - `pharos.watch-safety-scores-docs/` — Pharos (stablecoin safety grades and scores, the dependency graph and scenarios; keyless and supporter-key endpoints).
     **Git-ignored**: the three folders exist only in the local checkout, so read them there; a fresh clone does not have them.
+  - `docs.zama.org-protocol-docs/` — Zama Protocol documentation (FHEVM confidential smart contracts: protocol and litepaper, Solidity guides, the relayer SDK, confidential tokens, the confidential swap and confidential vault apps, examples, changelog). **Git-ignored**: it exists only in the local checkout, so read it there; a fresh clone does not have it.
 
   The seven source repositories are git submodules (`.gitmodules`), pinned at the commits above: after a clone, run `git submodule update --init`. To move a pin, check out the new commit inside the submodule and stage the submodule path.
 - `fixtures/snapshot/` (analyze demo cache + `as_of.json`) and `fixtures/replay/` (recorded watch ranges, graphs, vault incidents, the Pharos snapshot under `pharos/` and the Nexus prices under `nexus/`) — test fixtures; do not delete or regenerate casually. **Tracked in git, not ignored, on purpose:** every test runs offline from these cached responses, so CI and any fresh clone need them; a cache file present on one machine only makes a test pass locally and fail in CI. They used to live under `data/`, which `.gitignore` ignores, and new cache files were silently left out of commits (the exit-queue test failed in CI for that reason). So a new cached response (`--record`, `--live`, or a live fetch into these folders) is committed with the change that needs it: check `git status fixtures/`. They hold public responses only: API keys go on the request, never into a cache file (`sources.Fetcher`, `secret`).
@@ -188,6 +196,8 @@ web/src/
 
 **Invariants.**
 
+- **No explanatory prose in the interface.** Use concise labels, figures and actions. Only add short hover tooltips when an explanation is necessary; do not add explanatory paragraphs, helper copy or instructional blocks to pages.
+
 - **The types are read off real output, not generated.** `api/types.ts` was written from `out/report.json` and `out/graph.json`, which are git-ignored, so `src/mocks/` is the only committed copy. Change a payload in `report.py` or `graph.py` and both the type and the fixture must follow, or mock mode silently renders the old shape.
 - **`inf`/`nan` arrive as `null`.** The report writer's `clean()` maps them, so a health factor with no debt or a risk multiple with no expected loss is `null`. Such fields are typed `number | null` and every formatter in `lib/format.ts` returns an em dash for null — keep that property when adding one.
 - **Two graph shapes, one renderer.** `/api/graph` returns the six capitalised kinds of `graph.py`; the graph embedded in a report is a serialised networkx graph with lowercase kinds and `from`/`to` edges. `lib/graph.ts` maps the second onto the first, and that mapping is a judgement call documented in place — not something the backend states.
@@ -211,7 +221,7 @@ Python ≥ 3.10; CI runs the suite on 3.10, the floor `requires-python` in `pypr
 
 ```bash
 uv sync
-uv run pytest -q tests                                 # 276 tests, offline
+uv run pytest -q tests                                 # 311 tests, offline
 uv run python -m riskdep analyze --demo                # cached snapshot, no network → out/report.html/.json
 uv run python -m riskdep watch --replay                # re-run the recorded vault range offline
 uv run python -m riskdep watch --blocks 1000 --record  # live range, saved for --replay
@@ -223,6 +233,12 @@ uv run ruff format . && uv run ruff check .            # format and lint, 120 co
 ~/.local/bin/erpc erpc.yaml                            # optional local RPC proxy (docs/erpc.md), in its own terminal
 export RISKDEP_RPC_URL=http://127.0.0.1:4000/main/evm/1  # route live runs through it; unset to go direct
 uv run uvicorn riskdep.api:app --reload                # the HTTP API for web/, docs at /docs
+uv run python -m riskdep notify                        # post watch alerts to Telegram (keys.ini [alerts]), next to watch
+scripts/fork/demo.sh --short                           # crisis demo on a mainnet fork, one command, ~2 min (--record: asciinema; --stop)
+scripts/fork/start-fork.sh 26165572                    # or step by step: an anvil fork (scripts/fork/README.md)
+RISKDEP_RPC_URL=http://127.0.0.1:8545 RISKDEP_FORK=1 uv run python -m riskdep watch --vault 0xD6d4b804014EF27836dBe9f8f6Bf6c71251548Ec --step 1
+scripts/fork/crisis-belem.sh                           # the Belem crisis, act by act, in another terminal
+uv run python -m riskdep watch --vault 0xD6d4b804014EF27836dBe9f8f6Bf6c71251548Ec --replay --record-as fork-belem  # the same, offline
 ```
 
 ```bash

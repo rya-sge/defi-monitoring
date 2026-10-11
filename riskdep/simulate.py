@@ -39,6 +39,7 @@ class SimResult:
     layers: list[LayerResult]
     interaction_usd: float
     loss_samples: np.ndarray = field(repr=False, default=None)
+    expected_loss_se: float = 0.0  # the standard error of the expected loss: σ / √n (IMPROVEMENT 2.2, B7)
 
 
 def _p_horizon(p_year: float, days: float) -> float:
@@ -124,4 +125,5 @@ def run(pos: Position, priors: list[Prior], horizon_days: float, n: int = 20000,
         sorted(layers, key=lambda ly: -ly.contribution_usd),
         el - sum(ly.contribution_usd for ly in layers),
         losses,
+        float(losses.std(ddof=1) / np.sqrt(n)) if n > 1 else 0.0,
     )

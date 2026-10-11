@@ -35,6 +35,7 @@ class Options:
     min_level: str = "info"
     color: bool = True
     poll_seconds: float = W["poll_seconds"]
+    step: int | None = None  # blocks per batch (default watch.max_range); 1 replays a fork crisis act by act (D185)
     max_polls: int | None = None
 
 
@@ -149,7 +150,8 @@ def run(opts: Options) -> int:
     if opts.mode == "replay":
         meta = json.loads(meta_path.read_text())
         pinned, start_cursor, dep = meta["head"], meta["cursor"], meta["depositor"]
-        S.FORK = meta.get("fork", False)  # a range recorded on a local fork replays as one (fork-demo D1)
+        S.FORK = meta.get("fork", False)  # a range recorded on a local fork replays as one (D180)
+        opts.step = meta.get("step") or opts.step  # the same batches as the recording, or its requests do not match
     else:
         pinned = None
         head = int(S.rpc(f, "eth_blockNumber", []), 16)
@@ -161,7 +163,14 @@ def run(opts: Options) -> int:
             state_dir.mkdir(parents=True, exist_ok=True)
             meta_path.write_text(
                 json.dumps(
-                    {"vault": opts.vault, "head": pinned, "cursor": start_cursor, "depositor": dep, "fork": S.FORK}
+                    {
+                        "vault": opts.vault,
+                        "head": pinned,
+                        "cursor": start_cursor,
+                        "depositor": dep,
+                        "fork": S.FORK,
+                        "step": opts.step,
+                    }
                 )
             )
 
@@ -206,7 +215,7 @@ def run(opts: Options) -> int:
         view.market_ids,
         cursor_path,
         W["confirmations"],
-        W["max_range"],
+        opts.step or W["max_range"],
         extra_filters=aw.filters(),
     )
     if start_cursor is not None:

@@ -280,13 +280,17 @@ class BookVaultIn(BaseModel):
     address: str
     label: str | None = None
     depositor: str | None = Field(default=None, description="Whose position to weigh; default the largest depositor.")
+    amount: float | None = Field(default=None, gt=0, description="`pocket` weighting: the book's position, in USD.")
+    kind: Literal["vault", "borrow"] = Field(
+        default="vault", description="`borrow`: a Morpho Blue borrow; `address` is then the market id."
+    )
 
 
 class BookIn(BaseModel):
     """A book of Morpho Vault V2 vaults, as in `examples/*.json`."""
 
     name: str | None = None
-    weighting: Literal["vault", "depositor"] = "vault"
+    weighting: Literal["vault", "depositor", "pocket"] = "vault"
     vaults: list[BookVaultIn] = Field(min_length=1)
 
 
@@ -304,14 +308,39 @@ class IncidentRequest(BaseModel):
     )
     user: str | None = Field(default=None, description="Depositor address, for every vault without its own.")
     horizon: float = Field(default=30.0, gt=0, le=365, description="Days over which the breakeven p* is stated.")
+    exit_cost: float | None = Field(
+        default=None,
+        ge=0,
+        lt=1,
+        description="The cost of leaving as a share of what leaves (0.11 for the brief's 11 % unwind), instead of "
+        "the vault's yield given up.",
+    )
+    conditional: bool = Field(
+        default=False,
+        description="Add the distribution of the loss of staying given the incident (needs a token=… shock).",
+    )
     live: bool = Field(default=False, description="Read the chain instead of the recordings (nothing is saved).")
 
 
 class BookSummary(BaseModel):
     name: str
     title: str
-    weighting: Literal["vault", "depositor"]
+    weighting: Literal["vault", "depositor", "pocket"]
     vaults: list[BookVaultIn]
+
+
+class Conditional(BaseModel):
+    """Given the incident, its size and the liquidators drawn: the loss of staying against leaving, in USD."""
+
+    paths: int
+    stay_mean: float
+    stay_p50: float
+    stay_p95: float
+    stay_p99: float
+    leave_mean: float = Field(description="Loss left after leaving first, plus the certain cost of leaving.")
+    p_stay_worse: float = Field(description="Share of paths where staying costs more than leaving.")
+    no_liquidator_share: float
+    text: str
 
 
 class MarketHit(BaseModel):
@@ -378,6 +407,14 @@ class VaultIncident(BaseModel):
     )
     p_star_year: float | None = None
     outside: list[str] = Field(default_factory=list)
+    liquidity: tuple[float, float, float] = Field(
+        default=(0.0, 0.0, 0.0), description="What can leave: plain, through forceDeallocate, and its penalty."
+    )
+    exit_cost_rate: float | None = None
+    conditional: Conditional | None = None
+    zama: list[str] = Field(
+        default_factory=list, description="For a Zama confidential vault: the confidential share and the two exits."
+    )
 
 
 class VaultLine(BaseModel):
@@ -393,11 +430,12 @@ class VaultLine(BaseModel):
     p_star_year: float | None = None
     exit_cost_usd: float = 0.0
     saved_usd: float = 0.0
+    reason: str = Field(default="", description="Why the verdict, in one clause.")
 
 
 class BookIncident(BaseModel):
     name: str
-    weighting: Literal["vault", "depositor"]
+    weighting: Literal["vault", "depositor", "pocket"]
     shocks: list[str]
     lines: list[VaultLine]
     value_usd: float
@@ -408,6 +446,7 @@ class BookIncident(BaseModel):
     p_star: float | None = None
     p_star_year: float | None = None
     horizon_days: float = 30.0
+    conditional: Conditional | None = None
 
 
 class IncidentResponse(BaseModel):

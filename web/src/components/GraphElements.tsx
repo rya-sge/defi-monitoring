@@ -10,7 +10,7 @@ import {
 } from '@xyflow/react';
 import type { Edge, EdgeProps, Node, NodeProps } from '@xyflow/react';
 import type { GraphEdge, GraphNode } from '../api/types';
-import { KIND_COLOR, NAME_SLOT, nodeDrawing, tokenIconUrl } from '../lib/graph';
+import { KIND_COLOR, NAME_SLOT, nodeDrawing, nodeRole, logoUrl } from '../lib/graph';
 
 /** `ring`: a colour to ring the node with when it is not selected (the impact page's status). */
 export type RiskNodeData = {
@@ -18,6 +18,8 @@ export type RiskNodeData = {
   amount: string[];
   ring?: string;
   underlying?: GraphNode;
+  /** A pool's assets, collateral first (two or more replace its icon); a vault's asset. */
+  assets?: GraphNode[];
 };
 export type RiskEdgeData = { edge: GraphEdge; label: string; width: number; colour: string };
 export type RiskNodeType = Node<RiskNodeData, 'risk'>;
@@ -45,16 +47,62 @@ const NODE_FILL = 'color-mix(in srgb, var(--fg) 12%, var(--bg))';
 const HALO = 6;
 const halo = (colour: string) => `color-mix(in srgb, ${colour} 10%, transparent)`;
 
+/** A token's or an oracle provider's logo, or the node kind's glyph if the logo does not load. */
+function Logo({
+  token,
+  size,
+  colour,
+  url = logoUrl(token),
+}: {
+  token: GraphNode;
+  size: number;
+  colour: string;
+  url?: string | null;
+}) {
+  const [failed, setFailed] = useState(false);
+  return url && !failed ? (
+    <img
+      src={url}
+      alt=""
+      className="shrink-0 rounded-full"
+      style={{
+        width: size,
+        height: size,
+        background: NODE_FILL,
+        boxShadow: `0 0 0 2px ${NODE_FILL}`,
+      }}
+      onError={() => setFailed(true)}
+    />
+  ) : (
+    createElement(nodeDrawing(token).icon, {
+      className: 'shrink-0',
+      style: { color: colour, width: size * 0.8, height: size * 0.8 },
+      'aria-hidden': true,
+    })
+  );
+}
+
 export function RiskNode({ data, selected }: NodeProps<RiskNodeType>) {
   const { node, amount } = data;
   const ring = selected ? KIND_COLOR[node.kind] : data.ring;
   const { shape, width, height, icon } = nodeDrawing(node);
   const colour = KIND_COLOR[node.kind];
   const iconSize = Math.round(Math.min(width, height) * 0.48);
-  const logo = tokenIconUrl(node);
-  const [logoFailed, setLogoFailed] = useState(false);
-  const [badgeFailed, setBadgeFailed] = useState(false);
-  const badge = data.underlying && tokenIconUrl(data.underlying);
+  const curator = node.details.curator_image;
+  // A PT carries its underlying's logo; a vault, its curator's.
+  const badge =
+    node.kind === 'Asset' && node.label.toUpperCase().startsWith('PT-') && data.underlying
+      ? { token: data.underlying, url: logoUrl(data.underlying), title: data.underlying.label }
+      : typeof curator === 'string'
+        ? { token: node, url: curator, title: String(node.details.curator) }
+        : undefined;
+  const pair = data.assets && data.assets.length >= 2 ? data.assets : undefined;
+  const logo =
+    node.kind === 'Asset' || node.kind === 'Oracle'
+      ? node
+      : nodeRole(node) === 'vault'
+        ? data.assets?.[0]
+        : undefined;
   const scale = useLabelScale();
 
   return (
@@ -99,42 +147,35 @@ export function RiskNode({ data, selected }: NodeProps<RiskNodeType>) {
 
       {/* Centred in the node and sized to it; the amount, drawn after, sits over it. */}
       <div className="absolute inset-0 flex items-center justify-center">
-        {logo && !logoFailed ? (
-          <img
-            src={logo}
-            alt=""
-            className="rounded-full"
-            style={{ width: iconSize * 1.2, height: iconSize * 1.2 }}
-            onError={() => setLogoFailed(true)}
-          />
+        {pair ? (
+          <div className="flex items-center" title={pair.map((a) => a.label).join(' / ')}>
+            {pair.map((asset, i) => (
+              <div key={asset.id} style={{ marginLeft: i ? -iconSize * 0.35 : 0 }}>
+                <Logo token={asset} size={iconSize} colour={colour} />
+              </div>
+            ))}
+          </div>
         ) : (
-          createElement(icon, {
-            style: { color: colour, width: iconSize, height: iconSize },
-            'aria-hidden': true,
-          })
+          <div className="relative">
+            {logo ? (
+              <Logo token={logo} size={iconSize * 1.2} colour={colour} />
+            ) : (
+              createElement(icon, {
+                style: { color: colour, width: iconSize, height: iconSize },
+                'aria-hidden': true,
+              })
+            )}
+            {badge ? (
+              <div
+                className="absolute -top-1 -right-2 flex size-4 items-center justify-center"
+                title={badge.title}
+              >
+                <Logo token={badge.token} url={badge.url} size={16} colour={colour} />
+              </div>
+            ) : null}
+          </div>
         )}
       </div>
-
-      {node.kind === 'Asset' &&
-      node.label.toUpperCase().startsWith('PT-') &&
-      badge &&
-      data.underlying ? (
-        <div
-          className="absolute top-0 right-0 flex size-5 items-center justify-center overflow-hidden rounded-full border"
-          style={{ background: NODE_FILL, borderColor: NODE_FILL }}
-          title={data.underlying?.label}
-        >
-          {badgeFailed ? (
-            createElement(nodeDrawing(data.underlying).icon, {
-              size: 12,
-              style: { color: colour },
-              'aria-hidden': true,
-            })
-          ) : (
-            <img src={badge} alt="" className="size-full" onError={() => setBadgeFailed(true)} />
-          )}
-        </div>
-      ) : null}
 
       {amount.length > 0 ? (
         <div className="absolute inset-x-0.5 bottom-1 flex flex-col items-center gap-px">
@@ -149,7 +190,7 @@ export function RiskNode({ data, selected }: NodeProps<RiskNodeType>) {
       {/* Counter-scaled for legibility, but kept inside its layout slot: narrower as it grows,
           and one line once two would no longer fit the slot's height. */}
       <div
-        className={`absolute top-full left-1/2 mt-1 origin-top rounded-md bg-background px-1 py-0.5 text-center text-[11px] leading-tight text-foreground ${
+        className={`absolute top-full left-1/2 mt-1 origin-top rounded-md bg-[var(--surface)] px-1 py-0.5 text-center text-[11px] leading-tight text-foreground ${
           scale > 1.4 ? 'line-clamp-1' : 'line-clamp-2'
         }`}
         style={{

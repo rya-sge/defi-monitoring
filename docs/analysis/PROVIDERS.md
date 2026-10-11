@@ -7,6 +7,7 @@ Every external service the project calls, what it is used for, and what is known
 - [Summary](#summary)
 - [Ethereum RPC](#ethereum-rpc)
 - [eRPC, optional local proxy](#erpc-optional-local-proxy)
+- [Local mainnet fork, demo only](#local-mainnet-fork-demo-only)
 - [Morpho API](#morpho-api)
 - [Pendle API](#pendle-api)
 - [DefiLlama](#defillama)
@@ -26,6 +27,7 @@ Every external service the project calls, what it is used for, and what is known
 | dRPC | `https://eth.drpc.org` | Ethereum JSON-RPC (HTTP) | no | cross-check only (block hash) | `riskdep/crosscheck.py` (`SECOND_RPCS`) |
 | 1RPC | `https://1rpc.io/eth` | Ethereum JSON-RPC (HTTP) | no | cross-check fallback; answers 410 "discontinued" since at least 2026-10-10 | `riskdep/crosscheck.py` (`SECOND_RPCS`) |
 | eRPC (optional) | `http://127.0.0.1:4000/main/evm/1`, run locally | RPC proxy over 6 free endpoints | no | the main RPC's requests, when `RISKDEP_RPC_URL` points at it | `erpc.yaml`, `docs/erpc.md` |
+| anvil fork (demo) | `http://127.0.0.1:8545`, run locally by `scripts/fork/start-fork.sh` | Ethereum JSON-RPC (anvil) | no | the main RPC's requests during the fork demo (`RISKDEP_RPC_URL` + `RISKDEP_FORK=1`) | `scripts/fork/addresses.env` (`FORK_RPC`, `FORK_UPSTREAMS`) |
 | Morpho | `https://blue-api.morpho.org/graphql` | GraphQL API | no | discovery: positions, borrowers, lenders, vault roles | `riskdep/sources.py` (`MORPHO`) |
 | Pendle | `https://api-v2.pendle.finance/core` | REST API | no | PT markets, implied yield, swap quotes | `riskdep/sources.py` (`PENDLE`) |
 | DefiLlama | `https://api.llama.fi` | REST API | no | protocol list, hack record | `riskdep/sources.py` (`LLAMA`) |
@@ -33,9 +35,12 @@ Every external service the project calls, what it is used for, and what is known
 | Nexus Mutual | `https://api.nexusmutual.io/v2` | REST API | no | cover prices and capacity per product: an outside probability next to the breakeven p\* (optional) | `riskdep/nexus.py` (`API`) |
 | Pharos | `https://api.pharos.watch` | REST API | no | issuer grades, off-chain backing, common-mode groups of stablecoins (optional) | `riskdep/pharos.py` (`URL`) |
 | Etherscan | `https://api.etherscan.io/v2/api` | REST API | yes, `keys.ini` `[etherscan]` | whether an oracle's source is verified; an unclassified oracle input's contract name | `riskdep/sources.py` (`ETHERSCAN`) |
+| Telegram Bot API | `https://api.telegram.org/bot<token>/sendMessage` | REST API (outbound push) | yes, `keys.ini` `[alerts]` | posts watch alerts to a private channel (`notify`, optional) | `riskdep/notify.py` (`API`) |
 | jsDelivr | `https://cdn.jsdelivr.net` | CDN (browser) | no | Mermaid in the `analyze` report | `riskdep/report.py` |
 | cdnjs | `https://cdnjs.cloudflare.com` | CDN (browser) | no | Cytoscape.js in the graph page | `riskdep/graph.py` |
-| DefiLlama token icons | `https://token-icons.llamao.fi` | image CDN (browser) | no | token logos in the web graph's Asset nodes | `web/src/lib/graph.ts` (`nodeIcon`) |
+| DefiLlama token icons | `https://token-icons.llamao.fi` | image CDN (browser) | no | token logos in the web graph's Asset and Pool nodes | `web/src/lib/graph.ts` (`logoUrl`) |
+| DefiLlama protocol icons | `https://icons.llamao.fi` | image CDN (browser) | no | oracle provider logos in the web graph's Oracle nodes | `web/src/lib/graph.ts` (`logoUrl`) |
+| Morpho curator images | `https://cdn.morpho.org` | image CDN (browser) | no | the curator badge on the web graph's vault nodes, at the URL the Morpho API gives (`curator_image`) | `web/src/components/GraphElements.tsx` |
 
 Every request to the data providers goes through the cached fetcher of `riskdep/sources.py`, except the CDN scripts, which the browser loads when a report is opened.
 
@@ -87,6 +92,21 @@ The browser's Incident page calls the local `GET /api/books` and `POST /api/inci
 
 **Measured 2026-10-10:** `graph --vault 0xE018…1965` (RockawayX USDC Yield) took 43 s direct and 20 s through eRPC, with the same graph (74 nodes, 106 edges, same oracle classes). `graph --example` took 8 to 12 min direct (65 siblings) and 178 s through eRPC with the $1M TVL floor (52 siblings). eRPC's log then shows upstream throttling it routes around, for example Tenderly's 20-call limit.
 
+## Local mainnet fork, demo only
+
+**`http://127.0.0.1:8545`**, an [anvil](https://book.getfoundry.sh/anvil/) fork of mainnet started by `scripts/fork/start-fork.sh` for the crisis demo (`scripts/fork/README.md`, plan `2026-10-11-fork-demo`). `RISKDEP_RPC_URL` sends the main RPC's requests to it and `RISKDEP_FORK=1` marks it as a fork (D180): the block-hash and Morpho-API cross-checks read "not checked", since the fork's blocks exist nowhere else and the API still describes mainnet. `RISKDEP_FORK` without `RISKDEP_RPC_URL` is refused, so it can never silence the checks on mainnet. Cache keys keep the publicnode URL, as for eRPC.
+
+Anvil fetches the state it needs from an upstream at the fork block, which must serve old state (archive):
+
+| Upstream | Endpoint | Probe 2026-10-11 (`eth_call` 5,000 blocks back) |
+|---|---|---|
+| `keys.ini [rpc] url`, when set | the user's paid endpoint, never printed | — |
+| Tenderly gateway | `https://mainnet.gateway.tenderly.co` | answered |
+| Blast | `https://eth-mainnet.public.blastapi.io` | answered |
+| MEV Blocker | `https://rpc.mevblocker.io` | answered |
+
+**Left out on purpose:** dRPC, which also answered, because it is the cross-check's independent node; publicnode (refuses old state: "Archive"); 1RPC (502), LlamaRPC (525), merkle.io (429), Cloudflare (internal error), Flashbots (method refused). Anvil keeps what it fetched in `~/.foundry/cache/rpc/`, and `--stop` saves the fork to `out/fork-<block>.json` so `--load` restarts it with no upstream.
+
 ## Morpho API
 
 **`https://blue-api.morpho.org/graphql`**, GraphQL. Used to *find* things the chain cannot list cheaply; every amount used in a decision is then read on-chain.
@@ -97,6 +117,7 @@ The browser's Incident page calls the local `GET /api/books` and `POST /api/inci
 | `marketPositions` | a market's borrowers (`borrowShares_gte`), its main suppliers (ordered by supply shares), the largest borrower of a market, every borrower's health factor, debt and collateral in USD (the dashboard's liquidation and bad-debt charts, first 1000 per market) | `market_risk.py`, `borrower.py`, `discover.py`, `dashboard.py` |
 | `marketById`, `marketPosition` | the `analyze` position and its market | `discover.py` |
 | `vaultV2ByAddress` | the vault's average net APY, rewards included (`avgNetApy`): the yield a depositor gives up by leaving, for the breakeven p\* (`vault_incident.vault_apy`); the largest depositor of a vault; its holders, first 100 by size, for the exit queue; its allocators and sentinels (graph); its total assets (cross-check); its name, total assets, liquidity and each Blue market adapter's supply per market (dashboard) | `vault.py`, `exit_queue.py`, `graph.py`, `crosscheck.py`, `dashboard.py` |
+| `vaultV2s`, `vaults` | the curator of every vault in the graph, name and logo URL, in one query by `address_in` (optional: a refusal or a replay without it leaves the vault without its badge) | `graph.py` (`_curators`) |
 | `markets` | every Ethereum Blue market with at least `graph.sibling_min_tvl_usd` supplied (its TVL, `supplyAssetsUsd_gte`): collateral, loan token, oracle and its base feeds and vault, borrow in USD; pages of 500 (136 markets at $1M on 2026-10-10); by id (`uniqueKey_in`), a vault's markets: LLTV, collateral address and price, supply, borrow, liquidity, utilization, borrow rate (dashboard) | `siblings.py`, `dashboard.py` |
 
 **Notes.** One page holds up to 1,000 items; `list_borrowers` pages with `skip`. Indexed data can lag the chain; the API-vs-chain cross-check warns beyond 0.5 %.
@@ -119,7 +140,7 @@ The browser's Incident page calls the local `GET /api/books` and `POST /api/inci
 
 | Path | Used for | Code |
 |---|---|---|
-| `/protocols` | each protocol's size, category and listing date, for incident base rates | `sources.llama_protocols`, `priors.py` |
+| `/protocols` | each protocol's size, category and listing date, for incident base rates and the graph's TVL concentration (D158–D160) | `sources.llama_protocols`, `priors.py`, `tvl.py`, `pipeline.llama_protocols` |
 | `/hacks` | the hack record of the last 5 years, for incident base rates | `sources.llama_hacks`, `priors.py` |
 
 **`https://coins.llama.fi`**, REST.
@@ -137,6 +158,7 @@ The browser's Incident page calls the local `GET /api/books` and `POST /api/inci
 
 | Query | Used for | Code |
 |---|---|---|
+| `module=logs&action=getLogs&address=…&topic0=…&topic1=…` | the `Liquidate` and `Borrow` events of a backtest's markets over wide block ranges (paged by 1,000; slimmed to block, time, topics, data, transaction) | `sources.etherscan_logs`, `backtest.py` |
 | `module=contract&action=getsourcecode&address=…` | whether the code behind the `analyze` position's oracle is verified: the implementation of an EIP-1167 clone, or of a proxy Etherscan recognises. A verified oracle drops the ×2 `oracle.unverified_factor` (D68) | `sources.contract_source`, `discover.oracle_verified` |
 | same | the verified contract name of an oracle input that no structural or history rule classifies, matched against `graph.oracle_patterns` (D83); asked only for those inputs | `oracle_class._contract_name` |
 
@@ -168,6 +190,18 @@ The browser's Incident page calls the local `GET /api/books` and `POST /api/inci
 
 **Recording.** `fixtures/replay/nexus/`, read 2026-10-11. **Limits.** None published; a price of 0 means the product is not sold.
 
+## Telegram Bot API
+
+**`https://api.telegram.org/bot<token>/sendMessage`**, REST, keyed: `keys.ini` `[alerts] telegram_bot_token` and `telegram_chat_id`. Used only by `notify`, which posts the watch alerts at or above a level (`registry.json` `notify`) to a private channel; design and setup in `TELEGRAM_BOT.md`. **It is a push, not a data source:** nothing it answers is used, nothing is cached, and the token, which sits in the URL path, is never printed or logged. What it posts leaves the machine and is stored by Telegram. **Limits.** About 20 messages a minute to one channel (`429` with `retry_after`, waited out); 4096 characters a message.
+
+## Zama contracts (through the Ethereum RPC)
+
+No new endpoint: the Zama batchers and the vault's `balanceOf(cShare)` are read by `eth_call` on the main RPC (`zama.read`: `currentBatchId`, `batchCreatedAt`, `batchMinBatchAge`, `paused`, `balanceOf`, `totalSupply`). Recorded at the incident's block through the archive route below.
+
+## Archive RPC (Alchemy)
+
+**`https://eth-mainnet.g.alchemy.com/v2/<key>`**, JSON-RPC, keyed: `keys.ini` `[alchemy] alchemy_ethereum_endpoint` (or any archive endpoint in `[rpc] url`). Used only by `backtest --record`, to read state at a past block, which the free publicnode no longer serves. It is a **route**: requests go to it, responses are cached under the public RPC's URL (`sources.routed_rpc`), so no file and no output carries the key, and the replay needs none. **Limits** (free plan, 2026-10-11): `eth_getLogs` over at most 10 blocks, hence events through Etherscan; batches of `eth_call` at a past block work.
+
 ## Scripts loaded by the HTML outputs
 
 These are not data sources: the browser loads them when a report is opened, at a pinned version.
@@ -179,7 +213,7 @@ These are not data sources: the browser loads them when a report is opened, at a
 
 ## Images loaded by the web frontend
 
-The SPA's dependency graph draws each Asset node with its logo from `https://token-icons.llamao.fi/icons/tokens/1/<address>?h=64&w=64` (keyless, served as WebP, by lowercase address). The response carries no CORS header, which a plain `<img>` does not need. An unknown token returns 404 and the node falls back to the Lucide `Coins` glyph. PT tokens use the Pendle token logo from the same CDN (Ethereum address `0x808507121b80c02388fad14726482e061b8da827`), with the underlying asset logo as a badge, resolved through the PT → Pendle pool → yield source graph edges. Other node kinds use inline Lucide glyphs and fetch nothing.
+The SPA's dependency graph draws each Asset node with its logo from `https://token-icons.llamao.fi/icons/tokens/1/<address>?h=64&w=64` (keyless, served as WebP, by lowercase address). The response carries no CORS header, which a plain `<img>` does not need. An unknown token returns 404 and the node falls back to the Lucide `Coins` glyph. PT tokens use the Pendle token logo from the same CDN (Ethereum address `0x808507121b80c02388fad14726482e061b8da827`), with the underlying asset logo as a badge, resolved through the PT → Pendle pool → yield source graph edges. A pool with two or more assets (a Blue market: collateral, then loan) shows their logos side by side, overlapping, instead of its glyph. Oracle nodes take their provider's logo from `https://icons.llamao.fi/icons/protocols/<slug>?w=48&h=48` (Chainlink, RedStone, Chronicle, Pyth, API3, Pendle, Morpho), the provider read from the label or the oracle's shape, a bare `X / Y` description read as Chainlink's; Ojo has no icon there, and an unnamed provider or a 404 falls back to the Lucide `Eye` glyph. Other node kinds use inline Lucide glyphs and fetch nothing.
 
 ## Defined but unused
 

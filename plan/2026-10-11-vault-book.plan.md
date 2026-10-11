@@ -38,7 +38,7 @@ mandate: mode classic · no git, the person commits · inline · tests at the sl
 
 The brief asks what an incident does "to your book". The sponsor's curator, RockawayX, runs several Morpho vaults that lend against the same young issuers, so one issuer's markdown reaches several vaults at once (`ROCK-VAULT.md` §1). A book must be definable by whoever runs the tool, for their own vaults.
 
-**Non-goals**: borrow and PT pockets (`NEXT_TASK.md` task 2 keeps them); vaults on other chains or venues; a probability per incident (the breakeven p\* comes next).
+**Non-goals**: borrow and PT pockets (now `NEXT_STEP.md` A6); vaults on other chains or venues; a probability per incident (the breakeven p\* comes next).
 
 ## 3. Modules, after
 

@@ -43,6 +43,18 @@ def main(argv: list[str] | None = None) -> int:
         help="a book of vaults in a JSON file (see examples/), each vault with an optional depositor and label",
     )
     a.add_argument(
+        "--conditional",
+        action="store_true",
+        help="with --vault or --book and a token=… shock: the distribution of the loss of staying given the incident "
+        "(its size recovering or deepening, liquidators failing to act), against the certain cost of leaving",
+    )
+    a.add_argument(
+        "--exit-cost",
+        type=float,
+        help="with --vault or --book: the cost of leaving as a share of what leaves (0.11 for the brief's 11 %% "
+        "unwind), instead of the vault's yield given up over --horizon",
+    )
+    a.add_argument(
         "--record",
         action="store_true",
         help="with --vault or --book: read each vault live at the head and save every response under "
@@ -82,6 +94,20 @@ def main(argv: list[str] | None = None) -> int:
         "--record", action="store_true", help="with --blocks: save every response under fixtures/replay/<vault>"
     )
     w.add_argument("--replay", action="store_true", help="re-run a recorded range offline")
+    w.add_argument(
+        "--step",
+        type=int,
+        metavar="N",
+        help="blocks per batch (default watch.max_range); --step 1 reads state at every block, so a short crisis "
+        "on a local fork is seen act by act",
+    )
+    w.add_argument(
+        "--poll",
+        type=float,
+        metavar="SECONDS",
+        help="seconds between polls in live mode (default watch.poll_seconds, 12 s, Ethereum's block time); "
+        "lower on a local fork, whose blocks come when a script mines them",
+    )
     w.add_argument(
         "--record-as",
         metavar="NAME",
@@ -137,10 +163,34 @@ def main(argv: list[str] | None = None) -> int:
     sh.add_argument("--record", action="store_true", help="save every response under fixtures/replay/graph-<target>")
     sh.add_argument("--replay", action="store_true", help="use a recorded graph, offline")
     sh.add_argument("--out", default=str(Path(__file__).resolve().parent.parent / "out"))
+    bt = sub.add_parser("backtest", help="replay a past incident: the tool's prediction against the on-chain events")
+    bt.add_argument("--episode", default="pt-reusd-2026-08-25", help="an episode of registry.json backtest.episodes")
+    bt.add_argument(
+        "--record",
+        action="store_true",
+        help="read the episode through the archive RPC and the Etherscan key of keys.ini, and save every response "
+        "under fixtures/replay/backtest-<episode>/ (offline otherwise)",
+    )
+    bt.add_argument("--out", default=str(Path(__file__).resolve().parent.parent / "out"))
+    nt = sub.add_parser("notify", help="post the watch alerts to a Telegram channel (keys.ini [alerts])")
+    nt.add_argument("--level", choices=["info", "warn", "critical"], help="lowest level posted (registry: warn)")
+    nt.add_argument("--from-start", action="store_true", help="post what the alert files already hold, not only new")
+    nt.add_argument("--once", action="store_true", help="one pass over the alert files, then stop")
+    nt.add_argument("--test", action="store_true", help="send one test message and stop")
+    nt.add_argument("--post", metavar="JSON", help="post the headline of an incident run (out/book-incident.json)")
+    nt.add_argument("--out", default=str(Path(__file__).resolve().parent.parent / "out"))
     args = ap.parse_args(argv)
 
+    if args.cmd == "backtest":
+        return _backtest(ap, args)
+    if args.cmd == "notify":
+        from . import notify
+
+        args.level = args.level or notify.N["level"]
+        return notify.run(args)
+
     if S.FORK:
-        # fork-demo D1–D2: a local fork only; its clock is the fork's, which `anvil_increaseTime` moves ahead of ours
+        # D180–D181: a local fork only; its clock is the fork's, which `anvil_increaseTime` moves ahead of ours
         if S.RPC not in S.ROUTES:
             ap.error("RISKDEP_FORK needs RISKDEP_RPC_URL pointing at the local fork (scripts/fork/start-fork.sh)")
         if not getattr(args, "replay", False):
@@ -234,6 +284,9 @@ def main(argv: list[str] | None = None) -> int:
             return 3
         ph = pipeline.pharos_snapshot("record" if args.record else "offline" if args.replay else "live")
         graded = GR.annotate_pharos(g, ph) if ph else 0
+        protocols = pipeline.llama_protocols("offline" if args.replay else "live")
+        drawn = GR.annotate_tvl(g, protocols) if protocols else 0
+        confidential = GR.annotate_zama(g)
         title = "Morpho dependency graph: " + ", ".join([u[:10] + "…" for u in users] + [v[:10] + "…" for v in vaults])
         hp, jp = GR.write(g, Path(args.out), title, GR.subtitle_for(block))
         kinds = {}
@@ -241,6 +294,11 @@ def main(argv: list[str] | None = None) -> int:
             kinds[n["kind"]] = kinds.get(n["kind"], 0) + 1
         print(f"{len(g.nodes)} nodes ({', '.join(f'{v} {k}' for k, v in kinds.items())}), {len(g.edges)} edges")
         print(f"Pharos {ph.as_of}: {graded} asset(s) graded" if ph else "Pharos: not checked")
+        print(
+            f"TVL concentration: {drawn} protocol(s) from DefiLlama" if protocols else "TVL concentration: not checked"
+        )
+        if confidential:
+            print(f"Zama: {confidential} vault(s) entered confidentially, their batchers and decryption drawn")
         print(f"html: {hp}\njson: {jp}")
         return 0
 
@@ -297,6 +355,8 @@ def main(argv: list[str] | None = None) -> int:
             blocks=args.blocks,
             min_level=args.level,
             max_polls=args.max_polls,
+            step=args.step,
+            **({"poll_seconds": args.poll} if args.poll else {}),
         )
         try:
             return run(opts)
@@ -370,13 +430,42 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
+def _backtest(ap, args) -> int:
+    """`backtest`: plan 2026-10-11-backtest (D161–D164)."""
+    from . import backtest as BK
+
+    if args.episode not in BK.BT["episodes"]:
+        ap.error(f"unknown episode {args.episode!r}: one of {', '.join(BK.BT['episodes'])}")
+    rdir = REPLAY_DIR / f"backtest-{args.episode}"
+    url = S.archive_url() if args.record else None
+    if args.record and not url:
+        ap.error("--record reads past state: put an archive RPC in keys.ini ([rpc] url or [alchemy])")
+    try:
+        with S.routed_rpc(url):
+            res = BK.run(S.Fetcher("refresh" if args.record else "offline", rdir), args.episode)
+    except S.CacheMiss as e:
+        print(f"no recording of this episode: {e}; run once with --record", file=sys.stderr)
+        return 2
+    except S.SourceError as e:
+        print(f"data source error: {e}", file=sys.stderr)
+        return 3
+    for line in res.lines():
+        print(line)
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    jp = out / f"backtest-{args.episode}.json"
+    jp.write_text(json.dumps(res.to_json(), indent=2))
+    print(f"json:   {jp}")
+    return 0
+
+
 def _vault_incident(ap, args) -> int:
     """`analyze --vault` / `--book`: a known incident on a collateral, for one vault or a book of vaults
     (plans 2026-10-11-vault-incident and 2026-10-11-vault-book); the work is `pipeline.incident`."""
     mode = "record" if args.record else "refresh" if args.refresh else "live" if args.live else "offline"
     try:
         book = vault_book.load(Path(args.book)) if args.book else vault_book.from_addresses(args.vault, args.user)
-        res = pipeline.incident(book, args.shock, args.user, args.horizon, mode)
+        res = pipeline.incident(book, args.shock, args.user, args.horizon, mode, args.exit_cost, args.conditional)
     except (ValueError, FileNotFoundError) as e:
         ap.error(str(e))
     except S.CacheMiss as e:

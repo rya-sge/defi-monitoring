@@ -36,7 +36,9 @@ export function AppShell() {
   return (
     <SidebarProvider>
       <Sidebar variant="inset">
-        <SidebarHeader className="px-4 pt-3.5 font-bold tracking-[-0.01em]">riskdep</SidebarHeader>
+        <SidebarHeader className="px-4 pt-3.5">
+          <img src="/logo.png" alt="agencetousrisk" className="h-auto w-full invert" />
+        </SidebarHeader>
         <SidebarContent>
           <SidebarGroup>
             <SidebarMenu aria-label="Main">

@@ -1,6 +1,6 @@
 # Current analysis: the brief's question against what the tool does
 
-This note records an assessment made on 2026-10-10, after the merge of the sibling-markets work. It re-reads the challenge brief (`docs/hackaton_instruction/GOAL.md` and the PDF next to it) as a chain of four steps, checks each step against the code, and draws the consequences for the Monte Carlo simulation and for the next tasks. It complements `GAP.md` (the model's gaps K1–K25), `NEXT_STEP.md` (the plan) and `NEXT_TASK.md` (the two next tasks), and it changes the order they propose.
+This note records an assessment made on 2026-10-10, after the merge of the sibling-markets work. It re-reads the challenge brief (`docs/hackaton_instruction/GOAL.md` and the PDF next to it) as a chain of four steps, checks each step against the code, and draws the consequences for the Monte Carlo simulation and for the next tasks. It complements `GAP.md` (the model's gaps K1–K25), `NEXT_STEP.md` (the plan) and the former `NEXT_TASK.md` (the two next tasks, since built; removed 2026-10-11), and it changes the order they propose.
 
 ## Contents
 
@@ -138,7 +138,7 @@ The brief itself says "exiting is expensive and certain, staying is cheap and un
 
 Three outputs, in order of importance:
 
-1. **The deterministic impact** of the observed incident: one answer, no probabilities (`NEXT_TASK.md` task 1).
+1. **The deterministic impact** of the observed incident: one answer, no probabilities (built as plan `2026-10-10-incident-mode`).
 2. **The conditional Monte Carlo** around it: the uncertainty of staying, with p\* so that a manager can apply their own view.
 3. **The current unconditional run**, kept as a secondary, ex-ante view: useful before any incident, to rank positions or to pre-select protocols (the brief's setter deploys only on protocols that clear a pre-selection scorecard), not for the main question.
 
@@ -154,7 +154,7 @@ The conditional run still needs judgement, for example how often a −8 % depeg 
 
 ## 7. What changes in the plan
 
-The next-step plan's phase A (then `NEXT_STEP_V2.md`, now merged into `NEXT_STEP.md`) and `NEXT_TASK.md` task 1 already proposed incident mode. This assessment adds three things to them and changes the order:
+The next-step plan's phase A (then `NEXT_STEP_V2.md`, now merged into `NEXT_STEP.md`) and the former `NEXT_TASK.md` task 1 already proposed incident mode. This assessment adds three things to them and changes the order:
 
 | Order | Step | What it delivers | Gaps |
 |---|---|---|---|

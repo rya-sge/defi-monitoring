@@ -77,8 +77,35 @@ export function nodeDrawing(node: GraphNode) {
  */
 export const NAME_SLOT = { width: 128, height: 40 };
 
-/** DefiLlama's keyless token-icon CDN, by address (D67). */
-export function tokenIconUrl(node: GraphNode): string | null {
+/**
+ * Oracle providers by the word naming them, the most specific first ("Ojo PT Feed Pendle
+ * Chainlink-compatible" is Ojo's), with their DefiLlama protocol slug; Ojo has no logo there.
+ */
+const ORACLE_SLUG: [string, string | null][] = [
+  ['ojo', null],
+  ['redstone', 'redstone'],
+  ['chronicle', 'chronicle'],
+  ['pyth', 'pyth-network'],
+  ['api3', 'api3'],
+  ['pendle', 'pendle'],
+  ['morpho', 'morpho'],
+  ['chainlink', 'chainlink'],
+];
+
+/** The oracle provider's slug from a node's label or shape; a bare "X / Y" is Chainlink's naming. */
+function oracleSlug(node: GraphNode): string | null {
+  const text = `${node.label} ${detailValue(node.details.shape)}`.toLowerCase();
+  const named = ORACLE_SLUG.find(([word]) => text.includes(word));
+  if (named) return named[1];
+  return /^\S+ \/ \S+$/.test(node.label) ? 'chainlink' : null;
+}
+
+/** DefiLlama's keyless icon CDN: an asset by address, an oracle by provider (D67). */
+export function logoUrl(node: GraphNode): string | null {
+  if (node.kind === 'Oracle') {
+    const slug = oracleSlug(node);
+    return slug ? `https://icons.llamao.fi/icons/protocols/${slug}?w=48&h=48` : null;
+  }
   const address = node.label.toUpperCase().startsWith('PT-')
     ? '0x808507121b80c02388fad14726482e061b8da827'
     : node.details.address;
